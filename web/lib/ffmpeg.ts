@@ -60,36 +60,51 @@ export async function renderEDL(
   target: RenderTarget = DEFAULT_TARGET,
 ): Promise<Blob> {
   const ff = await getFFmpeg();
-  const videoClips = clips.filter((c) => mediaById(media, c.sourceId)?.kind === "video");
-  if (!videoClips.length) throw new Error("אין קליפי וידאו לרינדור (תמונה/שמע יתווספו בהמשך).");
+  const usable = clips.filter((c) => {
+    const k = mediaById(media, c.sourceId)?.kind;
+    return k === "video" || k === "image";
+  });
+  if (!usable.length) throw new Error("אין קליפי וידאו/תמונה לרינדור.");
 
-  // כותבים כל מקור-וידאו בשימוש פעם אחת, וממפים sourceId -> אינדקס קלט.
-  const usedIds = Array.from(new Set(videoClips.map((c) => c.sourceId)));
-  const inputArgs: string[] = [];
-  const inputIndex = new Map<string, number>();
-  for (let i = 0; i < usedIds.length; i++) {
-    const asset = mediaById(media, usedIds[i])!;
-    const name = `src${i}.${extOf(asset.file.name)}`;
-    await ff.writeFile(name, await fetchFile(asset.file));
-    inputArgs.push("-i", name);
-    inputIndex.set(usedIds[i], i);
-  }
+  // כותבים כל קובץ-מקור בשימוש פעם אחת ל-FS של ffmpeg.
+  const written = new Map<string, string>();
+  const ensureFile = async (asset: MediaAsset) => {
+    if (written.has(asset.id)) return written.get(asset.id)!;
+    const nm = `m${written.size}.${extOf(asset.file.name)}`;
+    await ff.writeFile(nm, await fetchFile(asset.file));
+    written.set(asset.id, nm);
+    return nm;
+  };
 
   const { w, h, fps } = target;
+  const scalePad = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p`;
+  const inputArgs: string[] = [];
+  let ic = 0;
+  const videoInput = new Map<string, number>(); // וידאו: input index לשימוש חוזר
   const parts: string[] = [];
   const labels: string[] = [];
-  videoClips.forEach((c, i) => {
-    const idx = inputIndex.get(c.sourceId)!;
-    parts.push(
-      `[${idx}:v]trim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},setpts=PTS-STARTPTS,` +
-        `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,` +
-        `setsar=1,fps=${fps},format=yuv420p[v${i}];` +
-        `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,` +
-        `aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`,
-    );
-    labels.push(`[v${i}][a${i}]`);
-  });
-  const filter = parts.join("") + `${labels.join("")}concat=n=${videoClips.length}:v=1:a=1[outv][outa]`;
+
+  for (let n = 0; n < usable.length; n++) {
+    const c = usable[n];
+    const asset = mediaById(media, c.sourceId)!;
+    if (asset.kind === "video") {
+      let idx = videoInput.get(asset.id);
+      if (idx === undefined) { const nm = await ensureFile(asset); idx = ic++; inputArgs.push("-i", nm); videoInput.set(asset.id, idx); }
+      parts.push(
+        `[${idx}:v]trim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},setpts=PTS-STARTPTS,${scalePad}[v${n}];` +
+          `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo[a${n}];`,
+      );
+    } else {
+      // תמונה: קלט לולאה בזמן הקליפ + אודיו שקט
+      const nm = await ensureFile(asset);
+      const dur = clipDur(c).toFixed(3);
+      const vin = ic++; inputArgs.push("-loop", "1", "-t", dur, "-i", nm);
+      const ain = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+      parts.push(`[${vin}:v]${scalePad}[v${n}];[${ain}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${n}];`);
+    }
+    labels.push(`[v${n}][a${n}]`);
+  }
+  const filter = parts.join("") + `${labels.join("")}concat=n=${usable.length}:v=1:a=1[outv][outa]`;
 
   if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
   await ff.exec([
