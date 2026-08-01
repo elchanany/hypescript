@@ -228,11 +228,11 @@ export default function EditorPage() {
   const generateSubs = () => {
     if (!words || !main) { setError("צריך לתמלל קודם (נתח)."); return; }
     const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
-    setSubs(edlToSubs(words, cl));
+    setSubs(edlToSubs(cl, (sid) => (sid === main?.id ? words : null)));
   };
   const exportSrt = () => {
     let s = subs;
-    if (!s) { if (!words || !main) return; const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]; s = edlToSubs(words, cl); setSubs(s); }
+    if (!s) { if (!words || !main) return; const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]; s = edlToSubs(cl, (sid) => (sid === main?.id ? words : null)); setSubs(s); }
     download(new Blob([subsToSrt(s)], { type: "text/plain;charset=utf-8" }), (main?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
   };
   const importSrt = (file: File | null) => {
@@ -276,7 +276,7 @@ export default function EditorPage() {
       <section className="editor-pane">
         {!groqOk && <div className="banner err">GROQ_API_KEY לא מוגדר ב-Vercel. ראה <a href="/settings">הגדרות</a>.</div>}
 
-        <VideoPreview ref={previewRef} media={media} clips={clips} onTime={setCur} audioMuted={audioMuted(tracks)} />
+        <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)} />
 
         {media.length > 0 && (
           <div className="media-strip">

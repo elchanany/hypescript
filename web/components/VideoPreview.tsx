@@ -2,12 +2,14 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, totalDur } from "@/lib/editor/model";
+import { Sub } from "@/lib/editor/subtitlesEdl";
 
 export interface PreviewHandle { seek: (assembled: number) => void; }
 
 interface Props {
   media: MediaAsset[];
   clips: Clip[] | null;
+  subs?: Sub[] | null;
   onTime: (assembled: number) => void;
   onCopyPosition?: (assembled: number) => void;
   audioMuted?: boolean;
@@ -21,7 +23,7 @@ function download(blob: Blob, name: string) {
 }
 
 // תצוגה מקדימה רב-מקורית עם סרגל נגן (seek), "העתק מיקום" וצילום פריים.
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, onTime, onCopyPosition, audioMuted }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const idx = useRef(0);
   const loaded = useRef<string | null>(null);
@@ -108,8 +110,11 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   return (
     <div className="preview">
       {hasVideo ? (
-        <video ref={videoRef} className="preview-video" onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-          onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onClick={toggle} />
+        <div className="preview-stage">
+          <video ref={videoRef} className="preview-video" onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
+            onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onClick={toggle} />
+          {(() => { const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02); return cue ? <div className="pv-caption">{cue.text}</div> : null; })()}
+        </div>
       ) : (
         <div className="preview-empty">טען סרטון כדי לראות תצוגה מקדימה</div>
       )}

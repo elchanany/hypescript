@@ -21,6 +21,12 @@ export class AgentRunner {
   private stopped = false;
   private running = false;
   private currentAbort: AbortController | null = null;
+  private injected: string[] = [];
+
+  // הזרקת הודעת משתמש תוך כדי ריצה — הסוכן יקרא אותה בתחילת האיטרציה הבאה.
+  injectMessage(text: string) {
+    this.injected.push(text);
+  }
 
   constructor(
     public provider: Provider,
@@ -46,6 +52,10 @@ export class AgentRunner {
         if (this.stopped) {
           this.events.onAssistant("⏹ המשימה נעצרה.");
           break;
+        }
+        // הודעות שהמשתמש הזריק תוך כדי ריצה — נכנסות לשיחה לפני הפנייה הבאה.
+        if (this.injected.length) {
+          for (const m of this.injected.splice(0)) this.history.push({ role: "user", content: m });
         }
         const media = this.ctx.media || [];
         const mediaNote = media.length

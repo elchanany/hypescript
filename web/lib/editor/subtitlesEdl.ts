@@ -10,8 +10,8 @@ const RLM = "‏";
 // כתובית הניתנת לעריכה (על ציר-הזמן הסופי).
 export interface Sub { id: string; start: number; end: number; text: string; }
 
-export function edlToSubs(words: Word[], clips: Clip[], maxChars = 42): Sub[] {
-  return edlToCues(words, clips, maxChars).map((c) => ({ id: uid("s"), ...c }));
+export function edlToSubs(clips: Clip[], getWords: WordsBySource, maxChars = 42): Sub[] {
+  return edlToCues(clips, getWords, maxChars).map((c) => ({ id: uid("s"), ...c }));
 }
 
 export function subsToSrt(subs: Sub[]): string {
@@ -38,11 +38,15 @@ export function parseSrt(text: string): Sub[] {
   return out;
 }
 
-export function edlToCues(words: Word[], clips: Clip[], maxChars = 42): Cue[] {
+// מקבל טקסט לכל מקור בנפרד — קריטי לרצף רב-מקורי: כל קליפ מקבל כתוביות
+// מהתמלול של *המקור שלו*, לא מתמלול גלובלי אחד.
+export type WordsBySource = (sourceId: string) => Word[] | null | undefined;
+
+export function edlToCues(clips: Clip[], getWords: WordsBySource, maxChars = 42): Cue[] {
   const cues: Cue[] = [];
   clips.forEach((c, ci) => {
     const base = assembledStart(clips, ci);
-    const ws = words
+    const ws = (getWords(c.sourceId) || [])
       .filter((w) => w.start >= c.start - 0.05 && w.end <= c.end + 0.05)
       .sort((a, b) => a.start - b.start);
     let cur: Word[] = [];
@@ -65,8 +69,8 @@ export function edlToCues(words: Word[], clips: Clip[], maxChars = 42): Cue[] {
   return cues;
 }
 
-export function edlToSrt(words: Word[], clips: Clip[], maxChars = 42): string {
-  return buildSrt(edlToCues(words, clips, maxChars));
+export function edlToSrt(clips: Clip[], getWords: WordsBySource, maxChars = 42): string {
+  return buildSrt(edlToCues(clips, getWords, maxChars));
 }
 
 export { clipDur };

@@ -111,9 +111,16 @@ export default function Chat({ media, onAddMedia, words, clips, subs, projectId,
     return runnerRef.current;
   }
 
-  const send = () => {
+  const submit = () => {
     const text = input.trim();
-    if (!text || running) return;
+    if (!text) return;
+    if (running) {
+      // הזרקת הודעה תוך כדי ריצה — הסוכן יקרא אותה ויתעדכן.
+      setItems((p) => [...p, { kind: "user", text, time: now() }]);
+      setInput("");
+      runnerRef.current?.injectMessage(text);
+      return;
+    }
     if (!configured[provider]) { setItems((p) => [...p, { kind: "assistant", text: `לספק ${PROVIDER_LABELS[provider]} אין מפתח ב-Vercel. ראה הגדרות.`, time: now() }]); return; }
     setItems((p) => [...p, { kind: "user", text, time: now() }]);
     setInput(""); setRunning(true);
@@ -201,10 +208,10 @@ export default function Chat({ media, onAddMedia, words, clips, subs, projectId,
         <button className="attach" onClick={() => attachRef.current?.click()} title="העלה קובץ">📎</button>
         <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
         <textarea value={input} onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="כתוב הוראה לסוכן… (Enter לשליחה)" rows={1} />
-        {running ? <button className="btn stop" onClick={() => runnerRef.current?.stop()}>⏹ עצור</button>
-          : <button className="btn primary" onClick={send} disabled={!input.trim()}>שלח</button>}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+          placeholder={running ? "עדכן את הסוכן תוך כדי עבודה…" : "כתוב הוראה לסוכן… (Enter לשליחה)"} rows={1} />
+        <button className="btn primary" onClick={submit} disabled={!input.trim()}>{running ? "↑ עדכן" : "שלח"}</button>
+        {running && <button className="btn stop" onClick={() => runnerRef.current?.stop()}>⏹</button>}
       </div>
     </div>
   );

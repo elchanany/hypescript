@@ -350,7 +350,9 @@ export const TOOLS: ToolMeta[] = [
     run: async (_a, ctx, report) => {
       if (!ctx.media.length) return "שגיאה: לא נטען סרטון.";
       const err = requireClips(ctx); if (err) return err;
-      const { renderEDL } = await import("@/lib/ffmpeg");
+      let renderEDL: typeof import("@/lib/ffmpeg").renderEDL;
+      try { ({ renderEDL } = await import("@/lib/ffmpeg")); }
+      catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
       const secs = ctx.clips!.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
       const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`));
@@ -368,8 +370,9 @@ export const TOOLS: ToolMeta[] = [
       const main = mainVideo(ctx);
       const clips = ctx.clips?.length ? ctx.clips : main ? [{ id: uid(), sourceId: main.id, start: 0, end: ctx.duration || main.duration }] : [];
       if (!clips.length) return "אין תוכן ליצירת כתוביות.";
-      ctx.subs = edlToSubs(ctx.words, clips, (a.max_chars | 0) || 42);
-      return `נוצרו ${ctx.subs.length} כתוביות (מוצגות על הציר וניתנות לעריכה). אפשר edit_subtitle / export_srt.`;
+      const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === main?.id ? ctx.words : null);
+      ctx.subs = edlToSubs(clips, getWords, (a.max_chars | 0) || 42);
+      return `נוצרו ${ctx.subs.length} כתוביות מכל המקורות (מוצגות על הציר). אפשר edit_subtitle / clear_subtitles / export_srt.`;
     },
   },
   {
@@ -406,6 +409,11 @@ export const TOOLS: ToolMeta[] = [
       ctx.subs = ctx.subs.filter((_, k) => k !== i);
       return `נמחקה כתובית ${i + 1}. נשארו ${ctx.subs.length}.`;
     },
+  },
+  {
+    name: "clear_subtitles", label: "מחיקת כל הכתוביות", color: "#ef4444", icon: "🧹",
+    schema: { name: "clear_subtitles", description: "מוחק את כל הכתוביות בבת אחת (השתמש בזה במקום למחוק אחת-אחת).", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => { const n = ctx.subs?.length || 0; ctx.subs = []; return `נמחקו כל ${n} הכתוביות.`; },
   },
   {
     name: "export_srt", label: "ייצוא SRT", color: "#8b5cf6", icon: "⬇️",
@@ -459,7 +467,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
 - עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
 - render_video רק בסוף / כשמבקשים. התוצר מופיע בצ'אט כקישור+תצוגה מקדימה.
-- כתוביות: generate_subtitles יוצר כתוביות ניתנות-לעריכה על הציר. ערוך תוכן עם edit_subtitle (למשל "בכתובית 3 תשאיר רק X"), תזמן עם retime_subtitle, מחק עם delete_subtitle, ייצא ל-SRT לא-צרוב עם export_srt, ייבא עם import_srt. קבל חופש לסדר/לקצר כתוביות בהיגיון לפי בקשת המשתמש.
+- כתוביות: generate_subtitles יוצר כתוביות ניתנות-לעריכה על הציר. ערוך תוכן עם edit_subtitle (למשל "בכתובית 3 תשאיר רק X"), תזמן עם retime_subtitle, מחק כתובית בודדת עם delete_subtitle, ולמחיקת הכל השתמש ב-clear_subtitles (לעולם אל תמחק אחת-אחת בלולאה). ייצא ל-SRT לא-צרוב עם export_srt, ייבא עם import_srt. קבל חופש לסדר/לקצר כתוביות בהיגיון לפי בקשת המשתמש.
 - הבן מהשפה הטבעית איך הסרטון הסופי צריך להיראות, ותכנן בעצמך את סדר הכלים.
 - אם חסר קובץ/מידע (התבקשת להוסיף תמונה/שמע שלא סופק) — בקש ב-ask_user, אל תמציא.
 - יעילות: אל תבזבז קריאות מיותרות. אם יש לך תמלול — פעל, אל תחזור על find_in_transcript שוב ושוב. add_clip מקבל אינדקס (מספר) או שם.
