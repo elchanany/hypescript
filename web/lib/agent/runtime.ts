@@ -20,6 +20,7 @@ export class AgentRunner {
   history: ChatMessage[] = [];
   private stopped = false;
   private running = false;
+  private currentAbort: AbortController | null = null;
 
   constructor(
     public provider: Provider,
@@ -33,6 +34,7 @@ export class AgentRunner {
 
   stop() {
     this.stopped = true;
+    this.currentAbort?.abort(); // מבטל מיד את קריאת ה-LLM התלויה
   }
 
   async send(userText: string): Promise<void> {
@@ -50,6 +52,7 @@ export class AgentRunner {
           ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n")
           : "עדיין לא נטענה מדיה.";
         const ctrl = new AbortController();
+        this.currentAbort = ctrl;
         const to = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
         let data: any;
         try {
@@ -70,9 +73,11 @@ export class AgentRunner {
           data = await resp.json();
           if (!resp.ok) { this.events.onError(data.error || "שגיאת סוכן."); break; }
         } catch (e: any) {
+          if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
           this.events.onError(e?.name === "AbortError" ? "הסוכן נתקע (timeout על קריאת ה-LLM). נסה שוב." : (e?.message || "שגיאת רשת."));
           break;
-        } finally { clearTimeout(to); }
+        } finally { clearTimeout(to); this.currentAbort = null; }
+        if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
         const content: string | null = data.content;
         const toolCalls: ToolCall[] = data.tool_calls || [];
 

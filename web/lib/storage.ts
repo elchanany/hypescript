@@ -44,3 +44,61 @@ export async function kvClear(): Promise<void> {
     db.transaction(STORE, "readwrite").objectStore(STORE).clear();
   } catch { /* ignore */ }
 }
+
+// --- ניהול פרויקטים מרובים ---
+// כל פרויקט מחזיק בנפרד: מדיה, מצב עריכה ושיחה, תחת מפתחות p:<id>:<key>.
+export interface ProjectMeta { id: string; name: string; updatedAt: number; }
+const IDX = "projects";
+const CUR = "currentProjectId";
+
+export const pk = (id: string, key: string) => `p:${id}:${key}`;
+
+export async function listProjects(): Promise<ProjectMeta[]> {
+  return (await kvGet<ProjectMeta[]>(IDX)) || [];
+}
+export async function getCurrentProjectId(): Promise<string | null> {
+  return await kvGet<string>(CUR);
+}
+export async function setCurrentProject(id: string): Promise<void> {
+  await kvSet(CUR, id);
+}
+export async function createProject(name: string): Promise<string> {
+  const id = "prj_" + Math.random().toString(36).slice(2, 9);
+  const list = await listProjects();
+  list.unshift({ id, name, updatedAt: Date.now() });
+  await kvSet(IDX, list);
+  await kvSet(CUR, id);
+  return id;
+}
+export async function renameProject(id: string, name: string): Promise<void> {
+  const list = await listProjects();
+  const p = list.find((x) => x.id === id);
+  if (p) { p.name = name; p.updatedAt = Date.now(); await kvSet(IDX, list); }
+}
+export async function deleteProject(id: string): Promise<void> {
+  const list = (await listProjects()).filter((x) => x.id !== id);
+  await kvSet(IDX, list);
+  await kvSet(pk(id, "media"), null);
+  await kvSet(pk(id, "state"), null);
+  await kvSet(pk(id, "chat"), null);
+  if ((await getCurrentProjectId()) === id) await kvSet(CUR, list[0]?.id || null);
+}
+export async function touchProject(id: string): Promise<void> {
+  const list = await listProjects();
+  const p = list.find((x) => x.id === id);
+  if (p) { p.updatedAt = Date.now(); await kvSet(IDX, list); }
+}
+// מחזיר פרויקט נוכחי תקין, יוצר ראשון אם אין. גם מהגר סשן ישן (media/state/chat גלובליים).
+export async function ensureProject(): Promise<string> {
+  const cur = await getCurrentProjectId();
+  const list = await listProjects();
+  if (cur && list.some((p) => p.id === cur)) return cur;
+  if (list.length) { await kvSet(CUR, list[0].id); return list[0].id; }
+  const id = await createProject("פרויקט 1");
+  // מיגרציה: אם קיים סשן ישן בשורש — נעביר לפרויקט הראשון.
+  for (const k of ["media", "state", "chat"] as const) {
+    const old = await kvGet(k);
+    if (old != null) { await kvSet(pk(id, k), old); await kvSet(k, null); }
+  }
+  return id;
+}

@@ -8,7 +8,7 @@ import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
-import { kvGet, kvSet } from "@/lib/storage";
+import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
 
 type Item =
@@ -24,10 +24,11 @@ interface ChatProps {
   words: Word[] | null;
   clips: Clip[] | null;
   subs: Sub[] | null;
+  projectId: string | null;
   onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null }) => void;
 }
 
-export default function Chat({ media, onAddMedia, words, clips, subs, onProject }: ChatProps) {
+export default function Chat({ media, onAddMedia, words, clips, subs, projectId, onProject }: ChatProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
@@ -53,27 +54,28 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
   const savedHistory = useRef<ChatMessage[]>([]);
   const [restoredChat, setRestoredChat] = useState(false);
 
-  // שחזור שיחה שמורה (הצגה + זיכרון הסוכן) כדי להמשיך מאותה נקודה.
+  // שחזור/החלפת שיחה לפי פרויקט — כולל איפוס זיכרון הסוכן.
   useEffect(() => {
+    if (!projectId) return;
+    setRestoredChat(false);
     (async () => {
-      const c = await kvGet<{ items: Item[]; history: ChatMessage[] }>("chat");
-      if (c) {
-        setItems((c.items || []).filter((it) => it.kind !== "output"));
-        savedHistory.current = c.history || [];
-      }
+      const c = await kvGet<{ items: Item[]; history: ChatMessage[] }>(pk(projectId, "chat"));
+      runnerRef.current = null; // סוכן חדש לפרויקט הנוכחי
+      savedHistory.current = c?.history || [];
+      setItems((c?.items || []).filter((it) => it.kind !== "output"));
       setRestoredChat(true);
     })();
-  }, []);
+  }, [projectId]);
 
   // שמירת השיחה (בלי כרטיסי פלט שה-URL שלהם נמחק ברענון) + זיכרון הסוכן.
   useEffect(() => {
-    if (!restoredChat) return;
+    if (!restoredChat || !projectId) return;
     const t = setTimeout(() => {
       const history = runnerRef.current?.history || savedHistory.current;
-      kvSet("chat", { items: items.filter((it) => it.kind !== "output"), history });
+      kvSet(pk(projectId, "chat"), { items: items.filter((it) => it.kind !== "output"), history });
     }, 700);
     return () => clearTimeout(t);
-  }, [items, restoredChat]);
+  }, [items, restoredChat, projectId]);
 
   useEffect(() => {
     const c = ctxRef.current;

@@ -7,7 +7,7 @@ import {
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
-import { kvClear, kvGet, kvSet } from "@/lib/storage";
+import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
@@ -53,42 +53,67 @@ export default function EditorPage() {
   const duration = main?.duration || 0;
 
   const [restored, setRestored] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<ProjectMeta[]>([]);
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
   }, []);
 
-  // שחזור סשן שמור (מדיה + מצב) ברענון.
+  // אתחול פרויקטים (ומיגרציה מסשן ישן).
   useEffect(() => {
     (async () => {
-      try {
-        const savedMedia = await kvGet<any[]>("media");
-        if (savedMedia?.length) {
-          setMedia(savedMedia.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })));
-        }
-        const st = await kvGet<any>("state");
-        if (st) { if (st.words) setWords(st.words); if (st.clips) setClips(st.clips); if (st.subs) setSubs(st.subs); }
-      } finally { setRestored(true); }
+      const id = await ensureProject();
+      setProjects(await listProjects());
+      setProjectId(id);
     })();
   }, []);
 
-  // שמירת מדיה (הקבצים עצמם) כשמשתנה.
+  // טעינת נתוני הפרויקט הנוכחי (מדיה + מצב) בכל החלפת פרויקט/רענון.
   useEffect(() => {
-    if (!restored) return;
-    if (media.length) kvSet("media", media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file })));
-  }, [media, restored]);
+    if (!projectId) return;
+    setRestored(false);
+    (async () => {
+      const sm = await kvGet<any[]>(pk(projectId, "media"));
+      setMedia((prev) => { prev.forEach((m) => URL.revokeObjectURL(m.url)); return sm?.length ? sm.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })) : []; });
+      const st = await kvGet<any>(pk(projectId, "state"));
+      setWords(st?.words ?? null); setClips(st?.clips ?? null); setSubs(st?.subs ?? null);
+      setCur(0); setSelectedId(null);
+      setRestored(true);
+    })();
+  }, [projectId]);
 
-  // שמירת מצב הפרויקט (קליפים/כתוביות/תמלול) — עם השהיה.
   useEffect(() => {
-    if (!restored) return;
-    const t = setTimeout(() => kvSet("state", { words, clips, subs }), 500);
+    if (!restored || !projectId) return;
+    kvSet(pk(projectId, "media"), media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file })));
+    touchProject(projectId);
+  }, [media, restored, projectId]);
+
+  useEffect(() => {
+    if (!restored || !projectId) return;
+    const t = setTimeout(() => { kvSet(pk(projectId, "state"), { words, clips, subs }); touchProject(projectId); }, 500);
     return () => clearTimeout(t);
-  }, [words, clips, subs, restored]);
+  }, [words, clips, subs, restored, projectId]);
 
+  const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
   const newProject = async () => {
-    if (!confirm("לפתוח פרויקט חדש? המדיה והעריכה הנוכחיים יימחקו מהמכשיר.")) return;
-    await kvClear();
-    location.reload();
+    const name = prompt("שם הפרויקט החדש:", `פרויקט ${projects.length + 1}`);
+    if (name === null) return;
+    const id = await createProject(name || "פרויקט");
+    setProjects(await listProjects()); setProjectId(id);
+  };
+  const renameCurrent = async () => {
+    if (!projectId) return;
+    const name = prompt("שנה שם פרויקט:", projects.find((p) => p.id === projectId)?.name || "");
+    if (!name) return;
+    await renameProject(projectId, name); setProjects(await listProjects());
+  };
+  const deleteCurrent = async () => {
+    if (!projectId || !confirm("למחוק את הפרויקט הנוכחי? כל המדיה, העריכה והשיחה יימחקו.")) return;
+    await deleteProject(projectId);
+    const list = await listProjects(); setProjects(list);
+    if (list.length) { await setCurrentProject(list[0].id); setProjectId(list[0].id); }
+    else { const id = await createProject("פרויקט 1"); setProjects(await listProjects()); setProjectId(id); }
   };
 
   // ברגע שנטען סרטון ואין עדיין קליפים — מציגים אותו כקליפ יחיד כדי שהציר יופיע מיד
@@ -226,7 +251,12 @@ export default function EditorPage() {
           <button className="btn good" onClick={render} disabled={working || !clips?.length}>{rendering ? "מרנדר…" : "🎬 ייצא"}</button>
           <button className="btn" onClick={exportSrt} disabled={!words}>💬 SRT</button>
           <div className="tb-grow" />
-          <button className="btn" onClick={newProject} title="פרויקט חדש (מוחק את הנוכחי)">🆕 חדש</button>
+          <select className="prov-select" value={projectId || ""} onChange={(e) => switchProject(e.target.value)} title="פרויקטים">
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button className="btn" onClick={newProject} title="פרויקט חדש">🆕</button>
+          <button className="btn" onClick={renameCurrent} title="שנה שם">✏️</button>
+          <button className="btn" onClick={deleteCurrent} title="מחק פרויקט">🗑️</button>
           {main && <span className="badge">{fmt(duration)} → {fmt(totalEdited)}</span>}
         </div>
 
@@ -273,7 +303,7 @@ export default function EditorPage() {
       </section>
 
       <aside className="chat-pane">
-        <Chat media={media} onAddMedia={addFiles} words={words} clips={clips} subs={subs}
+        <Chat media={media} onAddMedia={addFiles} words={words} clips={clips} subs={subs} projectId={projectId}
           onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setClips(c); setSubs(s); }} />
       </aside>
     </div>
