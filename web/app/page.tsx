@@ -7,6 +7,7 @@ import {
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { kvClear, kvGet, kvSet } from "@/lib/storage";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
@@ -51,9 +52,44 @@ export default function EditorPage() {
   const main = useMemo(() => firstVideo(media), [media]);
   const duration = main?.duration || 0;
 
+  const [restored, setRestored] = useState(false);
+
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
   }, []);
+
+  // שחזור סשן שמור (מדיה + מצב) ברענון.
+  useEffect(() => {
+    (async () => {
+      try {
+        const savedMedia = await kvGet<any[]>("media");
+        if (savedMedia?.length) {
+          setMedia(savedMedia.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })));
+        }
+        const st = await kvGet<any>("state");
+        if (st) { if (st.words) setWords(st.words); if (st.clips) setClips(st.clips); if (st.subs) setSubs(st.subs); }
+      } finally { setRestored(true); }
+    })();
+  }, []);
+
+  // שמירת מדיה (הקבצים עצמם) כשמשתנה.
+  useEffect(() => {
+    if (!restored) return;
+    if (media.length) kvSet("media", media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file })));
+  }, [media, restored]);
+
+  // שמירת מצב הפרויקט (קליפים/כתוביות/תמלול) — עם השהיה.
+  useEffect(() => {
+    if (!restored) return;
+    const t = setTimeout(() => kvSet("state", { words, clips, subs }), 500);
+    return () => clearTimeout(t);
+  }, [words, clips, subs, restored]);
+
+  const newProject = async () => {
+    if (!confirm("לפתוח פרויקט חדש? המדיה והעריכה הנוכחיים יימחקו מהמכשיר.")) return;
+    await kvClear();
+    location.reload();
+  };
 
   // ברגע שנטען סרטון ואין עדיין קליפים — מציגים אותו כקליפ יחיד כדי שהציר יופיע מיד
   // (אפשר לגרור/לחתוך). הסוכן/הסקריפט מחליפים כשמריצים.
@@ -178,6 +214,7 @@ export default function EditorPage() {
           <button className="btn good" onClick={render} disabled={working || !clips?.length}>{rendering ? "מרנדר…" : "🎬 ייצא"}</button>
           <button className="btn" onClick={exportSrt} disabled={!words}>💬 SRT</button>
           <div className="tb-grow" />
+          <button className="btn" onClick={newProject} title="פרויקט חדש (מוחק את הנוכחי)">🆕 חדש</button>
           {main && <span className="badge">{fmt(duration)} → {fmt(totalEdited)}</span>}
         </div>
 

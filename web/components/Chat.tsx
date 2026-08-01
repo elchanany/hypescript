@@ -8,6 +8,8 @@ import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
+import { kvGet, kvSet } from "@/lib/storage";
+import { ChatMessage } from "@/lib/agent/types";
 
 type Item =
   | { kind: "user" | "assistant"; text: string; time: string }
@@ -48,6 +50,30 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
   const onProjectRef = useRef(onProject);
   onProjectRef.current = onProject;
   ctxRef.current.onOutput = addOutput;
+  const savedHistory = useRef<ChatMessage[]>([]);
+  const [restoredChat, setRestoredChat] = useState(false);
+
+  // שחזור שיחה שמורה (הצגה + זיכרון הסוכן) כדי להמשיך מאותה נקודה.
+  useEffect(() => {
+    (async () => {
+      const c = await kvGet<{ items: Item[]; history: ChatMessage[] }>("chat");
+      if (c) {
+        setItems((c.items || []).filter((it) => it.kind !== "output"));
+        savedHistory.current = c.history || [];
+      }
+      setRestoredChat(true);
+    })();
+  }, []);
+
+  // שמירת השיחה (בלי כרטיסי פלט שה-URL שלהם נמחק ברענון) + זיכרון הסוכן.
+  useEffect(() => {
+    if (!restoredChat) return;
+    const t = setTimeout(() => {
+      const history = runnerRef.current?.history || savedHistory.current;
+      kvSet("chat", { items: items.filter((it) => it.kind !== "output"), history });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [items, restoredChat]);
 
   useEffect(() => {
     const c = ctxRef.current;
@@ -77,6 +103,7 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
         onError: (msg) => setItems((p) => [...p, { kind: "assistant", text: "⚠ " + msg, time: now() }]),
         onDone: () => setRunning(false),
       });
+      if (savedHistory.current.length) runnerRef.current.history = savedHistory.current;
     }
     runnerRef.current.provider = provider;
     return runnerRef.current;
