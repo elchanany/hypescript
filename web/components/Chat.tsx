@@ -38,7 +38,7 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
-    media: [], duration: 0, words: null, clips: null, subs: null, lastRender: null,
+    media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null, lastRender: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     onOutput: addOutput,
   });

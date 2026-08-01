@@ -13,13 +13,19 @@ import { ToolSchema } from "./types";
 export interface AgentContext {
   media: MediaAsset[];
   duration: number; // משך המקור הראשי
-  words: Word[] | null;
+  words: Word[] | null; // התמלול של המקור הראשי (תאימות)
+  transcripts: Record<string, Word[]>; // תמלול לכל מקור לפי id (מולטי-וידאו)
   clips: Clip[] | null;
   subs: Sub[] | null;
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
   onOutput?: (blob: Blob, name: string, kind: "video" | "srt") => void;
+}
+
+// התמלול של מקור מסוים (מהמפה, או של הראשי מ-words).
+function transcriptOf(ctx: AgentContext, asset: MediaAsset): Word[] | null {
+  return ctx.transcripts[asset.id] || (asset.id === mainVideo(ctx)?.id ? ctx.words : null) || null;
 }
 
 // המקור הראשי (הסרטון הראשון) — עליו מתמללים וחותכים לפי סקריפט כברירת מחדל.
@@ -86,16 +92,17 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "transcribe_video", label: "תמלול הסרטון", color: "#8b5cf6", icon: "📝",
-    schema: { name: "transcribe_video", description: "מתמלל ובונה מפת נקודות-ציון (מילים+זמנים). חובה פעם אחת לפני פעולות מבוססות-טקסט.", parameters: { type: "object", properties: {} } },
-    run: async (_a, ctx, report) => {
-      const m = mainVideo(ctx);
-      if (!m) return "שגיאה: לא נטען סרטון.";
-      if (ctx.words) return `כבר תומלל (${ctx.words.length} מילים).`;
-      const key = txKey(m.file); const cached = txRead(key);
-      if (cached) { ctx.words = cached; if (!ctx.duration) ctx.duration = cached[cached.length - 1].end + 0.2; return `נטען תמלול שמור (${cached.length} מילים) — לא תומלל מחדש.`; }
+    schema: { name: "transcribe_video", description: "מתמלל סרטון ובונה מפת נקודות-ציון. אם יש כמה סרטונים — תמלל כל אחד (עם source) לפני שמרכיבים מהם.", parameters: { type: "object", properties: { source: { type: "string", description: "שם/אינדקס הסרטון לתמלול (ברירת מחדל: הראשי)" } } } },
+    run: async (a, ctx, report) => {
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
+      if (ctx.transcripts[asset.id]) return `"${asset.name}" כבר תומלל (${ctx.transcripts[asset.id].length} מילים).`;
+      const isMain = asset.id === mainVideo(ctx)?.id;
+      const key = txKey(asset.file); const cached = txRead(key);
+      if (cached) { ctx.transcripts[asset.id] = cached; if (isMain) { ctx.words = cached; if (!ctx.duration) ctx.duration = asset.duration; } return `נטען תמלול שמור ל-"${asset.name}" (${cached.length} מילים).`; }
       const { extractAudio } = await import("@/lib/ffmpeg");
-      report("מחלץ אודיו…");
-      const audio = await extractAudio(m.file);
+      report(`מחלץ אודיו מ-${asset.name}…`);
+      const audio = await extractAudio(asset.file);
       report("שולח לתמלול (Groq)…");
       const fd = new FormData();
       fd.append("file", audio, "audio.mp3"); fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
@@ -104,18 +111,21 @@ export const TOOLS: ToolMeta[] = [
       if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
       const words: Word[] = (data.words || []).filter((w: any) => w.start != null && w.end != null && (w.word || w.text)).map((w: any) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
       if (!words.length) throw new Error("התמלול לא החזיר מילים.");
-      ctx.words = words; if (!ctx.duration) ctx.duration = words[words.length - 1].end + 0.2;
+      ctx.transcripts[asset.id] = words;
+      if (isMain) { ctx.words = words; if (!ctx.duration) ctx.duration = asset.duration; }
       txWrite(key, words);
-      report("בונה מפת נקודות-ציון…");
-      return `התמלול הושלם: ${words.length} מילים (נשמר). מוכן לחיתוך.`;
+      return `תומלל "${asset.name}": ${words.length} מילים (נשמר).`;
     },
   },
   {
     name: "find_in_transcript", label: "איתור בתמלול", color: "#14b8a6", icon: "🔍",
-    schema: { name: "find_in_transcript", description: "מאתר היכן טקסט נאמר ומחזיר טווחי-זמן (שניות במקור).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+    schema: { name: "find_in_transcript", description: "מאתר היכן טקסט נאמר ומחזיר טווחי-זמן (שניות במקור).", parameters: { type: "object", properties: { query: { type: "string" }, source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי)" } }, required: ["query"] } },
     run: async (a, ctx) => {
-      if (!ctx.words) return "שגיאה: צריך לתמלל קודם.";
-      const r = findRanges(ctx.words, String(a.query || ""));
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset) return "שגיאה: אין סרטון.";
+      const words = transcriptOf(ctx, asset);
+      if (!words) return `צריך לתמלל קודם את "${asset.name}".`;
+      const r = findRanges(words, String(a.query || ""));
       return r.length ? "נמצא:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n") : `לא נמצא "${a.query}".`;
     },
   },
@@ -123,18 +133,19 @@ export const TOOLS: ToolMeta[] = [
     name: "keep_by_script", label: "חיתוך לפי סקריפט", color: "#f59e0b", icon: "✂️",
     schema: {
       name: "keep_by_script",
-      description: "בונה את הסרטון לפי טקסט: הקליפים מסודרים בדיוק בסדר של הטקסט, כולל חזרות (אם הטקסט חוזר על קטע — הוא יופיע שוב). זו הדרך המועדפת.",
-      parameters: { type: "object", properties: { script: { type: "string", description: "הטקסט שאמור להישאר, בסדר הרצוי" } }, required: ["script"] },
+      description: "בונה קליפים מסרטון לפי טקסט, בדיוק בסדר הטקסט (כולל חזרות). לריבוי סרטונים: קרא פעם לכל סרטון עם source ו-append=true כדי להרכיב רצף אחד מכמה מקורות.",
+      parameters: { type: "object", properties: { script: { type: "string", description: "הטקסט שאמור להישאר, בסדר הרצוי" }, source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי)" }, append: { type: "boolean", description: "להוסיף לרצף הקיים במקום להחליף (להרכבה מכמה סרטונים)" } }, required: ["script"] },
     },
     run: async (a, ctx, report) => {
-      if (!ctx.words) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
-      const m = mainVideo(ctx);
-      if (!m) return "שגיאה: אין סרטון ראשי.";
-      report("מיישר סקריפט ובונה קליפים לפי הסדר…");
-      const clips = scriptToClips(ctx.words, String(a.script || ""), m.id);
-      if (!clips.length) return "לא נמצאו התאמות — ודא שהטקסט תואם לנאמר בסרטון.";
-      ctx.clips = clips;
-      return `נבנה: ${clipsSummary(clips)} (בסדר הטקסט, כולל חזרות). הרץ render_video לייצוא.`;
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset) return "שגיאה: אין סרטון.";
+      const words = transcriptOf(ctx, asset);
+      if (!words) return `צריך לתמלל קודם את "${asset.name}" (transcribe_video source="${asset.name}").`;
+      report(`מיישר סקריפט ל-"${asset.name}"…`);
+      const clips = scriptToClips(words, String(a.script || ""), asset.id);
+      if (!clips.length) return `לא נמצאו התאמות ב-"${asset.name}".`;
+      ctx.clips = a.append ? [...(ctx.clips || []), ...clips] : clips;
+      return `${a.append ? "נוספו" : "נבנו"} קליפים מ-"${asset.name}". ${clipsSummary(ctx.clips)}`;
     },
   },
   {
@@ -314,7 +325,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 
 מודל: הסרטון הסופי הוא רשימת "קליפים" מסודרת (EDL). כל קליפ מצביע על טווח במקור. הסדר ברשימה = הסדר בסרטון הסופי. אפשר לסדר-מחדש ולחזור על קטע.
 
-מדיה: יכולים להיות כמה קבצים (list_media). הסרטון הראשון הוא "הראשי" — עליו חלים תמלול וחיתוך-לפי-סקריפט. אפשר להרכיב סרטון מכמה מקורות בעזרת add_clip (לפי שם או אינדקס; המשתמש עשוי לצטט מקור עם @שם).
+מדיה: יכולים להיות כמה סרטונים (list_media). אם המשתמש רוצה להרכיב מכמה סרטונים — אל תיתקע על "הראשי". תמלל כל סרטון רלוונטי (transcribe_video עם source לכל אחד), ואז הרכב רצף אחד: קרא keep_by_script לכל סרטון עם source ו-append=true, או השתמש ב-add_clip לפי שם/@שם. הקליפים מצטרפים בסדר שבו אתה מוסיף אותם.
 
 עקרונות:
 - ענה תמיד בעברית, קצר.
