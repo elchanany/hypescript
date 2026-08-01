@@ -141,13 +141,19 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "get_transcript", label: "קריאת תמלול", color: "#14b8a6", icon: "📄",
-    schema: { name: "get_transcript", description: "מחזיר את טקסט התמלול המלא של סרטון — כדי להבין את התוכן ולהחליט על סדר/חיתוך. השתמש בזה (ולא ב-find_in_transcript) כדי לקרוא מה נאמר.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
+    schema: { name: "get_transcript", description: "מחזיר את התמלול המלא עם חותמות זמן (בשניות) לכל שורה — כדי להבין תוכן ולדעת בדיוק מתי כל דבר נאמר, לצורך חיתוך מדויק. השתמש בזה כדי לקרוא מה נאמר ומתי.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
     run: async (a, ctx) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset) return "אין סרטון.";
       const words = transcriptOf(ctx, asset);
       if (!words) return `"${asset.name}" עדיין לא תומלל.`;
-      return `תמלול "${asset.name}" (${words.length} מילים):\n${words.map((w) => w.text).join(" ")}`;
+      // מקבצים לשורות עם חותמת זמן [start–end], כך שהמודל רואה גם תוכן וגם תזמון מדויק.
+      const lines: string[] = [];
+      let cur: Word[] = [];
+      const flush = () => { if (cur.length) { lines.push(`[${cur[0].start.toFixed(1)}–${cur[cur.length - 1].end.toFixed(1)}s] ${cur.map((w) => w.text).join(" ")}`); cur = []; } };
+      for (const w of words) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
+      flush();
+      return `תמלול "${asset.name}" (${words.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}`;
     },
   },
   {
