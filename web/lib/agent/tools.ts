@@ -7,6 +7,7 @@ import {
   addClip, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
+import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { ToolSchema } from "./types";
 
 export interface AgentContext {
@@ -14,6 +15,7 @@ export interface AgentContext {
   duration: number; // משך המקור הראשי
   words: Word[] | null;
   clips: Clip[] | null;
+  subs: Sub[] | null;
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
@@ -233,17 +235,69 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "generate_subtitles", label: "יצירת כתוביות", color: "#8b5cf6", icon: "💬",
-    schema: { name: "generate_subtitles", description: "מייצר קובץ כתוביות SRT (לא צרוב לסרטון) מהתמלול והקליפים — להורדה ולשימוש ב-CapCut (שינוי גופן/מיקום שם).", parameters: { type: "object", properties: { max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" } } } },
+    schema: { name: "generate_subtitles", description: "מייצר כתוביות ניתנות-לעריכה מהתמלול והקליפים, ומציג אותן על הציר. אחר כך אפשר לערוך/לקצר/למחוק כתובית ולייצא SRT.", parameters: { type: "object", properties: { max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" } } } },
     run: async (a, ctx) => {
       if (!ctx.words) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
       const main = mainVideo(ctx);
       const clips = ctx.clips?.length ? ctx.clips : main ? [{ id: uid(), sourceId: main.id, start: 0, end: ctx.duration || main.duration }] : [];
       if (!clips.length) return "אין תוכן ליצירת כתוביות.";
-      const { edlToSrt } = await import("@/lib/editor/subtitlesEdl");
-      const srt = edlToSrt(ctx.words, clips, (a.max_chars | 0) || 42);
-      const name = (main?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt";
-      ctx.onOutput?.(new Blob([srt], { type: "text/plain;charset=utf-8" }), name, "srt");
-      return `נוצרו כתוביות SRT — קישור להורדה בצ'אט (לא צרוב, מתאים ל-CapCut).`;
+      ctx.subs = edlToSubs(ctx.words, clips, (a.max_chars | 0) || 42);
+      return `נוצרו ${ctx.subs.length} כתוביות (מוצגות על הציר וניתנות לעריכה). אפשר edit_subtitle / export_srt.`;
+    },
+  },
+  {
+    name: "list_subtitles", label: "רשימת כתוביות", color: "#8b5cf6", icon: "📃",
+    schema: { name: "list_subtitles", description: "מחזיר את הכתוביות (אינדקס 1-based, זמן, טקסט).", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => ctx.subs?.length ? ctx.subs.map((s, i) => `${i + 1}. [${s.start.toFixed(1)}–${s.end.toFixed(1)}] ${s.text}`).join("\n") : "אין כתוביות. הרץ generate_subtitles.",
+  },
+  {
+    name: "edit_subtitle", label: "עריכת כתובית", color: "#a855f7", icon: "✏️",
+    schema: { name: "edit_subtitle", description: "משנה את הטקסט של כתובית מסוימת (לקיצור/תיקון/ניסוח).", parameters: { type: "object", properties: { index: { type: "number", description: "מספר הכתובית (1-based)" }, text: { type: "string" } }, required: ["index", "text"] } },
+    run: async (a, ctx) => {
+      if (!ctx.subs?.length) return "אין כתוביות.";
+      const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
+      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, text: String(a.text) } : s));
+      return `כתובית ${i + 1} עודכנה: "${a.text}"`;
+    },
+  },
+  {
+    name: "retime_subtitle", label: "תזמון כתובית", color: "#a855f7", icon: "⏲️",
+    schema: { name: "retime_subtitle", description: "משנה את זמני ההופעה של כתובית (start/end בשניות על הציר הסופי).", parameters: { type: "object", properties: { index: { type: "number" }, start: { type: "number" }, end: { type: "number" } }, required: ["index", "start", "end"] } },
+    run: async (a, ctx) => {
+      if (!ctx.subs?.length) return "אין כתוביות.";
+      const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
+      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, start: +a.start, end: Math.max(+a.start + 0.2, +a.end) } : s));
+      return `תוזמנה כתובית ${i + 1}.`;
+    },
+  },
+  {
+    name: "delete_subtitle", label: "מחיקת כתובית", color: "#ef4444", icon: "🗑️",
+    schema: { name: "delete_subtitle", description: "מוחק כתובית.", parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] } },
+    run: async (a, ctx) => {
+      if (!ctx.subs?.length) return "אין כתוביות.";
+      const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
+      ctx.subs = ctx.subs.filter((_, k) => k !== i);
+      return `נמחקה כתובית ${i + 1}. נשארו ${ctx.subs.length}.`;
+    },
+  },
+  {
+    name: "export_srt", label: "ייצוא SRT", color: "#8b5cf6", icon: "⬇️",
+    schema: { name: "export_srt", description: "מייצא את הכתוביות הנוכחיות כקובץ SRT (לא צרוב) — קישור בצ'אט.", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => {
+      if (!ctx.subs?.length) return "אין כתוביות. הרץ generate_subtitles.";
+      const name = (mainVideo(ctx)?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt";
+      ctx.onOutput?.(new Blob([subsToSrt(ctx.subs)], { type: "text/plain;charset=utf-8" }), name, "srt");
+      return `יוצא SRT (${ctx.subs.length} כתוביות) — קישור להורדה בצ'אט.`;
+    },
+  },
+  {
+    name: "import_srt", label: "ייבוא SRT", color: "#8b5cf6", icon: "📥",
+    schema: { name: "import_srt", description: "טוען כתוביות מתוכן SRT שהמשתמש הדביק.", parameters: { type: "object", properties: { content: { type: "string", description: "תוכן קובץ ה-SRT" } }, required: ["content"] } },
+    run: async (a, ctx) => {
+      const subs = parseSrt(String(a.content || ""));
+      if (!subs.length) return "לא זוהו כתוביות בתוכן.";
+      ctx.subs = subs;
+      return `יובאו ${subs.length} כתוביות. אפשר לערוך/לייצא.`;
     },
   },
   {
@@ -269,7 +323,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
 - עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
 - render_video רק בסוף / כשמבקשים. התוצר מופיע בצ'אט כקישור+תצוגה מקדימה.
-- כתוביות: generate_subtitles מייצר SRT לא-צרוב (לשימוש ב-CapCut). המשתמש יכול לבקש אורך שורה או תוכן — קבל חופש לסדר את הכתוביות בהיגיון.
+- כתוביות: generate_subtitles יוצר כתוביות ניתנות-לעריכה על הציר. ערוך תוכן עם edit_subtitle (למשל "בכתובית 3 תשאיר רק X"), תזמן עם retime_subtitle, מחק עם delete_subtitle, ייצא ל-SRT לא-צרוב עם export_srt, ייבא עם import_srt. קבל חופש לסדר/לקצר כתוביות בהיגיון לפי בקשת המשתמש.
 - הבן מהשפה הטבעית איך הסרטון הסופי צריך להיראות, ותכנן בעצמך את סדר הכלים.
 - אם חסר קובץ/מידע (התבקשת להוסיף תמונה/שמע שלא סופק) — בקש ב-ask_user, אל תמציא.
 

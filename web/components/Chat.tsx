@@ -7,6 +7,7 @@ import { Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
+import { Sub } from "@/lib/editor/subtitlesEdl";
 
 type Item =
   | { kind: "user" | "assistant"; text: string; time: string }
@@ -20,22 +21,24 @@ interface ChatProps {
   onAddMedia: (files: FileList | File[] | null) => void;
   words: Word[] | null;
   clips: Clip[] | null;
-  onProject: (p: { words: Word[] | null; clips: Clip[] | null }) => void;
+  subs: Sub[] | null;
+  onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null }) => void;
 }
 
-export default function Chat({ media, onAddMedia, words, clips, onProject }: ChatProps) {
+export default function Chat({ media, onAddMedia, words, clips, subs, onProject }: ChatProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
+  const [askText, setAskText] = useState("");
 
   const addOutput = (blob: Blob, name: string, mkind: "video" | "srt") =>
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
-    media: [], duration: 0, words: null, clips: null, lastRender: null,
+    media: [], duration: 0, words: null, clips: null, subs: null, lastRender: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     onOutput: addOutput,
   });
@@ -47,8 +50,8 @@ export default function Chat({ media, onAddMedia, words, clips, onProject }: Cha
 
   useEffect(() => {
     const c = ctxRef.current;
-    c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips;
-  }, [media, words, clips]);
+    c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
+  }, [media, words, clips, subs]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -68,7 +71,7 @@ export default function Chat({ media, onAddMedia, words, clips, onProject }: Cha
         onToolEnd: (id, ok, summary) => {
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
           const c = ctxRef.current;
-          onProjectRef.current({ words: c.words, clips: c.clips });
+          onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs });
         },
         onError: (msg) => setItems((p) => [...p, { kind: "assistant", text: "⚠ " + msg, time: now() }]),
         onDone: () => setRunning(false),
@@ -142,7 +145,13 @@ export default function Chat({ media, onAddMedia, words, clips, onProject }: Cha
         {ask && (
           <div className="ask">
             <div className="ask-q">{ask.q}</div>
-            <div className="ask-opts">{ask.options.map((o, i) => (<button key={i} className="btn" onClick={() => { ask.resolve(o); setAsk(null); }}>{o}</button>))}</div>
+            <div className="ask-opts">{ask.options.map((o, i) => (<button key={i} className="btn" onClick={() => { ask.resolve(o); setAsk(null); setAskText(""); }}>{o}</button>))}</div>
+            <div className="ask-free">
+              <input value={askText} onChange={(e) => setAskText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && askText.trim()) { ask.resolve(askText.trim()); setAsk(null); setAskText(""); } }}
+                placeholder="או כתוב תשובה משלך…" />
+              <button className="btn primary" disabled={!askText.trim()} onClick={() => { ask.resolve(askText.trim()); setAsk(null); setAskText(""); }}>שלח</button>
+            </div>
           </div>
         )}
       </div>

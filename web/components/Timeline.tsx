@@ -2,10 +2,12 @@
 
 import { useMemo, useRef } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, totalDur } from "@/lib/editor/model";
+import { Sub } from "@/lib/editor/subtitlesEdl";
 
 interface Props {
   media: MediaAsset[];
   clips: Clip[];
+  subs?: Sub[] | null;
   maxDuration: number; // אורך המקור (לחסימת טרים)
   currentAssembled: number;
   selectedId: string | null;
@@ -20,7 +22,7 @@ const SOURCE_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#
 // ציר-זמן אינטראקטיבי בסגנון CapCut: גרירה לסידור-מחדש + ידיות טרים, חי.
 // פנימית LTR (זמן משמאל לימין) כדי לפשט את חשבון הפיקסלים.
 export default function Timeline({
-  media, clips, maxDuration, currentAssembled, selectedId, onSeek, onSelect, onTrim, onReorder,
+  media, clips, subs, maxDuration, currentAssembled, selectedId, onSeek, onSelect, onTrim, onReorder,
 }: Props) {
   const colorOf = (sourceId: string) => {
     const i = media.findIndex((m) => m.id === sourceId);
@@ -125,6 +127,18 @@ export default function Timeline({
           <div className="tl-playhead" style={{ left: `${pct(currentAssembled)}%` }} />
         </div>
       </div>
+
+      {subs && subs.length > 0 && (
+        <div className="tl-track">
+          <div className="tl-label" style={{ color: "#a855f7" }}>כתוביות</div>
+          <div className="tl-lane" onClick={seekFromLane}>
+            {subs.map((s) => (
+              <div key={s.id} className="tl-cue" style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }} title={s.text} />
+            ))}
+            <div className="tl-playhead" style={{ left: `${pct(currentAssembled)}%` }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

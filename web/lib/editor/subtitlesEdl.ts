@@ -2,10 +2,41 @@
 // ל-CapCut ולשנות גופן/מיקום שם. תומך בסדר/חזרות של הקליפים.
 
 import { Word } from "@/lib/models";
-import { Clip, assembledStart, clipDur } from "./model";
+import { Clip, assembledStart, clipDur, uid } from "./model";
 import { buildSrt, Cue } from "@/lib/subtitles";
 
 const RLM = "‏";
+
+// כתובית הניתנת לעריכה (על ציר-הזמן הסופי).
+export interface Sub { id: string; start: number; end: number; text: string; }
+
+export function edlToSubs(words: Word[], clips: Clip[], maxChars = 42): Sub[] {
+  return edlToCues(words, clips, maxChars).map((c) => ({ id: uid("s"), ...c }));
+}
+
+export function subsToSrt(subs: Sub[]): string {
+  return buildSrt(subs.map((s) => ({ start: s.start, end: s.end, text: s.text })));
+}
+
+// פירוק קובץ SRT לרשימת כתוביות ניתנות לעריכה (לייבוא).
+export function parseSrt(text: string): Sub[] {
+  const toSec = (t: string) => {
+    const m = t.trim().match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+    if (!m) return 0;
+    return +m[1] * 3600 + +m[2] * 60 + +m[3] + +m[4] / 1000;
+  };
+  const out: Sub[] = [];
+  for (const block of text.replace(/\r/g, "").split(/\n\n+/)) {
+    const lines = block.split("\n").filter((l) => l.trim() !== "");
+    if (!lines.length) continue;
+    const timeIdx = lines.findIndex((l) => l.includes("-->"));
+    if (timeIdx < 0) continue;
+    const [a, b] = lines[timeIdx].split("-->");
+    const body = lines.slice(timeIdx + 1).join("\n").trim();
+    if (body) out.push({ id: uid("s"), start: toSec(a), end: toSec(b), text: body });
+  }
+  return out;
+}
 
 export function edlToCues(words: Word[], clips: Clip[], maxChars = 42): Cue[] {
   const cues: Cue[] = [];

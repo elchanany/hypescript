@@ -6,6 +6,7 @@ import {
   Clip, MediaAsset, MediaKind, assembledToSource, firstVideo, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
+import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
@@ -32,6 +33,7 @@ export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [words, setWords] = useState<Word[] | null>(null);
   const [clips, setClips] = useState<Clip[] | null>(null);
+  const [subs, setSubs] = useState<Sub[] | null>(null);
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [script, setScript] = useState("");
@@ -43,6 +45,7 @@ export default function EditorPage() {
   const [groqOk, setGroqOk] = useState(true);
 
   const fileInput = useRef<HTMLInputElement>(null);
+  const srtInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
 
   const main = useMemo(() => firstVideo(media), [media]);
@@ -51,6 +54,13 @@ export default function EditorPage() {
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
   }, []);
+
+  // ברגע שנטען סרטון ואין עדיין קליפים — מציגים אותו כקליפ יחיד כדי שהציר יופיע מיד
+  // (אפשר לגרור/לחתוך). הסוכן/הסקריפט מחליפים כשמריצים.
+  useEffect(() => {
+    if (main && !clips) setClips([{ id: uid(), sourceId: main.id, start: 0, end: main.duration }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [main]);
 
   const addFiles = async (files: FileList | File[] | null) => {
     if (!files) return;
@@ -104,12 +114,22 @@ export default function EditorPage() {
     finally { setRendering(false); setProgress(0); }
   };
 
-  const exportSrt = async () => {
-    if (!words || !main) return;
+  const generateSubs = () => {
+    if (!words || !main) { setError("צריך לתמלל קודם (נתח)."); return; }
     const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
-    const { edlToSrt } = await import("@/lib/editor/subtitlesEdl");
-    download(new Blob([edlToSrt(words, cl)], { type: "text/plain;charset=utf-8" }), (main.name.replace(/\.[^.]+$/, "")) + ".srt");
+    setSubs(edlToSubs(words, cl));
   };
+  const exportSrt = () => {
+    let s = subs;
+    if (!s) { if (!words || !main) return; const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]; s = edlToSubs(words, cl); setSubs(s); }
+    download(new Blob([subsToSrt(s)], { type: "text/plain;charset=utf-8" }), (main?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
+  };
+  const importSrt = (file: File | null) => {
+    if (!file) return;
+    file.text().then((t) => { const s = parseSrt(t); if (s.length) setSubs(s); else setError("לא זוהו כתוביות בקובץ."); });
+  };
+  const editSub = (id: string, text: string) => setSubs((ss) => ss?.map((s) => (s.id === id ? { ...s, text } : s)) || ss);
+  const delSub = (id: string) => setSubs((ss) => ss?.filter((s) => s.id !== id) || ss);
 
   const splitAtPlayhead = () => {
     if (!clips?.length) return;
@@ -133,7 +153,10 @@ export default function EditorPage() {
             {media.map((m, i) => (
               <div key={m.id} className={`media-chip ${m.id === main?.id ? "main" : ""}`} title={m.name}>
                 <span className="mc-kind">{m.kind === "video" ? "🎞️" : m.kind === "image" ? "🖼️" : "🎵"}</span>
-                <span className="mc-name">{i + 1}. {m.name}</span>
+                <span className="mc-body">
+                  <span className="mc-name">{i + 1}. {m.name}</span>
+                  <span className="mc-meta">{m.kind === "video" ? "וידאו" : m.kind === "image" ? "תמונה" : "שמע"} · {m.duration.toFixed(1)}s{m.id === main?.id ? " · ראשי" : ""}</span>
+                </span>
               </div>
             ))}
           </div>
@@ -162,7 +185,7 @@ export default function EditorPage() {
 
         {clips ? (
           <Timeline
-            media={media} clips={clips} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
+            media={media} clips={clips} subs={subs} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
             onSeek={seek} onSelect={setSelectedId}
             onTrim={(id, s, e) => setClips((c) => (c ? trimClip(c, id, s, e, duration) : c))}
             onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
@@ -172,15 +195,32 @@ export default function EditorPage() {
         )}
 
         <details className="manual">
-          <summary>עריכה ידנית</summary>
+          <summary>עריכה ידנית + כתוביות</summary>
           <textarea value={script} onChange={(e) => setScript(e.target.value)} placeholder="סקריפט: הטקסט שאמור להישאר, בסדר הרצוי (אפשר לחזור על קטע)…" />
-          <div className="hint" style={{ marginTop: 6 }}>“נתח” מתמלל (פעם אחת) ובונה קליפים. גרור קליפ להזזה, גרור קצה לטרים.</div>
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <button className="btn" onClick={generateSubs} disabled={!words}>💬 צור כתוביות</button>
+            <button className="btn" onClick={() => srtInput.current?.click()}>📥 ייבא SRT</button>
+            <button className="btn" onClick={exportSrt} disabled={!words && !subs}>⬇ ייצא SRT</button>
+            <input ref={srtInput} type="file" accept=".srt,text/plain" hidden onChange={(e) => { importSrt(e.target.files?.[0] || null); e.currentTarget.value = ""; }} />
+          </div>
+          {subs && (
+            <div className="subs-editor">
+              {subs.map((s, i) => (
+                <div key={s.id} className="sub-row">
+                  <span className="sub-idx">{i + 1}</span>
+                  <span className="sub-time">{s.start.toFixed(1)}–{s.end.toFixed(1)}</span>
+                  <input className="sub-text" value={s.text} onChange={(e) => editSub(s.id, e.target.value)} />
+                  <button className="sub-del" onClick={() => delSub(s.id)} title="מחק">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
         </details>
       </section>
 
       <aside className="chat-pane">
-        <Chat media={media} onAddMedia={addFiles} words={words} clips={clips}
-          onProject={({ words: w, clips: c }) => { setWords(w); setClips(c); }} />
+        <Chat media={media} onAddMedia={addFiles} words={words} clips={clips} subs={subs}
+          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setClips(c); setSubs(s); }} />
       </aside>
     </div>
   );
