@@ -8,6 +8,7 @@ import {
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { ToolSchema } from "./types";
 
 export interface AgentContext {
@@ -165,6 +166,57 @@ export const TOOLS: ToolMeta[] = [
       for (const w of words) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
       flush();
       return `תמלול "${asset.name}" (${words.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}`;
+    },
+  },
+  {
+    name: "analyze_audio", label: "ניתוח אודיו", color: "#0891b2", icon: "🔊",
+    schema: { name: "analyze_audio", description: "מנתח את עוצמת הסאונד (dB) ומסווג את הרווחים בין המילים: שקט/נשימה מול רעש (שיעול/כסא/רקע). כדי להחליט מה לחתוך לפי עוצמה, לא רק לפי טקסט.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
+    run: async (a, ctx, report) => {
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset || asset.kind !== "video") return "אין סרטון.";
+      const words = transcriptOf(ctx, asset);
+      if (!words) return `צריך לתמלל קודם את "${asset.name}".`;
+      report("מנתח עוצמת סאונד…");
+      const prof = await analyzeAudio(asset.file);
+      const gaps: Array<[number, number]> = [];
+      let prev = 0;
+      for (const w of words) { if (w.start - prev > 0.25) gaps.push([prev, w.start]); prev = w.end; }
+      if (asset.duration - prev > 0.25) gaps.push([prev, asset.duration]);
+      const quiet = prof.floorDb + 6;
+      const lines = gaps.slice(0, 40).map(([s, e]) => {
+        const d = avgDb(prof, s, e);
+        return `• ${s.toFixed(1)}–${e.toFixed(1)}s (${(e - s).toFixed(1)}s): ${d < quiet ? "שקט/נשימה" : "רעש/קול-רקע (אולי שיעול/כסא)"} [${d.toFixed(0)}dB]`;
+      });
+      return `ניתוח אודיו "${asset.name}" (רצפת רעש ${prof.floorDb.toFixed(0)}dB, שיא ${prof.peakDb.toFixed(0)}dB):\n${lines.join("\n")}\n(שקט=נשימה/שתיקה לחיתוך; עם עוצמה=ייתכן רעש. השתמש ב-remove_silence לחיתוך אוטומטי לפי עוצמה.)`;
+    },
+  },
+  {
+    name: "remove_silence", label: "הסרת שתיקות (עוצמה)", color: "#f59e0b", icon: "🤫",
+    schema: { name: "remove_silence", description: "מסיר נשימות ושתיקות לפי *עוצמת הסאונד* בפועל (מדויק יותר מרווחי-מילים), ובונה EDL עם קטעי הדיבור בלבד. זו הדרך לחתוך נשימות/שתיקות.", parameters: { type: "object", properties: { source: { type: "string" }, threshold_db: { type: "number", description: "סף עוצמה (dB). ברירת מחדל: רצפת-רעש+8" }, min_silence: { type: "number", description: "אורך שקט מינימלי לחיתוך (שנ'), ברירת מחדל 0.35" }, padding: { type: "number", description: "ריפוד בכל צד (שנ'), ברירת מחדל 0.08" } } } },
+    run: async (a, ctx, report) => {
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset || asset.kind !== "video") return "אין סרטון.";
+      report("מנתח עוצמת סאונד…");
+      const prof = await analyzeAudio(asset.file);
+      const padding = a.padding != null ? +a.padding : 0.08;
+      const thr = a.threshold_db != null ? +a.threshold_db : prof.floorDb + 8;
+      const sil = findSilences(prof, thr, a.min_silence != null ? +a.min_silence : 0.35);
+      const dur = asset.duration;
+      const raw: Array<[number, number]> = [];
+      let prev = 0;
+      for (const [s, e] of sil) { if (s - prev > 0.05) raw.push([prev, s]); prev = e; }
+      if (dur - prev > 0.05) raw.push([prev, dur]);
+      if (!raw.length) return "לא זוהו קטעי דיבור מעל הסף.";
+      const padded = raw.map(([s, e]) => ({ start: Math.max(0, s - padding), end: Math.min(dur, e + padding) }));
+      const merged: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
+      for (const k of padded.slice(1)) {
+        const last = merged[merged.length - 1];
+        if (k.start <= last.end + 1e-3) last.end = Math.max(last.end, k.end);
+        else merged.push({ id: uid(), sourceId: asset.id, start: k.start, end: k.end });
+      }
+      ctx.clips = merged;
+      const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
+      return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s. ${clipsSummary(merged)}`;
     },
   },
   {
@@ -401,6 +453,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - ענה תמיד בעברית, קצר. אל תכתוב פסקאות ארוכות של התלבטות — משפט או שניים ואז פעולה.
 - העדף כלים קיימים: אם המשתמש נותן טקסט שאמור להישאר — השתמש ב-keep_by_script. הוא בונה את הקליפים *בדיוק בסדר של הטקסט*, כולל חזרות. אם המשתמש נתן טקסט ואז הוסיף עוד טקסט (גם אם מההתחלה) — הרץ keep_by_script שוב עם כל הטקסט המעודכן בסדר הנכון.
 - חובה transcribe_video פעם אחת לפני פעולות מבוססות-טקסט (נשמר, לא מתמללים שוב).
+- לחיתוך נשימות/שתיקות — remove_silence (לפי עוצמת הסאונד בפועל, מדויק). כדי להבין מה יש בין המילים (שקט מול שיעול/כסא/רקע) — analyze_audio.
 - כדי לבדוק איך נראה הווידאו בנקודה מסוימת — capture_frame (בשנייה במקור, או timeline=true על הציר הערוך). בספק תומך-ראייה (Gemini/OpenAI/Anthropic) תוכל לנתח את הפריים; DeepSeek לא רואה תמונות, אז שם זה רק להצגה למשתמש.
 - כדי להבין מה נאמר בסרטון — get_transcript (קורא את כל הטקסט). find_in_transcript הוא רק לאיתור מיקום של ביטוי ספציפי, לא לקריאת תוכן.
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
