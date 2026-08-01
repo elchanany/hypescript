@@ -72,6 +72,21 @@ export async function extractAudio(file: File, onProgress?: (r: number) => void)
   });
 }
 
+// מחלץ פריים בודד בשנייה נתונה (seek מהיר). מחזיר PNG.
+export async function extractFrame(file: File, atSeconds: number): Promise<Blob> {
+  return runExclusive(async () => {
+    const ff = await getFFmpeg();
+    const input = `fi_${uid()}.${extOf(file.name)}`;
+    const out = `fo_${uid()}.png`;
+    await ff.writeFile(input, await fetchFile(file));
+    await ff.exec(["-ss", Math.max(0, atSeconds).toFixed(3), "-i", input, "-frames:v", "1", "-q:v", "3", out]);
+    const data = (await ff.readFile(out)) as Uint8Array;
+    await ff.deleteFile(out).catch(() => {});
+    await ff.deleteFile(input).catch(() => {});
+    return new Blob([data as unknown as BlobPart], { type: "image/png" });
+  });
+}
+
 export interface RenderTarget { w: number; h: number; fps: number; }
 const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
 

@@ -12,7 +12,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 type Item =
   | { kind: "user" | "assistant"; text: string; time: string }
   | { kind: "tool"; id: string; label: string; color: string; icon: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string }
-  | { kind: "output"; name: string; url: string; mkind: "video" | "srt"; time: string };
+  | { kind: "output"; name: string; url: string; mkind: "video" | "srt" | "image"; time: string };
 
 const now = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
@@ -34,13 +34,14 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
   const [askText, setAskText] = useState("");
 
-  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt") =>
+  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt" | "image") =>
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
     media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null, lastRender: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     onOutput: addOutput,
+    pendingImages: [],
   });
   const runnerRef = useRef<AgentRunner | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -131,8 +132,9 @@ export default function Chat({ media, onAddMedia, words, clips, subs, onProject 
             </div>
           ) : it.kind === "output" ? (
             <div key={i} className="output-card">
-              <div className="tool-top"><b>{it.mkind === "video" ? "🎬 סרטון מוכן" : "💬 כתוביות SRT"}</b><span className="tool-time">{it.time}</span></div>
+              <div className="tool-top"><b>{it.mkind === "video" ? "🎬 סרטון מוכן" : it.mkind === "image" ? "📸 פריים" : "💬 כתוביות SRT"}</b><span className="tool-time">{it.time}</span></div>
               {it.mkind === "video" && <video src={it.url} controls className="output-video" />}
+              {it.mkind === "image" && <img src={it.url} alt="frame" className="output-video" />}
               <a className="btn good" href={it.url} download={it.name}>⬇ הורד {it.name}</a>
             </div>
           ) : (

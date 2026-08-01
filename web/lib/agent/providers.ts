@@ -4,7 +4,31 @@
 // מפתחות (משתני סביבה ב-Vercel): DEEPSEEK_API_KEY, OPENAI_API_KEY,
 // ANTHROPIC_API_KEY, GEMINI_API_KEY (או GOOGLE_API_KEY).
 
-import { AgentResponse, ChatMessage, Provider, ToolSchema } from "./types";
+import { AgentResponse, ChatMessage, ContentPart, Provider, ToolSchema } from "./types";
+
+function parseDataUrl(url: string): { mime: string; data: string } {
+  const m = url.match(/^data:([^;]+);base64,(.*)$/);
+  return m ? { mime: m[1], data: m[2] } : { mime: "image/png", data: "" };
+}
+const textOnly = (parts: ContentPart[]) => parts.filter((p) => p.type === "text").map((p) => (p as any).text).join(" ");
+
+function anthropicParts(content: ChatMessage["content"]): any[] {
+  if (!Array.isArray(content)) return [{ type: "text", text: content || "" }];
+  return content.map((p) => {
+    if (p.type === "text") return { type: "text", text: p.text };
+    const { mime, data } = parseDataUrl(p.image_url.url);
+    return { type: "image", source: { type: "base64", media_type: mime, data } };
+  });
+}
+function geminiParts(content: ChatMessage["content"]): any[] {
+  if (!Array.isArray(content)) return [{ text: content || "" }];
+  return content.map((p) => {
+    if (p.type === "text") return { text: p.text };
+    const { mime, data } = parseDataUrl(p.image_url.url);
+    return { inlineData: { mimeType: mime, data } };
+  });
+}
+const asText = (c: ChatMessage["content"]) => (Array.isArray(c) ? textOnly(c) : c || "");
 
 interface ProviderConfig {
   envKeys: string[];
@@ -79,7 +103,11 @@ async function callOpenAICompat(
         };
       }
       if (m.role === "tool") {
-        return { role: "tool", tool_call_id: m.tool_call_id, content: m.content || "" };
+        return { role: "tool", tool_call_id: m.tool_call_id, content: Array.isArray(m.content) ? textOnly(m.content) : m.content || "" };
+      }
+      if (Array.isArray(m.content)) {
+        // openai תומך בתמונות; deepseek לא — נשלח טקסט בלבד.
+        return { role: m.role, content: provider === "openai" ? m.content : textOnly(m.content) };
       }
       return { role: m.role, content: m.content || "" };
     }),
@@ -114,14 +142,14 @@ async function callAnthropic(
   const conv: any[] = [];
   for (const m of messages) {
     if (m.role === "system") continue;
-    if (m.role === "user") conv.push({ role: "user", content: [{ type: "text", text: m.content || "" }] });
+    if (m.role === "user") conv.push({ role: "user", content: anthropicParts(m.content) });
     else if (m.role === "assistant") {
       const blocks: any[] = [];
-      if (m.content) blocks.push({ type: "text", text: m.content });
+      if (m.content) blocks.push({ type: "text", text: asText(m.content) });
       for (const tc of m.tool_calls || []) blocks.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.arguments });
       conv.push({ role: "assistant", content: blocks });
     } else if (m.role === "tool") {
-      conv.push({ role: "user", content: [{ type: "tool_result", tool_use_id: m.tool_call_id, content: m.content || "" }] });
+      conv.push({ role: "user", content: [{ type: "tool_result", tool_use_id: m.tool_call_id, content: asText(m.content) }] });
     }
   }
   const body: any = { model, max_tokens: 4096, messages: conv };
@@ -155,14 +183,14 @@ async function callGemini(
   const contents: any[] = [];
   for (const m of messages) {
     if (m.role === "system") continue;
-    if (m.role === "user") contents.push({ role: "user", parts: [{ text: m.content || "" }] });
+    if (m.role === "user") contents.push({ role: "user", parts: geminiParts(m.content) });
     else if (m.role === "assistant") {
       const parts: any[] = [];
-      if (m.content) parts.push({ text: m.content });
+      if (m.content) parts.push({ text: asText(m.content) });
       for (const tc of m.tool_calls || []) parts.push({ functionCall: { name: tc.name, args: tc.arguments } });
       contents.push({ role: "model", parts });
     } else if (m.role === "tool") {
-      contents.push({ role: "user", parts: [{ functionResponse: { name: m.name || "tool", response: { result: m.content || "" } } }] });
+      contents.push({ role: "user", parts: [{ functionResponse: { name: m.name || "tool", response: { result: asText(m.content) } } }] });
     }
   }
   const body: any = { contents };

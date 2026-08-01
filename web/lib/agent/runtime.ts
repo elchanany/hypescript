@@ -13,7 +13,8 @@ export interface AgentEvents {
   onDone: () => void;
 }
 
-const MAX_ITERS = 14;
+const MAX_ITERS = 40;
+const CALL_TIMEOUT_MS = 120000;
 
 export class AgentRunner {
   history: ChatMessage[] = [];
@@ -48,24 +49,30 @@ export class AgentRunner {
         const mediaNote = media.length
           ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n")
           : "עדיין לא נטענה מדיה.";
-        const resp = await fetch("/api/agent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: this.provider,
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "system", content: mediaNote },
-              ...this.history,
-            ],
-            tools: TOOL_SCHEMAS,
-          }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) {
-          this.events.onError(data.error || "שגיאת סוכן.");
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
+        let data: any;
+        try {
+          const resp = await fetch("/api/agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: ctrl.signal,
+            body: JSON.stringify({
+              provider: this.provider,
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "system", content: mediaNote },
+                ...this.history,
+              ],
+              tools: TOOL_SCHEMAS,
+            }),
+          });
+          data = await resp.json();
+          if (!resp.ok) { this.events.onError(data.error || "שגיאת סוכן."); break; }
+        } catch (e: any) {
+          this.events.onError(e?.name === "AbortError" ? "הסוכן נתקע (timeout על קריאת ה-LLM). נסה שוב." : (e?.message || "שגיאת רשת."));
           break;
-        }
+        } finally { clearTimeout(to); }
         const content: string | null = data.content;
         const toolCalls: ToolCall[] = data.tool_calls || [];
 
@@ -100,6 +107,18 @@ export class AgentRunner {
         );
         for (const r of results) {
           this.history.push({ role: "tool", tool_call_id: r.tool_call_id, name: r.name, content: r.content });
+        }
+        // פריימים שצולמו -> הודעת-תמונה לתור הבא (הסוכן "יראה" בספק תומך-ראייה).
+        const imgs = this.ctx.pendingImages;
+        if (imgs && imgs.length) {
+          this.history.push({
+            role: "user",
+            content: [
+              { type: "text", text: "הנה הפריימים שצולמו לבדיקה:" },
+              ...imgs.map((u) => ({ type: "image_url" as const, image_url: { url: u } })),
+            ],
+          });
+          imgs.length = 0;
         }
       }
     } finally {

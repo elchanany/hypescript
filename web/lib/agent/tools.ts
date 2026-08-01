@@ -4,7 +4,7 @@
 import { Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import {
-  addClip, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
@@ -20,7 +20,18 @@ export interface AgentContext {
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
-  onOutput?: (blob: Blob, name: string, kind: "video" | "srt") => void;
+  onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image") => void;
+  // תמונות שהסוכן צילם — יצורפו להודעה הבאה כדי שיוכל "לראות" אותן (בספק תומך-ראייה).
+  pendingImages?: string[];
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result));
+    fr.onerror = rej;
+    fr.readAsDataURL(blob);
+  });
 }
 
 // התמלול של מקור מסוים (מהמפה, או של הראשי מ-words).
@@ -154,6 +165,31 @@ export const TOOLS: ToolMeta[] = [
       for (const w of words) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
       flush();
       return `תמלול "${asset.name}" (${words.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}`;
+    },
+  },
+  {
+    name: "capture_frame", label: "צילום פריים", color: "#06b6d4", icon: "📸",
+    schema: {
+      name: "capture_frame",
+      description: "מצלם פריים בשנייה מדויקת — כדי לבדוק איך נראה הווידאו בנקודה מסוימת. מקור: סרטון ספציפי (source) או הציר הערוך (timeline=true). התמונה מוצגת בצ'אט, ואם הספק תומך בראייה — תוכל לנתח אותה בתור הבא.",
+      parameters: { type: "object", properties: { at_seconds: { type: "number", description: "השנייה לצילום" }, source: { type: "string", description: "סרטון מקור (אופציונלי)" }, timeline: { type: "boolean", description: "true = השנייה על הציר הערוך (assembled), לא על המקור" } }, required: ["at_seconds"] },
+    },
+    run: async (a, ctx) => {
+      let asset: MediaAsset | undefined;
+      let srcTime = +a.at_seconds;
+      if (a.timeline && ctx.clips?.length) {
+        const { index, source } = assembledToSource(ctx.clips, +a.at_seconds);
+        asset = index >= 0 ? mediaById(ctx.media, ctx.clips[index].sourceId) : undefined;
+        srcTime = source;
+      } else {
+        asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      }
+      if (!asset || asset.kind !== "video") return "אין סרטון לצילום.";
+      const { extractFrame } = await import("@/lib/ffmpeg");
+      const blob = await extractFrame(asset.file, srcTime);
+      ctx.onOutput?.(blob, `frame_${srcTime.toFixed(1)}s.png`, "image");
+      try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+      return `צולם פריים מ-"${asset.name}" בשנייה ${srcTime.toFixed(1)} (מוצג בצ'אט). אם הספק תומך בראייה — אנתח אותו בתור הבא.`;
     },
   },
   {
@@ -355,10 +391,17 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 
 מדיה: יכולים להיות כמה סרטונים (list_media). אם המשתמש רוצה להרכיב מכמה סרטונים — אל תיתקע על "הראשי". תמלל כל סרטון רלוונטי (transcribe_video עם source לכל אחד), ואז הרכב רצף אחד: קרא keep_by_script לכל סרטון עם source ו-append=true, או השתמש ב-add_clip לפי שם/@שם. הקליפים מצטרפים בסדר שבו אתה מוסיף אותם.
 
+היה החלטי ויעיל — זה קריטי:
+- תכנן פעם אחת ובצע. אל תתלבט אינסוף ואל תחזור על אותה בדיקה: אל תקרא את אותו תמלול פעמיים, אל תריץ list_clips אחרי כל פעולה קטנה.
+- אחרי שקראת את התמלולים — קבל החלטה סבירה על הסדר והחיתוכים ובצע ברצף, בלי לנתח מחדש כל שלב.
+- אם פרט אינו קריטי (למשל בדיוק איפה קטע הומוריסטי משתלב) — קבל החלטה סבירה והתקדם, אל תיתקע עליו.
+- שמור על מספר מצומצם של פעולות. עדיף keep_by_script/remove_segments גדולים על פני עשרות split/delete קטנים.
+
 עקרונות:
-- ענה תמיד בעברית, קצר.
+- ענה תמיד בעברית, קצר. אל תכתוב פסקאות ארוכות של התלבטות — משפט או שניים ואז פעולה.
 - העדף כלים קיימים: אם המשתמש נותן טקסט שאמור להישאר — השתמש ב-keep_by_script. הוא בונה את הקליפים *בדיוק בסדר של הטקסט*, כולל חזרות. אם המשתמש נתן טקסט ואז הוסיף עוד טקסט (גם אם מההתחלה) — הרץ keep_by_script שוב עם כל הטקסט המעודכן בסדר הנכון.
 - חובה transcribe_video פעם אחת לפני פעולות מבוססות-טקסט (נשמר, לא מתמללים שוב).
+- כדי לבדוק איך נראה הווידאו בנקודה מסוימת — capture_frame (בשנייה במקור, או timeline=true על הציר הערוך). בספק תומך-ראייה (Gemini/OpenAI/Anthropic) תוכל לנתח את הפריים; DeepSeek לא רואה תמונות, אז שם זה רק להצגה למשתמש.
 - כדי להבין מה נאמר בסרטון — get_transcript (קורא את כל הטקסט). find_in_transcript הוא רק לאיתור מיקום של ביטוי ספציפי, לא לקריאת תוכן.
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
 - עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
