@@ -30,11 +30,14 @@ function transcriptOf(ctx: AgentContext, asset: MediaAsset): Word[] | null {
 
 // המקור הראשי (הסרטון הראשון) — עליו מתמללים וחותכים לפי סקריפט כברירת מחדל.
 const mainVideo = (ctx: AgentContext) => firstVideo(ctx.media);
-// איתור מקור לפי שם/אינדקס (1-based) שהסוכן מספק.
+// איתור מקור לפי אינדקס (1-based) או שם. חשוב: אם הערך מספרי טהור — קודם אינדקס,
+// ולא חיפוש-שם (שמות הקבצים מכילים ספרות מתאריך, אחרת "3" היה תופס שם שגוי).
 function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | undefined {
   if (typeof ref === "number") return ctx.media[ref - 1];
-  const s = String(ref).replace(/^@/, "").trim().toLowerCase();
-  return ctx.media.find((m) => m.name.toLowerCase().includes(s)) || ctx.media[(parseInt(s, 10) || 0) - 1];
+  const s = String(ref).replace(/^@/, "").trim();
+  if (/^\d+$/.test(s)) return ctx.media[parseInt(s, 10) - 1];
+  const low = s.toLowerCase();
+  return ctx.media.find((m) => m.name.toLowerCase().includes(low));
 }
 
 export type Reporter = (status: string) => void;
@@ -236,8 +239,9 @@ export const TOOLS: ToolMeta[] = [
       if (!ctx.media.length) return "שגיאה: לא נטען סרטון.";
       const err = requireClips(ctx); if (err) return err;
       const { renderEDL } = await import("@/lib/ffmpeg");
-      report("מרנדר בדפדפן…");
-      const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.round(r * 100)}%`));
+      const secs = ctx.clips!.reduce((s, c) => s + (c.end - c.start), 0);
+      report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
+      const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`));
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
       ctx.onOutput?.(blob, `${base}_edited.mp4`, "video");
@@ -337,5 +341,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - כתוביות: generate_subtitles יוצר כתוביות ניתנות-לעריכה על הציר. ערוך תוכן עם edit_subtitle (למשל "בכתובית 3 תשאיר רק X"), תזמן עם retime_subtitle, מחק עם delete_subtitle, ייצא ל-SRT לא-צרוב עם export_srt, ייבא עם import_srt. קבל חופש לסדר/לקצר כתוביות בהיגיון לפי בקשת המשתמש.
 - הבן מהשפה הטבעית איך הסרטון הסופי צריך להיראות, ותכנן בעצמך את סדר הכלים.
 - אם חסר קובץ/מידע (התבקשת להוסיף תמונה/שמע שלא סופק) — בקש ב-ask_user, אל תמציא.
+- יעילות: אל תבזבז קריאות מיותרות. אם יש לך תמלול — פעל, אל תחזור על find_in_transcript שוב ושוב. add_clip מקבל אינדקס (מספר) או שם.
+- דוגמה — "סדר כרונולוגית כמה סרטונים": transcribe_video לכל אחד (source), החלט על הסדר, ואז keep_by_script לכל אחד עם source ו-append=true (לחיתוך לפי תוכן) או add_clip לכל אחד (לסרטון שלם), ואז render_video.
 
 זרימה טיפוסית: transcribe_video → keep_by_script (או find→remove) → עריכות עדינות → render_video.`;

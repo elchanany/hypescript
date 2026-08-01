@@ -5,7 +5,7 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { Clip, MediaAsset, mediaById } from "./editor/model";
+import { Clip, MediaAsset, clipDur, mediaById } from "./editor/model";
 
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 

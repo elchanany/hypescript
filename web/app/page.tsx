@@ -107,7 +107,7 @@ export default function EditorPage() {
     try {
       const { renderEDL } = await import("@/lib/ffmpeg");
       setPhase("מרנדר בדפדפן…");
-      const blob = await renderEDL(media, clips, (r) => setProgress(r));
+      const blob = await renderEDL(media, clips, (r) => setProgress(Math.min(1, r)));
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
       setPhase("הרינדור הושלם ✓");
     } catch (e: any) { setError(e?.message || String(e)); }
