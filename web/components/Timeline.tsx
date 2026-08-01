@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { Clip, assembledStart, clipDur, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, clipDur, totalDur } from "@/lib/editor/model";
 
 interface Props {
+  media: MediaAsset[];
   clips: Clip[];
   maxDuration: number; // אורך המקור (לחסימת טרים)
   currentAssembled: number;
@@ -14,11 +15,17 @@ interface Props {
   onReorder: (id: string, toIndex: number) => void;
 }
 
+const SOURCE_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#eab308"];
+
 // ציר-זמן אינטראקטיבי בסגנון CapCut: גרירה לסידור-מחדש + ידיות טרים, חי.
 // פנימית LTR (זמן משמאל לימין) כדי לפשט את חשבון הפיקסלים.
 export default function Timeline({
-  clips, maxDuration, currentAssembled, selectedId, onSeek, onSelect, onTrim, onReorder,
+  media, clips, maxDuration, currentAssembled, selectedId, onSeek, onSelect, onTrim, onReorder,
 }: Props) {
+  const colorOf = (sourceId: string) => {
+    const i = media.findIndex((m) => m.id === sourceId);
+    return SOURCE_COLORS[(i < 0 ? 0 : i) % SOURCE_COLORS.length];
+  };
   const laneRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
 
@@ -96,7 +103,7 @@ export default function Timeline({
             <div
               key={c.id}
               className={`tl-clip clip-int ${c.id === selectedId ? "sel" : ""}`}
-              style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
+              style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%`, background: colorOf(c.sourceId) }}
               onMouseDown={(e) => onDown(e, c, "move")}
               title={`${c.start.toFixed(1)}–${c.end.toFixed(1)}s`}
             >

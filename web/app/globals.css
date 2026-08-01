@@ -103,6 +103,23 @@ a { color: inherit; text-decoration: none; }
 .tl-handle:hover { background: rgba(255,255,255,.55); }
 .tl-placeholder { background: var(--card); border: 1px dashed var(--border); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
+/* ספריית מדיה */
+.media-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px; }
+.media-chip { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; white-space: nowrap; flex: none; }
+.media-chip.main { border-color: var(--accent); }
+.mc-kind { font-size: 13px; }
+.mc-name { color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+
+/* צ'אט: העלאה, ציטוט, פלט */
+.attach { background: var(--card-2); border: 1px solid var(--border); color: var(--text); border-radius: 10px; width: 40px; min-height: 42px; cursor: pointer; font-size: 16px; }
+.attach:hover { border-color: var(--accent); }
+.mention-row { display: flex; gap: 6px; overflow-x: auto; padding: 6px 12px 0; }
+.mention-chip { flex: none; background: var(--card-2); border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 3px 10px; font-size: 11.5px; cursor: pointer; white-space: nowrap; }
+.mention-chip:hover { border-color: var(--accent); }
+.output-card { align-self: stretch; background: var(--card-2); border: 1px solid var(--good); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.output-video { width: 100%; border-radius: 8px; background: #000; max-height: 200px; }
+.output-card .btn { text-align: center; text-decoration: none; }
+
 .manual { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; }
 .manual summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .manual textarea { min-height: 64px; margin-top: 10px; }

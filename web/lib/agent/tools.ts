@@ -4,18 +4,29 @@
 import { Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import {
-  Clip, clipDur, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  addClip, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { ToolSchema } from "./types";
 
 export interface AgentContext {
-  file: File | null;
-  duration: number;
+  media: MediaAsset[];
+  duration: number; // משך המקור הראשי
   words: Word[] | null;
   clips: Clip[] | null;
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
+  // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
+  onOutput?: (blob: Blob, name: string, kind: "video" | "srt") => void;
+}
+
+// המקור הראשי (הסרטון הראשון) — עליו מתמללים וחותכים לפי סקריפט כברירת מחדל.
+const mainVideo = (ctx: AgentContext) => firstVideo(ctx.media);
+// איתור מקור לפי שם/אינדקס (1-based) שהסוכן מספק.
+function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | undefined {
+  if (typeof ref === "number") return ctx.media[ref - 1];
+  const s = String(ref).replace(/^@/, "").trim().toLowerCase();
+  return ctx.media.find((m) => m.name.toLowerCase().includes(s)) || ctx.media[(parseInt(s, 10) || 0) - 1];
 }
 
 export type Reporter = (status: string) => void;
@@ -63,20 +74,26 @@ const clipsSummary = (clips: Clip[]) => `${clips.length} קליפים, משך ס
 export const TOOLS: ToolMeta[] = [
   {
     name: "get_video_info", label: "בדיקת אורך", color: "#3b82f6", icon: "⏱️",
-    schema: { name: "get_video_info", description: "מחזיר את אורך הסרטון בשניות.", parameters: { type: "object", properties: {} } },
-    run: async (_a, ctx) => ctx.file ? `אורך הסרטון: ${ctx.duration.toFixed(2)}s.` : "שגיאה: לא נטען סרטון.",
+    schema: { name: "get_video_info", description: "מחזיר את אורך הסרטון הראשי בשניות.", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => { const m = mainVideo(ctx); return m ? `אורך "${m.name}": ${m.duration.toFixed(2)}s.` : "שגיאה: לא נטען סרטון."; },
+  },
+  {
+    name: "list_media", label: "רשימת מדיה", color: "#64748b", icon: "🗂️",
+    schema: { name: "list_media", description: "מחזיר את כל קבצי המדיה שנטענו (אינדקס 1-based, שם, סוג, משך).", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => ctx.media.length ? ctx.media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n") : "אין מדיה טעונה.",
   },
   {
     name: "transcribe_video", label: "תמלול הסרטון", color: "#8b5cf6", icon: "📝",
     schema: { name: "transcribe_video", description: "מתמלל ובונה מפת נקודות-ציון (מילים+זמנים). חובה פעם אחת לפני פעולות מבוססות-טקסט.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx, report) => {
-      if (!ctx.file) return "שגיאה: לא נטען סרטון.";
+      const m = mainVideo(ctx);
+      if (!m) return "שגיאה: לא נטען סרטון.";
       if (ctx.words) return `כבר תומלל (${ctx.words.length} מילים).`;
-      const key = txKey(ctx.file); const cached = txRead(key);
+      const key = txKey(m.file); const cached = txRead(key);
       if (cached) { ctx.words = cached; if (!ctx.duration) ctx.duration = cached[cached.length - 1].end + 0.2; return `נטען תמלול שמור (${cached.length} מילים) — לא תומלל מחדש.`; }
       const { extractAudio } = await import("@/lib/ffmpeg");
       report("מחלץ אודיו…");
-      const audio = await extractAudio(ctx.file);
+      const audio = await extractAudio(m.file);
       report("שולח לתמלול (Groq)…");
       const fd = new FormData();
       fd.append("file", audio, "audio.mp3"); fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
@@ -109,8 +126,10 @@ export const TOOLS: ToolMeta[] = [
     },
     run: async (a, ctx, report) => {
       if (!ctx.words) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
+      const m = mainVideo(ctx);
+      if (!m) return "שגיאה: אין סרטון ראשי.";
       report("מיישר סקריפט ובונה קליפים לפי הסדר…");
-      const clips = scriptToClips(ctx.words, String(a.script || ""));
+      const clips = scriptToClips(ctx.words, String(a.script || ""), m.id);
       if (!clips.length) return "לא נמצאו התאמות — ודא שהטקסט תואם לנאמר בסרטון.";
       ctx.clips = clips;
       return `נבנה: ${clipsSummary(clips)} (בסדר הטקסט, כולל חזרות). הרץ render_video לייצוא.`;
@@ -120,14 +139,33 @@ export const TOOLS: ToolMeta[] = [
     name: "remove_segments", label: "הסרת קטעים", color: "#f59e0b", icon: "✂️",
     schema: { name: "remove_segments", description: "מסיר טווחי-זמן מהמקור ובונה EDL מהשאר (בסדר המקורי).", parameters: { type: "object", properties: { segments: { type: "array", items: { type: "object", properties: { start: { type: "number" }, end: { type: "number" } }, required: ["start", "end"] } } }, required: ["segments"] } },
     run: async (a, ctx) => {
-      if (!ctx.duration) return "שגיאה: לא ידוע אורך הסרטון.";
-      const segs = (a.segments || []).map((s: any) => ({ start: Math.max(0, +s.start), end: Math.min(ctx.duration, +s.end) })).filter((s: any) => s.end > s.start).sort((x: any, y: any) => x.start - y.start);
+      const m = mainVideo(ctx);
+      if (!m) return "שגיאה: לא נטען סרטון.";
+      const dur = ctx.duration || m.duration;
+      const segs = (a.segments || []).map((s: any) => ({ start: Math.max(0, +s.start), end: Math.min(dur, +s.end) })).filter((s: any) => s.end > s.start).sort((x: any, y: any) => x.start - y.start);
       const clips: Clip[] = []; let prev = 0;
-      for (const s of segs) { if (s.start - prev > 0.05) clips.push({ id: uid(), start: prev, end: s.start }); prev = Math.max(prev, s.end); }
-      if (ctx.duration - prev > 0.05) clips.push({ id: uid(), start: prev, end: ctx.duration });
+      for (const s of segs) { if (s.start - prev > 0.05) clips.push({ id: uid(), sourceId: m.id, start: prev, end: s.start }); prev = Math.max(prev, s.end); }
+      if (dur - prev > 0.05) clips.push({ id: uid(), sourceId: m.id, start: prev, end: dur });
       if (!clips.length) return "לא נשאר תוכן.";
       ctx.clips = clips;
       return `הוסרו ${segs.length} קטעים. ${clipsSummary(clips)}`;
+    },
+  },
+  {
+    name: "add_clip", label: "הוספת קליפ", color: "#10b981", icon: "➕",
+    schema: {
+      name: "add_clip",
+      description: "מוסיף קליפ מכל מקור-מדיה (לפי שם או אינדקס) לסוף הרצף — כך מרכיבים סרטון מכמה סרטונים.",
+      parameters: { type: "object", properties: { source: { type: "string", description: "שם המקור או אינדקס (1-based)" }, start: { type: "number" }, end: { type: "number" }, at_index: { type: "number", description: "מיקום להוספה (1-based, אופציונלי)" } }, required: ["source"] },
+    },
+    run: async (a, ctx) => {
+      const asset = resolveAsset(ctx, a.source);
+      if (!asset) return `לא נמצא מקור "${a.source}". השתמש ב-list_media.`;
+      const start = a.start != null ? Math.max(0, +a.start) : 0;
+      const end = a.end != null ? Math.min(asset.duration, +a.end) : asset.duration;
+      const clip: Clip = { id: uid(), sourceId: asset.id, start, end: Math.max(start + 0.1, end) };
+      ctx.clips = addClip(ctx.clips || [], clip, a.at_index != null ? (a.at_index | 0) - 1 : undefined);
+      return `נוסף קליפ מ-"${asset.name}". ${clipsSummary(ctx.clips)}`;
     },
   },
   {
@@ -182,15 +220,30 @@ export const TOOLS: ToolMeta[] = [
     name: "render_video", label: "ייצוא הווידאו", color: "#22c55e", icon: "🎬",
     schema: { name: "render_video", description: "מרנדר ומייצא את הסרטון הסופי לפי הקליפים (בסדר). הרץ בסוף.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx, report) => {
-      if (!ctx.file) return "שגיאה: לא נטען סרטון.";
+      if (!ctx.media.length) return "שגיאה: לא נטען סרטון.";
       const err = requireClips(ctx); if (err) return err;
-      const { renderCut } = await import("@/lib/ffmpeg");
+      const { renderEDL } = await import("@/lib/ffmpeg");
       report("מרנדר בדפדפן…");
-      const blob = await renderCut(ctx.file, ctx.clips!, (r) => report(`מרנדר… ${Math.round(r * 100)}%`));
+      const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.round(r * 100)}%`));
       ctx.lastRender = blob;
-      const base = ctx.file.name.replace(/\.[^.]+$/, "");
-      download(blob, `${base}_edited.mp4`);
-      return `הייצוא הושלם — ${base}_edited.mp4 הורד.`;
+      const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
+      ctx.onOutput?.(blob, `${base}_edited.mp4`, "video");
+      return `הייצוא הושלם — קישור להורדה ותצוגה מקדימה בצ'אט.`;
+    },
+  },
+  {
+    name: "generate_subtitles", label: "יצירת כתוביות", color: "#8b5cf6", icon: "💬",
+    schema: { name: "generate_subtitles", description: "מייצר קובץ כתוביות SRT (לא צרוב לסרטון) מהתמלול והקליפים — להורדה ולשימוש ב-CapCut (שינוי גופן/מיקום שם).", parameters: { type: "object", properties: { max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" } } } },
+    run: async (a, ctx) => {
+      if (!ctx.words) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
+      const main = mainVideo(ctx);
+      const clips = ctx.clips?.length ? ctx.clips : main ? [{ id: uid(), sourceId: main.id, start: 0, end: ctx.duration || main.duration }] : [];
+      if (!clips.length) return "אין תוכן ליצירת כתוביות.";
+      const { edlToSrt } = await import("@/lib/editor/subtitlesEdl");
+      const srt = edlToSrt(ctx.words, clips, (a.max_chars | 0) || 42);
+      const name = (main?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt";
+      ctx.onOutput?.(new Blob([srt], { type: "text/plain;charset=utf-8" }), name, "srt");
+      return `נוצרו כתוביות SRT — קישור להורדה בצ'אט (לא צרוב, מתאים ל-CapCut).`;
     },
   },
   {
@@ -207,13 +260,16 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 
 מודל: הסרטון הסופי הוא רשימת "קליפים" מסודרת (EDL). כל קליפ מצביע על טווח במקור. הסדר ברשימה = הסדר בסרטון הסופי. אפשר לסדר-מחדש ולחזור על קטע.
 
+מדיה: יכולים להיות כמה קבצים (list_media). הסרטון הראשון הוא "הראשי" — עליו חלים תמלול וחיתוך-לפי-סקריפט. אפשר להרכיב סרטון מכמה מקורות בעזרת add_clip (לפי שם או אינדקס; המשתמש עשוי לצטט מקור עם @שם).
+
 עקרונות:
 - ענה תמיד בעברית, קצר.
 - העדף כלים קיימים: אם המשתמש נותן טקסט שאמור להישאר — השתמש ב-keep_by_script. הוא בונה את הקליפים *בדיוק בסדר של הטקסט*, כולל חזרות. אם המשתמש נתן טקסט ואז הוסיף עוד טקסט (גם אם מההתחלה) — הרץ keep_by_script שוב עם כל הטקסט המעודכן בסדר הנכון.
 - חובה transcribe_video פעם אחת לפני פעולות מבוססות-טקסט (נשמר, לא מתמללים שוב).
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
 - עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
-- render_video רק בסוף / כשמבקשים.
+- render_video רק בסוף / כשמבקשים. התוצר מופיע בצ'אט כקישור+תצוגה מקדימה.
+- כתוביות: generate_subtitles מייצר SRT לא-צרוב (לשימוש ב-CapCut). המשתמש יכול לבקש אורך שורה או תוכן — קבל חופש לסדר את הכתוביות בהיגיון.
 - הבן מהשפה הטבעית איך הסרטון הסופי צריך להיראות, ותכנן בעצמך את סדר הכלים.
 - אם חסר קובץ/מידע (התבקשת להוסיף תמונה/שמע שלא סופק) — בקש ב-ask_user, אל תמציא.
 

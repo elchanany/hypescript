@@ -44,12 +44,20 @@ export class AgentRunner {
           this.events.onAssistant("⏹ המשימה נעצרה.");
           break;
         }
+        const media = this.ctx.media || [];
+        const mediaNote = media.length
+          ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n")
+          : "עדיין לא נטענה מדיה.";
         const resp = await fetch("/api/agent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             provider: this.provider,
-            messages: [{ role: "system", content: SYSTEM_PROMPT }, ...this.history],
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "system", content: mediaNote },
+              ...this.history,
+            ],
             tools: TOOL_SCHEMAS,
           }),
         });

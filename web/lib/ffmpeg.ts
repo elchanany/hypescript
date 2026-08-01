@@ -1,11 +1,11 @@
-// עטיפה ל-ffmpeg.wasm — כל עיבוד הווידאו קורה בתוך הדפדפן, מקומית.
-// הווידאו לא נשלח לשום שרת; רק האודיו הדחוס נשלח לתמלול.
+// עטיפה ל-ffmpeg.wasm — כל עיבוד הווידאו קורה בדפדפן, מקומית.
+// תומך בכמה מקורות: מרנדר EDL שמורכב מקליפים מכמה סרטונים.
 
 "use client";
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { KeepInterval } from "./models";
+import { Clip, MediaAsset, mediaById } from "./editor/model";
 
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
@@ -17,7 +17,6 @@ export type LogFn = (msg: string) => void;
 export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
   if (ffmpeg && (ffmpeg as any).loaded) return ffmpeg;
   if (loadPromise) return loadPromise;
-
   loadPromise = (async () => {
     const inst = new FFmpeg();
     if (onLog) inst.on("log", ({ message }) => onLog(message));
@@ -36,7 +35,7 @@ function extOf(name: string): string {
   return m ? m[1] : "mp4";
 }
 
-// מחלץ אודיו mono דחוס (mp3 48k) לתמלול. מחזיר Blob קטן.
+// מחלץ אודיו mono דחוס לתמלול. מחזיר Blob קטן.
 export async function extractAudio(file: File, onProgress?: (r: number) => void): Promise<Blob> {
   const ff = await getFFmpeg();
   const ext = extOf(file.name);
@@ -49,32 +48,52 @@ export async function extractAudio(file: File, onProgress?: (r: number) => void)
   return new Blob([data as unknown as BlobPart], { type: "audio/mpeg" });
 }
 
-// חותך את קטעי ה-keep ומרכיב מחדש (trim+concat, re-encode). מחזיר Blob של mp4.
-export async function renderCut(
-  file: File,
-  keeps: KeepInterval[],
+export interface RenderTarget { w: number; h: number; fps: number; }
+const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
+
+// מרנדר EDL רב-מקורי: כל קליפ נחתך מהמקור שלו, מנורמל ל-target, ומשורשר בסדר.
+// כרגע נתמכים קליפי וידאו (כמה סרטונים). תמונות/שמע כשכבה — פאזה הבאה.
+export async function renderEDL(
+  media: MediaAsset[],
+  clips: Clip[],
   onProgress?: (r: number) => void,
+  target: RenderTarget = DEFAULT_TARGET,
 ): Promise<Blob> {
   const ff = await getFFmpeg();
-  const ext = extOf(file.name);
-  const input = `in.${ext}`;
-  // ודא שהקובץ קיים (אולי כבר נכתב ב-extractAudio, אבל לא מובטח).
-  await ff.writeFile(input, await fetchFile(file));
+  const videoClips = clips.filter((c) => mediaById(media, c.sourceId)?.kind === "video");
+  if (!videoClips.length) throw new Error("אין קליפי וידאו לרינדור (תמונה/שמע יתווספו בהמשך).");
 
+  // כותבים כל מקור-וידאו בשימוש פעם אחת, וממפים sourceId -> אינדקס קלט.
+  const usedIds = Array.from(new Set(videoClips.map((c) => c.sourceId)));
+  const inputArgs: string[] = [];
+  const inputIndex = new Map<string, number>();
+  for (let i = 0; i < usedIds.length; i++) {
+    const asset = mediaById(media, usedIds[i])!;
+    const name = `src${i}.${extOf(asset.file.name)}`;
+    await ff.writeFile(name, await fetchFile(asset.file));
+    inputArgs.push("-i", name);
+    inputIndex.set(usedIds[i], i);
+  }
+
+  const { w, h, fps } = target;
   const parts: string[] = [];
   const labels: string[] = [];
-  keeps.forEach((iv, i) => {
+  videoClips.forEach((c, i) => {
+    const idx = inputIndex.get(c.sourceId)!;
     parts.push(
-      `[0:v]trim=start=${iv.start.toFixed(3)}:end=${iv.end.toFixed(3)},setpts=PTS-STARTPTS[v${i}];` +
-        `[0:a]atrim=start=${iv.start.toFixed(3)}:end=${iv.end.toFixed(3)},asetpts=PTS-STARTPTS[a${i}];`,
+      `[${idx}:v]trim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},setpts=PTS-STARTPTS,` +
+        `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,` +
+        `setsar=1,fps=${fps},format=yuv420p[v${i}];` +
+        `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,` +
+        `aformat=sample_rates=44100:channel_layouts=stereo[a${i}];`,
     );
     labels.push(`[v${i}][a${i}]`);
   });
-  const filter = parts.join("") + `${labels.join("")}concat=n=${keeps.length}:v=1:a=1[outv][outa]`;
+  const filter = parts.join("") + `${labels.join("")}concat=n=${videoClips.length}:v=1:a=1[outv][outa]`;
 
   if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
   await ff.exec([
-    "-i", input,
+    ...inputArgs,
     "-filter_complex", filter,
     "-map", "[outv]", "-map", "[outa]",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
