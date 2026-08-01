@@ -109,9 +109,16 @@ export const TOOLS: ToolMeta[] = [
       report("שולח לתמלול (Groq)…");
       const fd = new FormData();
       fd.append("file", audio, "audio.mp3"); fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
-      const resp = await fetch("/api/transcribe", { method: "POST", body: fd });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 180000);
+      let data: any;
+      try {
+        const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal });
+        data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
+      } catch (e: any) {
+        throw new Error(e?.name === "AbortError" ? "התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר." : (e?.message || "התמלול נכשל."));
+      } finally { clearTimeout(to); }
       const words: Word[] = (data.words || []).filter((w: any) => w.start != null && w.end != null && (w.word || w.text)).map((w: any) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
       if (!words.length) throw new Error("התמלול לא החזיר מילים.");
       ctx.transcripts[asset.id] = words;

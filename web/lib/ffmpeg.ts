@@ -7,13 +7,19 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Clip, MediaAsset, clipDur, mediaById } from "./editor/model";
 
-const CORE_ST = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-const CORE_MT = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd";
+const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
 let ffmpeg: FFmpeg | null = null;
 let loadPromise: Promise<FFmpeg> | null = null;
 
 export type LogFn = (msg: string) => void;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${label} נתקע (timeout ${ms / 1000}s)`)), ms)),
+  ]);
+}
 
 export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
   if (ffmpeg && (ffmpeg as any).loaded) return ffmpeg;
@@ -21,23 +27,15 @@ export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
   loadPromise = (async () => {
     const inst = new FFmpeg();
     if (onLog) inst.on("log", ({ message }) => onLog(message));
-    // רב-תהליכי (מהיר) כשהדף מבודד cross-origin; אחרת חד-תהליכי כ-fallback.
-    const mt = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
-    const base = mt ? CORE_MT : CORE_ST;
-    const cfg: any = {
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
-    };
-    if (mt) cfg.workerURL = await toBlobURL(`${base}/ffmpeg-core.worker.js`, "text/javascript");
-    try {
-      await inst.load(cfg);
-    } catch {
-      // אם הרב-תהליכי נכשל — נופלים לחד-תהליכי.
-      await inst.load({
-        coreURL: await toBlobURL(`${CORE_ST}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${CORE_ST}/ffmpeg-core.wasm`, "application/wasm"),
-      });
-    }
+    // ליבה חד-תהליכית — יציבה. עם timeout כדי שלא ייתקע לנצח אם הטעינה נכשלת.
+    await withTimeout(
+      inst.load({
+        coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+      }),
+      90000,
+      "טעינת מנוע העיבוד",
+    ).catch((e) => { loadPromise = null; throw e; });
     ffmpeg = inst;
     return inst;
   })();
