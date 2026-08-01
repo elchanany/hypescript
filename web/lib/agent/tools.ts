@@ -140,6 +140,17 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "get_transcript", label: "קריאת תמלול", color: "#14b8a6", icon: "📄",
+    schema: { name: "get_transcript", description: "מחזיר את טקסט התמלול המלא של סרטון — כדי להבין את התוכן ולהחליט על סדר/חיתוך. השתמש בזה (ולא ב-find_in_transcript) כדי לקרוא מה נאמר.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
+    run: async (a, ctx) => {
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      if (!asset) return "אין סרטון.";
+      const words = transcriptOf(ctx, asset);
+      if (!words) return `"${asset.name}" עדיין לא תומלל.`;
+      return `תמלול "${asset.name}" (${words.length} מילים):\n${words.map((w) => w.text).join(" ")}`;
+    },
+  },
+  {
     name: "keep_by_script", label: "חיתוך לפי סקריפט", color: "#f59e0b", icon: "✂️",
     schema: {
       name: "keep_by_script",
@@ -342,6 +353,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - ענה תמיד בעברית, קצר.
 - העדף כלים קיימים: אם המשתמש נותן טקסט שאמור להישאר — השתמש ב-keep_by_script. הוא בונה את הקליפים *בדיוק בסדר של הטקסט*, כולל חזרות. אם המשתמש נתן טקסט ואז הוסיף עוד טקסט (גם אם מההתחלה) — הרץ keep_by_script שוב עם כל הטקסט המעודכן בסדר הנכון.
 - חובה transcribe_video פעם אחת לפני פעולות מבוססות-טקסט (נשמר, לא מתמללים שוב).
+- כדי להבין מה נאמר בסרטון — get_transcript (קורא את כל הטקסט). find_in_transcript הוא רק לאיתור מיקום של ביטוי ספציפי, לא לקריאת תוכן.
 - הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
 - עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
 - render_video רק בסוף / כשמבקשים. התוצר מופיע בצ'אט כקישור+תצוגה מקדימה.

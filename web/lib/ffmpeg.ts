@@ -5,7 +5,7 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { Clip, MediaAsset, clipDur, mediaById } from "./editor/model";
+import { Clip, MediaAsset, clipDur, mediaById, uid } from "./editor/model";
 
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
@@ -47,17 +47,29 @@ function extOf(name: string): string {
   return m ? m[1] : "mp4";
 }
 
+// ffmpeg.wasm הוא מופע יחיד עם מערכת-קבצים אחת — אסור להריץ שתי פעולות במקביל
+// (הסוכן קורא לכלים במקביל -> "FS error"). תור שמסדר את כל פעולות ה-ffmpeg.
+let ffQueue: Promise<unknown> = Promise.resolve();
+function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const result = ffQueue.then(fn, fn);
+  ffQueue = result.catch(() => {});
+  return result;
+}
+
 // מחלץ אודיו mono דחוס לתמלול. מחזיר Blob קטן.
 export async function extractAudio(file: File, onProgress?: (r: number) => void): Promise<Blob> {
-  const ff = await getFFmpeg();
-  const ext = extOf(file.name);
-  const input = `in.${ext}`;
-  await ff.writeFile(input, await fetchFile(file));
-  if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
-  await ff.exec(["-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", "audio.mp3"]);
-  const data = (await ff.readFile("audio.mp3")) as Uint8Array;
-  await ff.deleteFile("audio.mp3").catch(() => {});
-  return new Blob([data as unknown as BlobPart], { type: "audio/mpeg" });
+  return runExclusive(async () => {
+    const ff = await getFFmpeg();
+    const input = `in_${uid()}.${extOf(file.name)}`;
+    const out = `au_${uid()}.mp3`;
+    await ff.writeFile(input, await fetchFile(file));
+    if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
+    await ff.exec(["-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out]);
+    const data = (await ff.readFile(out)) as Uint8Array;
+    await ff.deleteFile(out).catch(() => {});
+    await ff.deleteFile(input).catch(() => {});
+    return new Blob([data as unknown as BlobPart], { type: "audio/mpeg" });
+  });
 }
 
 export interface RenderTarget { w: number; h: number; fps: number; }
@@ -71,6 +83,7 @@ export async function renderEDL(
   onProgress?: (r: number) => void,
   target: RenderTarget = DEFAULT_TARGET,
 ): Promise<Blob> {
+  return runExclusive(async () => {
   const ff = await getFFmpeg();
   const usable = clips.filter((c) => {
     const k = mediaById(media, c.sourceId)?.kind;
@@ -130,4 +143,5 @@ export async function renderEDL(
   const data = (await ff.readFile("out.mp4")) as Uint8Array;
   await ff.deleteFile("out.mp4").catch(() => {});
   return new Blob([data as unknown as BlobPart], { type: "video/mp4" });
+  });
 }
