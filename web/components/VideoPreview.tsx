@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, totalDur } from "@/lib/editor/model";
 
 export interface PreviewHandle { seek: (assembled: number) => void; }
 
@@ -10,6 +10,7 @@ interface Props {
   clips: Clip[] | null;
   onTime: (assembled: number) => void;
   onCopyPosition?: (assembled: number) => void;
+  audioMuted?: boolean;
 }
 
 const fmtT = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -20,7 +21,7 @@ function download(blob: Blob, name: string) {
 }
 
 // תצוגה מקדימה רב-מקורית עם סרגל נגן (seek), "העתק מיקום" וצילום פריים.
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, onTime, onCopyPosition }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, onTime, onCopyPosition, audioMuted }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const idx = useRef(0);
   const loaded = useRef<string | null>(null);
@@ -33,6 +34,9 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const edl = clips && clips.length ? clips : null;
   const byId = (id: string) => media.find((m) => m.id === id);
   const firstVid = media.find((m) => m.kind === "video");
+  const playable = (c: Clip) => byId(c.sourceId)?.kind === "video" && clipEnabled(c);
+
+  useEffect(() => { if (videoRef.current) videoRef.current.muted = !!audioMuted; }, [audioMuted]);
   const total = edl ? totalDur(edl) : dur;
 
   const ensure = (sourceId: string, tt: number, play: boolean) => {
@@ -69,7 +73,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     let i = idx.current;
     if (i >= edl.length) { v.pause(); return; }
     if (v.currentTime >= edl[i].end - 0.03) {
-      do { i++; } while (i < edl.length && byId(edl[i].sourceId)?.kind !== "video");
+      do { i++; } while (i < edl.length && !playable(edl[i]));
       idx.current = i;
       if (i >= edl.length) { v.pause(); setT(total); onTime(total); return; }
       ensure(edl[i].sourceId, edl[i].start + 0.001, true);

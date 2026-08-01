@@ -93,21 +93,45 @@ a { color: inherit; text-decoration: none; }
 .editor-status { display: flex; align-items: center; gap: 12px; font-size: 12.5px; }
 .editor-status .progress { flex: 1; margin: 0; }
 
-/* ציר-זמן (LTR פנימי) */
-.timeline { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; }
-.tl-ruler { position: relative; height: 18px; margin-left: 66px; border-bottom: 1px solid var(--border); }
+/* ציר-זמן רב-רצועתי (LTR פנימי) */
+.timeline { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 8px; overflow-x: auto; }
+.tl-row { display: flex; align-items: stretch; }
+.tl-row + .tl-row { margin-top: 5px; }
+.tl-ruler-row { height: 20px; margin-bottom: 4px; }
+.tl-corner { width: 132px; flex: none; }
+.tl-ruler { position: relative; flex: 1; border-bottom: 1px solid var(--border); cursor: pointer; }
 .tl-tick { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--muted); }
-.tl-track { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.tl-label { width: 58px; flex: none; font-size: 12px; direction: rtl; }
-.tl-lane { position: relative; flex: 1; height: 40px; background: var(--bg-2); border-radius: 8px; overflow: hidden; cursor: pointer; }
+.tl-header { width: 132px; flex: none; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; direction: rtl; }
+.th-name { font-size: 12px; font-weight: 600; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th-ctrls { display: flex; gap: 2px; }
+.th-btn { width: 22px; height: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 5px; cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
+.th-btn:hover { border-color: var(--accent); }
+.th-btn.on { background: var(--accent); border-color: var(--accent); }
+.tl-lane { position: relative; flex: 1; margin-inline-start: 6px; background: var(--bg-2); border-radius: 8px; overflow: hidden; cursor: pointer; }
+.tl-lane.muted { opacity: .45; }
 .tl-clip { position: absolute; top: 4px; bottom: 4px; border-radius: 6px; opacity: .9; }
 .tl-clip.audio { background: #1f8a52; opacity: .55; }
-.tl-cue { position: absolute; top: 10px; bottom: 10px; background: #a855f7; border-radius: 3px; opacity: .8; }
+.tl-clip.disabled { opacity: .3; filter: grayscale(1); }
+.tl-cue { position: absolute; top: 6px; bottom: 6px; background: #a855f7; border-radius: 3px; opacity: .8; }
 .tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #ef4444; pointer-events: none; z-index: 5; box-shadow: 0 0 6px rgba(239,83,80,.7); }
 
 /* קליפ אינטראקטיבי */
 .clip-int { background: linear-gradient(180deg, #3b82f6, #2563eb); cursor: grab; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); user-select: none; }
 .clip-int:active { cursor: grabbing; }
+.clip-int.locked { cursor: default; }
+
+/* Inspector */
+.inspector-pane { direction: rtl; flex: none; height: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow-y: auto; }
+.inspector { padding: 12px 14px; }
+.insp-head { font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.insp-section { border-top: 1px solid var(--border); padding: 10px 0; }
+.insp-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin: 4px 0; gap: 8px; }
+.insp-row span { color: var(--muted); }
+.insp-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62%; }
+.insp-field { display: block; margin: 8px 0; }
+.insp-field > span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.insp-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; }
+.mono { font-family: Consolas, "Courier New", monospace; }
 .clip-int.sel { outline: 2px solid #fff; outline-offset: -1px; box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(0,0,0,.4); z-index: 4; }
 .tl-clip-label { font-size: 11px; color: #fff; font-weight: 700; pointer-events: none; opacity: .9; }
 .tl-handle { position: absolute; top: 0; bottom: 0; width: 9px; cursor: ew-resize; background: rgba(255,255,255,.25); }

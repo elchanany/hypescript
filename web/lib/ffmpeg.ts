@@ -5,7 +5,7 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { Clip, MediaAsset, clipDur, mediaById, uid } from "./editor/model";
+import { Clip, MediaAsset, clipDur, clipEnabled, clipVolume, mediaById, uid } from "./editor/model";
 
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
@@ -92,15 +92,20 @@ const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
 
 // מרנדר EDL רב-מקורי: כל קליפ נחתך מהמקור שלו, מנורמל ל-target, ומשורשר בסדר.
 // כרגע נתמכים קליפי וידאו (כמה סרטונים). תמונות/שמע כשכבה — פאזה הבאה.
+export interface RenderOpts { audioMuted?: boolean; }
+
 export async function renderEDL(
   media: MediaAsset[],
   clips: Clip[],
   onProgress?: (r: number) => void,
   target: RenderTarget = DEFAULT_TARGET,
+  opts: RenderOpts = {},
 ): Promise<Blob> {
   return runExclusive(async () => {
   const ff = await getFFmpeg();
+  const muteGain = opts.audioMuted ? 0 : 1;
   const usable = clips.filter((c) => {
+    if (!clipEnabled(c)) return false; // קליפ מושבת — מדולג
     const k = mediaById(media, c.sourceId)?.kind;
     return k === "video" || k === "image";
   });
@@ -130,9 +135,10 @@ export async function renderEDL(
     if (asset.kind === "video") {
       let idx = videoInput.get(asset.id);
       if (idx === undefined) { const nm = await ensureFile(asset); idx = ic++; inputArgs.push("-i", nm); videoInput.set(asset.id, idx); }
+      const vol = (clipVolume(c) * muteGain).toFixed(3);
       parts.push(
         `[${idx}:v]trim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},setpts=PTS-STARTPTS,${scalePad}[v${n}];` +
-          `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo[a${n}];`,
+          `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo,volume=${vol}[a${n}];`,
       );
     } else {
       // תמונה: קלט לולאה בזמן הקליפ + אודיו שקט

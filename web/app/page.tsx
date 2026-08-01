@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Word } from "@/lib/models";
 import {
-  Clip, MediaAsset, MediaKind, assembledToSource, firstVideo, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, assembledToSource, firstVideo, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
+import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
+import { migrateState } from "@/lib/editor/migrate";
+import Inspector from "@/components/Inspector";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
@@ -34,7 +37,12 @@ function probeDuration(file: File, kind: MediaKind): Promise<number> {
 export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [words, setWords] = useState<Word[] | null>(null);
-  const { clips, subs, setClips, setSubs, setProject, reset: resetEditor, undo, redo, canUndo, canRedo } = useEditor();
+  const {
+    clips, subs, tracks, setClips, setSubs, setProject, updateClip,
+    renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack,
+    beginTransaction, setClipsLive, commitTransaction,
+    reset: resetEditor, undo, redo, canUndo, canRedo,
+  } = useEditor();
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [script, setScript] = useState("");
@@ -47,6 +55,8 @@ export default function EditorPage() {
   const [chatOpen, setChatOpen] = useState(true);
   const [chatWidth, setChatWidth] = useState(400);
   const chatWidthRef = useRef(400); chatWidthRef.current = chatWidth;
+  const [inspectorWidth, setInspectorWidth] = useState(320);
+  const inspWRef = useRef(320); inspWRef.current = inspectorWidth;
 
   const fileInput = useRef<HTMLInputElement>(null);
   const srtInput = useRef<HTMLInputElement>(null);
@@ -63,7 +73,17 @@ export default function EditorPage() {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(640, w));
+    const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 240) setInspectorWidth(Math.min(480, iw));
   }, []);
+
+  const startResizeInspector = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX; const startW = inspWRef.current;
+    const onMove = (ev: MouseEvent) => setInspectorWidth(Math.max(240, Math.min(480, startW + (startX - ev.clientX))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_inspw", String(inspWRef.current)); document.body.style.userSelect = ""; };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  };
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -91,9 +111,10 @@ export default function EditorPage() {
     (async () => {
       const sm = await kvGet<any[]>(pk(projectId, "media"));
       setMedia((prev) => { prev.forEach((m) => URL.revokeObjectURL(m.url)); return sm?.length ? sm.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })) : []; });
-      const st = await kvGet<any>(pk(projectId, "state"));
-      setWords(st?.words ?? null);
-      resetEditor({ clips: st?.clips ?? null, subs: st?.subs ?? null });
+      const raw = await kvGet<any>(pk(projectId, "state"));
+      setWords(raw?.words ?? null);
+      const st = migrateState(raw);
+      resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks });
       setCur(0); setSelectedId(null);
       setRestored(true);
     })();
@@ -107,9 +128,9 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (!restored || !projectId) return;
-    const t = setTimeout(() => { kvSet(pk(projectId, "state"), { words, clips, subs }); touchProject(projectId); }, 500);
+    const t = setTimeout(() => { kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks }); touchProject(projectId); }, 500);
     return () => clearTimeout(t);
-  }, [words, clips, subs, restored, projectId]);
+  }, [words, clips, subs, tracks, restored, projectId]);
 
   const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
   const newProject = async () => {
@@ -197,7 +218,7 @@ export default function EditorPage() {
     try {
       const { renderEDL } = await import("@/lib/ffmpeg");
       setPhase("מרנדר בדפדפן…");
-      const blob = await renderEDL(media, clips, (r) => setProgress(Math.min(1, r)));
+      const blob = await renderEDL(media, clips, (r) => setProgress(Math.min(1, r)), undefined, { audioMuted: audioMuted(tracks) });
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
       setPhase("הרינדור הושלם ✓");
     } catch (e: any) { setError(e?.message || String(e)); }
@@ -222,11 +243,15 @@ export default function EditorPage() {
   const delSub = (id: string) => setSubs((ss) => ss?.filter((s) => s.id !== id) || ss);
 
   const splitAtPlayhead = () => {
-    if (!clips?.length) return;
+    if (!clips?.length || videoLocked(tracks)) return;
     const { index, source } = assembledToSource(clips, cur);
     if (index >= 0) setClips(splitClip(clips, clips[index].id, source));
   };
-  const deleteSel = () => { if (clips && selectedId) { setClips(removeClip(clips, selectedId)); setSelectedId(null); } };
+  const deleteSel = () => { if (clips && selectedId && !videoLocked(tracks)) { setClips(removeClip(clips, selectedId)); setSelectedId(null); } };
+  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [36, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
+
+  const selectedClip = clips?.find((c) => c.id === selectedId) || null;
+  const selectedIndex = selectedClip ? clips!.indexOf(selectedClip) : -1;
 
   // קיצורי מקלדת (לא פעילים בזמן הקלדה בשדה טקסט).
   useEffect(() => {
@@ -251,7 +276,7 @@ export default function EditorPage() {
       <section className="editor-pane">
         {!groqOk && <div className="banner err">GROQ_API_KEY לא מוגדר ב-Vercel. ראה <a href="/settings">הגדרות</a>.</div>}
 
-        <VideoPreview ref={previewRef} media={media} clips={clips} onTime={setCur} />
+        <VideoPreview ref={previewRef} media={media} clips={clips} onTime={setCur} audioMuted={audioMuted(tracks)} />
 
         {media.length > 0 && (
           <div className="media-strip">
@@ -304,10 +329,14 @@ export default function EditorPage() {
 
         {clips ? (
           <Timeline
-            media={media} clips={clips} subs={subs} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
+            media={media} clips={clips} subs={subs} tracks={tracks} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
             onSeek={seek} onSelect={setSelectedId}
-            onTrim={(id, s, e) => setClips((c) => (c ? trimClip(c, id, s, e, duration) : c))}
+            onTrimBegin={beginTransaction}
+            onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}
+            onTrimEnd={commitTransaction}
             onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
+            renameTrack={renameTrack} toggleLock={toggleLock} toggleMute={toggleMute}
+            cycleHeight={cycleHeight} reorderTrack={reorderTrack}
           />
         ) : (
           <div className="tl-placeholder">טען מדיה ותגיד לסוכן בצ'אט מה לעשות — הוא בונה את הציר. או “עריכה ידנית”.</div>
@@ -336,6 +365,21 @@ export default function EditorPage() {
           )}
         </details>
       </section>
+
+      {selectedClip && <div className="resizer" onMouseDown={startResizeInspector} title="גרור לשינוי רוחב ה-Inspector" />}
+      {selectedClip && (
+        <aside className="inspector-pane" style={{ width: inspectorWidth }}>
+          <Inspector
+            clip={selectedClip}
+            assetName={mediaById(media, selectedClip.sourceId)?.name || "?"}
+            assetKind={(mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio") || "video"}
+            assetDuration={mediaById(media, selectedClip.sourceId)?.duration || duration}
+            trackName={videoTrack(tracks)?.name || "וידאו"}
+            timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
+            onUpdate={(patch) => updateClip(selectedClip.id, patch)}
+          />
+        </aside>
+      )}
 
       {chatOpen && <div className="resizer" onMouseDown={startResize} title="גרור לשינוי רוחב הצ'אט" />}
       <aside className="chat-pane" style={{ width: chatOpen ? chatWidth : 0 }}>

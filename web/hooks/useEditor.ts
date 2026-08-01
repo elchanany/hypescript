@@ -1,28 +1,32 @@
 "use client";
 
-// מקור אמת מרכזי לעריכה: מחזיק clips ו-subs + מערכת Undo/Redo.
-// כל שינוי דרך setClips/setSubs/setProject נרשם ל-History. reset (טעינת פרויקט)
-// אינו נרשם. משתמש ב-refs כדי למנוע snapshots מיושנים (stale closures).
+// מקור אמת מרכזי לעריכה: clips (רצף וידאו), subs (כתוביות), tracks (מטא-רצועות).
+// כל שינוי דרך ה-setters נרשם ל-History. גרירה/טרים משתמשים ב-transaction כדי
+// שכל הגרירה תיצור פעולת Undo *אחת*. reset (טעינת פרויקט) אינו נרשם.
 
 import { useCallback, useRef, useState } from "react";
 import { Clip } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { createHistory } from "@/lib/editor/history";
+import { defaultTracks, TrackMeta } from "@/lib/editor/project";
 
-export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; }
+export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; tracks: TrackMeta[]; }
 type Updater<T> = T | ((prev: T) => T);
 
 export function useEditor() {
   const [clips, setClipsRaw] = useState<Clip[] | null>(null);
   const [subs, setSubsRaw] = useState<Sub[] | null>(null);
+  const [tracks, setTracksRaw] = useState<TrackMeta[]>(defaultTracks());
   const clipsRef = useRef(clips); clipsRef.current = clips;
   const subsRef = useRef(subs); subsRef.current = subs;
+  const tracksRef = useRef(tracks); tracksRef.current = tracks;
   const hist = useRef(createHistory<EditorSnapshot>());
+  const pending = useRef<EditorSnapshot | null>(null);
   const [, force] = useState(0);
   const touch = useCallback(() => force((v) => v + 1), []);
 
-  const apply = (s: EditorSnapshot) => { setClipsRaw(s.clips); setSubsRaw(s.subs); };
-  const now = (): EditorSnapshot => ({ clips: clipsRef.current, subs: subsRef.current });
+  const now = (): EditorSnapshot => ({ clips: clipsRef.current, subs: subsRef.current, tracks: tracksRef.current });
+  const apply = (s: EditorSnapshot) => { setClipsRaw(s.clips); setSubsRaw(s.subs); setTracksRaw(s.tracks); };
 
   const commit = useCallback((next: EditorSnapshot) => {
     hist.current.push(now());
@@ -32,40 +36,66 @@ export function useEditor() {
 
   const setClips = useCallback((u: Updater<Clip[] | null>) => {
     const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
-    commit({ clips: next, subs: subsRef.current });
+    commit({ ...now(), clips: next });
   }, [commit]);
 
   const setSubs = useCallback((u: Updater<Sub[] | null>) => {
     const next = typeof u === "function" ? (u as any)(subsRef.current) : u;
-    commit({ clips: clipsRef.current, subs: next });
+    commit({ ...now(), subs: next });
   }, [commit]);
 
-  // עדכון clips+subs יחד ב-commit אחד (למשל שינויים של הסוכן).
   const setProject = useCallback((c: Clip[] | null, s: Sub[] | null) => {
-    commit({ clips: c, subs: s });
+    commit({ clips: c, subs: s, tracks: tracksRef.current });
   }, [commit]);
 
-  // טעינת פרויקט/איפוס — לא נכנס להיסטוריה.
+  const updateClip = useCallback((id: string, patch: Partial<Clip>) => {
+    const cur = clipsRef.current;
+    if (!cur) return;
+    commit({ ...now(), clips: cur.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+  }, [commit]);
+
+  // --- רצועות (כל פעולה = commit יחיד, ניתן ל-Undo) ---
+  const patchTrack = useCallback((id: string, patch: Partial<TrackMeta>) => {
+    commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
+  }, [commit]);
+  const renameTrack = useCallback((id: string, name: string) => patchTrack(id, { name }), [patchTrack]);
+  const setTrackHeight = useCallback((id: string, height: number) => patchTrack(id, { height: Math.max(28, Math.min(140, height)) }), [patchTrack]);
+  const toggleLock = useCallback((id: string) => { const t = tracksRef.current.find((x) => x.id === id); if (t) patchTrack(id, { locked: !t.locked }); }, [patchTrack]);
+  const toggleMute = useCallback((id: string) => { const t = tracksRef.current.find((x) => x.id === id); if (t) patchTrack(id, { muted: !t.muted }); }, [patchTrack]);
+  const reorderTrack = useCallback((id: string, dir: -1 | 1) => {
+    const list = [...tracksRef.current].sort((a, b) => a.order - b.order);
+    const i = list.findIndex((t) => t.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const a = list[i], b = list[j];
+    commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === a.id ? { ...t, order: b.order } : t.id === b.id ? { ...t, order: a.order } : t)) });
+  }, [commit]);
+
+  // --- transaction לגרירה (Undo אחד לכל הגרירה) ---
+  const beginTransaction = useCallback(() => { if (!pending.current) pending.current = now(); }, []);
+  const setClipsLive = useCallback((u: Updater<Clip[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
+    setClipsRaw(next);
+  }, []);
+  const commitTransaction = useCallback(() => {
+    if (pending.current) { hist.current.push(pending.current); pending.current = null; touch(); }
+  }, [touch]);
+
   const reset = useCallback((s: EditorSnapshot) => {
-    hist.current.reset();
-    apply(s);
+    hist.current.reset(); pending.current = null;
+    apply({ clips: s.clips, subs: s.subs, tracks: s.tracks?.length ? s.tracks : defaultTracks() });
     touch();
   }, [touch]);
 
-  const undo = useCallback(() => {
-    const prev = hist.current.undo(now());
-    if (prev) { apply(prev); touch(); }
-  }, [touch]);
-
-  const redo = useCallback(() => {
-    const next = hist.current.redo(now());
-    if (next) { apply(next); touch(); }
-  }, [touch]);
+  const undo = useCallback(() => { const p = hist.current.undo(now()); if (p) { apply(p); touch(); } }, [touch]);
+  const redo = useCallback(() => { const n = hist.current.redo(now()); if (n) { apply(n); touch(); } }, [touch]);
 
   return {
-    clips, subs,
-    setClips, setSubs, setProject, reset, undo, redo,
-    canUndo: hist.current.canUndo(),
-    canRedo: hist.current.canRedo(),
+    clips, subs, tracks,
+    setClips, setSubs, setProject, updateClip,
+    renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack,
+    beginTransaction, setClipsLive, commitTransaction,
+    reset, undo, redo,
+    canUndo: hist.current.canUndo(), canRedo: hist.current.canRedo(),
   };
 }

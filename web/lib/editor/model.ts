@@ -18,7 +18,12 @@ export interface Clip {
   sourceId: string; // מזהה MediaAsset
   start: number; // in-point במקור (שניות)
   end: number; // out-point במקור
+  volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
+  enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
 }
+
+export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
+export const clipVolume = (c: Clip): number => (c.volume == null ? 1 : c.volume);
 
 export function uid(prefix = "c"): string {
   return prefix + Math.random().toString(36).slice(2, 9);
