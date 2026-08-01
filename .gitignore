@@ -1,0 +1,20 @@
+# Python (local/)
+.venv/
+__pycache__/
+*.pyc
+.env
+*_edited.mp4
+*_cuts.json
+*_transcript.txt
+*.srt
+
+# Node / Next (web/)
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db

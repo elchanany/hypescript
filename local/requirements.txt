@@ -1,0 +1,10 @@
+# hypescript — תלויות Python
+#
+# מצב ענן (ברירת מחדל) דורש רק את requests.
+# מצב מקומי דורש גם את faster-whisper (כבד — מוריד torch/ctranslate2 וכו').
+# אם אתה משתמש רק בענן, אפשר להעיר את השורה של faster-whisper.
+#
+# FFmpeg ו-FFprobe הם תלות חיצונית (לא pip) — ראה README להתקנה.
+
+requests>=2.31.0
+faster-whisper>=1.0.0
