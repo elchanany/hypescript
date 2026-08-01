@@ -11,6 +11,7 @@ import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
+import { useEditor } from "@/hooks/useEditor";
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 function download(blob: Blob, name: string) {
@@ -33,8 +34,7 @@ function probeDuration(file: File, kind: MediaKind): Promise<number> {
 export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [words, setWords] = useState<Word[] | null>(null);
-  const [clips, setClips] = useState<Clip[] | null>(null);
-  const [subs, setSubs] = useState<Sub[] | null>(null);
+  const { clips, subs, setClips, setSubs, setProject, reset: resetEditor, undo, redo, canUndo, canRedo } = useEditor();
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [script, setScript] = useState("");
@@ -44,6 +44,9 @@ export default function EditorPage() {
   const [error, setError] = useState("");
   const [rendering, setRendering] = useState(false);
   const [groqOk, setGroqOk] = useState(true);
+  const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(400);
+  const chatWidthRef = useRef(400); chatWidthRef.current = chatWidth;
 
   const fileInput = useRef<HTMLInputElement>(null);
   const srtInput = useRef<HTMLInputElement>(null);
@@ -58,7 +61,19 @@ export default function EditorPage() {
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
+    const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
+    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(640, w));
   }, []);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX; const startW = chatWidthRef.current;
+    const onMove = (ev: MouseEvent) => setChatWidth(Math.max(300, Math.min(640, startW + (startX - ev.clientX))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  };
+  const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
 
   // אתחול פרויקטים (ומיגרציה מסשן ישן).
   useEffect(() => {
@@ -77,7 +92,8 @@ export default function EditorPage() {
       const sm = await kvGet<any[]>(pk(projectId, "media"));
       setMedia((prev) => { prev.forEach((m) => URL.revokeObjectURL(m.url)); return sm?.length ? sm.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })) : []; });
       const st = await kvGet<any>(pk(projectId, "state"));
-      setWords(st?.words ?? null); setClips(st?.clips ?? null); setSubs(st?.subs ?? null);
+      setWords(st?.words ?? null);
+      resetEditor({ clips: st?.clips ?? null, subs: st?.subs ?? null });
       setCur(0); setSelectedId(null);
       setRestored(true);
     })();
@@ -212,6 +228,21 @@ export default function EditorPage() {
   };
   const deleteSel = () => { if (clips && selectedId) { setClips(removeClip(clips, selectedId)); setSelectedId(null); } };
 
+  // קיצורי מקלדת (לא פעילים בזמן הקלדה בשדה טקסט).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const meta = e.ctrlKey || e.metaKey;
+      if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
+      else if ((e.key === "Delete" || e.key === "Backspace") && selectedId) { e.preventDefault(); deleteSel(); }
+      else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const working = busy || rendering;
   const totalEdited = clips ? totalDur(clips) : duration;
 
@@ -244,8 +275,11 @@ export default function EditorPage() {
           <button className="btn" onClick={() => fileInput.current?.click()}>📁 טען מדיה</button>
           <input ref={fileInput} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
           <div className="tb-sep" />
-          <button className="btn" onClick={splitAtPlayhead} disabled={!clips?.length}>🔪 פצל</button>
-          <button className="btn" onClick={deleteSel} disabled={!selectedId}>🗑️ מחק</button>
+          <button className="btn mono" onClick={undo} disabled={!canUndo} title="בטל (Ctrl+Z)">↶</button>
+          <button className="btn mono" onClick={redo} disabled={!canRedo} title="בצע מחדש (Ctrl+Shift+Z)">↷</button>
+          <div className="tb-sep" />
+          <button className="btn" onClick={splitAtPlayhead} disabled={!clips?.length} title="פצל בראש-הנגן (S)">🔪 פצל</button>
+          <button className="btn" onClick={deleteSel} disabled={!selectedId} title="מחק (Delete)">🗑️ מחק</button>
           <div className="tb-sep" />
           <button className="btn primary" onClick={analyze} disabled={working || !main}>{busy ? "מנתח…" : words ? "בנה מחדש" : "נתח"}</button>
           <button className="btn good" onClick={render} disabled={working || !clips?.length}>{rendering ? "מרנדר…" : "🎬 ייצא"}</button>
@@ -257,6 +291,7 @@ export default function EditorPage() {
           <button className="btn" onClick={newProject} title="פרויקט חדש">🆕</button>
           <button className="btn" onClick={renameCurrent} title="שנה שם">✏️</button>
           <button className="btn" onClick={deleteCurrent} title="מחק פרויקט">🗑️</button>
+          <button className="btn" onClick={toggleChat} title="הצג/הסתר צ'אט">💬</button>
           {main && <span className="badge">{fmt(duration)} → {fmt(totalEdited)}</span>}
         </div>
 
@@ -302,10 +337,12 @@ export default function EditorPage() {
         </details>
       </section>
 
-      <aside className="chat-pane">
+      {chatOpen && <div className="resizer" onMouseDown={startResize} title="גרור לשינוי רוחב הצ'אט" />}
+      <aside className="chat-pane" style={{ width: chatOpen ? chatWidth : 0 }}>
         <Chat media={media} onAddMedia={addFiles} words={words} clips={clips} subs={subs} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setClips(c); setSubs(s); }} />
+          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }} />
       </aside>
+      {!chatOpen && <button className="chat-reopen" onClick={toggleChat} title="פתח צ'אט">🤖</button>}
     </div>
   );
 }
