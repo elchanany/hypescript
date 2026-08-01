@@ -5,7 +5,8 @@ import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { PROVIDER_PREF } from "@/lib/keys";
-import { KeepInterval, Word } from "@/lib/models";
+import { Word } from "@/lib/models";
+import { Clip } from "@/lib/editor/model";
 
 type Item =
   | { kind: "user" | "assistant"; text: string; time: string }
@@ -30,11 +31,11 @@ interface ChatProps {
   file: File | null;
   duration: number;
   words: Word[] | null;
-  keeps: KeepInterval[] | null;
-  onProject: (p: { words: Word[] | null; keeps: KeepInterval[] | null }) => void;
+  clips: Clip[] | null;
+  onProject: (p: { words: Word[] | null; clips: Clip[] | null }) => void;
 }
 
-export default function Chat({ file, duration, words, keeps, onProject }: ChatProps) {
+export default function Chat({ file, duration, words, clips, onProject }: ChatProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
@@ -46,7 +47,7 @@ export default function Chat({ file, duration, words, keeps, onProject }: ChatPr
     file: null,
     duration: 0,
     words: null,
-    keeps: null,
+    clips: null,
     lastRender: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
   });
@@ -61,8 +62,8 @@ export default function Chat({ file, duration, words, keeps, onProject }: ChatPr
     c.file = file;
     c.duration = duration;
     c.words = words;
-    c.keeps = keeps;
-  }, [file, duration, words, keeps]);
+    c.clips = clips;
+  }, [file, duration, words, clips]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -107,9 +108,9 @@ export default function Chat({ file, duration, words, keeps, onProject }: ChatPr
                 : it,
             ),
           );
-          // דחיפת שינויי הפרויקט (תמלול/חיתוכים) לעמוד -> העדכון מוצג ב-timeline.
+          // דחיפת שינויי הפרויקט (תמלול/קליפים) לעמוד -> העדכון מוצג ב-timeline חי.
           const c = ctxRef.current;
-          onProjectRef.current({ words: c.words, keeps: c.keeps });
+          onProjectRef.current({ words: c.words, clips: c.clips });
         },
         onError: (msg) => setItems((p) => [...p, { kind: "assistant", text: "⚠ " + msg, time: now() }]),
         onDone: () => setRunning(false),

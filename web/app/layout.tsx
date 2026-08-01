@@ -19,9 +19,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </header>
         <main className="container">{children}</main>
-        <footer className="foot">
-          עיבוד הווידאו רץ בדפדפן שלך · רק האודיו נשלח לתמלול · ללא אחסון בענן
-        </footer>
       </body>
     </html>
   );

@@ -1,35 +1,27 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { KeepInterval } from "@/lib/models";
-import { removedIntervals } from "@/lib/editing";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { Clip, assembledStart, assembledToSource, clipDur, totalDur } from "@/lib/editor/model";
 
 export interface PreviewHandle {
-  seek: (t: number) => void;
+  seek: (assembled: number) => void;
 }
 
 interface Props {
   file: File | null;
-  duration: number;
-  keeps: KeepInterval[] | null;
-  onTime: (t: number) => void;
+  clips: Clip[] | null; // ה-EDL; null/ריק = הסרטון המקורי
+  onTime: (assembled: number) => void;
 }
 
-// נגן תצוגה מקדימה עם "השמעה ערוכה": מדלג על הקטעים שהוסרו בזמן אמת,
-// כך שרואים את התוצאה בלי לרנדר.
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(
-  { file, duration, keeps, onTime },
-  ref,
-) {
+// נגן תצוגה מקדימה שמנגן את ה-EDL: קליפ אחרי קליפ, בסדר (כולל חזרות/סידור-מחדש),
+// בלי לרנדר. כשאין EDL — מנגן את המקור.
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ file, clips, onTime }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [url, setUrl] = useState<string>("");
+  const idx = useRef(0);
+  const [url, setUrl] = useState("");
   const [playing, setPlaying] = useState(false);
-  const [edited, setEdited] = useState(true);
 
-  const removed = useMemo(
-    () => (keeps && keeps.length ? removedIntervals(keeps, duration) : []),
-    [keeps, duration],
-  );
+  const edl = clips && clips.length ? clips : null;
 
   useEffect(() => {
     if (!file) return;
@@ -39,53 +31,61 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(
   }, [file]);
 
   useImperativeHandle(ref, () => ({
-    seek: (t: number) => {
-      if (videoRef.current) videoRef.current.currentTime = t;
+    seek: (assembled: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      if (edl) {
+        const { index, source } = assembledToSource(edl, assembled);
+        idx.current = Math.max(0, index);
+        v.currentTime = source;
+      } else {
+        v.currentTime = assembled;
+      }
     },
   }));
 
   const onTimeUpdate = () => {
     const v = videoRef.current;
     if (!v) return;
-    let t = v.currentTime;
-    if (edited && removed.length) {
-      const seg = removed.find((r) => t >= r[0] - 0.02 && t < r[1]);
-      if (seg) {
-        v.currentTime = seg[1] + 0.001;
-        t = seg[1];
-      }
+    if (!edl) { onTime(v.currentTime); return; }
+    let i = idx.current;
+    if (i >= edl.length) { v.pause(); return; }
+    if (v.currentTime >= edl[i].end - 0.03 || v.currentTime < edl[i].start - 0.3) {
+      i++;
+      idx.current = i;
+      if (i < edl.length) { v.currentTime = edl[i].start + 0.001; }
+      else { v.pause(); onTime(totalDur(edl)); return; }
     }
-    onTime(t);
+    const cur = edl[i];
+    onTime(assembledStart(edl, i) + Math.max(0, Math.min(clipDur(cur), v.currentTime - cur.start)));
   };
 
   const toggle = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) { v.play(); setPlaying(true); } else { v.pause(); setPlaying(false); }
+    if (v.paused) {
+      if (edl && (idx.current >= edl.length || v.currentTime >= edl[Math.min(idx.current, edl.length - 1)].end)) {
+        idx.current = 0; v.currentTime = edl[0].start;
+      }
+      v.play(); setPlaying(true);
+    } else { v.pause(); setPlaying(false); }
   };
 
   return (
     <div className="preview">
       {url ? (
-        <video
-          ref={videoRef}
-          src={url}
-          className="preview-video"
-          onTimeUpdate={onTimeUpdate}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onClick={toggle}
-        />
+        <video ref={videoRef} src={url} className="preview-video" onTimeUpdate={onTimeUpdate}
+          onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onClick={toggle} />
       ) : (
         <div className="preview-empty">טען סרטון כדי לראות תצוגה מקדימה</div>
       )}
       <div className="preview-bar">
         <button className="btn" onClick={toggle} disabled={!url}>{playing ? "⏸" : "▶"}</button>
-        <label className="check" title="דלג על הקטעים שהוסרו">
-          <input type="checkbox" checked={edited} onChange={(e) => setEdited(e.target.checked)} />
-          תצוגה ערוכה
-        </label>
-        {keeps && keeps.length > 0 && <span className="badge">{keeps.length} קטעים · {removed.length} חיתוכים</span>}
+        {edl ? (
+          <span className="badge">{edl.length} קליפים · {totalDur(edl).toFixed(1)}s (סופי)</span>
+        ) : (
+          <span className="hint">מקור — צור חיתוך כדי לראות תצוגה ערוכה</span>
+        )}
       </div>
     </div>
   );
