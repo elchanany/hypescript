@@ -16,13 +16,19 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
-    const apiKey = String(form.get("apiKey") || "");
     const provider = String(form.get("provider") || "groq");
     const model = String(form.get("model") || "whisper-large-v3");
     const language = String(form.get("language") || "he");
 
+    // המפתח נקרא קודם ממשתני הסביבה של Vercel; fallback לערך מהלקוח (dev מקומי).
+    const envKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
+    const apiKey = (envKey || String(form.get("apiKey") || "")).trim();
+
     if (!apiKey) {
-      return NextResponse.json({ error: "חסר מפתח API. הזן אותו בהגדרות." }, { status: 400 });
+      return NextResponse.json(
+        { error: "חסר מפתח תמלול. הגדר GROQ_API_KEY במשתני הסביבה של Vercel." },
+        { status: 400 },
+      );
     }
     if (!(file instanceof Blob)) {
       return NextResponse.json({ error: "לא התקבל קובץ אודיו." }, { status: 400 });

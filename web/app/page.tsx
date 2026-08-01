@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GROQ_KEY } from "@/lib/keys";
 import { Word, KeepInterval, keptDuration } from "@/lib/models";
 import { scriptKeepMask } from "@/lib/align";
 import { buildKeepIntervals, fillerMask, parseFillers, removedIntervals } from "@/lib/editing";
 import { buildCues, buildSrt } from "@/lib/subtitles";
+import Chat from "@/components/Chat";
 
 interface Result {
   words: Word[];
@@ -41,7 +41,7 @@ export default function EditorPage() {
   const [padding, setPadding] = useState(0.1);
   const [maxChars, setMaxChars] = useState(42);
 
-  const [apiKey, setApiKey] = useState("");
+  const [groqOk, setGroqOk] = useState(true);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState(0);
@@ -54,7 +54,7 @@ export default function EditorPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setApiKey(localStorage.getItem(GROQ_KEY) || "");
+    fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
   }, []);
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -76,7 +76,6 @@ export default function EditorPage() {
   const analyze = async () => {
     setError("");
     if (!file) return setError("בחר קובץ וידאו קודם.");
-    if (!apiKey) return setError("חסר מפתח Groq — הזן אותו בעמוד ההגדרות.");
 
     setBusy(true);
     setResult(null);
@@ -96,7 +95,6 @@ export default function EditorPage() {
       setProgress(0);
       const fd = new FormData();
       fd.append("file", audio, "audio.mp3");
-      fd.append("apiKey", apiKey);
       fd.append("provider", "groq");
       fd.append("model", "whisper-large-v3");
       fd.append("language", "he");
@@ -182,10 +180,9 @@ export default function EditorPage() {
         <p>בחר וידאו, הדבק את הטקסט שצריך להישאר — וקבל סרטון מדויק בלי נשימות. הכל בדפדפן.</p>
       </div>
 
-      {!apiKey && (
+      {!groqOk && (
         <div className="card" style={{ borderColor: "var(--bad)" }}>
-          <span className="err">חסר מפתח Groq.</span> עבור ל<a href="/settings" className="ok"> הגדרות </a>
-          והזן מפתח כדי להתחיל.
+          <span className="err">מפתח התמלול (GROQ_API_KEY) לא מוגדר ב-Vercel.</span> ראה <a href="/settings" className="ok">הגדרות</a>.
         </div>
       )}
 
@@ -304,6 +301,8 @@ export default function EditorPage() {
           </div>
         </div>
       )}
+
+      <Chat file={file} duration={duration} />
     </div>
   );
 }
