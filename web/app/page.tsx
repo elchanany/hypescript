@@ -108,6 +108,14 @@ export default function EditorPage() {
     setMedia((m) => [...m, ...assets]);
   };
 
+  const removeMedia = (id: string) => {
+    setMedia((ms) => { const m = ms.find((x) => x.id === id); if (m) URL.revokeObjectURL(m.url); return ms.filter((x) => x.id !== id); });
+    setClips((cs) => (cs ? cs.filter((c) => c.sourceId !== id) : cs));
+  };
+  const addMediaClip = (asset: MediaAsset) => {
+    setClips((cs) => [...(cs || []), { id: uid(), sourceId: asset.id, start: 0, end: asset.duration }]);
+  };
+
   const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
 
   const analyze = async () => {
@@ -197,6 +205,10 @@ export default function EditorPage() {
                 <span className="mc-body">
                   <span className="mc-name">{i + 1}. {m.name}</span>
                   <span className="mc-meta">{m.kind === "video" ? "וידאו" : m.kind === "image" ? "תמונה" : "שמע"} · {m.duration.toFixed(1)}s{m.id === main?.id ? " · ראשי" : ""}</span>
+                </span>
+                <span className="mc-actions">
+                  <button onClick={() => addMediaClip(m)} title="הוסף לציר">＋</button>
+                  <button onClick={() => removeMedia(m.id)} title="הסר קובץ">✕</button>
                 </span>
               </div>
             ))}
