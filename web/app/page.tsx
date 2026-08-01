@@ -1,308 +1,177 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Word, KeepInterval, keptDuration } from "@/lib/models";
 import { scriptKeepMask } from "@/lib/align";
 import { buildKeepIntervals, fillerMask, parseFillers, removedIntervals } from "@/lib/editing";
-import { buildCues, buildSrt } from "@/lib/subtitles";
+import { buildCues, buildSrt, Cue } from "@/lib/subtitles";
 import Chat from "@/components/Chat";
-
-interface Result {
-  words: Word[];
-  keeps: KeepInterval[];
-  srt: string;
-  keptText: string;
-  originalSec: number;
-  editedSec: number;
-  cuts: number;
-}
+import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
+import Timeline from "@/components/Timeline";
 
 function fmt(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = (sec % 60).toFixed(1);
   return `${m}:${s.padStart(4, "0")}`;
 }
-
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+// בלוקי כתוביות על ציר-הזמן המקורי (לתצוגת ה-timeline).
+function rawCues(words: Word[]): Cue[] {
+  const out: Cue[] = [];
+  let cur: Word[] = [];
+  const flush = () => {
+    if (cur.length) out.push({ start: cur[0].start, end: cur[cur.length - 1].end, text: cur.map((w) => w.text).join(" ") });
+    cur = [];
+  };
+  for (const w of words) {
+    if (cur.length && (w.start - cur[cur.length - 1].end > 0.6 || cur.length >= 10)) flush();
+    cur.push(w);
+  }
+  flush();
+  return out;
 }
 
 export default function EditorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState(0);
+  const [words, setWords] = useState<Word[] | null>(null);
+  const [keeps, setKeeps] = useState<KeepInterval[] | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+
   const [script, setScript] = useState("");
   const [removeFillers, setRemoveFillers] = useState(true);
-  const [threshold, setThreshold] = useState(0.4);
-  const [padding, setPadding] = useState(0.1);
   const [maxChars, setMaxChars] = useState(42);
 
-  const [groqOk, setGroqOk] = useState(true);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState(0);
-  const [logLines, setLogLines] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<Result | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [groqOk, setGroqOk] = useState(true);
 
-  const logRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<PreviewHandle>(null);
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
   }, []);
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logLines]);
 
-  const log = (m: string) => setLogLines((p) => [...p, m]);
+  const tlCues = useMemo(() => (words ? rawCues(words) : []), [words]);
+  const editedSec = keeps ? keptDuration(keeps) : duration;
 
   const onPick = (f: File | null) => {
     if (!f) return;
-    setFile(f);
-    setResult(null);
-    setError("");
+    setFile(f); setWords(null); setKeeps(null); setError(""); setCurrentTime(0);
     const v = document.createElement("video");
     v.preload = "metadata";
     v.onloadedmetadata = () => setDuration(v.duration || 0);
     v.src = URL.createObjectURL(f);
   };
 
+  const seek = (t: number) => { setCurrentTime(t); previewRef.current?.seek(t); };
+
   const analyze = async () => {
     setError("");
     if (!file) return setError("בחר קובץ וידאו קודם.");
-
-    setBusy(true);
-    setResult(null);
-    setLogLines([]);
-    setProgress(0);
+    setBusy(true); setProgress(0);
     try {
       const { extractAudio } = await import("@/lib/ffmpeg");
-
-      setPhase("טוען מנוע עיבוד (ffmpeg.wasm)…");
-      log("• טוען ffmpeg.wasm בדפדפן…");
-
       setPhase("מחלץ אודיו…");
       const audio = await extractAudio(file, (r) => setProgress(r));
-      log(`• אודיו חולץ (${(audio.size / 1024).toFixed(0)}KB) — נשלח לתמלול בלבד.`);
-
-      setPhase("מתמלל ב-Groq…");
-      setProgress(0);
+      setPhase("מתמלל…"); setProgress(0);
       const fd = new FormData();
       fd.append("file", audio, "audio.mp3");
-      fd.append("provider", "groq");
-      fd.append("model", "whisper-large-v3");
-      fd.append("language", "he");
+      fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
       const resp = await fetch("/api/transcribe", { method: "POST", body: fd });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
-
-      const rawWords: any[] = data.words || [];
-      const words: Word[] = rawWords
-        .filter((w) => w.start != null && w.end != null && (w.word || w.text))
-        .map((w) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
-      if (!words.length) throw new Error("התמלול לא החזיר מילים עם חותמות זמן.");
-      log(`• התקבלו ${words.length} מילים מתומללות.`);
-
-      const dur = Math.max(duration, words[words.length - 1].end + 0.2);
-
-      // מסכה מאוחדת: סקריפט + מהססים
-      let mask = new Array(words.length).fill(true);
-      if (script.trim()) {
-        const sm = scriptKeepMask(words, script);
-        mask = mask.map((m, i) => m && sm[i]);
-        log(`• יישור לפי סקריפט: נשמרו ${sm.filter(Boolean).length}/${words.length} מילים.`);
-      }
-      if (removeFillers) {
-        const fm = fillerMask(words, parseFillers());
-        mask = mask.map((m, i) => m && !fm[i]);
-        const n = fm.filter(Boolean).length;
-        if (n) log(`• הוסרו ${n} מילות-מהסס/גמגום.`);
-      }
-
-      const keptWords = words.filter((_, i) => mask[i]);
-      if (!keptWords.length) throw new Error("אחרי הסינון לא נשארו מילים. בדוק את הסקריפט.");
-
-      // הסרת נשימות/שתיקות פעילה תמיד; המסכה מוסיפה חיתוך לפי סקריפט/מהססים.
-      const keeps = buildKeepIntervals(words, dur, threshold, padding, mask);
-
-      const removed = removedIntervals(keeps, dur);
-      const editedSec = keptDuration(keeps);
-      const cues = buildCues(keptWords, keeps, maxChars, 2);
-      const srt = buildSrt(cues);
-      const keptText = keptWords.map((w) => w.text).join(" ");
-
-      log(`• ${keeps.length} קטעים נשמרים, ${removed.length} חיתוכים. הוסרו ${fmt(dur - editedSec)}.`);
-      setResult({ words, keeps, srt, keptText, originalSec: dur, editedSec, cuts: removed.length });
+      const ws: Word[] = (data.words || [])
+        .filter((w: any) => w.start != null && w.end != null && (w.word || w.text))
+        .map((w: any) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
+      if (!ws.length) throw new Error("התמלול לא החזיר מילים.");
+      setWords(ws);
+      const dur = Math.max(duration, ws[ws.length - 1].end + 0.2);
+      let mask = new Array(ws.length).fill(true);
+      if (script.trim()) { const sm = scriptKeepMask(ws, script); mask = mask.map((m, i) => m && sm[i]); }
+      if (removeFillers) { const fm = fillerMask(ws, parseFillers()); mask = mask.map((m, i) => m && !fm[i]); }
+      setKeeps(buildKeepIntervals(ws, dur, 0.4, 0.1, mask));
       setPhase("הניתוח הושלם ✓");
-    } catch (e: any) {
-      setError(e?.message || String(e));
-      setPhase("");
-    } finally {
-      setBusy(false);
-      setProgress(0);
-    }
+    } catch (e: any) { setError(e?.message || String(e)); setPhase(""); }
+    finally { setBusy(false); setProgress(0); }
   };
 
   const render = async () => {
-    if (!file || !result) return;
-    setError("");
-    setRendering(true);
-    setProgress(0);
+    if (!file || !keeps) return;
+    setError(""); setRendering(true); setProgress(0);
     try {
       const { renderCut } = await import("@/lib/ffmpeg");
-      setPhase("מרנדר וידאו בדפדפן… (עשוי לקחת זמן)");
-      log("• מתחיל רינדור בדפדפן — הווידאו לא עוזב את המחשב.");
-      const blob = await renderCut(file, result.keeps, (r) => setProgress(r));
-      const base = file.name.replace(/\.[^.]+$/, "");
-      download(blob, `${base}_edited.mp4`);
-      log("• הרינדור הסתיים ✓ — הקובץ הורד.");
+      setPhase("מרנדר בדפדפן…");
+      const blob = await renderCut(file, keeps, (r) => setProgress(r));
+      download(blob, file.name.replace(/\.[^.]+$/, "") + "_edited.mp4");
       setPhase("הרינדור הושלם ✓");
-    } catch (e: any) {
-      setError(e?.message || String(e));
-    } finally {
-      setRendering(false);
-      setProgress(0);
-    }
+    } catch (e: any) { setError(e?.message || String(e)); }
+    finally { setRendering(false); setProgress(0); }
+  };
+
+  const downloadSrt = () => {
+    if (!words) return;
+    const cues = buildCues(words.filter((_, i) => true), keeps || [{ start: 0, end: duration }], maxChars, 2);
+    download(new Blob([buildSrt(cues)], { type: "text/plain;charset=utf-8" }), (file?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
   };
 
   const working = busy || rendering;
 
   return (
-    <div>
-      <div className="hero">
-        <h1>עריכת שיעור</h1>
-        <p>בחר וידאו, הדבק את הטקסט שצריך להישאר — וקבל סרטון מדויק בלי נשימות. הכל בדפדפן.</p>
-      </div>
-
-      {!groqOk && (
-        <div className="card" style={{ borderColor: "var(--bad)" }}>
-          <span className="err">מפתח התמלול (GROQ_API_KEY) לא מוגדר ב-Vercel.</span> ראה <a href="/settings" className="ok">הגדרות</a>.
-        </div>
-      )}
-
-      {/* קלט */}
-      <div className="card">
-        <h2>1 · קבצים</h2>
-        <div
-          className="file-drop"
-          onClick={() => fileInput.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            onPick(e.dataTransfer.files?.[0] || null);
-          }}
-        >
-          {file ? (
-            <span><strong>{file.name}</strong> · {duration ? fmt(duration) : "…"}</span>
-          ) : (
-            <span>גרור לכאן קובץ וידאו או <strong>לחץ לבחירה</strong></span>
-          )}
-          <input
-            ref={fileInput}
-            type="file"
-            accept="video/*"
-            hidden
-            onChange={(e) => onPick(e.target.files?.[0] || null)}
-          />
-        </div>
-
-        <label className="field" style={{ marginTop: 16 }}>
-          <span>סקריפט — הטקסט שצריך להישאר (אופציונלי; ריק = רק הסרת נשימות/מהססים)</span>
-          <textarea
-            value={script}
-            onChange={(e) => setScript(e.target.value)}
-            placeholder="הדבק כאן את הטקסט הנקי שאמור להישאר בסרטון…"
-          />
-        </label>
-      </div>
-
-      {/* אפשרויות */}
-      <div className="card">
-        <h2>2 · עריכה</h2>
-        <div className="controls">
-          <label className="check">
-            <input type="checkbox" checked={removeFillers} onChange={(e) => setRemoveFillers(e.target.checked)} />
-            הסר מהססים (אה/אמ/המ)
-          </label>
-          <label className="field" style={{ margin: 0 }}>
-            <span>סף שתיקה (שנ')</span>
-            <input type="number" step="0.05" min="0.1" max="2" value={threshold}
-              onChange={(e) => setThreshold(+e.target.value)} />
-          </label>
-          <label className="field" style={{ margin: 0 }}>
-            <span>ריפוד (שנ')</span>
-            <input type="number" step="0.05" min="0" max="1" value={padding}
-              onChange={(e) => setPadding(+e.target.value)} />
-          </label>
-          <label className="field" style={{ margin: 0 }}>
-            <span>תווים בכתובית</span>
-            <input type="number" step="1" min="20" max="80" value={maxChars}
-              onChange={(e) => setMaxChars(+e.target.value)} />
-          </label>
-        </div>
-      </div>
-
-      {/* פעולות */}
-      <div className="card">
-        <div className="row">
-          <button className="btn primary" onClick={analyze} disabled={working || !file}>
-            {busy ? "מנתח…" : "▶ נתח (תמלול + חישוב חיתוכים)"}
-          </button>
-          {result && (
-            <button className="btn good" onClick={render} disabled={working}>
-              {rendering ? "מרנדר…" : "🎬 רנדר וידאו בדפדפן"}
-            </button>
-          )}
-        </div>
-
-        {(working || phase) && (
-          <>
-            <div className="hint">{phase}</div>
-            <div className="progress"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div>
-          </>
+    <div className="workspace">
+      <section className="editor-pane">
+        {!groqOk && (
+          <div className="card" style={{ borderColor: "var(--bad)", margin: 0 }}>
+            <span className="err">GROQ_API_KEY לא מוגדר ב-Vercel.</span> ראה <a href="/settings" className="ok">הגדרות</a>.
+          </div>
         )}
-        {error && <div className="err" style={{ marginTop: 8 }}>⚠ {error}</div>}
 
-        <div className="log" ref={logRef}>{logLines.join("\n") || "מוכן."}</div>
-      </div>
+        <VideoPreview ref={previewRef} file={file} duration={duration} keeps={keeps} onTime={setCurrentTime} />
+        <Timeline duration={duration} keeps={keeps} cues={tlCues} currentTime={currentTime} onSeek={seek} />
 
-      {/* תוצאות */}
-      {result && (
-        <div className="card">
-          <h2>3 · תוצאות</h2>
-          <div className="stats">
-            <div className="stat"><b>{fmt(result.originalSec)}</b><span>משך מקורי</span></div>
-            <div className="stat"><b>{fmt(result.editedSec)}</b><span>משך ערוך</span></div>
-            <div className="stat"><b>{fmt(result.originalSec - result.editedSec)}</b><span>הוסר</span></div>
-            <div className="stat"><b>{result.cuts}</b><span>חיתוכים</span></div>
+        <div className="editor-tools">
+          <div className="row">
+            <button className="btn" onClick={() => fileInput.current?.click()}>📁 טען וידאו</button>
+            {file && <span className="badge">{file.name} · {fmt(duration)}{keeps ? ` → ${fmt(editedSec)}` : ""}</span>}
+            <input ref={fileInput} type="file" accept="video/*" hidden onChange={(e) => onPick(e.target.files?.[0] || null)} />
           </div>
 
-          <div className="row" style={{ marginBottom: 14 }}>
-            <button className="btn" onClick={() => download(new Blob([result.srt], { type: "text/plain;charset=utf-8" }), (file?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt")}>
-              ⬇ הורד SRT
-            </button>
-            <button className="btn" onClick={() => download(new Blob([result.keptText], { type: "text/plain;charset=utf-8" }), (file?.name.replace(/\.[^.]+$/, "") || "transcript") + "_transcript.txt")}>
-              ⬇ הורד תמלול-סופי
-            </button>
-          </div>
-
-          <label className="field">
-            <span>הטקסט הסופי שיישאר בסרטון (להגהה)</span>
-            <textarea value={result.keptText} readOnly style={{ minHeight: 100 }} />
-          </label>
-          <div className="hint">
-            הרינדור בדפדפן מתאים לסרטונים קצרים-בינוניים. לקבצים כבדים — השתמש ב-SRT + בכלי המקומי (תיקיית <span className="badge">local/</span>).
-          </div>
+          <details className="manual">
+            <summary>עריכה ידנית (או פשוט השתמש בסוכן ⟵)</summary>
+            <textarea value={script} onChange={(e) => setScript(e.target.value)} placeholder="סקריפט: הטקסט שאמור להישאר (אופציונלי)…" />
+            <div className="row" style={{ gap: 16, margin: "8px 0" }}>
+              <label className="check"><input type="checkbox" checked={removeFillers} onChange={(e) => setRemoveFillers(e.target.checked)} /> הסר מהססים</label>
+              <label className="check">תווים בכתובית <input type="number" min={20} max={80} value={maxChars} onChange={(e) => setMaxChars(+e.target.value)} style={{ width: 64 }} /></label>
+            </div>
+            <div className="row">
+              <button className="btn primary" onClick={analyze} disabled={working || !file}>{busy ? "מנתח…" : "נתח"}</button>
+              {keeps && <button className="btn good" onClick={render} disabled={working}>{rendering ? "מרנדר…" : "🎬 ייצא"}</button>}
+              {words && <button className="btn" onClick={downloadSrt}>⬇ SRT</button>}
+            </div>
+            {(working || phase) && (<><div className="hint">{phase}</div><div className="progress"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div></>)}
+            {error && <div className="err" style={{ marginTop: 6 }}>⚠ {error}</div>}
+          </details>
         </div>
-      )}
+      </section>
 
-      <Chat file={file} duration={duration} />
+      <aside className="chat-pane">
+        <Chat
+          file={file}
+          duration={duration}
+          words={words}
+          keeps={keeps}
+          onProject={({ words: w, keeps: k }) => { setWords(w); setKeeps(k); }}
+        />
+      </aside>
     </div>
   );
 }

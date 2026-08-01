@@ -33,6 +33,20 @@ function fmt(sec: number): string {
   return `${m}:${s.padStart(4, "0")}`;
 }
 
+// --- אחסון תמלול לפי טביעת-אצבע של הקובץ (שם+גודל+תאריך) ---
+function txCacheKey(f: File): string {
+  return `hs_tx_${f.name}_${f.size}_${(f as any).lastModified || 0}`;
+}
+function readTxCache(key: string): Word[] | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Word[]) : null;
+  } catch { return null; }
+}
+function writeTxCache(key: string, words: Word[]) {
+  try { localStorage.setItem(key, JSON.stringify(words)); } catch { /* quota — לא קריטי */ }
+}
+
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -93,6 +107,14 @@ export const TOOLS: ToolMeta[] = [
     run: async (_args, ctx, report) => {
       if (!ctx.file) return "שגיאה: לא נטען סרטון.";
       if (ctx.words) return `כבר תומלל (${ctx.words.length} מילים).`;
+      // אחסון תמלול: לא מתמללים שוב את אותו סרטון.
+      const cacheKey = txCacheKey(ctx.file);
+      const cached = readTxCache(cacheKey);
+      if (cached) {
+        ctx.words = cached;
+        if (!ctx.duration) ctx.duration = cached[cached.length - 1].end + 0.2;
+        return `נטען תמלול שמור (${cached.length} מילים) — לא תומלל מחדש.`;
+      }
       const { extractAudio } = await import("@/lib/ffmpeg");
       report("מחלץ אודיו…");
       const audio = await extractAudio(ctx.file);
@@ -111,8 +133,9 @@ export const TOOLS: ToolMeta[] = [
       if (!words.length) throw new Error("התמלול לא החזיר מילים.");
       ctx.words = words;
       if (!ctx.duration) ctx.duration = words[words.length - 1].end + 0.2;
+      writeTxCache(cacheKey, words);
       report("בונה מפת נקודות-ציון…");
-      return `התמלול הושלם: ${words.length} מילים ממופות לפי זמן. מוכן לחיתוך.`;
+      return `התמלול הושלם: ${words.length} מילים ממופות לפי זמן (נשמר לפעם הבאה). מוכן לחיתוך.`;
     },
   },
   {
@@ -274,5 +297,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - אחרי שחישבת חיתוכים, הרץ render_video רק אם המשתמש ביקש לייצא, או שאל אותו (ask_user) אם לייצא.
 - כשיש אי-בהירות אמיתית — השתמש ב-ask_user במקום לנחש.
 - אל תמציא זמנים; קבל אותם מהכלים.
+- הבן מהשפה הטבעית מה המשתמש רוצה ואיך הסרטון הסופי צריך להיראות, ותכנן בעצמך באילו כלים ובאיזה סדר להשתמש.
+- אם חסר לך משהו כדי לבצע (למשל התבקשת להוסיף תמונה/סרטון/קובץ שמע שלא סופק) — בקש אותו מהמשתמש ב-ask_user, אל תמציא.
+- התמלול נשמר: אם כבר תמללת סרטון, אל תתמלל אותו שוב.
 
 זרימה טיפוסית: transcribe_video → keep_by_script או (find_in_transcript → remove_segments) → render_video.`;

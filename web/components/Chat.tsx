@@ -5,6 +5,7 @@ import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { PROVIDER_PREF } from "@/lib/keys";
+import { KeepInterval, Word } from "@/lib/models";
 
 type Item =
   | { kind: "user" | "assistant"; text: string; time: string }
@@ -25,14 +26,21 @@ function now(): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export default function Chat({ file, duration }: { file: File | null; duration: number }) {
+interface ChatProps {
+  file: File | null;
+  duration: number;
+  words: Word[] | null;
+  keeps: KeepInterval[] | null;
+  onProject: (p: { words: Word[] | null; keeps: KeepInterval[] | null }) => void;
+}
+
+export default function Chat({ file, duration, words, keeps, onProject }: ChatProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
-  const [open, setOpen] = useState(true);
 
   const ctxRef = useRef<AgentContext>({
     file: null,
@@ -44,17 +52,17 @@ export default function Chat({ file, duration }: { file: File | null; duration: 
   });
   const runnerRef = useRef<AgentRunner | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const onProjectRef = useRef(onProject);
+  onProjectRef.current = onProject;
 
-  // סנכרון הקובץ/אורך למצב הסוכן; קובץ חדש מאפס תמלול/חיתוכים.
+  // סנכרון המצב המשותף (מהעמוד) לתוך הקשר של הסוכן.
   useEffect(() => {
     const c = ctxRef.current;
-    if (c.file !== file) {
-      c.words = null;
-      c.keeps = null;
-    }
     c.file = file;
     c.duration = duration;
-  }, [file, duration]);
+    c.words = words;
+    c.keeps = keeps;
+  }, [file, duration, words, keeps]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -91,14 +99,18 @@ export default function Chat({ file, duration }: { file: File | null; duration: 
         },
         onToolStatus: (id, status) =>
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, status } : it))),
-        onToolEnd: (id, ok, summary) =>
+        onToolEnd: (id, ok, summary) => {
           setItems((p) =>
             p.map((it) =>
               it.kind === "tool" && it.id === id
                 ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary }
                 : it,
             ),
-          ),
+          );
+          // דחיפת שינויי הפרויקט (תמלול/חיתוכים) לעמוד -> העדכון מוצג ב-timeline.
+          const c = ctxRef.current;
+          onProjectRef.current({ words: c.words, keeps: c.keeps });
+        },
         onError: (msg) => setItems((p) => [...p, { kind: "assistant", text: "⚠ " + msg, time: now() }]),
         onDone: () => setRunning(false),
       });
@@ -136,11 +148,10 @@ export default function Chat({ file, duration }: { file: File | null; duration: 
   const copy = (t: string) => navigator.clipboard?.writeText(t);
 
   return (
-    <div className={`chat ${open ? "open" : "closed"}`}>
+    <div className="chat">
       <div className="chat-head">
-        <div className="chat-head-l" onClick={() => setOpen((o) => !o)} style={{ cursor: "pointer" }}>
+        <div className="chat-head-l">
           <span className="chat-title">🤖 סוכן העריכה</span>
-          {open && <span className="hint"> · מבצע פעולות על הסרטון לפי בקשתך</span>}
           {running && <span className="live-dot" title="פעיל" />}
         </div>
         <div className="chat-head-r">
@@ -155,9 +166,6 @@ export default function Chat({ file, duration }: { file: File | null; duration: 
               </option>
             ))}
           </select>
-          <button className="collapse" onClick={() => setOpen((o) => !o)} title={open ? "מזער" : "הרחב"}>
-            {open ? "▾" : "▴"}
-          </button>
         </div>
       </div>
 
