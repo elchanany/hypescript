@@ -23,10 +23,13 @@ export interface RenderGraph {
 const SR = 44100; // uniform sample rate
 const ext = (name?: string) => ((name || "").toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || "mp4");
 
-// Per-segment video chain: cut -> reset PTS -> CFR fps -> fit target -> pixfmt -> timebase.
-function vChain(w: number, h: number, fps: number): string {
+// Per-segment video chain: cut -> reset PTS -> CFR fps -> fit target -> pixfmt ->
+// force EXACTLY `frames` frames (kills the extra boundary frame the fps resampler emits
+// on non-frame-aligned cuts) -> re-zero PTS -> timebase.
+function vChain(w: number, h: number, fps: number, frames: number): string {
   return `setpts=PTS-STARTPTS,fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,`
-    + `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,settb=1/${fps}`;
+    + `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,`
+    + `trim=end_frame=${frames},setpts=PTS-STARTPTS,settb=1/${fps}`;
 }
 // Per-segment audio chain: cut -> reset PTS -> async resample (fills/aligns timestamps
 // across VFR sources so concat never pads) -> uniform rate/layout -> gain -> timebase.
@@ -70,22 +73,27 @@ export function buildConcatGraph(
 
   usable.forEach((c, n) => {
     const asset = mediaById(media, c.sourceId)!;
-    const s = c.start.toFixed(3), e = c.end.toFixed(3);
+    // Snap the trim window to a whole number of frames so each segment's video and
+    // audio are exactly the same length -> concat has nothing to pad (no duplicate
+    // frames / injected silence at joins). Measured: removes the ~0.2 frame/join drift.
+    const frames = Math.max(1, Math.round((c.end - c.start) * fps));
+    const s = c.start.toFixed(3), e = (c.start + frames / fps).toFixed(3); // snap end to whole frames
     if (asset.kind === "video") {
       let idx = videoInputIdx.get(asset.id);
       if (idx === undefined) { const fn = writeOnce(asset); idx = ic++; inputArgs.push("-i", fn); videoInputIdx.set(asset.id, idx); }
       const vol = clipVolume(c) * muteGain;
       parts.push(
-        `[${idx}:v]trim=start=${s}:end=${e},${vChain(w, h, fps)}[v${n}];`
+        `[${idx}:v]trim=start=${s}:end=${e},${vChain(w, h, fps, frames)}[v${n}];`
         + `[${idx}:a]atrim=start=${s}:end=${e},${aChain(vol)}[a${n}];`,
       );
     } else {
-      // still image -> looped video for the clip duration + matching silent audio
+      // still image -> looped video for exactly `frames` frames + matching silent audio
       const fn = writeOnce(asset);
-      const dur = clipDur(c).toFixed(3);
+      const imgFrames = Math.max(1, Math.round(clipDur(c) * fps));
+      const dur = (imgFrames / fps).toFixed(3);
       const vin = ic++; inputArgs.push("-loop", "1", "-t", dur, "-i", fn);
       const ain = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", `anullsrc=channel_layout=stereo:sample_rate=${SR}`);
-      parts.push(`[${vin}:v]${vChain(w, h, fps)}[v${n}];[${ain}:a]${aChain(muteGain)}[a${n}];`);
+      parts.push(`[${vin}:v]${vChain(w, h, fps, imgFrames)}[v${n}];[${ain}:a]${aChain(muteGain)}[a${n}];`);
     }
     labels.push(`[v${n}][a${n}]`);
   });

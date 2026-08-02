@@ -27,10 +27,11 @@ describe("export render graph — single continuous stream, no per-clip encode",
   });
 
   it("each segment resets PTS and cuts both video and audio", () => {
-    expect((g.filterComplex.match(/\]trim=start=/g) || []).length).toBe(20); // video (] before trim)
-    expect((g.filterComplex.match(/atrim=start=/g) || []).length).toBe(20);  // audio
-    expect((g.filterComplex.match(/,setpts=PTS-STARTPTS/g) || []).length).toBe(20); // video (comma before)
-    expect((g.filterComplex.match(/asetpts=PTS-STARTPTS/g) || []).length).toBe(20); // audio
+    expect((g.filterComplex.match(/\]trim=start=/g) || []).length).toBe(20); // video cut (] before trim)
+    expect((g.filterComplex.match(/atrim=start=/g) || []).length).toBe(20);  // audio cut
+    expect((g.filterComplex.match(/asetpts=PTS-STARTPTS/g) || []).length).toBe(20); // audio PTS reset
+    expect(g.filterComplex).toContain("setpts=PTS-STARTPTS");                        // video PTS reset
+    expect((g.filterComplex.match(/trim=end_frame=/g) || []).length).toBe(20);       // exact-frame lock per segment
   });
 
   it("normalizes timebase, fps, format, samplerate, channels, and async audio (the join fix)", () => {
