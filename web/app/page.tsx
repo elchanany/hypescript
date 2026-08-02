@@ -1,22 +1,29 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, assembledToSource, firstVideo, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, assembledToSource, clipEnabled, firstVideo, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
-import Inspector from "@/components/Inspector";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
+import { useEditor } from "@/hooks/useEditor";
+import { Copy, Scissors, Eye, EyeOff, Trash2 } from "lucide-react";
+import { ContextMenu, CtxItem } from "@/components/ui";
+import TopBar from "@/components/TopBar";
+import ToolRail, { LeftTab } from "@/components/ToolRail";
+import MediaPanel from "@/components/MediaPanel";
+import CaptionsPanel from "@/components/CaptionsPanel";
+import InspectorPanel from "@/components/InspectorPanel";
+import TimelineToolbar from "@/components/TimelineToolbar";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
-import { useEditor } from "@/hooks/useEditor";
 
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = name; a.click();
@@ -52,14 +59,20 @@ export default function EditorPage() {
   const [error, setError] = useState("");
   const [rendering, setRendering] = useState(false);
   const [groqOk, setGroqOk] = useState(true);
-  const [chatOpen, setChatOpen] = useState(true);
-  const [chatWidth, setChatWidth] = useState(400);
-  const chatWidthRef = useRef(400); chatWidthRef.current = chatWidth;
-  const [inspectorWidth, setInspectorWidth] = useState(320);
-  const inspWRef = useRef(320); inspWRef.current = inspectorWidth;
+
+  // layout state
+  const [leftTab, setLeftTab] = useState<LeftTab>("media");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatWidth, setChatWidth] = useState(360);
+  const chatWidthRef = useRef(360); chatWidthRef.current = chatWidth;
+  const [tlHeight, setTlHeight] = useState(300);
+  const tlHeightRef = useRef(300); tlHeightRef.current = tlHeight;
+  const [zoom, setZoom] = useState(1);
+  const [snap, setSnap] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
-  const srtInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
 
   const main = useMemo(() => firstVideo(media), [media]);
@@ -72,30 +85,28 @@ export default function EditorPage() {
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
-    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(640, w));
-    const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 240) setInspectorWidth(Math.min(480, iw));
+    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(560, w));
+    const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
   }, []);
 
-  const startResizeInspector = (e: React.MouseEvent) => {
+  const startResizeChat = (e: React.MouseEvent) => {
     e.preventDefault();
-    const startX = e.clientX; const startW = inspWRef.current;
-    const onMove = (ev: MouseEvent) => setInspectorWidth(Math.max(240, Math.min(480, startW + (startX - ev.clientX))));
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_inspw", String(inspWRef.current)); document.body.style.userSelect = ""; };
+    const startX = e.clientX; const startW = chatWidthRef.current;
+    const onMove = (ev: MouseEvent) => setChatWidth(Math.max(300, Math.min(560, startW + (startX - ev.clientX))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
-
-  const startResize = (e: React.MouseEvent) => {
+  const startResizeTL = (e: React.MouseEvent) => {
     e.preventDefault();
-    const startX = e.clientX; const startW = chatWidthRef.current;
-    const onMove = (ev: MouseEvent) => setChatWidth(Math.max(300, Math.min(640, startW + (startX - ev.clientX))));
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
+    const startY = e.clientY; const startH = tlHeightRef.current;
+    const onMove = (ev: MouseEvent) => setTlHeight(Math.max(200, Math.min(560, startH + (startY - ev.clientY))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_tlh", String(tlHeightRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
   const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
 
-  // אתחול פרויקטים (ומיגרציה מסשן ישן).
   useEffect(() => {
     (async () => {
       const id = await ensureProject();
@@ -104,13 +115,25 @@ export default function EditorPage() {
     })();
   }, []);
 
-  // טעינת נתוני הפרויקט הנוכחי (מדיה + מצב) בכל החלפת פרויקט/רענון.
   useEffect(() => {
     if (!projectId) return;
     setRestored(false);
     (async () => {
       const sm = await kvGet<any[]>(pk(projectId, "media"));
-      setMedia((prev) => { prev.forEach((m) => URL.revokeObjectURL(m.url)); return sm?.length ? sm.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: m.blob, url: URL.createObjectURL(m.blob) })) : []; });
+      setMedia((prev) => {
+        prev.forEach((m) => URL.revokeObjectURL(m.url));
+        if (!sm?.length) return [];
+        const out: MediaAsset[] = [];
+        for (const m of sm) {
+          // rehydrate as a real File so downstream (ffmpeg extOf, render) always has a name.
+          const file = m.blob instanceof File ? m.blob
+            : m.blob instanceof Blob ? new File([m.blob], m.name || "media", { type: m.blob.type || "" })
+            : null;
+          if (!file) continue; // skip a broken record rather than throwing (never wipe good media)
+          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file, url: URL.createObjectURL(file) });
+        }
+        return out;
+      });
       const raw = await kvGet<any>(pk(projectId, "state"));
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
@@ -128,7 +151,11 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (!restored || !projectId) return;
-    const t = setTimeout(() => { kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks }); touchProject(projectId); }, 500);
+    setSaving(true);
+    const t = setTimeout(async () => {
+      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks });
+      touchProject(projectId); setSaving(false);
+    }, 500);
     return () => clearTimeout(t);
   }, [words, clips, subs, tracks, restored, projectId]);
 
@@ -153,8 +180,6 @@ export default function EditorPage() {
     else { const id = await createProject("פרויקט 1"); setProjects(await listProjects()); setProjectId(id); }
   };
 
-  // ברגע שנטען סרטון ואין עדיין קליפים — מציגים אותו כקליפ יחיד כדי שהציר יופיע מיד
-  // (אפשר לגרור/לחתוך). הסוכן/הסקריפט מחליפים כשמריצים.
   useEffect(() => {
     if (main && !clips) setClips([{ id: uid(), sourceId: main.id, start: 0, end: main.duration }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,7 +232,7 @@ export default function EditorPage() {
       }
       const built = script.trim() ? scriptToClips(ws!, script, main.id) : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
       setClips(built.length ? built : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]);
-      setPhase("מוכן ✓");
+      setPhase("מוכן");
     } catch (e: any) { setError(e?.message || String(e)); setPhase(""); }
     finally { setBusy(false); setProgress(0); }
   };
@@ -220,13 +245,13 @@ export default function EditorPage() {
       setPhase("מרנדר בדפדפן…");
       const blob = await renderEDL(media, clips, (r) => setProgress(Math.min(1, r)), undefined, { audioMuted: audioMuted(tracks) });
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
-      setPhase("הרינדור הושלם ✓");
+      setPhase("הרינדור הושלם");
     } catch (e: any) { setError(e?.message || String(e)); }
     finally { setRendering(false); setProgress(0); }
   };
 
   const generateSubs = () => {
-    if (!words || !main) { setError("צריך לתמלל קודם (נתח)."); return; }
+    if (!words || !main) { setError("צריך לתמלל קודם."); return; }
     const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
     setSubs(edlToSubs(cl, (sid) => (sid === main?.id ? words : null)));
   };
@@ -247,13 +272,18 @@ export default function EditorPage() {
     const { index, source } = assembledToSource(clips, cur);
     if (index >= 0) setClips(splitClip(clips, clips[index].id, source));
   };
-  const deleteSel = () => { if (clips && selectedId && !videoLocked(tracks)) { setClips(removeClip(clips, selectedId)); setSelectedId(null); } };
-  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [36, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
+  const deleteClipById = (id: string) => { if (clips && !videoLocked(tracks)) { setClips(removeClip(clips, id)); if (selectedId === id) setSelectedId(null); } };
+  const deleteSel = () => { if (selectedId) deleteClipById(selectedId); };
+  const duplicateClip = (id: string) => {
+    if (videoLocked(tracks)) return;
+    setClips((cs) => { if (!cs) return cs; const i = cs.findIndex((c) => c.id === id); if (i < 0) return cs; const copy = { ...cs[i], id: uid() }; return [...cs.slice(0, i + 1), copy, ...cs.slice(i + 1)]; });
+  };
+  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIndex = selectedClip ? clips!.indexOf(selectedClip) : -1;
+  const menuClip = clipMenu ? clips?.find((c) => c.id === clipMenu.id) || null : null;
 
-  // קיצורי מקלדת (לא פעילים בזמן הקלדה בשדה טקסט).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -261,6 +291,7 @@ export default function EditorPage() {
       const meta = e.ctrlKey || e.metaKey;
       if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
+      else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
       else if ((e.key === "Delete" || e.key === "Backspace") && selectedId) { e.preventDefault(); deleteSel(); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
     };
@@ -270,123 +301,105 @@ export default function EditorPage() {
 
   const working = busy || rendering;
   const totalEdited = clips ? totalDur(clips) : duration;
+  const vLocked = videoLocked(tracks);
+  const projectName = projects.find((p) => p.id === projectId)?.name || "";
+
+  const clipMenuItems: CtxItem[] = menuClip ? [
+    { label: "שכפל", icon: Copy, onClick: () => duplicateClip(menuClip.id), disabled: vLocked },
+    { label: "פצל בראש-הנגן", icon: Scissors, onClick: splitAtPlayhead, disabled: vLocked },
+    { label: clipEnabled(menuClip) ? "השבת" : "הפעל", icon: clipEnabled(menuClip) ? EyeOff : Eye, onClick: () => updateClip(menuClip.id, { enabled: !clipEnabled(menuClip) }) },
+    { sep: true, label: "" },
+    { label: "מחק", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
+  ] : [];
 
   return (
-    <div className="workspace">
-      <section className="editor-pane">
-        {!groqOk && <div className="banner err">GROQ_API_KEY לא מוגדר ב-Vercel. ראה <a href="/settings">הגדרות</a>.</div>}
+    <div className="editor-root">
+      <TopBar
+        projectName={projectName} projects={projects} projectId={projectId} saving={saving}
+        onSwitch={switchProject} onNew={newProject} onRename={renameCurrent} onDelete={deleteCurrent}
+        canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
+        chatOpen={chatOpen} onToggleChat={toggleChat}
+        canExport={!!clips?.length} rendering={rendering} onExport={render}
+      />
 
-        <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)} />
+      {!groqOk && <div className="banner2">GROQ_API_KEY לא מוגדר ב-Vercel. <Link href="/settings">הגדרות</Link></div>}
 
-        {media.length > 0 && (
-          <div className="media-strip">
-            {media.map((m, i) => (
-              <div key={m.id} className={`media-chip ${m.id === main?.id ? "main" : ""}`} title={m.name}>
-                <span className="mc-kind">{m.kind === "video" ? "🎞️" : m.kind === "image" ? "🖼️" : "🎵"}</span>
-                <span className="mc-body">
-                  <span className="mc-name">{i + 1}. {m.name}</span>
-                  <span className="mc-meta">{m.kind === "video" ? "וידאו" : m.kind === "image" ? "תמונה" : "שמע"} · {m.duration.toFixed(1)}s{m.id === main?.id ? " · ראשי" : ""}</span>
-                </span>
-                <span className="mc-actions">
-                  <button onClick={() => addMediaClip(m)} title="הוסף לציר">＋</button>
-                  <button onClick={() => removeMedia(m.id)} title="הסר קובץ">✕</button>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="shell-body">
+        <ToolRail active={leftTab} onSelect={setLeftTab} />
 
-        <div className="editor-toolbar">
-          <button className="btn" onClick={() => fileInput.current?.click()}>📁 טען מדיה</button>
-          <input ref={fileInput} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
-          <div className="tb-sep" />
-          <button className="btn mono" onClick={undo} disabled={!canUndo} title="בטל (Ctrl+Z)">↶</button>
-          <button className="btn mono" onClick={redo} disabled={!canRedo} title="בצע מחדש (Ctrl+Shift+Z)">↷</button>
-          <div className="tb-sep" />
-          <button className="btn" onClick={splitAtPlayhead} disabled={!clips?.length} title="פצל בראש-הנגן (S)">🔪 פצל</button>
-          <button className="btn" onClick={deleteSel} disabled={!selectedId} title="מחק (Delete)">🗑️ מחק</button>
-          <div className="tb-sep" />
-          <button className="btn primary" onClick={analyze} disabled={working || !main}>{busy ? "מנתח…" : words ? "בנה מחדש" : "נתח"}</button>
-          <button className="btn good" onClick={render} disabled={working || !clips?.length}>{rendering ? "מרנדר…" : "🎬 ייצא"}</button>
-          <button className="btn" onClick={exportSrt} disabled={!words}>💬 SRT</button>
-          <div className="tb-grow" />
-          <select className="prov-select" value={projectId || ""} onChange={(e) => switchProject(e.target.value)} title="פרויקטים">
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <button className="btn" onClick={newProject} title="פרויקט חדש">🆕</button>
-          <button className="btn" onClick={renameCurrent} title="שנה שם">✏️</button>
-          <button className="btn" onClick={deleteCurrent} title="מחק פרויקט">🗑️</button>
-          <button className="btn" onClick={toggleChat} title="הצג/הסתר צ'אט">💬</button>
-          {main && <span className="badge">{fmt(duration)} → {fmt(totalEdited)}</span>}
+        <div className="leftpanel">
+          {leftTab === "media" ? (
+            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia} />
+          ) : (
+            <CaptionsPanel
+              script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
+              hasMain={!!main} hasWords={!!words} subs={subs}
+              onGenerate={generateSubs} onImportSrt={importSrt} onExportSrt={exportSrt} onEditSub={editSub} onDelSub={delSub}
+            />
+          )}
         </div>
 
-        {(working || phase || error) && (
-          <div className="editor-status">
-            {error ? <span className="err">⚠ {error}</span> : <span className="hint">{phase}</span>}
-            {working && <div className="progress"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
-          </div>
-        )}
-
-        {clips ? (
-          <Timeline
-            media={media} clips={clips} subs={subs} tracks={tracks} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
-            onSeek={seek} onSelect={setSelectedId}
-            onTrimBegin={beginTransaction}
-            onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}
-            onTrimEnd={commitTransaction}
-            onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
-            renameTrack={renameTrack} toggleLock={toggleLock} toggleMute={toggleMute}
-            cycleHeight={cycleHeight} reorderTrack={reorderTrack}
-          />
-        ) : (
-          <div className="tl-placeholder">טען מדיה ותגיד לסוכן בצ'אט מה לעשות — הוא בונה את הציר. או “עריכה ידנית”.</div>
-        )}
-
-        <details className="manual">
-          <summary>עריכה ידנית + כתוביות</summary>
-          <textarea value={script} onChange={(e) => setScript(e.target.value)} placeholder="סקריפט: הטקסט שאמור להישאר, בסדר הרצוי (אפשר לחזור על קטע)…" />
-          <div className="row" style={{ gap: 8, marginTop: 8 }}>
-            <button className="btn" onClick={generateSubs} disabled={!words}>💬 צור כתוביות</button>
-            <button className="btn" onClick={() => srtInput.current?.click()}>📥 ייבא SRT</button>
-            <button className="btn" onClick={exportSrt} disabled={!words && !subs}>⬇ ייצא SRT</button>
-            <input ref={srtInput} type="file" accept=".srt,text/plain" hidden onChange={(e) => { importSrt(e.target.files?.[0] || null); e.currentTarget.value = ""; }} />
-          </div>
-          {subs && (
-            <div className="subs-editor">
-              {subs.map((s, i) => (
-                <div key={s.id} className="sub-row">
-                  <span className="sub-idx">{i + 1}</span>
-                  <span className="sub-time">{s.start.toFixed(1)}–{s.end.toFixed(1)}</span>
-                  <input className="sub-text" value={s.text} onChange={(e) => editSub(s.id, e.target.value)} />
-                  <button className="sub-del" onClick={() => delSub(s.id)} title="מחק">✕</button>
+        <div className="main-area">
+          <div className="upper">
+            <div className="center-col">
+              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)} />
+              {(working || phase || error) && (
+                <div className="status-strip">
+                  <span className={`s-msg ${error ? "err" : ""}`}>{error || phase}</span>
+                  {working && <div className="s-bar"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </details>
-      </section>
 
-      {selectedClip && <div className="resizer" onMouseDown={startResizeInspector} title="גרור לשינוי רוחב ה-Inspector" />}
-      {selectedClip && (
-        <aside className="inspector-pane" style={{ width: inspectorWidth }}>
-          <Inspector
-            clip={selectedClip}
-            assetName={mediaById(media, selectedClip.sourceId)?.name || "?"}
-            assetKind={(mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio") || "video"}
-            assetDuration={mediaById(media, selectedClip.sourceId)?.duration || duration}
-            trackName={videoTrack(tracks)?.name || "וידאו"}
-            timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
-            onUpdate={(patch) => updateClip(selectedClip.id, patch)}
-          />
-        </aside>
-      )}
+            <InspectorPanel
+              clip={selectedClip}
+              assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : ""}
+              assetKind={(selectedClip && (mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio")) || "video"}
+              assetDuration={selectedClip ? mediaById(media, selectedClip.sourceId)?.duration || duration : 0}
+              trackName={videoTrack(tracks)?.name || "וידאו"}
+              timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
+              onUpdate={(patch) => selectedClip && updateClip(selectedClip.id, patch)}
+              projectName={projectName} mediaCount={media.length} sourceDuration={duration} editedDuration={totalEdited}
+            />
+          </div>
 
-      {chatOpen && <div className="resizer" onMouseDown={startResize} title="גרור לשינוי רוחב הצ'אט" />}
-      <aside className="chat-pane" style={{ width: chatOpen ? chatWidth : 0 }}>
-        <Chat media={media} onAddMedia={addFiles} words={words} clips={clips} subs={subs} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }} />
-      </aside>
-      {!chatOpen && <button className="chat-reopen" onClick={toggleChat} title="פתח צ'אט">🤖</button>}
+          <div className="timeline-region" style={{ height: tlHeight }}>
+            <div className="tl-resize" onMouseDown={startResizeTL} title="גרור לשינוי גובה" />
+            <TimelineToolbar
+              selInfo={selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
+              canSplit={!!clips?.length && !vLocked} canDelete={!!selectedId && !vLocked}
+              onSplit={splitAtPlayhead} onDelete={deleteSel}
+              snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
+            />
+            {clips ? (
+              <Timeline
+                media={media} clips={clips} subs={subs} tracks={tracks} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
+                zoom={zoom} snap={snap}
+                onSeek={seek} onSelect={setSelectedId}
+                onTrimBegin={beginTransaction}
+                onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}
+                onTrimEnd={commitTransaction}
+                onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
+                onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
+                renameTrack={renameTrack} toggleLock={toggleLock} toggleMute={toggleMute}
+                cycleHeight={cycleHeight} reorderTrack={reorderTrack}
+              />
+            ) : (
+              <div className="tl-empty">טען מדיה כדי להתחיל — הסרטון יופיע כאן כקטע בציר, ותוכל לחתוך, לגרור ולפצל. או בקש מהסוכן ב-AI.</div>
+            )}
+          </div>
+        </div>
+
+        {chatOpen && (
+          <aside className="chat-drawer" style={{ width: chatWidth }}>
+            <div className="drawer-resize" onMouseDown={startResizeChat} title="גרור לשינוי רוחב" />
+            <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs} projectId={projectId}
+              onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }} />
+          </aside>
+        )}
+      </div>
+
+      {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
     </div>
   );
 }

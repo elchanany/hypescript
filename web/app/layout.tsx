@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./globals.css";
 import ChunkReload from "@/components/ChunkReload";
 
@@ -13,14 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="he" dir="rtl">
       <body>
         <ChunkReload />
-        <header className="topbar">
-          <Link href="/" className="brand">🎬 hypescript</Link>
-          <nav>
-            <Link href="/">עורך</Link>
-            <Link href="/settings">הגדרות</Link>
-          </nav>
-        </header>
-        <main className="container">{children}</main>
+        {children}
       </body>
     </html>
   );

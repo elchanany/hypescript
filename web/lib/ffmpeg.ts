@@ -42,8 +42,8 @@ export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
   return loadPromise;
 }
 
-function extOf(name: string): string {
-  const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
+function extOf(name?: string): string {
+  const m = (name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
   return m ? m[1] : "mp4";
 }
 

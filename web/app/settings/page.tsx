@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 
@@ -31,6 +32,13 @@ export default function SettingsPage() {
 
   return (
     <div>
+      <header className="site-header">
+        <Link href="/" className="brand">hypescript</Link>
+        <nav>
+          <Link href="/">חזרה לעורך</Link>
+        </nav>
+      </header>
+      <div className="container">
       <div className="hero">
         <h1>הגדרות</h1>
         <p>המפתחות נשמרים כמשתני-סביבה ב-Vercel (או ב-<code>web/.env.local</code> להרצה מקומית) — לא בדפדפן ולא בקוד.</p>
@@ -72,6 +80,7 @@ export default function SettingsPage() {
           <li>Redeploy כדי שהמפתח ייכנס לתוקף.</li>
           <li>הרצה מקומית: הוסף אותם ל-<code>web/.env.local</code>.</li>
         </ol>
+      </div>
       </div>
     </div>
   );
