@@ -5,7 +5,10 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { Clip, MediaAsset, clipDur, clipEnabled, clipVolume, mediaById, uid } from "./editor/model";
+import { Clip, MediaAsset, mediaById, uid } from "./editor/model";
+import { buildConcatGraph, RenderTarget, DEFAULT_TARGET, toExecArgs } from "./render/graph";
+
+export type { RenderTarget } from "./render/graph";
 
 const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
@@ -87,12 +90,15 @@ export async function extractFrame(file: File, atSeconds: number): Promise<Blob>
   });
 }
 
-export interface RenderTarget { w: number; h: number; fps: number; }
-const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
+// עוצר ומאפס את מנוע ה-ffmpeg (לביטול Job אמיתי). הקריאה הבאה תטען מחדש.
+export function terminateFFmpeg() {
+  try { ffmpeg?.terminate(); } catch { /* noop */ }
+  ffmpeg = null; loadPromise = null;
+}
 
-// מרנדר EDL רב-מקורי: כל קליפ נחתך מהמקור שלו, מנורמל ל-target, ומשורשר בסדר.
-// כרגע נתמכים קליפי וידאו (כמה סרטונים). תמונות/שמע כשכבה — פאזה הבאה.
-export interface RenderOpts { audioMuted?: boolean; }
+// מרנדר EDL רב-מקורי דרך גרף-סינון יחיד (ראה lib/render/graph.ts):
+// אין קידוד לכל קליפ בנפרד ואין concat demuxer — Stream רציף אחד, קידוד יחיד.
+export interface RenderOpts { audioMuted?: boolean; signal?: AbortSignal; }
 
 export async function renderEDL(
   media: MediaAsset[],
@@ -102,67 +108,31 @@ export async function renderEDL(
   opts: RenderOpts = {},
 ): Promise<Blob> {
   return runExclusive(async () => {
-  const ff = await getFFmpeg();
-  const muteGain = opts.audioMuted ? 0 : 1;
-  const usable = clips.filter((c) => {
-    if (!clipEnabled(c)) return false; // קליפ מושבת — מדולג
-    const k = mediaById(media, c.sourceId)?.kind;
-    return k === "video" || k === "image";
-  });
-  if (!usable.length) throw new Error("אין קליפי וידאו/תמונה לרינדור.");
+    if (opts.signal?.aborted) throw new Error("בוטל");
+    const ff = await getFFmpeg();
+    const graph = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted });
 
-  // כותבים כל קובץ-מקור בשימוש פעם אחת ל-FS של ffmpeg.
-  const written = new Map<string, string>();
-  const ensureFile = async (asset: MediaAsset) => {
-    if (written.has(asset.id)) return written.get(asset.id)!;
-    const nm = `m${written.size}.${extOf(asset.file.name)}`;
-    await ff.writeFile(nm, await fetchFile(asset.file));
-    written.set(asset.id, nm);
-    return nm;
-  };
-
-  const { w, h, fps } = target;
-  const scalePad = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p`;
-  const inputArgs: string[] = [];
-  let ic = 0;
-  const videoInput = new Map<string, number>(); // וידאו: input index לשימוש חוזר
-  const parts: string[] = [];
-  const labels: string[] = [];
-
-  for (let n = 0; n < usable.length; n++) {
-    const c = usable[n];
-    const asset = mediaById(media, c.sourceId)!;
-    if (asset.kind === "video") {
-      let idx = videoInput.get(asset.id);
-      if (idx === undefined) { const nm = await ensureFile(asset); idx = ic++; inputArgs.push("-i", nm); videoInput.set(asset.id, idx); }
-      const vol = (clipVolume(c) * muteGain).toFixed(3);
-      parts.push(
-        `[${idx}:v]trim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},setpts=PTS-STARTPTS,${scalePad}[v${n}];` +
-          `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo,volume=${vol}[a${n}];`,
-      );
-    } else {
-      // תמונה: קלט לולאה בזמן הקליפ + אודיו שקט
-      const nm = await ensureFile(asset);
-      const dur = clipDur(c).toFixed(3);
-      const vin = ic++; inputArgs.push("-loop", "1", "-t", dur, "-i", nm);
-      const ain = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
-      parts.push(`[${vin}:v]${scalePad}[v${n}];[${ain}:a]aformat=sample_rates=44100:channel_layouts=stereo[a${n}];`);
+    // כותבים כל קובץ-מקור בשימוש פעם אחת ל-FS של ffmpeg.
+    for (const wsr of graph.writes) {
+      const asset = mediaById(media, wsr.assetId)!;
+      await ff.writeFile(wsr.filename, await fetchFile(asset.file));
     }
-    labels.push(`[v${n}][a${n}]`);
-  }
-  const filter = parts.join("") + `${labels.join("")}concat=n=${usable.length}:v=1:a=1[outv][outa]`;
 
-  if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
-  await ff.exec([
-    ...inputArgs,
-    "-filter_complex", filter,
-    "-map", "[outv]", "-map", "[outa]",
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
-    "-c:a", "aac", "-b:a", "192k",
-    "out.mp4",
-  ]);
-  const data = (await ff.readFile("out.mp4")) as Uint8Array;
-  await ff.deleteFile("out.mp4").catch(() => {});
-  return new Blob([data as unknown as BlobPart], { type: "video/mp4" });
+    // ביטול אמיתי: terminate מפיל את ה-exec הנוכחי -> ה-Promise נדחה.
+    let onAbort: (() => void) | undefined;
+    if (opts.signal) { onAbort = () => terminateFFmpeg(); opts.signal.addEventListener("abort", onAbort, { once: true }); }
+    if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
+
+    try {
+      await ff.exec(toExecArgs(graph, "out.mp4"));
+      const data = (await ff.readFile("out.mp4")) as Uint8Array;
+      await ff.deleteFile("out.mp4").catch(() => {});
+      return new Blob([data as unknown as BlobPart], { type: "video/mp4" });
+    } catch (e) {
+      if (opts.signal?.aborted) throw new Error("בוטל");
+      throw e;
+    } finally {
+      if (opts.signal && onAbort) opts.signal.removeEventListener("abort", onAbort);
+    }
   });
 }

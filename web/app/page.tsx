@@ -241,9 +241,10 @@ export default function EditorPage() {
     if (!media.length || !clips?.length) return;
     setError(""); setRendering(true); setProgress(0);
     try {
-      const { renderEDL } = await import("@/lib/ffmpeg");
+      const { getRenderBackend } = await import("@/lib/render/RenderBackend");
+      const backend = getRenderBackend();
       setPhase("מרנדר בדפדפן…");
-      const blob = await renderEDL(media, clips, (r) => setProgress(Math.min(1, r)), undefined, { audioMuted: audioMuted(tracks) });
+      const blob = await backend.renderProject({ media, clips, audioMuted: audioMuted(tracks) }, (r) => setProgress(Math.min(1, r)));
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
       setPhase("הרינדור הושלם");
     } catch (e: any) { setError(e?.message || String(e)); }
