@@ -1,8 +1,8 @@
 // לולאת הסוכן (צד-לקוח): שולחת שיחה+כלים ל-/api/agent, מבצעת את קריאות הכלים
 // (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
 
-import { ChatMessage, Provider, ToolCall } from "./types";
-import { AgentContext, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
+import { AgentMode, ChatMessage, Provider, ToolCall } from "./types";
+import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
 
 export interface AgentEvents {
   onAssistant: (text: string) => void;
@@ -18,6 +18,8 @@ const CALL_TIMEOUT_MS = 120000;
 
 export class AgentRunner {
   history: ChatMessage[] = [];
+  // מצב הסוכן. ask/plan אינם מקבלים כלים -> אינם יכולים לשנות את הפרויקט.
+  mode: AgentMode = "act";
   private stopped = false;
   private running = false;
   private currentAbort: AbortController | null = null;
@@ -64,6 +66,8 @@ export class AgentRunner {
         const ctrl = new AbortController();
         this.currentAbort = ctrl;
         const to = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
+        // אכיפת מצב: ב-ask/plan לא מעבירים כלים כלל, לכן אין אפשרות לשנות את הפרויקט.
+        const toolsForMode = this.mode === "act" ? TOOL_SCHEMAS : [];
         let data: any;
         try {
           const resp = await fetch("/api/agent", {
@@ -73,11 +77,11 @@ export class AgentRunner {
             body: JSON.stringify({
               provider: this.provider,
               messages: [
-                { role: "system", content: SYSTEM_PROMPT },
+                { role: "system", content: SYSTEM_PROMPT + MODE_PROMPTS[this.mode] },
                 { role: "system", content: mediaNote },
                 ...this.history,
               ],
-              tools: TOOL_SCHEMAS,
+              tools: toolsForMode,
             }),
           });
           data = await resp.json();

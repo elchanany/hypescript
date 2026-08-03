@@ -63,8 +63,10 @@ export default function EditorPage() {
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatWidth, setChatWidth] = useState(360);
-  const chatWidthRef = useRef(360); chatWidthRef.current = chatWidth;
+  const [chatWidth, setChatWidth] = useState(380);
+  const chatWidthRef = useRef(380); chatWidthRef.current = chatWidth;
+  const [dockSide, setDockSide] = useState<"left" | "right">("right");
+  const dockSideRef = useRef<"left" | "right">("right"); dockSideRef.current = dockSide;
   const [tlHeight, setTlHeight] = useState(300);
   const tlHeightRef = useRef(300); tlHeightRef.current = tlHeight;
   const [leftW, setLeftW] = useState(264);
@@ -89,7 +91,8 @@ export default function EditorPage() {
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
-    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(560, w));
+    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(640, w));
+    const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
     const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
     const lw = parseInt(localStorage.getItem("hs_leftw") || "0", 10); if (lw >= 220) setLeftW(Math.min(440, lw));
     const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 260) setInspW(Math.min(460, iw));
@@ -98,11 +101,16 @@ export default function EditorPage() {
   const startResizeChat = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX; const startW = chatWidthRef.current;
-    const onMove = (ev: MouseEvent) => setChatWidth(Math.max(300, Math.min(560, startW + (startX - ev.clientX))));
+    const onMove = (ev: MouseEvent) => {
+      const delta = dockSideRef.current === "right" ? (startX - ev.clientX) : (ev.clientX - startX);
+      setChatWidth(Math.max(320, Math.min(640, startW + delta)));
+    };
     const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
+  const resetChatWidth = () => { setChatWidth(380); localStorage.setItem("hs_chatw", "380"); };
+  const toggleDockSide = () => setDockSide((s) => { const n = s === "right" ? "left" : "right"; localStorage.setItem("hs_dockside", n); return n; });
   const startResizeTL = (e: React.MouseEvent) => {
     e.preventDefault();
     const startY = e.clientY; const startH = tlHeightRef.current;
@@ -328,6 +336,23 @@ export default function EditorPage() {
   const totalEdited = clips ? totalDur(clips) : duration;
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
+  const agentSelLabel = selectedClip ? (mediaById(media, selectedClip.sourceId)?.name || "קטע") : null;
+
+  const dockHandle = (
+    <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth}
+      title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל הסוכן" />
+  );
+  const agentDock = chatOpen ? (
+    <>
+      {dockSide === "right" && dockHandle}
+      <aside className="agent-dock" style={{ width: chatWidth }}>
+        <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs} projectId={projectId}
+          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }}
+          playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide} />
+      </aside>
+      {dockSide === "left" && dockHandle}
+    </>
+  ) : null;
 
   const clipMenuItems: CtxItem[] = menuClip ? [
     { label: "שכפל", icon: Copy, onClick: () => duplicateClip(menuClip.id), disabled: vLocked },
@@ -350,6 +375,7 @@ export default function EditorPage() {
       {!groqOk && <div className="banner2">GROQ_API_KEY לא מוגדר ב-Vercel. <Link href="/settings">הגדרות</Link></div>}
 
       <div className="shell-body">
+        {dockSide === "left" && agentDock}
         <ToolRail active={leftTab} onSelect={setLeftTab} />
 
         <div className="leftpanel" style={{ width: leftW }}>
@@ -420,13 +446,7 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {chatOpen && (
-          <aside className="chat-drawer" style={{ width: chatWidth }}>
-            <div className="drawer-resize" onMouseDown={startResizeChat} title="גרור לשינוי רוחב" />
-            <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs} projectId={projectId}
-              onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }} />
-          </aside>
-        )}
+        {dockSide === "right" && agentDock}
       </div>
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
