@@ -11,18 +11,18 @@
 | מבנה shell (top/tool-rail/left/preview/inspector/timeline) | OK | — |
 | פאנלים resizable + persist + dbl-reset | OK | — |
 | Agent dock (מעוגן, מכווץ workspace) | OK | — |
-| קטגוריות tool-rail | PARTIAL | רק Media+Captions; חסרות Audio/Text/Effects/Transitions/Filters/Adjustment/Templates/Generate/Brand (לא מוצגות עד שיש פאנל אמיתי — נכון, אך חסר תוכן) |
+| קטגוריות tool-rail | PARTIAL | Media+Text+Captions; חסרות Audio/Effects/Transitions/Filters/Adjustment/Templates/Generate/Brand (לא מוצגות עד שיש פאנל אמיתי) |
 | Top bar: breadcrumb/preview-quality/jobs/profile | PARTIAL | חסר |
 
-## 2. Canvas / Direct manipulation  ← **הפער הקריטי**
+## 2. Canvas / Direct manipulation  ← **הפער הקריטי** (Preview הושלם; Export חסר)
 | פריט | סטטוס | פער |
 |---|---|---|
 | Preview (וידאו יחיד) | OK | — |
 | Caption overlay בנגן | PARTIAL (!EXPORT partial) | טקסט בלבד |
-| PreviewCompositor (שכבות: image/logo/text/sticker) | MISSING | הליבה של "עורך אמיתי" |
-| Project coordinates (לא CSS px) | MISSING | — |
-| בחירה/Bounding box/drag/resize/rotate | MISSING | — |
-| Inspector transform sync | MISSING | — |
+| PreviewCompositor (שכבות: image/logo/text) | OK (!EXPORT) | stickers חסר; ייצוא לא מרנדר overlays |
+| Project coordinates (לא CSS px) | OK | unit tests ב-`canvasCoords.test.ts` |
+| בחירה/Bounding box/drag/resize/rotate | OK | Undo אחד לכל gesture; cancel אם לא זז |
+| Inspector transform sync | OK | X/Y/W/H/rotation/opacity + טקסט |
 | Snapping/guides/safe-areas | MISSING | — |
 
 ## 3. Timeline
@@ -36,15 +36,15 @@
 | Zoom around pointer / Ctrl+wheel / pinch | MISSING | — |
 | Gap entity / Delete-leaves-gap / Ripple-delete / Roll / Slip | MISSING | סמנטיקת עריכה מקצועית |
 | Transitions/Effects/Keyframes visuals | MISSING | — |
-| Overlay/Text tracks | MISSING | תלוי ב-#2 |
+| Overlay/Text tracks | PARTIAL | רצועת «שכבות» לבחירה; trim/move בציר חסר |
 
 ## 4. Text / Captions / Images / Logos / Overlays
 | פריט | סטטוס | פער |
 |---|---|---|
 | כתוביות: create/edit/timing/SRT | OK | — |
 | כתוביות: style/position/animation/scope | MISSING | — |
-| Text element (add/edit/style) | MISSING | — |
-| Image/Logo overlay | MISSING | תלוי ב-#2 |
+| Text element (add/edit/style) | PARTIAL (!EXPORT) | הוספה+עריכה+transform ב-Preview; style מלא/אנימציה חסרים |
+| Image/Logo overlay | OK (!EXPORT) | תמונה→overlay (לא קליפ); aspect טבעי; checkerboard |
 | Stickers/Shapes | MISSING | — |
 
 ## 5. Agent workspace
@@ -85,18 +85,13 @@
 # ISSUES לפי עדיפות
 
 ### P0 — באגים חוסמים
-- **AG-1**: DeepSeek `tool_calls` 400 — normalizer/repair שמבטיח tool result לכל tool_call_id, מוחק orphans, מתקן היסטוריה שמורה. *(מטופל בסבב זה)*
+- **AG-1**: DeepSeek `tool_calls` 400 — normalizer/repair. ✅ הושלם (`web/lib/agent/normalize.ts` + tests).
 
 ### P1 — ליבת עורך (הסדר שנקבע)
-- **CV-1**: מודל overlays (`VisualElement`+`VisualTransform`) + schemaVersion 2→3 + migration.
-- **CV-2**: מתמטיקת קואורדינטות פרויקט↔viewport + hit-test + matrices (+unit tests).
-- **CV-3**: PreviewCompositor — image/logo/text מעל הווידאו לפי זמן+transform.
-- **CV-4**: Direct manipulation — select/bbox/corner-resize/rotate/drag, commit יחיד ל-Undo.
-- **CV-5**: Inspector Transform (X/Y/scale/rotation/opacity) sync דו-כיווני.
-- **CV-6**: Timeline — overlay/text track + ייצוג הישויות.
-- **CV-7**: Export parity — overlay (FFmpeg `overlay`/drawtext) בלי לשבור מנוע ה-EDL הנבדק.
+- **CV-1…CV-6**: ✅ Preview — מודל overlays + קואורדינטות + compositor + drag/resize/rotate + Inspector + רצועת שכבות.
+- **CV-7**: Export parity — overlay (FFmpeg `overlay`/drawtext) בלי לשבור מנוע ה-EDL הנבדק. ← **הבא**
 - **TL-1**: Gap entity + Delete-leaves-gap + Ripple-delete + zoom-around-pointer + Ctrl/pinch.
-- **TX-1**: Text element מלא (add/edit/style) + Caption style/position.
+- **TX-1**: Text style מלא + Caption style/position + trim overlays בציר.
 
 ### P2 — סוכן/פלטפורמה
 - **AG-2**: CommandBus מרכזי + Command registry + Query API → parity אמיתי UI/Agent.

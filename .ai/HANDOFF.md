@@ -33,6 +33,6 @@
 - Overlay lane בציר הוא ויזואלי (לא TrackMeta type); trim/move של overlays בציר עדיין לא.
 
 ## Exact Next Steps
-1. אימות דפדפן: הוספת תמונה/טקסט, drag/resize/rotate, Inspector sync, Undo, בחירה מציר.
-2. Export parity ל-overlays (בלי לשבור מנוע EDL).
-3. לפי GAP_MAP: Timeline gaps/ripple/zoom-around-pointer → CommandBus → Auth/Providers.
+1. **CV-7 Export parity** ל-overlays (FFmpeg `overlay`/drawtext) בלי לשבור מנוע EDL — regression tests.
+2. לפי GAP_MAP: Timeline gaps/ripple/zoom-around-pointer → CommandBus → Auth/Providers.
+3. Artifacts אימות Canvas: `.artifacts/pkgA/canvas_*.png` (מוחרגים מ-git).
