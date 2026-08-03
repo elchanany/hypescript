@@ -11,19 +11,19 @@
 | מבנה shell (top/tool-rail/left/preview/inspector/timeline) | OK | — |
 | פאנלים resizable + persist + dbl-reset | OK | — |
 | Agent dock (מעוגן, מכווץ workspace) | OK | — |
-| קטגוריות tool-rail | PARTIAL | Media+Text+Captions; חסרות Audio/Effects/Transitions/Filters/Adjustment/Templates/Generate/Brand (לא מוצגות עד שיש פאנל אמיתי) |
+| קטגוריות tool-rail | PARTIAL | Media+Text+Captions; חסרות Audio/Effects/… (לא מוצגות עד פאנל אמיתי) |
 | Top bar: breadcrumb/preview-quality/jobs/profile | PARTIAL | חסר |
 
-## 2. Canvas / Direct manipulation  ← **הפער הקריטי** (Preview הושלם; Export חסר)
+## 2. Canvas / Direct manipulation
 | פריט | סטטוס | פער |
 |---|---|---|
 | Preview (וידאו יחיד) | OK | — |
-| Caption overlay בנגן | PARTIAL (!EXPORT partial) | טקסט בלבד |
-| PreviewCompositor (שכבות: image/logo/text) | OK | stickers חסר; Preview+Export (burn-in אחרי concat) |
-| Project coordinates (לא CSS px) | OK | unit tests ב-`canvasCoords.test.ts` |
-| בחירה/Bounding box/drag/resize/rotate | OK | Undo אחד לכל gesture; cancel אם לא זז |
-| Inspector transform sync | OK | X/Y/W/H/rotation/opacity + טקסט |
-| Snapping/guides/safe-areas | MISSING | — |
+| Caption overlay בנגן | PARTIAL | טקסט בלבד |
+| PreviewCompositor (image/logo/text) | OK | stickers חסר; Preview+Export |
+| Project coordinates | OK | — |
+| בחירה/Bounding box/drag/resize/rotate | OK | — |
+| Inspector transform sync | OK | — |
+| Snapping/guides/safe-areas | PARTIAL | snap למרכז + שולי 10% בגרירה (Alt מבטל); guides ויזואליים חסרים |
 
 ## 3. Timeline
 | פריט | סטטוס | פער |
@@ -33,18 +33,18 @@
 | Track headers (lock/mute/height/reorder) | PARTIAL | solo/collapse/add/delete חסר |
 | Split/Trim/Move | OK | — |
 | Ghost+Drop indicator | OK | — |
-| Zoom around pointer / Ctrl+wheel / pinch | MISSING | — |
-| Gap entity / Delete-leaves-gap / Ripple-delete / Roll / Slip | MISSING | סמנטיקת עריכה מקצועית |
+| Zoom around pointer / Ctrl+wheel | OK | — |
+| Gap entity / Delete-leaves-gap / Ripple-delete | OK | Preview+Export (lavfi black); Roll/Slip חסרים |
 | Transitions/Effects/Keyframes visuals | MISSING | — |
-| Overlay/Text tracks | PARTIAL | רצועת «שכבות» לבחירה; trim/move בציר חסר |
+| Overlay/Text tracks | OK | בחירה + trim/move בציר |
 
 ## 4. Text / Captions / Images / Logos / Overlays
 | פריט | סטטוס | פער |
 |---|---|---|
 | כתוביות: create/edit/timing/SRT | OK | — |
 | כתוביות: style/position/animation/scope | MISSING | — |
-| Text element (add/edit/style) | PARTIAL | הוספה+עריכה+transform+export (PNG→overlay); style מלא/אנימציה חסרים |
-| Image/Logo overlay | OK | תמונה→overlay (לא קליפ); Preview+Export burn-in |
+| Text element (add/edit/style) | PARTIAL | style מלא/אנימציה חסרים |
+| Image/Logo overlay | OK | — |
 | Stickers/Shapes | MISSING | — |
 
 ## 5. Agent workspace
@@ -52,53 +52,47 @@
 |---|---|---|
 | Docked panel + Ask/Plan/Act (enforced) | OK | — |
 | Slash `/` + `@mentions` + context chips | OK | — |
-| Tool activity rows | PARTIAL | provider/model/progress/cost/cancel/retry/undo חסר |
-| **DeepSeek tool_calls protocol** | **BROKEN (P0)** | `400: assistant tool_calls must be followed by tool messages` — נראה ברפרנס. **נדרש normalizer/repair.** |
-| Plan checklist / approval cards / checkpoints / diff | MISSING | — |
-| Reference chips לחיצים | MISSING | — |
-| CommandBus מרכזי + Query API + parity tests | MISSING | עמוד השדרה ל-parity |
+| Tool activity rows | PARTIAL | cost/cancel/retry מלא חסר |
+| DeepSeek tool_calls protocol | OK | normalize.ts |
+| Plan checklist / approval cards / checkpoints | MISSING | — |
+| CommandBus + Query API | PARTIAL | registry + builtins + queryProject; לא כל ה-UI עובר דרכו עדיין |
+| כלי overlays / enable / volume / leave_gap | OK | — |
 
 ## 6. Project / Auth / Dashboard
 | פריט | סטטוס | פער |
 |---|---|---|
-| פרויקטים מקומיים (IndexedDB) + מעבר/יצירה/שם/מחיקה | OK | — |
-| Login / Google OAuth / session | MISSING | — |
+| פרויקטים מקומיים (IndexedDB) | OK | — |
+| Login / Google OAuth / session | MISSING | דורש אישור (RULES §7 — שירות חדש) |
 | Dashboard / project cards / wizard | MISSING | — |
 | Organizations / roles / RLS | MISSING | — |
 
 ## 7. Providers
 | פריט | סטטוס | פער |
 |---|---|---|
-| LLM proxy (deepseek/openai/anthropic/gemini, env) | OK | — |
-| תמלול Groq (proxy) | PARTIAL | מפתח client-side (פער אבטחה) |
-| Provider Registry + policies + Zero-cost + health-check | MISSING | — |
+| LLM proxy | OK | — |
+| תמלול Groq (proxy) | PARTIAL | מפתח client-side |
+| Provider Registry + policies + Zero-cost | MISSING | — |
 | Image/Video/Voice/Music/Storage/Search | MISSING | — |
 
-## 8. Templates / Effects / Transitions / Filters / Adjustment
-| הכל | MISSING | אין להציג ללא Preview+Export אמיתי |
-
-## 9. Usage / Credits / Admin
-| הכל | MISSING | — |
+## 8–9. Templates / Effects / Usage / Admin
+| הכל | MISSING | אין להציג בלי Preview+Export אמיתי / דורש אישור |
 
 ---
 
 # ISSUES לפי עדיפות
 
-### P0 — באגים חוסמים
-- **AG-1**: DeepSeek `tool_calls` 400 — normalizer/repair. ✅ הושלם (`web/lib/agent/normalize.ts` + tests).
+### P0
+- **AG-1**: DeepSeek tool_calls ✅
 
-### P1 — ליבת עורך (הסדר שנקבע)
-- **CV-1…CV-7**: ✅ Preview + Export burn-in (post-concat `overlay`, טקסט→PNG; identity כשאין overlays; integration test).
-- **TL-1**: Gap entity + Delete-leaves-gap + Ripple-delete + zoom-around-pointer + Ctrl/pinch. ← **הבא**
-- **TX-1**: Text style מלא + Caption style/position + trim overlays בציר.
+### P1
+- **CV-1…CV-7** ✅ · **TL-1** ✅ (gaps/ripple/leave-gap/zoom-around-pointer) · **TX-1** PARTIAL (overlay trim ✅; caption style חסר)
 
-### P2 — סוכן/פלטפורמה
-- **AG-2**: CommandBus מרכזי + Command registry + Query API → parity אמיתי UI/Agent.
-- **AG-3**: כלים חסרים לסוכן (disable_clip/set_clip_volume/track ops/overlay ops).
-- **AG-4**: Tool activity מלא (provider/model/progress/cancel/retry/undo) + approval + checkpoints.
-- **PR-1**: Provider Registry + policies + Zero-cost + health-check + missing-key UI.
-- **AU-1**: Supabase Auth (Google) + Dashboard + project wizard + RLS.
+### P2 (הבא)
+- **AG-2**: להעביר יותר פעולות UI דרך CommandBus + parity tests
+- **AG-4**: Tool activity מלא + approval/checkpoints
+- **PR-1**: Provider Registry (בלי ספקים מדומים)
+- **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 
-### P3 — הרחבות
-- Templates / Effects / Transitions / Filters / Adjustment (רק עם Preview+Export).
-- Organizations / Brand kit / Usage / Credits / Admin.
+### P3
+- Templates / Effects / Transitions / Filters (רק עם Preview+Export)
+- Organizations / Brand / Usage / Credits

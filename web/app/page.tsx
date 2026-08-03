@@ -474,7 +474,10 @@ export default function EditorPage() {
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           overlays={overlays} canvas={canvas} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }}
+          onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
+            setWords(w); setProject(c, s);
+            if (ovs) setOverlays(ovs);
+          }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide} />
       </aside>
       {dockSide === "left" && dockHandle}

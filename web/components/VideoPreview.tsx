@@ -2,6 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, totalDur } from "@/lib/editor/model";
+import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
@@ -52,14 +53,17 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const [dur, setDur] = useState(0);
   const [vol, setVol] = useState(1);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [inGap, setInGap] = useState(false);
+  const gapRaf = useRef<number | null>(null);
 
   const edl = clips && clips.length ? clips : null;
   const byId = (id: string) => media.find((m) => m.id === id);
   const firstVid = media.find((m) => m.kind === "video");
-  const playable = (c: Clip) => byId(c.sourceId)?.kind === "video" && clipEnabled(c);
+  const playable = (c: Clip) => !isGapClip(c) && byId(c.sourceId)?.kind === "video" && clipEnabled(c);
 
   useEffect(() => { if (videoRef.current) videoRef.current.muted = !!audioMuted; }, [audioMuted]);
   useEffect(() => { if (videoRef.current) videoRef.current.volume = vol; }, [vol]);
+  useEffect(() => () => { if (gapRaf.current != null) cancelAnimationFrame(gapRaf.current); }, []);
 
   // measure the stage so we can letterbox the project canvas box inside it
   useEffect(() => {
@@ -72,21 +76,61 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const box = displayRect(stageSize.w, stageSize.h, canvas);
   const total = edl ? totalDur(edl) : dur;
 
+  const clearGapClock = () => { if (gapRaf.current != null) { cancelAnimationFrame(gapRaf.current); gapRaf.current = null; } };
+
   const ensure = (sourceId: string, tt: number, play: boolean) => {
     const v = videoRef.current; if (!v) return;
     const asset = byId(sourceId); if (!asset || asset.kind !== "video") return;
-    if (loaded.current === sourceId) { v.currentTime = tt; if (play) v.play(); return; }
+    setInGap(false); clearGapClock();
+    if (loaded.current === sourceId) { v.currentTime = tt; if (play) { v.play(); setPlaying(true); } return; }
     loaded.current = sourceId; pending.current = { t: tt, play }; v.src = asset.url; v.load();
+  };
+
+  const advanceFrom = (index: number, play: boolean) => {
+    if (!edl) return;
+    let i = index;
+    while (i < edl.length && !clipEnabled(edl[i])) i++;
+    idx.current = i;
+    if (i >= edl.length) { videoRef.current?.pause(); setPlaying(false); setInGap(false); setT(total); onTime(total); return; }
+    if (isGapClip(edl[i])) { runGap(i, assembledStart(edl, i), play); return; }
+    ensure(edl[i].sourceId, edl[i].start + 0.001, play);
+  };
+
+  const runGap = (index: number, fromAssembled: number, play: boolean) => {
+    if (!edl) return;
+    const v = videoRef.current; v?.pause();
+    clearGapClock(); setInGap(true); loaded.current = null; idx.current = index;
+    const gapStart = assembledStart(edl, index);
+    const gapEnd = gapStart + clipDur(edl[index]);
+    let a = Math.max(gapStart, Math.min(fromAssembled, gapEnd));
+    setT(a); onTime(a);
+    if (!play) { setPlaying(false); return; }
+    setPlaying(true);
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000; last = now;
+      a = Math.min(gapEnd, a + dt);
+      setT(a); onTime(a);
+      if (a >= gapEnd - 0.001) { advanceFrom(index + 1, true); return; }
+      gapRaf.current = requestAnimationFrame(tick);
+    };
+    gapRaf.current = requestAnimationFrame(tick);
   };
 
   const seekTo = (assembled: number) => {
     const v = videoRef.current; if (!v) return;
     const a = Math.max(0, Math.min(total, assembled));
-    if (edl) { const { index, source } = assembledToSource(edl, a); idx.current = Math.max(0, index); ensure(edl[idx.current].sourceId, source, false); }
-    else v.currentTime = a;
+    clearGapClock(); setPlaying(false);
+    if (edl) {
+      const { index, source } = assembledToSource(edl, a);
+      idx.current = Math.max(0, index);
+      if (index >= 0 && isGapClip(edl[index])) { runGap(index, a, false); return; }
+      setInGap(false);
+      if (index >= 0) ensure(edl[index].sourceId, source, false);
+    } else v.currentTime = a;
     setT(a); onTime(a);
   };
-  const step = (dir: -1 | 1) => { if (playing) { videoRef.current?.pause(); setPlaying(false); } seekTo(t + dir * FRAME); };
+  const step = (dir: -1 | 1) => { if (playing) { videoRef.current?.pause(); setPlaying(false); clearGapClock(); } seekTo(t + dir * FRAME); };
 
   useEffect(() => {
     const v = videoRef.current;
@@ -107,24 +151,23 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     if (!edl) { setT(v.currentTime); onTime(v.currentTime); return; }
     let i = idx.current;
     if (i >= edl.length) { v.pause(); return; }
-    if (v.currentTime >= edl[i].end - 0.03) {
-      do { i++; } while (i < edl.length && !playable(edl[i]));
-      idx.current = i;
-      if (i >= edl.length) { v.pause(); setT(total); onTime(total); return; }
-      ensure(edl[i].sourceId, edl[i].start + 0.001, true);
-      return;
-    }
+    if (isGapClip(edl[i])) return; // gap clock owns time
+    if (v.currentTime >= edl[i].end - 0.03) { advanceFrom(i + 1, true); return; }
     const a = assembledStart(edl, i) + Math.max(0, Math.min(clipDur(edl[i]), v.currentTime - edl[i].start));
     setT(a); onTime(a);
   };
 
   const toggle = () => {
     const v = videoRef.current; if (!v) return;
-    if (v.paused) {
-      if (edl && idx.current >= edl.length) idx.current = 0;
-      if (edl) ensure(edl[idx.current].sourceId, edl[idx.current].start, true);
-      else { v.play(); setPlaying(true); }
-    } else { v.pause(); setPlaying(false); }
+    if (playing || (!v.paused && !inGap)) {
+      v.pause(); clearGapClock(); setPlaying(false); return;
+    }
+    if (edl) {
+      if (idx.current >= edl.length) idx.current = 0;
+      const i = idx.current;
+      if (isGapClip(edl[i])) runGap(i, Math.max(assembledStart(edl, i), t), true);
+      else ensure(edl[i].sourceId, edl[i].start + (t > assembledStart(edl, i) ? Math.min(edl[i].end - edl[i].start - 0.01, t - assembledStart(edl, i)) : 0.001), true);
+    } else { v.play(); setPlaying(true); }
   };
 
   const copyPos = () => { navigator.clipboard?.writeText(`[מיקום ${t.toFixed(1)} שניות]`); onCopyPosition?.(t); };
@@ -149,7 +192,9 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
           <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
             <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
               onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
-              onClick={() => { onSelectOverlay?.(null); toggle(); }} />
+              onClick={() => { onSelectOverlay?.(null); toggle(); }}
+              style={inGap ? { visibility: "hidden" } : undefined} />
+            {inGap && <div className="pv-gap" aria-hidden />}
             {(() => { const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02); return cue ? <div className="pv-caption">{cue.text}</div> : null; })()}
             <PreviewOverlays boxRef={canvasBoxRef} canvas={canvas} overlays={overlays} media={media} currentTime={t}
               selectedId={selectedOverlayId ?? null}

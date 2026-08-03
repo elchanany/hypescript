@@ -32,7 +32,9 @@ const now = () => { const d = new Date(); return `${String(d.getHours()).padStar
 const TOOL_ICON: Record<string, LucideIcon> = {
   get_video_info: Info, list_media: Layers, transcribe_video: Type, find_in_transcript: Search, get_transcript: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
-  trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, analyze_audio: AudioLines, remove_silence: AudioLines,
+  trim_clip: Scissors, move_clip: Move,   delete_clip: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,
+  list_overlays: Layers, add_text_overlay: Type, delete_overlay: Trash2, update_overlay: Pencil,
+  analyze_audio: AudioLines, remove_silence: AudioLines,
   capture_frame: Camera, generate_subtitles: Captions, list_subtitles: Captions, edit_subtitle: Pencil,
   retime_subtitles: Clock, delete_subtitle: Trash2, export_subtitles: FileDown, import_subtitles: FileUp,
   clear_subtitles: Trash2, render_video: Film, ask_user: HelpCircle,
@@ -75,7 +77,7 @@ interface ChatProps {
   overlays?: Overlay[];
   canvas?: CanvasSize;
   projectId: string | null;
-  onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null }) => void;
+  onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null; overlays?: Overlay[] }) => void;
   // הקשר עריכה חי (context chips + mention resolution)
   playhead?: number;
   selectionLabel?: string | null;
@@ -179,7 +181,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
         onToolEnd: (id, ok, summary) => {
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
           const c = ctxRef.current;
-          onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs });
+          onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays });
         },
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),
