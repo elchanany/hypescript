@@ -68,7 +68,16 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
     if (Math.abs(dxCss) > 2 || Math.abs(dyCss) > 2) d.moved = true;
     if (d.mode === "move") {
       const dx = dxCss / d.scale, dy = dyCss / d.scale;
-      onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, x: d.s.x + dx, y: d.s.y + dy } } : o)));
+      let x = d.s.x + dx, y = d.s.y + dy;
+      if (!e.altKey) {
+        const snap = (v: number, targets: number[]) => {
+          for (const t of targets) if (Math.abs(v - t) <= 12) return t;
+          return v;
+        };
+        x = snap(x, [canvas.width / 2, canvas.width * 0.1, canvas.width * 0.9]);
+        y = snap(y, [canvas.height / 2, canvas.height * 0.1, canvas.height * 0.9]);
+      }
+      onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, x, y } } : o)));
       return;
     }
     // pointer in project coords

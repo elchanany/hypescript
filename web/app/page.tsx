@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, assembledToSource, clipEnabled, firstVideo, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, clipEnabled, firstVideo, mediaById, moveClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
@@ -12,9 +12,12 @@ import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
+import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, trimGap } from "@/lib/editor/timelineOps";
+import { EditorApi, runCommand } from "@/lib/editor/commands";
+import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import TopBar from "@/components/TopBar";
 import ToolRail, { LeftTab } from "@/components/ToolRail";
@@ -26,6 +29,8 @@ import TimelineToolbar from "@/components/TimelineToolbar";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
+
+ensureBuiltinCommands();
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -85,6 +90,32 @@ export default function EditorPage() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  const clipsRef = useRef<Clip[] | null>(clips); clipsRef.current = clips;
+  const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
+  const mediaRef = useRef(media); mediaRef.current = media;
+  const subsRef = useRef(subs); subsRef.current = subs;
+  const canvasRef = useRef(canvas); canvasRef.current = canvas;
+  const curRef = useRef(cur); curRef.current = cur;
+  const editorApiRef = useRef<EditorApi | null>(null);
+  if (!editorApiRef.current) {
+    editorApiRef.current = {
+      getClips: () => clipsRef.current,
+      setClips: (next) => setClips(next),
+      getOverlays: () => overlaysRef.current,
+      setOverlays: (next) => setOverlays(next),
+      updateOverlay,
+      removeOverlay,
+      addOverlay,
+      updateClip,
+      getMedia: () => mediaRef.current,
+      getSubs: () => subsRef.current,
+      getCanvas: () => canvasRef.current,
+      selectClip: (id) => { setSelectedId(id); if (id) setSelectedOverlayId(null); },
+      selectOverlay: (id) => { setSelectedOverlayId(id); if (id) setSelectedId(null); },
+      seek: (t) => { setCur(t); previewRef.current?.seek(t); },
+      getPlayhead: () => curRef.current,
+    };
+  }
 
   const main = useMemo(() => firstVideo(media), [media]);
   const duration = main?.duration || 0;
@@ -346,13 +377,24 @@ export default function EditorPage() {
 
   const splitAtPlayhead = () => {
     if (!clips?.length || videoLocked(tracks)) return;
-    const { index, source } = assembledToSource(clips, cur);
-    if (index >= 0) setClips(splitClip(clips, clips[index].id, source));
+    const res = runCommand("clip.splitAtPlayhead", editorApiRef.current!);
+    if (!res.ok) setError(res.error);
   };
-  const deleteClipById = (id: string) => { if (clips && !videoLocked(tracks)) { setClips(removeClip(clips, id)); if (selectedId === id) setSelectedId(null); } };
-  const deleteSel = () => {
-    if (selectedOverlayId) { removeOverlay(selectedOverlayId); setSelectedOverlayId(null); return; }
-    if (selectedId) deleteClipById(selectedId);
+  const deleteClipById = (id: string, leaveGap = false) => {
+    if (!clips || videoLocked(tracks)) return;
+    const c = clips.find((x) => x.id === id);
+    if (!c) return;
+    const next = isGapClip(c) ? closeGap(clips, id) : leaveGap ? removeClipLeaveGap(clips, id) : removeClipRipple(clips, id);
+    setClips(next);
+    if (selectedId === id) setSelectedId(null);
+  };
+  const deleteSel = (leaveGap = false) => {
+    if (selectedOverlayId) {
+      const res = runCommand("overlay.delete", editorApiRef.current!, { id: selectedOverlayId });
+      if (!res.ok) setError(res.error);
+      return;
+    }
+    if (selectedId) deleteClipById(selectedId, leaveGap);
   };
   const duplicateClip = (id: string) => {
     if (videoLocked(tracks)) return;
@@ -361,6 +403,7 @@ export default function EditorPage() {
   const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
+  const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
   const selectedOverlay = overlays.find((o) => o.id === selectedOverlayId) || null;
   const selectedIndex = selectedClip ? clips!.indexOf(selectedClip) : -1;
   const menuClip = clipMenu ? clips?.find((c) => c.id === clipMenu.id) || null : null;
@@ -373,7 +416,7 @@ export default function EditorPage() {
       if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
-      else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId)) { e.preventDefault(); deleteSel(); }
+      else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId)) { e.preventDefault(); deleteSel(e.shiftKey); }
       else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
     };
@@ -383,11 +426,43 @@ export default function EditorPage() {
 
   const working = busy || rendering;
   const totalEdited = clips ? totalDur(clips) : duration;
+  const timelineDuration = Math.max(duration, clips ? totalDur(clips) : 0, ...overlays.map((o) => o.end), 0.001);
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay
     ? (selectedOverlay.kind === "text" ? (selectedOverlay.text || "טקסט") : (mediaById(media, selectedOverlay.assetId || "")?.name || "תמונה"))
-    : selectedClip ? (mediaById(media, selectedClip.sourceId)?.name || "קטע") : null;
+    : selectedClip ? (isGapClip(selectedClip) ? "רווח" : (mediaById(media, selectedClip.sourceId)?.name || "קטע")) : null;
+  const onWheelZoom = (deltaY: number, clientX: number, laneEl: HTMLElement) => {
+    const rect = laneEl.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const scrollEl = laneEl.closest(".tl-scroll") as HTMLElement | null;
+    const anchorAssembled = Math.max(0, Math.min(timelineDuration, ((clientX - rect.left) / rect.width) * timelineDuration));
+    const anchorRatio = anchorAssembled / timelineDuration;
+    setZoom((z) => {
+      const next = Math.max(1, Math.min(12, Math.round((z + (deltaY < 0 ? 0.5 : -0.5)) * 2) / 2));
+      if (next !== z && scrollEl) {
+        requestAnimationFrame(() => {
+          const nextRect = laneEl.getBoundingClientRect();
+          scrollEl.scrollLeft += nextRect.left + anchorRatio * nextRect.width - clientX;
+        });
+      }
+      return next;
+    });
+  };
+  const clampOverlayRange = (start: number, end: number) => {
+    const s = Math.max(0, Math.min(start, end - 0.05));
+    const e = Math.max(end, s + 0.05);
+    return { start: s, end: e };
+  };
+  const setOverlayRangeLive = (id: string, start: number, end: number) => {
+    const range = clampOverlayRange(start, end);
+    setOverlaysLive((os) => os.map((o) => (o.id === id ? { ...o, ...range } : o)));
+  };
+  const setOverlayMoveLive = (id: string, start: number, end: number) => {
+    const dur = Math.max(0.05, end - start);
+    const s = Math.max(0, start);
+    setOverlaysLive((os) => os.map((o) => (o.id === id ? { ...o, start: s, end: s + dur } : o)));
+  };
 
   const dockHandle = (
     <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth}
@@ -406,12 +481,15 @@ export default function EditorPage() {
     </>
   ) : null;
 
-  const clipMenuItems: CtxItem[] = menuClip ? [
+  const clipMenuItems: CtxItem[] = menuClip ? isGapClip(menuClip) ? [
+    { label: "סגור רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
+  ] : [
     { label: "שכפל", icon: Copy, onClick: () => duplicateClip(menuClip.id), disabled: vLocked },
     { label: "פצל בראש-הנגן", icon: Scissors, onClick: splitAtPlayhead, disabled: vLocked },
     { label: clipEnabled(menuClip) ? "השבת" : "הפעל", icon: clipEnabled(menuClip) ? EyeOff : Eye, onClick: () => updateClip(menuClip.id, { enabled: !clipEnabled(menuClip) }) },
     { sep: true, label: "" },
-    { label: "מחק", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
+    { label: "מחק והשאר רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id, true), disabled: vLocked, kbd: "Shift+Delete" },
+    { label: "מחק", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked, kbd: "Delete" },
   ] : [];
 
   return (
@@ -488,22 +566,32 @@ export default function EditorPage() {
             <div className="tl-resize" onMouseDown={startResizeTL} title="גרור לשינוי גובה" />
             <TimelineToolbar
               selInfo={selectedOverlay ? `${(selectedOverlay.end - selectedOverlay.start).toFixed(1)}s` : selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
-              canSplit={!!clips?.length && !vLocked} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId}
+              canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId}
               onSplit={splitAtPlayhead} onDelete={deleteSel}
+              onDeleteLeaveGap={() => deleteSel(true)} canLeaveGap={!!selectedClip && !selectedIsGap && !vLocked}
               snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
             />
             {clips ? (
               <Timeline
                 media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
-                maxDuration={Math.max(duration, clips ? totalDur(clips) : 0, ...overlays.map((o) => o.end), 0.001)}
+                maxDuration={timelineDuration}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
                 zoom={zoom} snap={snap}
                 onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay}
                 onTrimBegin={beginTransaction}
-                onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}
+                onTrim={(id, s, e) => setClipsLive((c) => {
+                  if (!c) return c;
+                  const clip = c.find((x) => x.id === id);
+                  return clip && isGapClip(clip) ? trimGap(c, id, e - s) : trimClip(c, id, s, e, duration);
+                })}
                 onTrimEnd={commitTransaction}
                 onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
+                onWheelZoom={onWheelZoom}
+                onOverlayTrimBegin={beginTransaction}
+                onOverlayTrim={setOverlayRangeLive}
+                onOverlayTrimEnd={commitTransaction}
+                onOverlayMove={setOverlayMoveLive}
                 renameTrack={renameTrack} toggleLock={toggleLock} toggleMute={toggleMute}
                 cycleHeight={cycleHeight} reorderTrack={reorderTrack}
               />
