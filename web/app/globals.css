@@ -596,6 +596,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tool2 .tx .nm { font-size: var(--fs-2); font-weight: 500; }
 .tool2 .tx .st { font-size: 11px; color: var(--text-2); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool2 .stt { flex: none; }
+.tool2 .tool-actions { display: flex; align-items: center; gap: 6px; }
 .tool2 .stt.ok { color: var(--success); }
 .tool2 .stt.err { color: var(--danger); }
 .tool2 .stt.run { color: var(--accent); }

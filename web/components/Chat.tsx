@@ -5,6 +5,8 @@ import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { AgentMode, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
+import { getProviderStatus } from "@/lib/providers/health";
+import { LLM_PROVIDERS } from "@/lib/providers/registry";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
@@ -23,8 +25,9 @@ import { LucideIcon } from "lucide-react";
 
 type Item =
   | { kind: "user" | "assistant" | "error"; text: string; time: string }
-  | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string }
+  | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string; providerLabel?: string }
   | { kind: "output"; name: string; url: string; mkind: "video" | "srt" | "image"; time: string };
+type ToolItem = Extract<Item, { kind: "tool" }>;
 
 const now = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
@@ -94,6 +97,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
   const [askText, setAskText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
@@ -134,6 +138,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   onProjectRef.current = onProject;
   ctxRef.current.onOutput = addOutput;
   const savedHistory = useRef<ChatMessage[]>([]);
+  const lastUserPromptRef = useRef("");
   const [restoredChat, setRestoredChat] = useState(false);
 
   useEffect(() => {
@@ -165,7 +170,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
-    fetch("/api/config").then((r) => r.json()).then((d) => setConfigured(d.providers || {})).catch(() => {});
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => setConfigured(d.providers || {}))
+      .catch(() => {})
+      .finally(() => setConfigLoaded(true));
   }, []);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [items, ask]);
 
@@ -173,9 +182,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     if (!runnerRef.current) {
       runnerRef.current = new AgentRunner(provider, ctxRef.current, {
         onAssistant: (text) => setItems((p) => [...p, { kind: "assistant", text, time: now() }]),
-        onToolStart: (call) => {
+        onToolStart: (call, toolProvider) => {
           const m = TOOL_BY_NAME[call.name];
-          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now() }]);
+          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider] }]);
         },
         onToolStatus: (id, status) => setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, status } : it))),
         onToolEnd: (id, ok, summary) => {
@@ -207,19 +216,36 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     }
     if (running) {
       setItems((p) => [...p, { kind: "user", text, time: now() }]);
+      lastUserPromptRef.current = text;
       setInput("");
       runnerRef.current?.injectMessage(text);
       return;
     }
-    if (!configured[provider]) { setItems((p) => [...p, { kind: "error", text: `לספק ${PROVIDER_LABELS[provider]} אין מפתח ב-Vercel. ראה הגדרות.`, time: now() }]); return; }
+    if (!configLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק עדיין את סטטוס המפתחות. נסה שוב בעוד רגע.", time: now() }]); return; }
+    const status = getProviderStatus(provider, configured);
+    if (status.status !== "ready") { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
     setItems((p) => [...p, { kind: "user", text, time: now() }]);
+    lastUserPromptRef.current = text;
     setInput(""); setRunning(true);
     getRunner().send(text);
   };
 
-  const changeProvider = (p: Provider) => { setProvider(p); localStorage.setItem(PROVIDER_PREF, p); if (runnerRef.current) runnerRef.current.provider = p; };
+  const changeProvider = (p: Provider) => {
+    const status = getProviderStatus(p, configured);
+    if (configLoaded && status.status !== "ready") {
+      setItems((prev) => [...prev, { kind: "error", text: `${status.labelHe} לא זמין כרגע: ${status.reasonHe}.`, time: now() }]);
+      return;
+    }
+    setProvider(p); localStorage.setItem(PROVIDER_PREF, p); if (runnerRef.current) runnerRef.current.provider = p;
+  };
   const copy = (t: string, i: number) => { navigator.clipboard?.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1200); };
   const attachRef = useRef<HTMLInputElement>(null);
+
+  const suggestToolRetry = (tool: ToolItem) => {
+    const suffix = lastUserPromptRef.current ? ` עבור הבקשה האחרונה: ${lastUserPromptRef.current}` : ".";
+    setInput(`נסה שוב את הפעולה "${tool.label}"${suffix}`);
+    requestAnimationFrame(() => taRef.current?.focus());
+  };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
   const onInputChange = (v: string) => {
@@ -267,9 +293,15 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
         <div className="actions" style={{ gap: 4 }}>
           <select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} data-tip="ספק / מודל" data-tippos="down"
             style={{ width: "auto", height: 26, padding: "0 6px", fontSize: 12 }}>
-            {(["deepseek", "openai", "anthropic", "gemini"] as Provider[]).map((p) => (
-              <option key={p} value={p}>{PROVIDER_LABELS[p]}{configured[p] ? "" : " —"}</option>
-            ))}
+            {LLM_PROVIDERS.map((p) => {
+              const status = getProviderStatus(p.id, configured);
+              const disabled = configLoaded && status.status !== "ready";
+              return (
+                <option key={p.id} value={p.id} disabled={disabled}>
+                  {p.labelHe}{disabled ? ` — ${status.reasonHe}` : ""}
+                </option>
+              );
+            })}
           </select>
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
@@ -308,17 +340,19 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
         {items.map((it, i) => {
           if (it.kind === "tool") {
             const Icon = toolIcon(it.name);
+            const statusText = it.state === "running" ? it.status : it.summary || it.status;
             return (
               <div key={i} className="tool2">
                 <span className="ic" style={{ background: it.color + "22", color: it.color }}><Icon size={15} strokeWidth={1.75} /></span>
                 <div className="tx">
                   <div className="nm" style={{ color: it.color }}>{it.label}</div>
-                  <div className="st">{it.state === "running" ? it.status : it.summary || it.status}</div>
+                  <div className="st">{it.providerLabel ? `דרך ${it.providerLabel} · ${statusText}` : statusText}</div>
                 </div>
-                <span className="stt">
+                <span className="stt tool-actions">
                   {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
                   {it.state === "ok" && <Check size={15} className="stt ok" />}
                   {it.state === "error" && <AlertTriangle size={15} className="stt err" />}
+                  {it.state === "error" && <button className="btn sm" onClick={() => suggestToolRetry(it)}>נסה שוב</button>}
                 </span>
               </div>
             );
@@ -396,7 +430,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             placeholder={running ? "עדכן את הסוכן תוך כדי עבודה…" : mode === "ask" ? "שאל על הפרויקט…  /  @  לאזכור" : mode === "plan" ? "תאר מה לתכנן…  /  @  לאזכור" : "כתוב הוראה…  /  לפקודה,  @  לאזכור"} rows={1} />
           {running
             ? <><button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
-               <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="עצור" data-tippos="up" aria-label="עצור"><Square size={15} strokeWidth={2} /></button></>
+               <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="בטל" data-tippos="up" aria-label="בטל"><Square size={15} strokeWidth={2} /></button></>
             : <button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
         </div>
       </div>

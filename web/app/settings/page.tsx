@@ -3,19 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PROVIDER_PREF } from "@/lib/keys";
-import { Provider, PROVIDER_LABELS } from "@/lib/agent/types";
-
-const ENV_VARS: Record<string, string> = {
-  groq: "GROQ_API_KEY",
-  deepseek: "DEEPSEEK_API_KEY",
-  openai: "OPENAI_API_KEY",
-  anthropic: "ANTHROPIC_API_KEY",
-  gemini: "GEMINI_API_KEY",
-};
+import { Provider } from "@/lib/agent/types";
+import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
+import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
+import type { ProviderStatusInfo } from "@/lib/providers/types";
 
 export default function SettingsPage() {
   const [provider, setProvider] = useState<Provider>("deepseek");
-  const [cfg, setCfg] = useState<{ providers?: Record<string, boolean>; transcription?: { groq: boolean } }>({});
+  const [cfg, setCfg] = useState<ApiConfigShape>({});
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -27,8 +22,13 @@ export default function SettingsPage() {
     localStorage.setItem(PROVIDER_PREF, p);
   };
 
-  const Status = ({ ok }: { ok?: boolean }) =>
-    ok ? <span className="ok">✓ מוגדר</span> : <span className="err">— חסר מפתח</span>;
+  const statuses = getProviderStatuses(flattenApiConfig(cfg));
+  const statusById = Object.fromEntries(statuses.map((status) => [status.id, status])) as Record<string, ProviderStatusInfo>;
+
+  const Status = ({ status }: { status: ProviderStatusInfo }) =>
+    status.status === "ready"
+      ? <span className="ok">✓ מוכן</span>
+      : <span className="err">— {status.status === "missing_key" ? "חסר מפתח" : "לא זמין"}</span>;
 
   return (
     <div>
@@ -46,10 +46,15 @@ export default function SettingsPage() {
 
       <div className="card">
         <h2>תמלול</h2>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <span>Groq (Whisper) · משתנה <code>{ENV_VARS.groq}</code></span>
-          <Status ok={cfg.transcription?.groq} />
-        </div>
+        {PROVIDER_REGISTRY.filter((p) => p.kind === "transcribe").map((p) => {
+          const status = statusById[p.id];
+          return (
+            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
+              <span>{p.labelHe} · משתנה <code>{p.envKeys.join(" / ")}</code></span>
+              <Status status={status} />
+            </div>
+          );
+        })}
         <div className="hint">מפתח חינם: console.groq.com/keys</div>
       </div>
 
@@ -57,18 +62,20 @@ export default function SettingsPage() {
         <h2>ספק ה-AI לסוכן</h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>בחר ספק, ודא שהמפתח שלו מוגדר ב-Vercel. הסוכן ישתמש בספק שנבחר.</p>
         <div className="controls">
-          {(["deepseek", "openai", "anthropic", "gemini"] as Provider[]).map((p) => (
-            <label key={p} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: provider === p ? "var(--card-2)" : "transparent" }}>
+          {LLM_PROVIDERS.map((p) => (
+            <label key={p.id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: provider === p.id ? "var(--card-2)" : "transparent" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="radio" name="prov" checked={provider === p} onChange={() => save(p)} />
-                {PROVIDER_LABELS[p]}
+                <input type="radio" name="prov" checked={provider === p.id} onChange={() => save(p.id)} />
+                {p.labelHe}
               </span>
-              <Status ok={cfg.providers?.[p]} />
+              <Status status={statusById[p.id]} />
             </label>
           ))}
         </div>
         <div className="hint" style={{ marginTop: 12 }}>
-          משתני הסביבה: <code>DEEPSEEK_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>, <code>GEMINI_API_KEY</code>.
+          משתני הסביבה: {LLM_PROVIDERS.map((p, i) => (
+            <span key={p.id}>{i > 0 ? ", " : ""}<code>{p.envKeys.join(" / ")}</code></span>
+          ))}.
         </div>
       </div>
 

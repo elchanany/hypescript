@@ -52,7 +52,7 @@
 |---|---|---|
 | Docked panel + Ask/Plan/Act (enforced) | OK | — |
 | Slash `/` + `@mentions` + context chips | OK | — |
-| Tool activity rows | PARTIAL | cost/cancel/retry מלא חסר |
+| Tool activity rows | PARTIAL | provider label + Retry prompt + "בטל" קיימים; cost/checkpoints/retry מלא חסרים |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | MISSING | — |
 | CommandBus + Query API | PARTIAL | registry + builtins + queryProject; לא כל ה-UI עובר דרכו עדיין |
@@ -71,7 +71,7 @@
 |---|---|---|
 | LLM proxy | OK | — |
 | תמלול Groq (proxy) | PARTIAL | מפתח client-side |
-| Provider Registry + policies + Zero-cost | MISSING | — |
+| Provider Registry + policies + Zero-cost | PARTIAL | Registry בסיסי + missing-key status; policies/health-check/Zero-cost חסרים |
 | Image/Video/Voice/Music/Storage/Search | MISSING | — |
 
 ## 8–9. Templates / Effects / Usage / Admin
@@ -89,8 +89,8 @@
 
 ### P2 (הבא)
 - **AG-2**: להעביר יותר פעולות UI דרך CommandBus + parity tests
-- **AG-4**: Tool activity מלא + approval/checkpoints
-- **PR-1**: Provider Registry (בלי ספקים מדומים)
+- **AG-4**: PARTIAL — Tool activity בסיסי (provider label, Retry prompt, "בטל"); cost/checkpoints/retry מלא חסרים
+- **PR-1**: PARTIAL — Provider Registry בסיסי וכנה; policies/health-check/Zero-cost חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 
 ### P3

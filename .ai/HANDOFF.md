@@ -13,12 +13,17 @@
   - Canvas snap (מרכז + שולי 10%, Alt מבטל)
   - CommandBus (`commands.ts` + builtins) + Query API
   - Agent tools: leave_gap, set_clip_enabled/volume, list/add/update/delete overlay
+- **סבב PR-1 / AG-4 בסיסי:**
+  - Provider Registry כנה ב-`web/lib/providers/`: LLM proxy אמיתי בלבד + Groq transcription, status לפי `/api/config`.
+  - Settings ו-Chat משתמשים ב-registry; Chat חוסם בחירת LLM חסר מפתח ומציג סיבה.
+  - Tool activity מציג ספק, Retry prompt לכשל, וטיפ ביטול ברור ("בטל").
+  - תיעוד עודכן: Provider Matrix, Gap Map. אין Supabase/Auth, אין ספקים מדומים.
 - אימות: `tsc` נקי; vitest ירוק כולל graph 20-cut + timelineOps + gap graph unit.
 
 ## Exact Next Steps
 1. להרחיב CommandBus ליותר פעולות UI + parity tests.
-2. AG-4 tool activity / checkpoints.
-3. Provider Registry (כנה).
+2. AG-4 מלא: checkpoints/cost/retry אמיתי לפי tool-call אם יידרש.
+3. PR-1 המשך: ProviderConnection/health-check/ExecutionPolicy/Zero-cost.
 4. **לא** להתחיל Supabase/Auth בלי אישור (RULES §7).
 
 ## Risks
