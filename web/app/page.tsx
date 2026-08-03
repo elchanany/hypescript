@@ -67,6 +67,10 @@ export default function EditorPage() {
   const chatWidthRef = useRef(360); chatWidthRef.current = chatWidth;
   const [tlHeight, setTlHeight] = useState(300);
   const tlHeightRef = useRef(300); tlHeightRef.current = tlHeight;
+  const [leftW, setLeftW] = useState(264);
+  const leftWRef = useRef(264); leftWRef.current = leftW;
+  const [inspW, setInspW] = useState(300);
+  const inspWRef = useRef(300); inspWRef.current = inspW;
   const [zoom, setZoom] = useState(1);
   const [snap, setSnap] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,6 +91,8 @@ export default function EditorPage() {
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 300) setChatWidth(Math.min(560, w));
     const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
+    const lw = parseInt(localStorage.getItem("hs_leftw") || "0", 10); if (lw >= 220) setLeftW(Math.min(440, lw));
+    const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 260) setInspW(Math.min(460, iw));
   }, []);
 
   const startResizeChat = (e: React.MouseEvent) => {
@@ -105,6 +111,24 @@ export default function EditorPage() {
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
+  const startResizeLeft = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX; const startW = leftWRef.current;
+    const onMove = (ev: MouseEvent) => setLeftW(Math.max(220, Math.min(440, startW + (ev.clientX - startX))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_leftw", String(leftWRef.current)); document.body.style.userSelect = ""; };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  };
+  const resetLeft = () => { setLeftW(264); localStorage.setItem("hs_leftw", "264"); };
+  const startResizeInsp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX; const startW = inspWRef.current;
+    const onMove = (ev: MouseEvent) => setInspW(Math.max(260, Math.min(460, startW - (ev.clientX - startX))));
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_inspw", String(inspWRef.current)); document.body.style.userSelect = ""; };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  };
+  const resetInsp = () => { setInspW(300); localStorage.setItem("hs_inspw", "300"); };
   const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
 
   useEffect(() => {
@@ -328,7 +352,7 @@ export default function EditorPage() {
       <div className="shell-body">
         <ToolRail active={leftTab} onSelect={setLeftTab} />
 
-        <div className="leftpanel">
+        <div className="leftpanel" style={{ width: leftW }}>
           {leftTab === "media" ? (
             <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia} />
           ) : (
@@ -339,6 +363,8 @@ export default function EditorPage() {
             />
           )}
         </div>
+        <div className="col-resize" onMouseDown={startResizeLeft} onDoubleClick={resetLeft}
+          title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מדיה" />
 
         <div className="main-area">
           <div className="upper">
@@ -352,7 +378,10 @@ export default function EditorPage() {
               )}
             </div>
 
+            <div className="col-resize" onMouseDown={startResizeInsp} onDoubleClick={resetInsp}
+              title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מאפיינים" />
             <InspectorPanel
+              width={inspW}
               clip={selectedClip}
               assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : ""}
               assetKind={(selectedClip && (mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio")) || "video"}

@@ -9,6 +9,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { Section, Toggle } from "@/components/ui";
 
 interface Props {
+  width?: number;
   clip: Clip | null;
   assetName: string;
   assetKind: "video" | "image" | "audio";
@@ -29,7 +30,7 @@ export default function InspectorPanel(p: Props) {
   const { clip } = p;
 
   return (
-    <aside className="inspector2">
+    <aside className="inspector2" style={p.width ? { width: p.width } : undefined}>
       <div className="panel-header">
         <span className="title"><SlidersHorizontal size={15} strokeWidth={1.75} />{clip ? "מאפייני קטע" : "הגדרות פרויקט"}</span>
       </div>
