@@ -3,6 +3,7 @@
 
 import { AgentMode, ChatMessage, Provider, ToolCall } from "./types";
 import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
+import { repairToolMessages } from "./normalize";
 
 export interface AgentEvents {
   onAssistant: (text: string) => void;
@@ -59,6 +60,9 @@ export class AgentRunner {
         if (this.injected.length) {
           for (const m of this.injected.splice(0)) this.history.push({ role: "user", content: m });
         }
+        // תיקון היסטוריה (כולל שמורה/שנקטעה) לפני כל פנייה: כל tool_call חייב
+        // tool result תואם, אחרת הספק מחזיר 400. idempotent.
+        this.history = repairToolMessages(this.history);
         const media = this.ctx.media || [];
         const mediaNote = media.length
           ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n")

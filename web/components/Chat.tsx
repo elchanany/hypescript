@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { AgentMode, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
+import { repairToolMessages } from "@/lib/agent/normalize";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
@@ -177,7 +178,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, p
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),
       });
-      if (savedHistory.current.length) runnerRef.current.history = savedHistory.current;
+      if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }
     runnerRef.current.provider = provider;
     runnerRef.current.mode = mode;
