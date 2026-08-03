@@ -232,6 +232,8 @@ export default function EditorPage() {
     setMedia((m) => [...m, ...assets]);
   };
 
+  const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
+
   const removeMedia = (id: string) => {
     setMedia((ms) => { const m = ms.find((x) => x.id === id); if (m) URL.revokeObjectURL(m.url); return ms.filter((x) => x.id !== id); });
     setClips((cs) => (cs ? cs.filter((c) => c.sourceId !== id) : cs));
@@ -242,8 +244,16 @@ export default function EditorPage() {
     if (asset.kind === "image") {
       // image -> canvas overlay (CapCut-style), not a main-track clip
       const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
-      const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end);
-      addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+      const apply = (iw?: number, ih?: number) => {
+        const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end, iw && ih ? { width: iw, height: ih } : undefined);
+        addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+        // ensure playhead is inside the overlay's visible window
+        if (cur < o.start || cur > o.end) seek(o.start);
+      };
+      const img = new Image();
+      img.onload = () => apply(img.naturalWidth, img.naturalHeight);
+      img.onerror = () => apply();
+      img.src = asset.url;
       return;
     }
     setClips((cs) => [...(cs || []), { id: uid(), sourceId: asset.id, start: 0, end: asset.duration }]);
@@ -254,13 +264,19 @@ export default function EditorPage() {
     addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
   };
   const selectClip = (id: string | null) => { setSelectedId(id); if (id) setSelectedOverlayId(null); };
-  const selectOverlay = (id: string | null) => { setSelectedOverlayId(id); if (id) setSelectedId(null); };
+  const selectOverlay = (id: string | null) => {
+    setSelectedOverlayId(id);
+    if (id) {
+      setSelectedId(null);
+      const o = overlays.find((x) => x.id === id);
+      // jump playhead into the overlay window so it becomes visible in preview
+      if (o && (cur < o.start - 1e-3 || cur > o.end + 1e-3)) seek(o.start + 0.01);
+    }
+  };
   const onCanvasDetected = (w: number, h: number) => {
     // only auto-set once from the first video if still at the default 1920×1080
     if (canvas.width === 1920 && canvas.height === 1080 && (w !== 1920 || h !== 1080)) setCanvas(defaultCanvasFor(w, h));
   };
-
-  const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
 
   const analyze = async () => {
     setError("");

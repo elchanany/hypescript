@@ -130,7 +130,8 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
             onPointerDown={(e) => startDrag(e, o, "move")}
             onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); const t = prompt("טקסט:", o.text || ""); if (t != null) onEditText(o.id, t); } }}>
             {o.kind === "image" && asset ? (
-              <img src={asset.url} alt="" draggable={false} />
+              // checkerboard behind semi-transparent / dark images so they're never "invisible"
+              <div className="ov-img-wrap"><img src={asset.url} alt="" draggable={false} /></div>
             ) : o.kind === "text" ? (
               <div className="ov-text" style={{ color: o.color || "#fff", fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>
                 {o.text || ""}

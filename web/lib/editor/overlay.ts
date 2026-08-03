@@ -41,9 +41,16 @@ export const overlayVisibleAt = (o: Overlay, t: number): boolean =>
 export const nextZ = (overlays: Overlay[]): number =>
   overlays.reduce((m, o) => Math.max(m, o.zIndex), 0) + 1;
 
-export function makeImageOverlay(assetId: string, canvasW: number, canvasH: number, overlays: Overlay[], start = 0, end = 4): Overlay {
+export function makeImageOverlay(
+  assetId: string, canvasW: number, canvasH: number, overlays: Overlay[],
+  start = 0, end = 4, intrinsic?: { width: number; height: number },
+): Overlay {
+  // Fit image into ~40% of canvas width, preserving intrinsic aspect (fallback 1:1).
+  const ar = (intrinsic && intrinsic.width > 0 && intrinsic.height > 0)
+    ? intrinsic.width / intrinsic.height
+    : 1;
   const w = Math.round(canvasW * 0.4);
-  const h = Math.round(w * 9 / 16);
+  const h = Math.round(w / ar);
   return {
     id: uid("ov"), kind: "image", assetId, start, end, zIndex: nextZ(overlays),
     transform: { x: canvasW / 2, y: canvasH / 2, w, h, rotation: 0, opacity: 1 },
