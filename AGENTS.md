@@ -60,3 +60,33 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Cursor Cloud specific instructions
+
+סביבת ה-VM כבר כוללת את הכלים הדרושים: Node 22, Python 3.12, ו-FFmpeg/FFprobe ב-PATH.
+סקריפט העדכון (רץ אוטומטית בכל הפעלה) מתקין את התלויות: `npm install` ב-`web/`, ויוצר
+venv ב-`local/.venv` עם `local/requirements.txt`. אין Docker/DB. פרטים והערות לא-מובנות:
+
+### web/ (המסלול המרכזי — Next.js)
+- הרצה/בנייה/בדיקות/lint: דרך הסקריפטים ב-`web/package.json` (`dev`,`build`,`test`,`lint`).
+  שרת הפיתוח: `npm run dev` (מתוך `web/`) → http://localhost:3000. בדיקות: `npm test` (Vitest).
+- **`npm run lint` נכשל אינטראקטיבית**: אין קובץ תצורת ESLint ב-repo, ולכן `next lint`
+  פותח שאלון הגדרה אינטראקטיבי. אימות טיפוסים כן רץ כחלק מ-`npm run build` ("checking
+  validity of types"). אל תריץ `npm run lint` בסביבה לא-אינטראקטיבית — הוא ייתקע.
+- **מפתחות API לא נדרשים לעריכה/ייצוא**: כל זרימת העריכה (טעינת וידאו, פיצול/גזירה,
+  ייצוא MP4) רצה 100% בדפדפן דרך ffmpeg.wasm — בלי מפתח. רק **התמלול** (`/api/transcribe`)
+  דורש `GROQ_API_KEY`. באנר אדום "GROQ_API_KEY לא מוגדר" הוא **מידע בלבד** (מגיע מ-
+  `/api/config`) ואינו חוסם עריכה/ייצוא. כדי להסתירו בדמו אפשר להריץ עם `GROQ_API_KEY`
+  כלשהו בסביבה.
+- **גוצ'ה — רינדור ראשון איטי**: הייצוא הראשון אחרי טעינת עמוד איטי (טעינת ליבת
+  ffmpeg.wash ה"קרה", יכול לקחת כמה דקות ב-VM); ייצואים נוספים באותה טעינה מהירים
+  (שניות). אל תרענן את העמוד לפני ייצוא אם רוצים מהירות, וחכה בסבלנות לרינדור הראשון.
+
+### local/ (כלי Python CLI/GUI)
+- הרצה תמיד **מתוך `local/`** (או עם PYTHONPATH מתאים) — למשל
+  `local/.venv/bin/python -m hypescript <video> ...`. הרצה מתיקייה אחרת נכשלת ב-
+  `No module named hypescript`. נתיבי קלט/פלט יכולים להיות מוחלטים.
+- E2E מלא אופליין דורש קובץ עם **דיבור אמיתי** (ה-CLI נכשל אם התמלול לא מחזיר מילים).
+  `--engine local --model tiny` מוריד את המודל בהרצה הראשונה (דורש רשת פעם אחת), ואז רץ
+  על CPU בלי מפתח. מצב ענן (`--engine cloud`, ברירת מחדל) דורש `GROQ_API_KEY`/`OPENAI_API_KEY`.
+- ה-GUI (`python -m hypescript.gui`) הוא Tkinter (חלון דסקטופ) — לא נחוץ לבדיקות CLI.
