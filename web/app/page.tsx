@@ -317,7 +317,10 @@ export default function EditorPage() {
       const { getRenderBackend } = await import("@/lib/render/RenderBackend");
       const backend = getRenderBackend();
       setPhase("מרנדר בדפדפן…");
-      const blob = await backend.renderProject({ media, clips, audioMuted: audioMuted(tracks) }, (r) => setProgress(Math.min(1, r)));
+      const blob = await backend.renderProject(
+        { media, clips, audioMuted: audioMuted(tracks), overlays, canvas },
+        (r) => setProgress(Math.min(1, r)),
+      );
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
       setPhase("הרינדור הושלם");
     } catch (e: any) { setError(e?.message || String(e)); }
@@ -394,7 +397,8 @@ export default function EditorPage() {
     <>
       {dockSide === "right" && dockHandle}
       <aside className="agent-dock" style={{ width: chatWidth }}>
-        <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs} projectId={projectId}
+        <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
+          overlays={overlays} canvas={canvas} projectId={projectId}
           onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide} />
       </aside>

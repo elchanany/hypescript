@@ -9,16 +9,15 @@
 - **Package 1 (הושלם):** design system; פאנלים ניתנים לשינוי גודל; Media grid/list + thumbnails; טקסט כתוביות בציר; Ghost+Drop indicator.
 - **Agent dock (הושלם):** flex dock מעוגן; Ask/Plan/Act עם אכיפה אמיתית (`tools:[]`); `/` slash; `@mentions`; context chips.
 - **P0 DeepSeek (הושלם):** `web/lib/agent/normalize.ts` — תיקון היסטוריית tool_calls.
-- **Canvas Direct Manipulation (סבב זה — Preview):**
-  - מודל: `Overlay` + `VisualTransform` (center anchor, project px) ב-`web/lib/editor/overlay.ts`
-  - קואורדינטות: `canvasCoords.ts` + tests (letterbox, round-trip, hit-test)
-  - Schema v3: `overlays[]` + `canvas` + migration בטוחה מ-v2
-  - Preview: letterbox `.pv-canvas` + `PreviewOverlays` (drag / corner resize / rotate, Undo אחד לכל gesture, cancel אם לא זז)
-  - Inspector: טרנספורם X/Y/W/H/rotation/opacity + מאפייני טקסט
-  - Timeline: רצועת «שכבות» לבחירת overlay
-  - ToolRail: לשונית «טקסט» + `TextPanel`; תמונה ממדיה → overlay (לא קליפ וידאו)
-- **מנוע ייצוא:** לא נגעתי; overlays **עדיין לא** ב-export (Preview בלבד).
-- אימות יחידה: `tsc` נקי; **48/48** tests (כולל canvasCoords + migrate v3).
+- **Canvas Direct Manipulation + Export burn-in (סבב זה):**
+  - מודל: `Overlay` + `VisualTransform` (center anchor, project px)
+  - קואורדינטות: `canvasCoords.ts` + tests
+  - Schema v3: `overlays[]` + `canvas` + migration
+  - Preview: letterbox + drag/resize/rotate (Undo אחד / cancel אם לא זז)
+  - Inspector + Timeline «שכבות» + TextPanel; תמונה→overlay
+  - **Export:** `appendOverlayBurns` אחרי concat (לא נוגע ב-EDL); טקסט→PNG; UI+Agent מעבירים overlays/canvas
+- **מנוע EDL:** `buildConcatGraph` ללא שינוי התנהגות כשאין overlays — integration 20-cut עדיין ירוק.
+- אימות: `tsc` נקי; unit+integration overlays + graph.
 
 ## Active Files
 - `web/lib/editor/{overlay,canvasCoords,project,migrate}.ts`
@@ -27,12 +26,12 @@
 - `web/app/{page.tsx,globals.css}`
 
 ## Risks / Known limitations
-- Export parity ל-overlays (FFmpeg overlay filter) — **לא ממומש**; Preview בלבד.
+- Export burn-in: אין drawtext מקורי (טקסט→PNG ב-Canvas); stickers/shapes חסרים.
 - אין API keys → סוכן LLM חי לא נבדק end-to-end.
 - Graphify CLI / `graphify-out` לא זמינים בסביבה זו — ניווט ידני ממוקד.
 - Overlay lane בציר הוא ויזואלי (לא TrackMeta type); trim/move של overlays בציר עדיין לא.
 
 ## Exact Next Steps
-1. **CV-7 Export parity** ל-overlays (FFmpeg `overlay`/drawtext) בלי לשבור מנוע EDL — regression tests.
-2. לפי GAP_MAP: Timeline gaps/ripple/zoom-around-pointer → CommandBus → Auth/Providers.
-3. Artifacts אימות Canvas: `.artifacts/pkgA/canvas_*.png` (מוחרגים מ-git).
+1. לפי GAP_MAP: **TL-1** Timeline gaps/ripple/zoom-around-pointer.
+2. CommandBus + Provider Registry / Auth.
+3. Artifacts: `.artifacts/pkgA/canvas_*.png` (מוחרגים מ-git).

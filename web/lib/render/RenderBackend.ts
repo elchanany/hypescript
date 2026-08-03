@@ -3,6 +3,8 @@
 // timeline, preview or export UI. See docs/RENDER_BACKEND.md for the native plan.
 
 import { Clip, MediaAsset } from "@/lib/editor/model";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { RenderTarget } from "@/lib/render/graph";
 
 export type ExecutionMode = "local-browser" | "local-native" | "cloud";
@@ -20,6 +22,8 @@ export interface RenderRequest {
   clips: Clip[];
   target?: RenderTarget;
   audioMuted?: boolean;
+  overlays?: Overlay[];
+  canvas?: CanvasSize;
 }
 
 export interface RenderBackend {
@@ -46,7 +50,9 @@ class BrowserRenderBackend implements RenderBackend {
 
   async renderProject(req: RenderRequest, onProgress?: (r: number) => void, signal?: AbortSignal): Promise<Blob> {
     const { renderEDL } = await import("@/lib/ffmpeg");
-    return renderEDL(req.media, req.clips, onProgress, req.target, { audioMuted: req.audioMuted, signal });
+    return renderEDL(req.media, req.clips, onProgress, req.target, {
+      audioMuted: req.audioMuted, signal, overlays: req.overlays, canvas: req.canvas,
+    });
   }
 }
 

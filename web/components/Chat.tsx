@@ -8,6 +8,8 @@ import { repairToolMessages } from "@/lib/agent/normalize";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
@@ -70,6 +72,8 @@ interface ChatProps {
   words: Word[] | null;
   clips: Clip[] | null;
   subs: Sub[] | null;
+  overlays?: Overlay[];
+  canvas?: CanvasSize;
   projectId: string | null;
   onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null }) => void;
   // הקשר עריכה חי (context chips + mention resolution)
@@ -82,7 +86,7 @@ interface ChatProps {
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock }: ChatProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
@@ -116,7 +120,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, p
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
-    media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null, lastRender: null,
+    media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null,
+    overlays: [], canvas: defaultCanvasFor(), lastRender: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     onOutput: addOutput,
     pendingImages: [],
@@ -153,7 +158,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, p
   useEffect(() => {
     const c = ctxRef.current;
     c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
-  }, [media, words, clips, subs]);
+    c.overlays = overlays; c.canvas = canvas || defaultCanvasFor();
+  }, [media, words, clips, subs, overlays, canvas]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));

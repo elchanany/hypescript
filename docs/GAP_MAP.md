@@ -19,7 +19,7 @@
 |---|---|---|
 | Preview (וידאו יחיד) | OK | — |
 | Caption overlay בנגן | PARTIAL (!EXPORT partial) | טקסט בלבד |
-| PreviewCompositor (שכבות: image/logo/text) | OK (!EXPORT) | stickers חסר; ייצוא לא מרנדר overlays |
+| PreviewCompositor (שכבות: image/logo/text) | OK | stickers חסר; Preview+Export (burn-in אחרי concat) |
 | Project coordinates (לא CSS px) | OK | unit tests ב-`canvasCoords.test.ts` |
 | בחירה/Bounding box/drag/resize/rotate | OK | Undo אחד לכל gesture; cancel אם לא זז |
 | Inspector transform sync | OK | X/Y/W/H/rotation/opacity + טקסט |
@@ -43,8 +43,8 @@
 |---|---|---|
 | כתוביות: create/edit/timing/SRT | OK | — |
 | כתוביות: style/position/animation/scope | MISSING | — |
-| Text element (add/edit/style) | PARTIAL (!EXPORT) | הוספה+עריכה+transform ב-Preview; style מלא/אנימציה חסרים |
-| Image/Logo overlay | OK (!EXPORT) | תמונה→overlay (לא קליפ); aspect טבעי; checkerboard |
+| Text element (add/edit/style) | PARTIAL | הוספה+עריכה+transform+export (PNG→overlay); style מלא/אנימציה חסרים |
+| Image/Logo overlay | OK | תמונה→overlay (לא קליפ); Preview+Export burn-in |
 | Stickers/Shapes | MISSING | — |
 
 ## 5. Agent workspace
@@ -88,9 +88,8 @@
 - **AG-1**: DeepSeek `tool_calls` 400 — normalizer/repair. ✅ הושלם (`web/lib/agent/normalize.ts` + tests).
 
 ### P1 — ליבת עורך (הסדר שנקבע)
-- **CV-1…CV-6**: ✅ Preview — מודל overlays + קואורדינטות + compositor + drag/resize/rotate + Inspector + רצועת שכבות.
-- **CV-7**: Export parity — overlay (FFmpeg `overlay`/drawtext) בלי לשבור מנוע ה-EDL הנבדק. ← **הבא**
-- **TL-1**: Gap entity + Delete-leaves-gap + Ripple-delete + zoom-around-pointer + Ctrl/pinch.
+- **CV-1…CV-7**: ✅ Preview + Export burn-in (post-concat `overlay`, טקסט→PNG; identity כשאין overlays; integration test).
+- **TL-1**: Gap entity + Delete-leaves-gap + Ripple-delete + zoom-around-pointer + Ctrl/pinch. ← **הבא**
 - **TX-1**: Text style מלא + Caption style/position + trim overlays בציר.
 
 ### P2 — סוכן/פלטפורמה

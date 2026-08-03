@@ -6,6 +6,8 @@ import { normalizeHebrew } from "@/lib/align";
 import {
   addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
@@ -18,6 +20,8 @@ export interface AgentContext {
   transcripts: Record<string, Word[]>; // תמלול לכל מקור לפי id (מולטי-וידאו)
   clips: Clip[] | null;
   subs: Sub[] | null;
+  overlays: Overlay[];
+  canvas: CanvasSize;
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
@@ -355,7 +359,12 @@ export const TOOLS: ToolMeta[] = [
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
       const secs = ctx.clips!.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
-      const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`));
+      const blob = await renderEDL(
+        ctx.media, ctx.clips!,
+        (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`),
+        undefined,
+        { overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
+      );
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
       ctx.onOutput?.(blob, `${base}_edited.mp4`, "video");
