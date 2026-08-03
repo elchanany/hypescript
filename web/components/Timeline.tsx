@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
+import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
-import { Film, AudioLines, Captions, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";
@@ -13,14 +14,17 @@ interface Props {
   media: MediaAsset[];
   clips: Clip[];
   subs?: Sub[] | null;
+  overlays?: Overlay[];
   tracks: TrackMeta[];
   maxDuration: number;
   currentAssembled: number;
   selectedId: string | null;
+  selectedOverlayId?: string | null;
   zoom: number;
   snap: boolean;
   onSeek: (assembled: number) => void;
   onSelect: (id: string | null) => void;
+  onSelectOverlay?: (id: string | null) => void;
   onTrimBegin: () => void;
   onTrim: (id: string, start: number, end: number) => void;
   onTrimEnd: () => void;
@@ -38,12 +42,15 @@ const SOURCE_COLORS = ["#3f5f8f", "#5b4d8a", "#8a4d68", "#8a6a3f", "#3f7d72", "#
 const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const;
 
 export default function Timeline(p: Props) {
-  const { media, clips, subs, tracks, currentAssembled, selectedId, zoom, snap } = p;
+  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, zoom, snap } = p;
   const laneRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
   const drag = useRef<{ mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
 
   const colorOf = (sourceId: string) => SOURCE_COLORS[Math.max(0, media.findIndex((m) => m.id === sourceId)) % SOURCE_COLORS.length];
-  const total = Math.max(0.001, totalDur(clips));
+  const total = Math.max(0.001, p.maxDuration || totalDur(clips));
   const pct = (t: number) => (t / total) * 100;
   const ordered = sortedTracks(tracks);
   const vTrack = videoTrack(tracks);
@@ -75,10 +82,20 @@ export default function Timeline(p: Props) {
   }, [total, zoom]);
   const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
+  // target insertion index for a pointer x (px, client coords) over the video lane
+  const dropTarget = (clientX: number): { index: number; boundary: number } => {
+    const rect = laneRef.current!.getBoundingClientRect();
+    const t = ((clientX - rect.left) / rect.width) * total;
+    let acc = 0, index = clips.length;
+    for (let i = 0; i < clips.length; i++) { const mid = acc + clipDur(clips[i]) / 2; if (t < mid) { index = i; break; } acc += clipDur(clips[i]); }
+    return { index, boundary: assembledStart(clips, index) };
+  };
+
   const onDown = (e: React.MouseEvent, clip: Clip, mode: "move" | "l" | "r") => {
     if (vLocked) return;
     e.stopPropagation();
     drag.current = { mode, id: clip.id, x0: e.clientX, laneW: laneRef.current?.clientWidth || 1, s0: clip.start, e0: clip.end, moved: false, px: e.clientX };
+    if (mode === "move") { const a = mediaById(media, clip.sourceId); setDragLabel({ name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע", dur: clipDur(clip) }); }
     if (mode === "l" || mode === "r") p.onTrimBegin();
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -90,22 +107,28 @@ export default function Timeline(p: Props) {
     const dt = (dx / d.laneW) * total;
     if (d.mode === "l") p.onTrim(d.id, d.s0 + dt, d.e0);
     else if (d.mode === "r") p.onTrim(d.id, d.s0, d.e0 + dt);
+    else if (d.mode === "move" && d.moved) {
+      // ghost + drop indicator updated imperatively (no React render per mouse move)
+      const g = ghostRef.current;
+      if (g) { g.style.display = "flex"; g.style.left = `${e.clientX + 12}px`; g.style.top = `${e.clientY + 14}px`; }
+      const drop = dropRef.current;
+      if (drop && laneRef.current) { const { boundary } = dropTarget(e.clientX); drop.style.display = "block"; drop.style.left = `${pct(boundary)}%`; }
+    }
+  };
+  const endDragVisuals = () => {
+    if (ghostRef.current) ghostRef.current.style.display = "none";
+    if (dropRef.current) dropRef.current.style.display = "none";
   };
   const onUp = () => {
     const d = drag.current;
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
-    if (!d) return;
+    endDragVisuals();
+    if (!d) { drag.current = null; return; }
     if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
     else if (d.mode === "move") {
       if (!d.moved) p.onSelect(d.id);
-      else {
-        const rect = laneRef.current!.getBoundingClientRect();
-        const t = ((d.px - rect.left) / rect.width) * total;
-        let acc = 0, target = clips.length;
-        for (let i = 0; i < clips.length; i++) { const mid = acc + clipDur(clips[i]) / 2; if (t < mid) { target = i; break; } acc += clipDur(clips[i]); }
-        p.onReorder(d.id, target);
-      }
+      else p.onReorder(d.id, dropTarget(d.px).index);
     }
     drag.current = null;
   };
@@ -120,6 +143,10 @@ export default function Timeline(p: Props) {
 
   return (
     <div className="tl-scroll">
+      <div className="tl-ghost" ref={ghostRef}>
+        <span className="g-name">{dragLabel?.name}</span>
+        <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+      </div>
       <div className="tl-inner" style={{ width: `${Math.max(1, zoom) * 100}%` }}>
         {/* ruler */}
         <div className="tl-rowline tl-rulerline">
@@ -182,6 +209,7 @@ export default function Timeline(p: Props) {
                       </div>
                     );
                   })}
+                  <div className="tl-drop" ref={dropRef} />
                   <Playhead />
                 </div>
               )}
@@ -207,7 +235,9 @@ export default function Timeline(p: Props) {
                 <div className="tl-lane2" onClick={(e) => seekFromRow(e, e.currentTarget)}>
                   <Grid />
                   {(subs || []).map((s) => (
-                    <div key={s.id} className="cue2" style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }} title={s.text} />
+                    <div key={s.id} className="cue2" style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }} title={s.text}>
+                      <span className="cue-txt">{s.text}</span>
+                    </div>
                   ))}
                   <Playhead />
                 </div>
@@ -215,6 +245,34 @@ export default function Timeline(p: Props) {
             </div>
           );
         })}
+
+        {/* Overlay lane — visual track for image/text layers (not a TrackMeta type yet) */}
+        <div className="tl-rowline" style={{ height: 40 }}>
+          <div className="tl-head2">
+            <div className="hd-top">
+              <Layers className="hd-type" size={14} strokeWidth={1.75} />
+              <span className="hd-name">שכבות</span>
+            </div>
+          </div>
+          <div className="tl-lane2" onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
+            <Grid />
+            {overlays.map((o) => {
+              const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
+              const label = o.kind === "text" ? (o.text || "טקסט") : ((asset?.name || "").replace(/\.[^.]+$/, "") || "תמונה");
+              const dur = Math.max(0.05, o.end - o.start);
+              return (
+                <div key={o.id}
+                  className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""}`}
+                  style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%` }}
+                  title={`${label} · ${dur.toFixed(1)}s`}
+                  onClick={(e) => { e.stopPropagation(); p.onSelectOverlay?.(o.id); }}>
+                  <span className="clip-label"><span>{label}</span><span className="cl-dur">{dur.toFixed(1)}s</span></span>
+                </div>
+              );
+            })}
+            <Playhead />
+          </div>
+        </div>
       </div>
     </div>
   );

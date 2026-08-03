@@ -1,21 +1,27 @@
 "use client";
 
-// Right-side Inspector. No clip selected -> project settings. Clip selected ->
-// properties that actually drive the engine (source in/out, enabled, volume).
-// Every edit flows through onUpdate -> useEditor -> History and affects render/preview.
+// Right-side Inspector. No selection -> project settings. Clip selected ->
+// clip properties. Overlay selected -> transform + text/image properties.
+// Every edit flows through onUpdate / onUpdateOverlay -> useEditor -> History.
 import { Clip, clipEnabled, clipVolume } from "@/lib/editor/model";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "lucide-react";
 import { Section, Toggle } from "@/components/ui";
 
 interface Props {
+  width?: number;
   clip: Clip | null;
+  overlay?: Overlay | null;
   assetName: string;
   assetKind: "video" | "image" | "audio";
   assetDuration: number;
   trackName: string;
   timelineStart: number;
   onUpdate: (patch: Partial<Clip>) => void;
+  onUpdateOverlay?: (patch: Partial<Overlay>) => void;
+  canvas?: CanvasSize;
   // project fallback
   projectName: string;
   mediaCount: number;
@@ -26,20 +32,26 @@ interface Props {
 const KIND = { video: "וידאו", image: "תמונה", audio: "שמע" } as const;
 
 export default function InspectorPanel(p: Props) {
-  const { clip } = p;
+  const { clip, overlay } = p;
+  const title = overlay ? (overlay.kind === "text" ? "מאפייני טקסט" : "מאפייני שכבה") : clip ? "מאפייני קטע" : "הגדרות פרויקט";
 
   return (
-    <aside className="inspector2">
+    <aside className="inspector2" style={p.width ? { width: p.width } : undefined}>
       <div className="panel-header">
-        <span className="title"><SlidersHorizontal size={15} strokeWidth={1.75} />{clip ? "מאפייני קטע" : "הגדרות פרויקט"}</span>
+        <span className="title"><SlidersHorizontal size={15} strokeWidth={1.75} />{title}</span>
       </div>
       <div className="insp-scroll">
-        {!clip ? (
+        {overlay ? (
+          <OverlayInspector overlay={overlay} onUpdate={p.onUpdateOverlay!} assetName={p.assetName} canvas={p.canvas} />
+        ) : !clip ? (
           <Section title="פרויקט">
             <div className="prop"><span className="k">שם</span><span className="v">{p.projectName || "—"}</span></div>
             <div className="prop"><span className="k">קבצי מקור</span><span className="v mono">{p.mediaCount}</span></div>
             <div className="prop"><span className="k">אורך מקור</span><span className="v mono">{formatTimecode(p.sourceDuration)}</span></div>
             <div className="prop"><span className="k">אורך ערוך</span><span className="v mono">{formatTimecode(p.editedDuration)}</span></div>
+            {p.canvas && (
+              <div className="prop"><span className="k">קנבס</span><span className="v mono">{p.canvas.width}×{p.canvas.height}</span></div>
+            )}
             {p.mediaCount === 0 && <div className="insp-empty" style={{ padding: "12px 0 0" }}>בחר קטע בציר הזמן כדי לערוך את מאפייניו.</div>}
           </Section>
         ) : (
@@ -47,6 +59,88 @@ export default function InspectorPanel(p: Props) {
         )}
       </div>
     </aside>
+  );
+}
+
+function num(v: number, digits = 1) {
+  return Number.isFinite(v) ? +v.toFixed(digits) : 0;
+}
+
+function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
+  overlay: Overlay; onUpdate: (patch: Partial<Overlay>) => void; assetName: string; canvas?: CanvasSize;
+}) {
+  const t = overlay.transform;
+  const setT = (patch: Partial<Overlay["transform"]>) => onUpdate({ transform: { ...t, ...patch } });
+  const cw = canvas?.width || 1920;
+  const ch = canvas?.height || 1080;
+
+  return (
+    <>
+      <Section title="מקור">
+        <div className="prop"><span className="k">סוג</span><span className="v">{overlay.kind === "text" ? "טקסט" : "תמונה"}</span></div>
+        {overlay.kind === "image" && <div className="prop"><span className="k">קובץ</span><span className="v" title={assetName}>{assetName || "—"}</span></div>}
+        <div className="prop">
+          <span className="k">נעול</span>
+          <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Toggle checked={!!overlay.locked} onChange={(v) => onUpdate({ locked: v })} tip="מנע שינוי בתצוגה" />
+          </span>
+        </div>
+        <div className="prop">
+          <span className="k">מוסתר</span>
+          <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Toggle checked={!!overlay.hidden} onChange={(v) => onUpdate({ hidden: v })} tip="לא מוצג בתצוגה" />
+          </span>
+        </div>
+      </Section>
+
+      <Section title="זמן בציר">
+        <div className="prop-input"><span className="k">התחלה</span>
+          <input type="number" step={0.05} min={0} value={num(overlay.start, 3)}
+            onChange={(e) => onUpdate({ start: Math.max(0, Math.min(+e.target.value, overlay.end - 0.05)) })} /></div>
+        <div className="prop-input"><span className="k">סיום</span>
+          <input type="number" step={0.05} min={0} value={num(overlay.end, 3)}
+            onChange={(e) => onUpdate({ end: Math.max(+e.target.value, overlay.start + 0.05) })} /></div>
+        <div className="prop"><span className="k">משך</span><span className="v mono">{(overlay.end - overlay.start).toFixed(2)}s</span></div>
+      </Section>
+
+      <Section title="טרנספורם">
+        <div className="prop-input"><span className="k">X</span>
+          <input type="number" step={1} value={num(t.x, 1)} onChange={(e) => setT({ x: +e.target.value })} /></div>
+        <div className="prop-input"><span className="k">Y</span>
+          <input type="number" step={1} value={num(t.y, 1)} onChange={(e) => setT({ y: +e.target.value })} /></div>
+        <div className="prop-input"><span className="k">רוחב</span>
+          <input type="number" step={1} min={8} max={cw * 2} value={num(t.w, 1)} onChange={(e) => setT({ w: Math.max(8, +e.target.value) })} /></div>
+        <div className="prop-input"><span className="k">גובה</span>
+          <input type="number" step={1} min={8} max={ch * 2} value={num(t.h, 1)} onChange={(e) => setT({ h: Math.max(8, +e.target.value) })} /></div>
+        <div className="prop-input"><span className="k">סיבוב°</span>
+          <input type="number" step={1} value={num(t.rotation, 1)} onChange={(e) => setT({ rotation: +e.target.value })} /></div>
+        <div className="prop"><span className="k">שקיפות</span><span className="v mono">{Math.round(t.opacity * 100)}%</span></div>
+        <input type="range" min={0} max={1} step={0.01} value={t.opacity}
+          onChange={(e) => setT({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
+          style={{ width: "100%", marginTop: 4 }} />
+      </Section>
+
+      {overlay.kind === "text" && (
+        <Section title="טקסט">
+          <div className="prop-input" style={{ alignItems: "flex-start" }}><span className="k">תוכן</span>
+            <textarea rows={3} value={overlay.text || ""} dir="rtl"
+              onChange={(e) => onUpdate({ text: e.target.value })}
+              style={{ flex: 1, resize: "vertical", minHeight: 56 }} /></div>
+          <div className="prop-input"><span className="k">גודל</span>
+            <input type="number" step={1} min={8} max={400} value={overlay.fontSize || 48}
+              onChange={(e) => onUpdate({ fontSize: Math.max(8, +e.target.value) })} /></div>
+          <div className="prop-input"><span className="k">צבע</span>
+            <input type="color" value={overlay.color || "#ffffff"}
+              onChange={(e) => onUpdate({ color: e.target.value })} style={{ flex: 1, height: 28, padding: 0 }} /></div>
+          <div className="prop">
+            <span className="k">מודגש</span>
+            <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Toggle checked={!!overlay.bold} onChange={(v) => onUpdate({ bold: v })} />
+            </span>
+          </div>
+        </Section>
+      )}
+    </>
   );
 }
 

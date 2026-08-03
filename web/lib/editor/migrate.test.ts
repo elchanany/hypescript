@@ -38,4 +38,22 @@ describe("project migration", () => {
     expect(p.tracks.find((t) => t.type === "video")).toBeTruthy();
     expect(p.tracks.find((t) => t.type === "caption")).toBeTruthy();
   });
+
+  it("v2 -> v3 defaults empty overlays and 1920×1080 canvas", () => {
+    const p = migrateState({ schemaVersion: 2, clips: null, subs: null, tracks: [] });
+    expect(p.schemaVersion).toBe(3);
+    expect(p.overlays).toEqual([]);
+    expect(p.canvas).toEqual({ width: 1920, height: 1080 });
+  });
+
+  it("preserves overlays and canvas from v3 state", () => {
+    const ov = [{
+      id: "ov1", kind: "text", text: "שלום", start: 0, end: 2, zIndex: 1,
+      transform: { x: 100, y: 200, w: 400, h: 80, rotation: 0, opacity: 1 },
+    }];
+    const p = migrateState({ schemaVersion: 3, clips: null, subs: null, overlays: ov, canvas: { width: 1280, height: 720 } });
+    expect(p.overlays).toHaveLength(1);
+    expect(p.overlays[0].text).toBe("שלום");
+    expect(p.canvas).toEqual({ width: 1280, height: 720 });
+  });
 });

@@ -6,7 +6,11 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Clip, MediaAsset, mediaById, uid } from "./editor/model";
+import { Overlay } from "./editor/overlay";
+import { CanvasSize } from "./editor/canvasCoords";
 import { buildConcatGraph, RenderTarget, DEFAULT_TARGET, toExecArgs } from "./render/graph";
+import { appendOverlayBurns } from "./render/overlayBurn";
+import { materializeOverlays } from "./render/materializeOverlays";
 
 export type { RenderTarget } from "./render/graph";
 
@@ -98,7 +102,12 @@ export function terminateFFmpeg() {
 
 // מרנדר EDL רב-מקורי דרך גרף-סינון יחיד (ראה lib/render/graph.ts):
 // אין קידוד לכל קליפ בנפרד ואין concat demuxer — Stream רציף אחד, קידוד יחיד.
-export interface RenderOpts { audioMuted?: boolean; signal?: AbortSignal; }
+export interface RenderOpts {
+  audioMuted?: boolean;
+  signal?: AbortSignal;
+  overlays?: Overlay[];
+  canvas?: CanvasSize;
+}
 
 export async function renderEDL(
   media: MediaAsset[],
@@ -110,12 +119,26 @@ export async function renderEDL(
   return runExclusive(async () => {
     if (opts.signal?.aborted) throw new Error("בוטל");
     const ff = await getFFmpeg();
-    const graph = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted });
+    const base = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted });
+    // Burn-in overlays AFTER the verified concat (identity when empty).
+    const mats = (opts.overlays?.length && opts.canvas)
+      ? await materializeOverlays(opts.overlays, media, opts.canvas, target)
+      : [];
+    const totalDur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
+    const graph = appendOverlayBurns(base, mats.map((m) => m.spec), totalDur);
+    const matByFile = new Map(mats.map((m) => [m.spec.filename, m]));
 
-    // כותבים כל קובץ-מקור בשימוש פעם אחת ל-FS של ffmpeg.
+    // כותבים כל קובץ-מקור / שכבה בשימוש ל-FS של ffmpeg.
     for (const wsr of graph.writes) {
-      const asset = mediaById(media, wsr.assetId)!;
-      await ff.writeFile(wsr.filename, await fetchFile(asset.file));
+      const mat = matByFile.get(wsr.filename);
+      if (mat?.bytes) {
+        await ff.writeFile(wsr.filename, mat.bytes);
+      } else {
+        const assetId = mat?.assetId || wsr.assetId;
+        const asset = mediaById(media, assetId);
+        if (!asset) throw new Error(`חסר מקור לרינדור: ${assetId}`);
+        await ff.writeFile(wsr.filename, await fetchFile(asset.file));
+      }
     }
 
     // ביטול אמיתי: terminate מפיל את ה-exec הנוכחי -> ה-Promise נדחה.

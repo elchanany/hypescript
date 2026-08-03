@@ -21,3 +21,6 @@ graphify-out/
 # OS
 .DS_Store
 Thumbs.db
+
+# local screenshots / scratch artifacts (not part of the product)
+.artifacts/

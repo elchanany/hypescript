@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Captions, Settings } from "lucide-react";
+import { Film, Captions, Type, Settings } from "lucide-react";
 
-export type LeftTab = "media" | "captions";
+export type LeftTab = "media" | "text" | "captions";
 
 const TABS: { id: LeftTab; icon: typeof Film; label: string }[] = [
   { id: "media", icon: Film, label: "מדיה" },
+  { id: "text", icon: Type, label: "טקסט" },
   { id: "captions", icon: Captions, label: "כתוביות" },
 ];
 

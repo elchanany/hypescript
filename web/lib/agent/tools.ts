@@ -6,6 +6,8 @@ import { normalizeHebrew } from "@/lib/align";
 import {
   addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
@@ -18,6 +20,8 @@ export interface AgentContext {
   transcripts: Record<string, Word[]>; // תמלול לכל מקור לפי id (מולטי-וידאו)
   clips: Clip[] | null;
   subs: Sub[] | null;
+  overlays: Overlay[];
+  canvas: CanvasSize;
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
@@ -355,7 +359,12 @@ export const TOOLS: ToolMeta[] = [
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
       const secs = ctx.clips!.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
-      const blob = await renderEDL(ctx.media, ctx.clips!, (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`));
+      const blob = await renderEDL(
+        ctx.media, ctx.clips!,
+        (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`),
+        undefined,
+        { overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
+      );
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
       ctx.onOutput?.(blob, `${base}_edited.mp4`, "video");
@@ -474,3 +483,11 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - דוגמה — "סדר כרונולוגית כמה סרטונים": transcribe_video לכל אחד (source), החלט על הסדר, ואז keep_by_script לכל אחד עם source ו-append=true (לחיתוך לפי תוכן) או add_clip לכל אחד (לסרטון שלם), ואז render_video.
 
 זרימה טיפוסית: transcribe_video → keep_by_script (או find→remove) → עריכות עדינות → render_video.`;
+
+// תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
+// כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
+export const MODE_PROMPTS: Record<import("./types").AgentMode, string> = {
+  ask: `\n\nמצב נוכחי: ASK (קריאה בלבד). אין לך כלים במצב זה ואינך יכול לשנות את הפרויקט. ענה על שאלות, הסבר את הפרויקט/התמלול/הציר, והצע צעדים. אם המשתמש מבקש לבצע עריכה — הסבר בקצרה מה צריך לעשות והצע לעבור למצב Act.`,
+  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). אין לך כלים ואינך משנה דבר. החזר תוכנית עריכה קצרה וברורה: מה יישאר, מה יימחק, אילו קטעים/כתוביות/נכסים יושפעו, משך צפוי, ואילו החלטות דורשות אישור. אל תטען שביצעת — רק תכנן. בסיום הצע למשתמש לאשר ולעבור ל-Act.`,
+  act: ``,
+};

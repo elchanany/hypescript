@@ -3,6 +3,10 @@
 
 export type Provider = "deepseek" | "openai" | "anthropic" | "gemini";
 
+// שלושת מצבי הסוכן. ההבדל אינו קוסמטי: Ask ו-Plan אינם מקבלים כלים כלל,
+// ולכן אינם יכולים לשנות את הפרויקט (אכיפה אמיתית, לא רק הנחיה).
+export type AgentMode = "ask" | "plan" | "act";
+
 export interface ToolCall {
   id: string;
   name: string;
