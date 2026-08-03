@@ -1,7 +1,7 @@
 import type { Provider } from "@/lib/agent/types";
-import type { ProviderDefinition } from "./types";
+import type { ProviderDefinition, ProviderId } from "./types";
 
-export const PROVIDER_REGISTRY = [
+export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
   {
     id: "deepseek",
     labelHe: "DeepSeek",
@@ -37,11 +37,8 @@ export const PROVIDER_REGISTRY = [
     envKeys: ["GROQ_API_KEY"],
     configuredKeys: ["groq-transcribe"],
   },
-] as const satisfies readonly ProviderDefinition[];
+] as const;
 
 export const LLM_PROVIDERS = PROVIDER_REGISTRY.filter((provider) => provider.kind === "llm") as readonly (ProviderDefinition & { id: Provider })[];
 
-export const PROVIDER_BY_ID = Object.fromEntries(PROVIDER_REGISTRY.map((provider) => [provider.id, provider])) as Record<
-  (typeof PROVIDER_REGISTRY)[number]["id"],
-  (typeof PROVIDER_REGISTRY)[number]
->;
+export const PROVIDER_BY_ID = Object.fromEntries(PROVIDER_REGISTRY.map((provider) => [provider.id, provider])) as Record<ProviderId, ProviderDefinition>;
