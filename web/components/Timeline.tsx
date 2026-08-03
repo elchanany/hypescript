@@ -6,6 +6,8 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { Film, AudioLines, Captions, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import Filmstrip from "@/components/Filmstrip";
+import Waveform from "@/components/Waveform";
 
 interface Props {
   media: MediaAsset[];
@@ -160,8 +162,9 @@ export default function Timeline(p: Props) {
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
                   {clips.map((c, i) => {
-                    const name = mediaById(media, c.sourceId)?.name || "";
-                    const short = name.replace(/\.[^.]+$/, "");
+                    const asset = mediaById(media, c.sourceId);
+                    const short = (asset?.name || "").replace(/\.[^.]+$/, "");
+                    const thumbH = Math.max(28, track.height - 8);
                     return (
                       <div key={c.id}
                         className={`clip2 ${c.id === selectedId ? "selected" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
@@ -170,6 +173,9 @@ export default function Timeline(p: Props) {
                         onContextMenu={(e) => { e.preventDefault(); p.onSelect(c.id); p.onClipMenu(c.id, e.clientX, e.clientY); }}
                         title={`${short} · ${clipDur(c).toFixed(1)}s`}>
                         <div className="clip-fill" style={{ background: colorOf(c.sourceId) }} />
+                        {asset?.kind === "video" && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
+                        {asset?.kind === "image" && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
+                        <span className="clip-accent" style={{ background: colorOf(c.sourceId) }} />
                         {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l")} />}
                         <span className="clip-label"><span>{short || `קטע ${i + 1}`}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
                         {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r")} />}
@@ -183,9 +189,16 @@ export default function Timeline(p: Props) {
               {track.type === "audio" && (
                 <div className={`tl-lane2 ${track.muted ? "muted" : ""}`} onClick={(e) => seekFromRow(e, e.currentTarget)}>
                   <Grid />
-                  {clips.map((c, i) => (
-                    <div key={c.id} className="clip-audio" style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }} />
-                  ))}
+                  {clips.map((c, i) => {
+                    const asset = mediaById(media, c.sourceId);
+                    return (
+                      <div key={c.id} className="clip-audio" style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}>
+                        {asset && (asset.kind === "video" || asset.kind === "audio") && (
+                          <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />
+                        )}
+                      </div>
+                    );
+                  })}
                   <Playhead />
                 </div>
               )}

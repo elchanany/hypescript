@@ -401,6 +401,16 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .clip2.locked { cursor: default; }
 .clip2.disabled { opacity: .4; filter: saturate(.4); }
 .clip2 .clip-fill { position: absolute; inset: 0; opacity: .9; }
+/* real filmstrip / image fill (above the color fallback, below label + handles) */
+.filmstrip { position: absolute; inset: 0; display: flex; overflow: hidden; z-index: 1; }
+.fs-cell { flex: 1 1 0; min-width: 0; height: 100%; overflow: hidden; border-inline-end: 1px solid rgba(0,0,0,.28); }
+.fs-cell:last-child { border-inline-end: none; }
+.fs-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.clip-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.clip2 .clip-accent { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; width: 3px; z-index: 2; }
+.clip2 .clip-label { background: linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,0) 55%); }
+.strip-loading { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); background-size: 200% 100%; animation: stripsh 1.1s infinite; }
+@keyframes stripsh { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .clip2 .clip-label { position: absolute; inset: 0; display: flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 11px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); pointer-events: none; z-index: 2; }
 .clip2 .clip-label .cl-dur { margin-inline-start: auto; opacity: .75; font-family: var(--mono); font-size: 10px; }
 .clip2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.4); z-index: 3; }
@@ -409,9 +419,9 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .clip2:hover .trim, .clip2.selected .trim { opacity: .55; }
 .clip2 .trim:hover { opacity: .9; }
 
-/* audio lane — clean placeholder block with a subtle center line */
-.clip-audio { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm); background: rgba(63,164,106,.14); border: 1px solid rgba(63,164,106,.3); overflow: hidden; }
-.clip-audio::after { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: rgba(63,164,106,.55); }
+/* audio lane — real waveform canvas (falls back to the tinted block while loading/on error) */
+.clip-audio { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm); background: rgba(63,164,106,.12); border: 1px solid rgba(63,164,106,.3); overflow: hidden; }
+.clip-audio canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 
 /* caption cues */
 .cue2 { position: absolute; top: 5px; bottom: 5px; background: rgba(168,85,247,.4); border: 1px solid rgba(168,85,247,.6); border-radius: var(--r-sm); }
