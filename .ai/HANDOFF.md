@@ -18,7 +18,8 @@
   - Settings ו-Chat משתמשים ב-registry; Chat חוסם בחירת LLM חסר מפתח ומציג סיבה.
   - Tool activity מציג ספק, Retry prompt לכשל, וטיפ ביטול ברור ("בטל").
   - תיעוד עודכן: Provider Matrix, Gap Map. אין Supabase/Auth, אין ספקים מדומים.
-- אימות: `tsc` נקי; vitest ירוק כולל graph 20-cut + timelineOps + gap graph unit.
+- אימות אחרון: `cd web && npx tsc --noEmit && npx vitest run` נקי — 14 files / 65 tests.
+- Graphify: לא מותקן בסביבה (`graphify-not-installed`), לכן לא רץ `graphify update .`.
 
 ## Exact Next Steps
 1. להרחיב CommandBus ליותר פעולות UI + parity tests.
