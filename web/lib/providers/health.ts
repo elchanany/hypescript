@@ -19,8 +19,9 @@ export function isProviderConfigured(provider: ProviderDefinition, configured: R
 
 export function getProviderStatuses(configured: Record<string, boolean>): ProviderStatusInfo[] {
   return PROVIDER_REGISTRY.map((provider) => {
-    if (provider.unavailableReasonHe) {
-      return { ...provider, status: "unavailable", reasonHe: provider.unavailableReasonHe };
+    const unavailableReasonHe = "unavailableReasonHe" in provider ? provider.unavailableReasonHe : undefined;
+    if (unavailableReasonHe) {
+      return { ...provider, status: "unavailable", reasonHe: unavailableReasonHe };
     }
     if (isProviderConfigured(provider, configured)) {
       return { ...provider, status: "ready", reasonHe: "מוגדר ומוכן" };
