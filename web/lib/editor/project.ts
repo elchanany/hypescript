@@ -5,8 +5,18 @@
 
 import { Clip } from "./model";
 import { Sub } from "./subtitlesEdl";
+import { Overlay } from "./overlay";
+import { CanvasSize } from "./canvasCoords";
 
-export const SCHEMA_VERSION = 2;
+// v3: added canvas (project coordinates) + overlays (image/text/logo elements).
+export const SCHEMA_VERSION = 3;
+
+export const DEFAULT_CANVAS: CanvasSize = { width: 1920, height: 1080 };
+export function normalizeCanvas(input: any): CanvasSize {
+  const w = Number(input?.width), h = Number(input?.height);
+  if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) return { width: Math.round(w), height: Math.round(h) };
+  return { ...DEFAULT_CANVAS };
+}
 
 export type TrackType = "video" | "audio" | "caption";
 
@@ -25,6 +35,8 @@ export interface ProjectState {
   clips: Clip[] | null; // רצף רצועת הווידאו (EDL)
   subs: Sub[] | null; // רצועת הכתוביות
   tracks: TrackMeta[];
+  overlays: Overlay[]; // שכבות ויזואליות (תמונה/לוגו/טקסט) מעל הווידאו
+  canvas: CanvasSize; // מידות הפרויקט (קואורדינטות פרויקט, בלתי תלויות במסך)
 }
 
 export function defaultTracks(): TrackMeta[] {

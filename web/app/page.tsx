@@ -10,6 +10,8 @@ import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/edito
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
+import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, EyeOff, Trash2 } from "lucide-react";
@@ -18,6 +20,7 @@ import TopBar from "@/components/TopBar";
 import ToolRail, { LeftTab } from "@/components/ToolRail";
 import MediaPanel from "@/components/MediaPanel";
 import CaptionsPanel from "@/components/CaptionsPanel";
+import TextPanel from "@/components/TextPanel";
 import InspectorPanel from "@/components/InspectorPanel";
 import TimelineToolbar from "@/components/TimelineToolbar";
 import Chat from "@/components/Chat";
@@ -45,13 +48,15 @@ export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [words, setWords] = useState<Word[] | null>(null);
   const {
-    clips, subs, tracks, setClips, setSubs, setProject, updateClip,
+    clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, updateClip,
+    addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
     renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack,
-    beginTransaction, setClipsLive, commitTransaction,
-    reset: resetEditor, undo, redo, canUndo, canRedo,
+    beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
+    setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
   } = useEditor();
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [script, setScript] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
@@ -169,8 +174,8 @@ export default function EditorPage() {
       const raw = await kvGet<any>(pk(projectId, "state"));
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
-      resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks });
-      setCur(0); setSelectedId(null);
+      resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas });
+      setCur(0); setSelectedId(null); setSelectedOverlayId(null);
       setRestored(true);
     })();
   }, [projectId]);
@@ -185,11 +190,11 @@ export default function EditorPage() {
     if (!restored || !projectId) return;
     setSaving(true);
     const t = setTimeout(async () => {
-      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks });
+      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas });
       touchProject(projectId); setSaving(false);
     }, 500);
     return () => clearTimeout(t);
-  }, [words, clips, subs, tracks, restored, projectId]);
+  }, [words, clips, subs, tracks, overlays, canvas, restored, projectId]);
 
   const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
   const newProject = async () => {
@@ -230,9 +235,29 @@ export default function EditorPage() {
   const removeMedia = (id: string) => {
     setMedia((ms) => { const m = ms.find((x) => x.id === id); if (m) URL.revokeObjectURL(m.url); return ms.filter((x) => x.id !== id); });
     setClips((cs) => (cs ? cs.filter((c) => c.sourceId !== id) : cs));
+    setOverlays((os) => os.filter((o) => o.assetId !== id));
+    if (selectedOverlayId) setSelectedOverlayId(null);
   };
   const addMediaClip = (asset: MediaAsset) => {
+    if (asset.kind === "image") {
+      // image -> canvas overlay (CapCut-style), not a main-track clip
+      const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
+      const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end);
+      addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+      return;
+    }
     setClips((cs) => [...(cs || []), { id: uid(), sourceId: asset.id, start: 0, end: asset.duration }]);
+  };
+  const addTextOverlay = () => {
+    const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
+    const o = makeTextOverlay(canvas.width, canvas.height, overlays, "טקסט חדש", cur, end);
+    addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+  };
+  const selectClip = (id: string | null) => { setSelectedId(id); if (id) setSelectedOverlayId(null); };
+  const selectOverlay = (id: string | null) => { setSelectedOverlayId(id); if (id) setSelectedId(null); };
+  const onCanvasDetected = (w: number, h: number) => {
+    // only auto-set once from the first video if still at the default 1920×1080
+    if (canvas.width === 1920 && canvas.height === 1080 && (w !== 1920 || h !== 1080)) setCanvas(defaultCanvasFor(w, h));
   };
 
   const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
@@ -306,7 +331,10 @@ export default function EditorPage() {
     if (index >= 0) setClips(splitClip(clips, clips[index].id, source));
   };
   const deleteClipById = (id: string) => { if (clips && !videoLocked(tracks)) { setClips(removeClip(clips, id)); if (selectedId === id) setSelectedId(null); } };
-  const deleteSel = () => { if (selectedId) deleteClipById(selectedId); };
+  const deleteSel = () => {
+    if (selectedOverlayId) { removeOverlay(selectedOverlayId); setSelectedOverlayId(null); return; }
+    if (selectedId) deleteClipById(selectedId);
+  };
   const duplicateClip = (id: string) => {
     if (videoLocked(tracks)) return;
     setClips((cs) => { if (!cs) return cs; const i = cs.findIndex((c) => c.id === id); if (i < 0) return cs; const copy = { ...cs[i], id: uid() }; return [...cs.slice(0, i + 1), copy, ...cs.slice(i + 1)]; });
@@ -314,6 +342,7 @@ export default function EditorPage() {
   const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
+  const selectedOverlay = overlays.find((o) => o.id === selectedOverlayId) || null;
   const selectedIndex = selectedClip ? clips!.indexOf(selectedClip) : -1;
   const menuClip = clipMenu ? clips?.find((c) => c.id === clipMenu.id) || null : null;
 
@@ -325,7 +354,8 @@ export default function EditorPage() {
       if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
-      else if ((e.key === "Delete" || e.key === "Backspace") && selectedId) { e.preventDefault(); deleteSel(); }
+      else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId)) { e.preventDefault(); deleteSel(); }
+      else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
     };
     window.addEventListener("keydown", onKey);
@@ -336,7 +366,9 @@ export default function EditorPage() {
   const totalEdited = clips ? totalDur(clips) : duration;
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
-  const agentSelLabel = selectedClip ? (mediaById(media, selectedClip.sourceId)?.name || "קטע") : null;
+  const agentSelLabel = selectedOverlay
+    ? (selectedOverlay.kind === "text" ? (selectedOverlay.text || "טקסט") : (mediaById(media, selectedOverlay.assetId || "")?.name || "תמונה"))
+    : selectedClip ? (mediaById(media, selectedClip.sourceId)?.name || "קטע") : null;
 
   const dockHandle = (
     <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth}
@@ -381,6 +413,8 @@ export default function EditorPage() {
         <div className="leftpanel" style={{ width: leftW }}>
           {leftTab === "media" ? (
             <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia} />
+          ) : leftTab === "text" ? (
+            <TextPanel onAddText={addTextOverlay} />
           ) : (
             <CaptionsPanel
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
@@ -395,7 +429,15 @@ export default function EditorPage() {
         <div className="main-area">
           <div className="upper">
             <div className="center-col">
-              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)} />
+              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)}
+                canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
+                onSelectOverlay={selectOverlay}
+                onBeginOverlay={beginTransaction}
+                onOverlayLive={(u) => setOverlaysLive(u)}
+                onCommitOverlay={commitTransaction}
+                onCancelOverlay={cancelTransaction}
+                onEditOverlayText={(id, text) => updateOverlay(id, { text })}
+                onCanvasDetected={onCanvasDetected} />
               {(working || phase || error) && (
                 <div className="status-strip">
                   <span className={`s-msg ${error ? "err" : ""}`}>{error || phase}</span>
@@ -409,12 +451,15 @@ export default function EditorPage() {
             <InspectorPanel
               width={inspW}
               clip={selectedClip}
-              assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : ""}
+              overlay={selectedOverlay}
+              assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : (selectedOverlay?.kind === "image" ? (mediaById(media, selectedOverlay.assetId || "")?.name || "?") : "")}
               assetKind={(selectedClip && (mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio")) || "video"}
               assetDuration={selectedClip ? mediaById(media, selectedClip.sourceId)?.duration || duration : 0}
               trackName={videoTrack(tracks)?.name || "וידאו"}
               timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
               onUpdate={(patch) => selectedClip && updateClip(selectedClip.id, patch)}
+              onUpdateOverlay={(patch) => selectedOverlay && updateOverlay(selectedOverlay.id, patch)}
+              canvas={canvas}
               projectName={projectName} mediaCount={media.length} sourceDuration={duration} editedDuration={totalEdited}
             />
           </div>
@@ -422,16 +467,18 @@ export default function EditorPage() {
           <div className="timeline-region" style={{ height: tlHeight }}>
             <div className="tl-resize" onMouseDown={startResizeTL} title="גרור לשינוי גובה" />
             <TimelineToolbar
-              selInfo={selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
-              canSplit={!!clips?.length && !vLocked} canDelete={!!selectedId && !vLocked}
+              selInfo={selectedOverlay ? `${(selectedOverlay.end - selectedOverlay.start).toFixed(1)}s` : selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
+              canSplit={!!clips?.length && !vLocked} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId}
               onSplit={splitAtPlayhead} onDelete={deleteSel}
               snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
             />
             {clips ? (
               <Timeline
-                media={media} clips={clips} subs={subs} tracks={tracks} maxDuration={duration} currentAssembled={cur} selectedId={selectedId}
+                media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
+                maxDuration={Math.max(duration, clips ? totalDur(clips) : 0, ...overlays.map((o) => o.end), 0.001)}
+                currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
                 zoom={zoom} snap={snap}
-                onSeek={seek} onSelect={setSelectedId}
+                onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}
                 onTrimEnd={commitTransaction}

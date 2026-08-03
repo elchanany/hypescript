@@ -3,8 +3,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
+import { Overlay } from "@/lib/editor/overlay";
+import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
+import PreviewOverlays from "@/components/PreviewOverlays";
 
 export interface PreviewHandle { seek: (assembled: number) => void; toggle: () => void; }
 
@@ -15,6 +18,17 @@ interface Props {
   onTime: (assembled: number) => void;
   onCopyPosition?: (assembled: number) => void;
   audioMuted?: boolean;
+  // canvas + overlays (direct manipulation)
+  canvas: CanvasSize;
+  overlays: Overlay[];
+  selectedOverlayId?: string | null;
+  onSelectOverlay?: (id: string | null) => void;
+  onBeginOverlay?: () => void;
+  onOverlayLive?: (updater: (prev: Overlay[]) => Overlay[]) => void;
+  onCommitOverlay?: () => void;
+  onCancelOverlay?: () => void;
+  onEditOverlayText?: (id: string, text: string) => void;
+  onCanvasDetected?: (w: number, h: number) => void;
 }
 
 const FRAME = 1 / 30;
@@ -25,9 +39,11 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const canvasBoxRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
   const idx = useRef(0);
   const loaded = useRef<string | null>(null);
   const pending = useRef<{ t: number; play: boolean } | null>(null);
@@ -44,6 +60,16 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
 
   useEffect(() => { if (videoRef.current) videoRef.current.muted = !!audioMuted; }, [audioMuted]);
   useEffect(() => { if (videoRef.current) videoRef.current.volume = vol; }, [vol]);
+
+  // measure the stage so we can letterbox the project canvas box inside it
+  useEffect(() => {
+    const el = stageRef.current; if (!el) return;
+    const measure = () => setStageSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure); ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const box = displayRect(stageSize.w, stageSize.h, canvas);
   const total = edl ? totalDur(edl) : dur;
 
   const ensure = (sourceId: string, tt: number, play: boolean) => {
@@ -72,7 +98,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
 
   const onLoaded = () => {
     const p = pending.current; const v = videoRef.current;
-    if (v) { setDur(edl ? totalDur(edl) : v.duration || 0); v.volume = vol; }
+    if (v) { setDur(edl ? totalDur(edl) : v.duration || 0); v.volume = vol; if (v.videoWidth && v.videoHeight) onCanvasDetected?.(v.videoWidth, v.videoHeight); }
     if (p && v) { v.currentTime = p.t; if (p.play) { v.play(); setPlaying(true); } pending.current = null; }
   };
 
@@ -120,11 +146,20 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     <div className="preview2">
       <div className="pv-stage" ref={stageRef}>
         {hasVideo ? (
-          <>
+          <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
             <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onClick={toggle} />
+              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+              onClick={() => { onSelectOverlay?.(null); toggle(); }} />
             {(() => { const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02); return cue ? <div className="pv-caption">{cue.text}</div> : null; })()}
-          </>
+            <PreviewOverlays boxRef={canvasBoxRef} canvas={canvas} overlays={overlays} media={media} currentTime={t}
+              selectedId={selectedOverlayId ?? null}
+              onSelect={(id) => onSelectOverlay?.(id)}
+              onBegin={() => onBeginOverlay?.()}
+              onLive={(u) => onOverlayLive?.(u)}
+              onCommit={() => onCommitOverlay?.()}
+              onCancel={() => onCancelOverlay?.()}
+              onEditText={(id, text) => onEditOverlayText?.(id, text)} />
+          </div>
         ) : (
           <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><span>טען מדיה כדי לראות תצוגה מקדימה</span></div>
         )}

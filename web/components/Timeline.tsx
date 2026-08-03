@@ -3,8 +3,9 @@
 import { useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
+import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
-import { Film, AudioLines, Captions, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";
@@ -13,14 +14,17 @@ interface Props {
   media: MediaAsset[];
   clips: Clip[];
   subs?: Sub[] | null;
+  overlays?: Overlay[];
   tracks: TrackMeta[];
   maxDuration: number;
   currentAssembled: number;
   selectedId: string | null;
+  selectedOverlayId?: string | null;
   zoom: number;
   snap: boolean;
   onSeek: (assembled: number) => void;
   onSelect: (id: string | null) => void;
+  onSelectOverlay?: (id: string | null) => void;
   onTrimBegin: () => void;
   onTrim: (id: string, start: number, end: number) => void;
   onTrimEnd: () => void;
@@ -38,7 +42,7 @@ const SOURCE_COLORS = ["#3f5f8f", "#5b4d8a", "#8a4d68", "#8a6a3f", "#3f7d72", "#
 const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const;
 
 export default function Timeline(p: Props) {
-  const { media, clips, subs, tracks, currentAssembled, selectedId, zoom, snap } = p;
+  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, zoom, snap } = p;
   const laneRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -46,7 +50,7 @@ export default function Timeline(p: Props) {
   const drag = useRef<{ mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
 
   const colorOf = (sourceId: string) => SOURCE_COLORS[Math.max(0, media.findIndex((m) => m.id === sourceId)) % SOURCE_COLORS.length];
-  const total = Math.max(0.001, totalDur(clips));
+  const total = Math.max(0.001, p.maxDuration || totalDur(clips));
   const pct = (t: number) => (t / total) * 100;
   const ordered = sortedTracks(tracks);
   const vTrack = videoTrack(tracks);
@@ -241,6 +245,34 @@ export default function Timeline(p: Props) {
             </div>
           );
         })}
+
+        {/* Overlay lane — visual track for image/text layers (not a TrackMeta type yet) */}
+        <div className="tl-rowline" style={{ height: 40 }}>
+          <div className="tl-head2">
+            <div className="hd-top">
+              <Layers className="hd-type" size={14} strokeWidth={1.75} />
+              <span className="hd-name">שכבות</span>
+            </div>
+          </div>
+          <div className="tl-lane2" onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
+            <Grid />
+            {overlays.map((o) => {
+              const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
+              const label = o.kind === "text" ? (o.text || "טקסט") : ((asset?.name || "").replace(/\.[^.]+$/, "") || "תמונה");
+              const dur = Math.max(0.05, o.end - o.start);
+              return (
+                <div key={o.id}
+                  className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""}`}
+                  style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%` }}
+                  title={`${label} · ${dur.toFixed(1)}s`}
+                  onClick={(e) => { e.stopPropagation(); p.onSelectOverlay?.(o.id); }}>
+                  <span className="clip-label"><span>{label}</span><span className="cl-dur">{dur.toFixed(1)}s</span></span>
+                </div>
+              );
+            })}
+            <Playhead />
+          </div>
+        </div>
       </div>
     </div>
   );
