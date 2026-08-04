@@ -1,16 +1,17 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימה פתוחה — PR #23 ממוזג ל־`main`.
+אין משימה פתוחה — PR #32 ממוזג ל־`main`.
 
 ## Branch
 `main`
 
 ## Latest commit
-`79d844e` — Merge branch `cursor/fix-captions-speech-sync-c816` (PR #23)
+`65a2528` — Merge PR #32  
+`17b6c9f` — continuity אחרי המיזוג
 
 ## Status
 הושלם · ב־`main`
 
 ## Exact continuation point
-GAP_MAP: AG-4 / intro-outro / preview; בלי Auth/Supabase בלי אישור.
+אימות ידני אופציונלי; GAP_MAP: AG-2 המשך / intro-outro / preview. בלי Auth/Supabase בלי אישור.

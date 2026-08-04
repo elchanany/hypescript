@@ -1,17 +1,23 @@
-# HANDOFF — Branding fix from user sources + Package A
+# HANDOFF — Package A + official Hypescript branding
 
-## Branch
-`cursor/saas-pkg-a-branding-505e` → merging to `main` per user request.
+## Goal
+עורך CapCut-class + סוכן AI (v0.3.0) + תשתית SaaS.
 
-## Branding
-- Official sources (user files, bit-exact icon):
-  - `web/public/brand/sources/original-icon-navy.png` → `hypescript-icon.png` (exact copy)
-  - `web/public/brand/sources/original-wordmark.png` → horizontal (black bg removed, RGBA)
-  - `web/public/brand/sources/original-icon-black.png` → additional/reference only
-- Derivatives regenerated from those sources only (no AI-redesigned logo).
+## Branch / merge
+`cursor/saas-pkg-a-branding-505e` → `main` (user requested merge).
 
-## Package A
-Still on branch; merge includes Auth foundation migration + UI.
+## Verified state
+- Brand: exact user PNGs in `web/public/brand/sources/`
+  - navy icon → `hypescript-icon.png` (bit-exact)
+  - wordmark → transparent horizontal lockup
+  - black icon → reference only
+- `BrandLogo` + theme System/Dark/Light
+- Package A migration + Auth UI + bootstrap System Owner
+- Editor Continuity (PR #32) already on main
 
-## Next after merge
-Package B (Dashboard wizard Local/Cloud/Hybrid) — only if approved / requested.
+## Not done
+- Package B–G (Dashboard wizard, Ledger, Billing, BYOK, Admin…)
+- MFA / live Supabase migration apply
+
+## Exact next step
+Package B — New Project Wizard (Local/Cloud/Hybrid) after confirmation.
