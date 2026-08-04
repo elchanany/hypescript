@@ -4,10 +4,11 @@
 // clip properties (video/audio). Sub selected -> caption properties.
 // Overlay selected -> transform + text/image properties.
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
-import { Clip, clipEnabled, clipVolume } from "@/lib/editor/model";
+import { Clip, clipEnabled, clipOpacity, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
+import { CaptionBg, CaptionPosition, CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "lucide-react";
 import { Section, Toggle } from "@/components/ui";
@@ -29,6 +30,8 @@ interface Props {
   onUpdateOverlay?: (patch: Partial<Overlay>) => void;
   onUpdateSub?: (patch: Partial<Sub>) => void;
   canvas?: CanvasSize;
+  captionStyle?: CaptionStyle;
+  onCaptionStyle?: (patch: Partial<CaptionStyle>) => void;
   // project fallback
   projectName: string;
   mediaCount: number;
@@ -65,7 +68,12 @@ export default function InspectorPanel(p: Props) {
         {overlay ? (
           <OverlayInspector overlay={overlay} onUpdate={p.onUpdateOverlay!} assetName={p.assetName} canvas={p.canvas} />
         ) : sub ? (
-          <SubInspector sub={sub} onUpdate={p.onUpdateSub!} />
+          <SubInspector
+            sub={sub}
+            onUpdate={p.onUpdateSub!}
+            captionStyle={p.captionStyle || DEFAULT_CAPTION_STYLE}
+            onCaptionStyle={p.onCaptionStyle}
+          />
         ) : !clip ? (
           <Section title="פרויקט">
             <div className="prop"><span className="k">שם</span><span className="v">{p.projectName || "—"}</span></div>
@@ -89,8 +97,14 @@ function num(v: number, digits = 1) {
   return Number.isFinite(v) ? +v.toFixed(digits) : 0;
 }
 
-function SubInspector({ sub, onUpdate }: { sub: Sub; onUpdate: (patch: Partial<Sub>) => void }) {
+function SubInspector({ sub, onUpdate, captionStyle, onCaptionStyle }: {
+  sub: Sub;
+  onUpdate: (patch: Partial<Sub>) => void;
+  captionStyle: CaptionStyle;
+  onCaptionStyle?: (patch: Partial<CaptionStyle>) => void;
+}) {
   const dur = Math.max(0, sub.end - sub.start);
+  const st = captionStyle;
   return (
     <>
       <Section title="תוכן">
@@ -109,6 +123,35 @@ function SubInspector({ sub, onUpdate }: { sub: Sub; onUpdate: (patch: Partial<S
         <div className="prop"><span className="k">משך</span><span className="v mono">{dur.toFixed(2)}s</span></div>
         <div className="prop"><span className="k">מיקום</span><span className="v mono">{formatTimecode(sub.start)}</span></div>
       </Section>
+      {onCaptionStyle && (
+        <Section title="עיצוב כתוביות (פרויקט)">
+          <div className="prop"><span className="k">גודל</span><span className="v mono">{st.fontSize.toFixed(1)}</span></div>
+          <input type="range" min={2} max={12} step={0.1} value={st.fontSize}
+            onChange={(e) => onCaptionStyle({ fontSize: +e.target.value })} style={{ width: "100%" }} />
+          <div className="prop-input"><span className="k">צבע</span>
+            <input type="color" value={st.color} onChange={(e) => onCaptionStyle({ color: e.target.value })}
+              style={{ flex: 1, height: 28, padding: 0 }} /></div>
+          <div className="prop-input"><span className="k">מיקום</span>
+            <select value={st.position} onChange={(e) => onCaptionStyle({ position: e.target.value as CaptionPosition })}
+              style={{ flex: 1 }}>
+              <option value="bottom">למטה</option>
+              <option value="center">מרכז</option>
+              <option value="top">למעלה</option>
+            </select></div>
+          <div className="prop-input"><span className="k">רקע</span>
+            <select value={st.bg} onChange={(e) => onCaptionStyle({ bg: e.target.value as CaptionBg })} style={{ flex: 1 }}>
+              <option value="soft">רך</option>
+              <option value="box">קופסה</option>
+              <option value="none">ללא</option>
+            </select></div>
+          <div className="prop">
+            <span className="k">מודגש</span>
+            <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Toggle checked={st.bold} onChange={(v) => onCaptionStyle({ bold: v })} />
+            </span>
+          </div>
+        </Section>
+      )}
     </>
   );
 }
@@ -206,6 +249,15 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
     </Section>
   );
 
+  const visualSection = p.assetKind !== "audio" && (
+    <Section title="תצוגה">
+      <div className="prop"><span className="k">שקיפות</span><span className="v mono">{Math.round(clipOpacity(clip) * 100)}%</span></div>
+      <input type="range" min={0} max={1} step={0.01} value={clipOpacity(clip)}
+        onChange={(e) => p.onUpdate({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
+        style={{ width: "100%", marginTop: 4 }} />
+    </Section>
+  );
+
   return (
     <>
       <Section title="מקור">
@@ -221,6 +273,7 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       </Section>
 
       {audioFirst && audioSection}
+      {!audioFirst && visualSection}
 
       <Section title="עריכה">
         <div className="prop"><span className="k">מיקום בציר</span><span className="v mono">{formatTimecode(p.timelineStart)}</span></div>
@@ -231,6 +284,7 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
         <div className="prop"><span className="k">משך</span><span className="v mono">{dur.toFixed(2)}s</span></div>
       </Section>
 
+      {audioFirst && visualSection}
       {!audioFirst && audioSection}
     </>
   );

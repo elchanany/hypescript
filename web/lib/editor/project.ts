@@ -46,9 +46,9 @@ export type { CaptionStyle };
 
 export function defaultTracks(): TrackMeta[] {
   return [
-    { id: "trk_video", name: "וידאו", type: "video", order: 0, height: 58, locked: false, muted: false },
-    { id: "trk_audio", name: "אודיו", type: "audio", order: 1, height: 46, locked: false, muted: false },
-    { id: "trk_caption", name: "כתוביות", type: "caption", order: 2, height: 34, locked: false, muted: false },
+    { id: "trk_video", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
+    { id: "trk_audio", name: "אודיו", type: "audio", order: 1, height: 56, locked: false, muted: false },
+    { id: "trk_caption", name: "כתוביות", type: "caption", order: 2, height: 48, locked: false, muted: false },
   ];
 }
 
@@ -73,7 +73,7 @@ export function normalizeTracks(input: any): TrackMeta[] {
       const d = base.find((b) => b.type === t.type)!;
       byType[t.type as TrackType] = {
         id: t.id || d.id, name: t.name || d.name, type: t.type, order: t.order ?? d.order,
-        height: typeof t.height === "number" ? t.height : d.height,
+        height: typeof t.height === "number" ? Math.max(t.type === "caption" ? 44 : 48, Math.min(140, t.height)) : d.height,
         locked: !!t.locked, muted: !!t.muted,
       };
     }

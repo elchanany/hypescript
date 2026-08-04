@@ -68,6 +68,7 @@ export default function EditorPage() {
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   /** Which track the clip was clicked on — inspector title (וידאו/שמע). */
   const [selectionTrack, setSelectionTrack] = useState<"video" | "audio" | null>(null);
+  const [avLinked, setAvLinked] = useState(true);
   const [script, setScript] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
@@ -505,7 +506,7 @@ export default function EditorPage() {
     const res = runCommand("clip.slip", editorApiRef.current, { id: selectedId, delta });
     if (!res.ok) setError(res.error);
   };
-  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
+  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [48, 64, 96]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
@@ -684,6 +685,8 @@ export default function EditorPage() {
               onUpdateOverlay={(patch) => selectedOverlay && updateOverlay(selectedOverlay.id, patch)}
               onUpdateSub={(patch) => selectedSub && updateSub(selectedSub.id, patch)}
               canvas={canvas}
+              captionStyle={captionStyle}
+              onCaptionStyle={(patch) => setCaptionStyle({ ...captionStyle, ...patch })}
               projectName={projectName} mediaCount={media.length} sourceDuration={duration} editedDuration={totalEdited}
             />
           </div>
@@ -699,13 +702,14 @@ export default function EditorPage() {
               canSlip={!!selectedId && !vLocked && !selectedIsGap}
               onRoll={rollSelected} onSlip={slipSelected}
               snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
+              avLinked={avLinked} onAvLinked={setAvLinked}
             />
             {clips ? (
               <Timeline
                 media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={timelineDuration}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
-                selectedSubId={selectedSubId} selectionTrack={selectionTrack}
+                selectedSubId={selectedSubId} selectionTrack={selectionTrack} avLinked={avLinked}
                 zoom={zoom} onZoom={setZoom} snap={snap}
                 onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay} onSelectSub={selectSub}
                 onTrimBegin={beginTransaction}

@@ -58,3 +58,4 @@ graphify-out/.needs_update
 # Installer backups / local-only noise
 *.graphify-bak
 .graphify/
+.vite/

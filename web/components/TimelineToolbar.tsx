@@ -1,6 +1,6 @@
 "use client";
 
-import { Scissors, Trash2, Magnet, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart } from "lucide-react";
+import { Scissors, Trash2, Magnet, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart, Link2, Unlink2 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "@/lib/editor/time";
 
@@ -8,14 +8,15 @@ export default function TimelineToolbar({
   selInfo, canSplit, canDelete, onSplit, onDelete, onDeleteLeaveGap, canLeaveGap,
   canRoll, canSlip, onRoll, onSlip,
   snap, onSnap, zoom, onZoom, onFit,
+  avLinked, onAvLinked,
 }: {
   selInfo: string; canSplit: boolean; canDelete: boolean;
   onSplit: () => void; onDelete: () => void; onDeleteLeaveGap?: () => void; canLeaveGap?: boolean;
   canRoll?: boolean; canSlip?: boolean; onRoll?: (delta: number) => void; onSlip?: (delta: number) => void;
   snap: boolean; onSnap: (v: boolean) => void;
   zoom: number; onZoom: (v: number) => void; onFit: () => void;
+  avLinked?: boolean; onAvLinked?: (v: boolean) => void;
 }) {
-  // סליידר לוגריתמי — נוח מ-0.15 עד 128
   const toSlider = (z: number) => Math.log(Math.max(ZOOM_MIN, z) / ZOOM_MIN) / Math.log(ZOOM_MAX / ZOOM_MIN);
   const fromSlider = (t: number) => clampZoom(ZOOM_MIN * Math.pow(ZOOM_MAX / ZOOM_MIN, t));
 
@@ -30,6 +31,15 @@ export default function TimelineToolbar({
       <IconButton icon={BetweenHorizontalStart} tip="Slip — החלק את המקור בלי לשנות אורך ([ / ])" tipPos="up"
         disabled={!canSlip} onClick={() => onSlip?.(0.1)} />
       <div className="vdivider" />
+      <IconButton
+        icon={avLinked !== false ? Link2 : Unlink2}
+        tip={avLinked !== false
+          ? "וידאו↔אודיו מקושרים (חיתוך משותף) — לחץ לשחרור בחירה נפרדת"
+          : "בחירה נפרדת — לחץ לקישור וידאו↔אודיו"}
+        tipPos="up"
+        active={avLinked !== false}
+        onClick={() => onAvLinked?.(!(avLinked !== false))}
+      />
       <IconButton icon={Magnet} tip="הצמדה לקצוות" tipPos="up" active={snap} onClick={() => onSnap(!snap)} />
       {selInfo && <span className="tl-selinfo">{selInfo}</span>}
       <div className="grow" />
