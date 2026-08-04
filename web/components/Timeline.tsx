@@ -57,7 +57,7 @@ export default function Timeline(p: Props) {
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<number | null>(null);
-  const zoomAcc = useRef({ delta: 0, clientX: 0 });
+  const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
   const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
   const drag = useRef<{ kind: "clip" | "overlay"; mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
@@ -86,25 +86,22 @@ export default function Timeline(p: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // wheel: pinch/Ctrl = זום (מצטבר ל-rAF); שתי אצבעות לצד / Shift = גלילה אופקית
+  // wheel: pinch/Ctrl = זום (מצטבר ל-rAF, עוגן לשמאל); שתי אצבעות לצד / Shift = גלילה
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const flushZoom = () => {
       zoomRaf.current = 0;
-      const { delta, clientX } = zoomAcc.current;
-      zoomAcc.current.delta = 0;
+      const delta = zoomAcc.current;
+      zoomAcc.current = 0;
       if (delta === 0) return;
       const z = zoomRef.current;
       const next = nextZoom(z, delta, true);
       if (Math.abs(next - z) < 1e-4) return;
-      const rect = el.getBoundingClientRect();
       pendingScroll.current = scrollLeftAfterZoom({
         oldZoom: z,
         newZoom: next,
         scrollLeft: el.scrollLeft,
-        clientX,
-        containerLeft: rect.left,
         portWidth: el.clientWidth,
         gutter: TIMELINE_GUTTER,
       });
@@ -115,8 +112,7 @@ export default function Timeline(p: Props) {
       const pinch = e.ctrlKey || e.metaKey;
       if (pinch) {
         e.preventDefault();
-        zoomAcc.current.delta += e.deltaY;
-        zoomAcc.current.clientX = e.clientX;
+        zoomAcc.current += e.deltaY;
         if (!zoomRaf.current) zoomRaf.current = requestAnimationFrame(flushZoom);
         return;
       }
