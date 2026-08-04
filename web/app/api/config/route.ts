@@ -3,18 +3,26 @@
 
 import { NextResponse } from "next/server";
 import { configuredProviders } from "@/lib/agent/providers";
-import { isAuthConfigured } from "@/lib/auth/config";
+import { getAuthDiagnostics, isAuthConfigured } from "@/lib/auth/config";
 import { elevenLabsConfigured } from "@/lib/elevenlabs/client";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const diag = getAuthDiagnostics();
   return NextResponse.json({
     providers: configuredProviders(),
     transcription: {
       groq: !!(process.env.GROQ_API_KEY || "").trim(),
       elevenlabs: elevenLabsConfigured(),
     },
-    auth: { supabase: isAuthConfigured() },
+    auth: {
+      supabase: isAuthConfigured(),
+      // Safe diagnostics only — never the key value.
+      urlHost: diag.urlHost,
+      keyKind: diag.keyKind,
+      keyLen: diag.keyLen,
+      issue: diag.issue,
+    },
   });
 }

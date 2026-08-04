@@ -119,11 +119,18 @@
 אם משהו נכשל:
 - «התחברות לא מוגדרת» → המשתנים לא ב־Vercel או לא עשית Redeploy
 - שגיאת redirect_uri_mismatch → ה־Callback URL ב־Google לא זהה לזה של Supabase
+- `Invalid API key` →
+  1. Vercel → Environment Variables
+  2. `NEXT_PUBLIC_SUPABASE_URL` = `https://xxxx.supabase.co` (בלי `/rest/v1`, בלי מרכאות)
+  3. `NEXT_PUBLIC_SUPABASE_ANON_KEY` = **Publishable** או **anon (legacy)** מאותו פרויקט — **לא** Secret / service_role
+  4. אם הדבקת עם `"..."` — הסר את המרכאות
+  5. Save → Deployments → **Redeploy**
+  6. אפשר לבדוק ב־`/api/config` את השדות `auth.keyKind` / `auth.issue` (בלי לחשוף את המפתח)
 - `PKCE code verifier not found` / חוזר ל־login →
-  1. ודא ש־Deploy כולל את `@supabase/ssr` (גרסה אחרי התיקון הזה)
+  1. ודא ש־Deploy כולל את `@supabase/ssr`
   2. Redirect URLs: `https://YOUR-DOMAIN/auth/callback` וגם `.../auth/callback**`
   3. Site URL = אותו דומיין שבו אתה גולש עכשיו
-  4. התחל את Google login מחדש מאותו דפדפן (אל תפתח את קישור ה-callback בלשונית אחרת)
+  4. התחל Google login מחדש מאותו דפדפן
   5. Redeploy אחרי שינוי env
 
 ---

@@ -80,8 +80,8 @@
     "semantic_hash": "9d7b24c53f977a8a97b9dab5df5fe0db"
   },
   "web/app/api/config/route.ts": {
-    "mtime": 1785831773.610132,
-    "ast_hash": "8b40a1a386617485340294eff14f438b",
+    "mtime": 1785873382.8723679,
+    "ast_hash": "3648d194e0bc193c3cd095d4bb972002",
     "semantic_hash": ""
   },
   "web/app/api/transcribe/route.ts": {
@@ -475,7 +475,7 @@
     "semantic_hash": "368f129b1abbe2d82b25351cde2785d9"
   },
   "web/package.json": {
-    "mtime": 1785868072.4440544,
+    "mtime": 1785868157.1572871,
     "ast_hash": "4824f81bf5b7d0c9b09477c0212ef912",
     "semantic_hash": ""
   },
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1785867409.3469748,
-    "ast_hash": "b96a303e148c5908f579922ba9a3e696",
+    "mtime": 1785868157.153287,
+    "ast_hash": "730d1ec3a76d0f56597696369d017535",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -785,8 +785,8 @@
     "semantic_hash": ""
   },
   "web/app/login/page.tsx": {
-    "mtime": 1785867401.0468774,
-    "ast_hash": "7726a763fa3ab76a02f971dc0b6c789f",
+    "mtime": 1785873383.9284048,
+    "ast_hash": "d9abf32b169da0d420efcba0c6e3b5f4",
     "semantic_hash": ""
   },
   "web/components/Modal.tsx": {
@@ -800,23 +800,23 @@
     "semantic_hash": ""
   },
   "web/lib/auth/config.test.ts": {
-    "mtime": 1785837161.4391367,
-    "ast_hash": "8ad067f7ad62441a57594b0c94891e7b",
+    "mtime": 1785873382.8723679,
+    "ast_hash": "0337b2c91de5c0fbf4a56c4ce0b4c42c",
     "semantic_hash": ""
   },
   "web/lib/auth/config.ts": {
-    "mtime": 1785837161.4391367,
-    "ast_hash": "3d5871152528b548a66d326a8f1704b3",
+    "mtime": 1785873397.312843,
+    "ast_hash": "f64f3e485fccb959397d6d98fb576e10",
     "semantic_hash": ""
   },
   "web/lib/auth/supabase.ts": {
-    "mtime": 1785868115.016673,
+    "mtime": 1785868157.1572871,
     "ast_hash": "f2acb72d12b22e47a5c3f4ff4262c1c2",
     "semantic_hash": ""
   },
   "web/lib/auth/useAuth.ts": {
-    "mtime": 1785868129.4848838,
-    "ast_hash": "ef5376b67bf2a3933135eb36b6618a3e",
+    "mtime": 1785873382.8323665,
+    "ast_hash": "2b770d0b3126475f126eb4069c83906a",
     "semantic_hash": ""
   },
   "web/lib/editor/captionStyle.test.ts": {
@@ -900,8 +900,8 @@
     "semantic_hash": ""
   },
   "docs/SETUP_AUTH.md": {
-    "mtime": 1785868130.5849,
-    "ast_hash": "b5a21ed58bba998989436c3b1fc86d1a",
+    "mtime": 1785873397.312843,
+    "ast_hash": "82dc9a6f228d1d36f99a5c445bd48de3",
     "semantic_hash": ""
   },
   "web/lib/agent/loopGuard.test.ts": {
@@ -1010,7 +1010,7 @@
     "semantic_hash": ""
   },
   "web/middleware.ts": {
-    "mtime": 1785868115.000673,
+    "mtime": 1785868157.1572871,
     "ast_hash": "07b859588a4016d2b5ceadf7eabedbfd",
     "semantic_hash": ""
   },
@@ -1195,17 +1195,17 @@
     "semantic_hash": ""
   },
   "web/app/auth/callback/route.ts": {
-    "mtime": 1785868115.004673,
+    "mtime": 1785868157.1572871,
     "ast_hash": "541d79987abc977381934d0123ebe019",
     "semantic_hash": ""
   },
   "web/app/auth/continue/page.tsx": {
-    "mtime": 1785868114.992673,
+    "mtime": 1785868157.1572871,
     "ast_hash": "026d8e35afdb9af62e2ff63afd92b73e",
     "semantic_hash": ""
   },
   "web/lib/auth/supabase-server.ts": {
-    "mtime": 1785868115.0286734,
+    "mtime": 1785868157.1572871,
     "ast_hash": "6556d5bd3329997b5455b65a9a335335",
     "semantic_hash": ""
   }
