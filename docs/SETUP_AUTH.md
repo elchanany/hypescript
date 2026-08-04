@@ -27,17 +27,18 @@
 
 ---
 
-## שלב 2 — להעתיק שני מפתחות (הציבוריים בלבד)
+## שלב 2 — להעתיק URL + Publishable key (המפתחות החדשים)
 
-1. בתפריט השמאלי של Supabase: **Project Settings** (גלגל שיניים) → **API**
-2. תעתיק בדיוק שני דברים:
+1. בתפריט השמאלי של Supabase: **Project Settings** (גלגל שיניים) → **API Keys**
+2. הישאר בטאב **Publishable and secret API keys** (לא Legacy)
+3. תעתיק:
 
-| מה ב־Supabase | שם המשתנה אצלנו | הערה |
+| מה ב־Supabase | שם המשתנה אצלנו | איך נראה |
 |---|---|---|
-| **Project URL** | `NEXT_PUBLIC_SUPABASE_URL` | נראה כמו `https://xxxx.supabase.co` |
-| **anon public** key | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | מפתח ארוך שמתחיל ב־`eyJ...` |
+| **Project URL** (לרוב תחת Data API / Project Settings) | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
+| **Publishable key** | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | מתחיל ב־`sb_publishable_...` |
 
-⚠️ **אל תעתיק** את `service_role` — זה סודי לשרת בלבד, ואנחנו לא משתמשים בו כאן.
+⚠️ **אל תעתיק** את **Secret key** — זה לשרת בלבד, לא לדפדפן ולא ל־`.env.local` הציבורי.
 
 ---
 
