@@ -47,13 +47,21 @@ export const ZOOM_MIN = 0.15;
 export const ZOOM_MAX = 128;
 export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
+export type SnapResult = { time: number; snapped: boolean; target: number | null };
+
 /** מגנטיות: אם s קרוב לאחד ה-targets בטולרנס — מחזיר את היעד (מעוגל ל-ms). */
-export function snapTime(s: number, targets: number[], toleranceSec: number): number {
+export function snapTimeTo(s: number, targets: number[], toleranceSec: number): SnapResult {
   let best = s;
   let bestD = toleranceSec;
+  let hit: number | null = null;
   for (const t of targets) {
     const d = Math.abs(t - s);
-    if (d < bestD) { bestD = d; best = t; }
+    if (d < bestD) { bestD = d; best = t; hit = t; }
   }
-  return roundToMs(best);
+  const snapped = hit != null;
+  return { time: roundToMs(best), snapped, target: snapped ? roundToMs(hit!) : null };
+}
+
+export function snapTime(s: number, targets: number[], toleranceSec: number): number {
+  return snapTimeTo(s, targets, toleranceSec).time;
 }

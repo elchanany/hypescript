@@ -91,7 +91,11 @@ export function splitClip(clips: Clip[], id: string, atSource: number): Clip[] {
   const c = clips[i];
   if (atSource <= c.start + 0.05 || atSource >= c.end - 0.05) return clips;
   const arr = [...clips];
-  arr.splice(i, 1, { ...c, end: atSource }, { id: uid(), sourceId: c.sourceId, start: atSource, end: c.end });
+  // Second half inherits linked A/V props (volume/enabled) — CapCut-style linked cut.
+  const right: Clip = { id: uid(), sourceId: c.sourceId, start: atSource, end: c.end };
+  if (c.volume != null) right.volume = c.volume;
+  if (c.enabled != null) right.enabled = c.enabled;
+  arr.splice(i, 1, { ...c, end: atSource }, right);
   return arr;
 }
 export function addClip(clips: Clip[], clip: Clip, atIndex?: number): Clip[] {

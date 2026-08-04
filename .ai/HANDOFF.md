@@ -1,18 +1,21 @@
 # HANDOFF
 
 ## Goal
-המשך ROADMAP/GAP — אחרי caption burn-in: chunking לתמלול ארוך ב-web.
+שיפורי טיימליין בסגנון CapCut: בחירה→אינספקטור, hover, snap guides, יישור כותרות אודיו, חיתוך מקושר A/V.
 
 ## Current State (verified)
-- `main` כולל צריבת כתוביות (#19).
-- ענף: `cursor/transcribe-chunking-505e`
-  - פיצול אודיו ל-20 דק׳ (כמו local), תמלול לכל חלק, איחוד מילים עם offset
-  - משותף לעורך + כלי הסוכן `transcribe_video`
-- בדיקות + build עברו.
+- ענף: `cursor/timeline-inspector-snap-328b`
+- לחיצה על קטע וידאו/אודיו/כתובית/שכבה פותחת מאפיינים בפאנל הימני (במקום «הגדרות פרויקט»).
+- Hover מסמן; בחירה מסונכרנת בין רצועת וידאו לאודיו (אותו EDL).
+- בזמן גרירה/חיתוך: קו מגנט צהוב לקצוות קליפים/שכבות/כתוביות/playhead (כש־Magnet דלוק).
+- כותרות רצועות: רשת 5 משבצות קבועה — mute באודיו לא דוחף אייקונים.
+- `splitClip` מעביר volume/enabled לחצי הימני (חיתוך מקושר).
+- בדיקות: `time` + `model` + `tsc` + `web build` עברו.
 
 ## Exact Next Steps
-1. למזג PR chunking (Deploy אוטומטי ב-Vercel).
-2. הבא: אינטרו/אאוטרו, תצוגה מקדימה לפני הורדה, או AG-4.
+1. בדיקה ידנית בעורך (בחירה, snap, split).
+2. למזג PR אחרי review.
+3. הבא לפי GAP_MAP: AG-4 / intro-outro / preview.
 
 ## Risks
-- פיצול בגבול 20 דק׳ עלול לחתוך מילה באמצע — מקובל כמו ב-local.
+- סף ה־snap תלוי בזום (~10px); Alt לביטול עדיין לא מיושם בטיימליין (רק ב־canvas overlays).

@@ -337,7 +337,9 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   background: color-mix(in srgb, var(--accent) 28%, var(--inset));
   border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
   cursor: pointer; display: flex; align-items: center; min-width: 4px;
+  transition: box-shadow .1s, border-color .1s;
 }
+.clip-ov:hover:not(.selected) { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); z-index: 2; }
 .clip-ov.selected { outline: 1.5px solid var(--accent); outline-offset: 0; z-index: 2; }
 .clip-ov.disabled { opacity: .45; }
 .clip-ov .clip-label { padding: 0 6px; font-size: 11px; color: var(--text); display: flex; gap: 6px; align-items: center; overflow: hidden; white-space: nowrap; width: 100%; }
@@ -486,7 +488,13 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-head2 .hd-top { display: flex; align-items: center; gap: 6px; }
 .tl-head2 .hd-type { color: var(--text-3); flex: none; }
 .tl-head2 .hd-name { font-size: var(--fs-2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; flex: 1; }
-.tl-head2 .hd-ctrls { display: flex; align-items: center; gap: 1px; }
+/* Fixed 5 columns (lock | mute|spacer | height | down | up) — mute on audio never shifts siblings */
+.tl-head2 .hd-ctrls {
+  display: grid; grid-template-columns: repeat(5, 24px); align-items: center; justify-items: center; gap: 0;
+  width: 120px;
+}
+.tl-head2 .hd-ctrls .iconbtn { width: 24px; height: 24px; padding: 0; }
+.tl-head2 .hd-slot { width: 24px; height: 24px; display: block; }
 
 /* ruler */
 .tl-rulerline { height: 26px; position: sticky; top: 0; z-index: 13; background: var(--panel); }
@@ -502,10 +510,11 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-gridline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); opacity: .5; pointer-events: none; }
 
 /* clips */
-.clip2 { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm); overflow: hidden; cursor: grab; user-select: none; border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.clip2 { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm); overflow: hidden; cursor: grab; user-select: none; border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); transition: box-shadow .1s, border-color .1s; }
 .clip2:active { cursor: grabbing; }
 .clip2.locked { cursor: default; }
 .clip2.disabled { opacity: .4; filter: saturate(.4); }
+.clip2.hovered:not(.selected) { border-color: rgba(108,146,255,.7); box-shadow: 0 0 0 1px rgba(108,146,255,.35); z-index: 2; }
 .clip2 .clip-fill { position: absolute; inset: 0; opacity: .9; }
 /* real filmstrip / image fill (above the color fallback, below label + handles) */
 .filmstrip { position: absolute; inset: 0; display: flex; overflow: hidden; z-index: 1; }
@@ -530,6 +539,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   border: 1px dashed var(--border); cursor: pointer; display: flex; align-items: center; overflow: hidden;
 }
 .clip-gap.selected { outline: 1.5px solid var(--accent); }
+.clip-gap.hovered:not(.selected) { outline: 1px solid rgba(108,146,255,.55); }
 .clip-gap .clip-label { padding: 0 6px; font-size: 11px; color: var(--text-2); display: flex; gap: 6px; align-items: center; overflow: hidden; white-space: nowrap; width: 100%; pointer-events: none; }
 .clip-gap .clip-label > span:first-child { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .clip-gap .cl-dur { font-family: var(--mono); color: var(--text-3); font-size: 10px; flex: none; }
@@ -538,13 +548,29 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .clip-gap:hover .trim, .clip-gap.selected .trim { opacity: .55; }
 .clip-gap .trim:hover { opacity: .9; }
 
-/* audio lane — real waveform canvas (falls back to the tinted block while loading/on error) */
-.clip-audio { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm); background: rgba(63,164,106,.12); border: 1px solid rgba(63,164,106,.3); overflow: hidden; }
-.clip-audio.gap { background: transparent; border-color: transparent; }
-.clip-audio canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* audio lane — real waveform canvas; linked to video clips (same EDL) */
+.clip-audio {
+  position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-sm);
+  background: rgba(63,164,106,.12); border: 1px solid rgba(63,164,106,.3); overflow: hidden;
+  cursor: pointer; transition: box-shadow .1s, border-color .1s;
+}
+.clip-audio.gap { background: transparent; border-color: transparent; cursor: default; }
+.clip-audio.hovered:not(.selected) { border-color: rgba(63,164,106,.85); box-shadow: 0 0 0 1px rgba(63,164,106,.4); z-index: 2; }
+.clip-audio.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
+.clip-audio canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.clip-audio .trim { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; opacity: 0; background: rgba(255,255,255,.9); }
+.clip-audio .trim.l { left: 0; } .clip-audio .trim.r { right: 0; }
+.clip-audio:hover .trim, .clip-audio.selected .trim { opacity: .55; }
+.clip-audio .trim:hover { opacity: .9; }
 
 /* caption cues — show the actual text (RTL) inside the block */
-.cue2 { position: absolute; top: 5px; bottom: 5px; background: rgba(168,85,247,.32); border: 1px solid rgba(168,85,247,.6); border-radius: var(--r-sm); overflow: hidden; display: flex; align-items: center; }
+.cue2 {
+  position: absolute; top: 5px; bottom: 5px; background: rgba(168,85,247,.32);
+  border: 1px solid rgba(168,85,247,.6); border-radius: var(--r-sm); overflow: hidden;
+  display: flex; align-items: center; cursor: pointer; transition: box-shadow .1s, border-color .1s;
+}
+.cue2.hovered:not(.selected) { border-color: rgba(196,140,255,.95); box-shadow: 0 0 0 1px rgba(168,85,247,.45); z-index: 2; }
+.cue2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 
 /* drag ghost + drop indicator (timeline move) */
@@ -561,6 +587,19 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-drop::before, .tl-drop::after { content: ""; position: absolute; left: -3.5px; width: 10px; height: 6px; background: var(--accent-hover); }
 .tl-drop::before { top: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .tl-drop::after { bottom: 0; clip-path: polygon(50% 0, 0 100%, 100% 100%); }
+
+/* CapCut-like magnet guide — vertical line across the whole timeline when snapping */
+.tl-snap-guide {
+  display: none; position: absolute; top: 0; bottom: 0; width: 2px; margin-inline-start: -1px;
+  background: #ffd166; z-index: 15; pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255,209,102,.35), 0 0 10px rgba(255,209,102,.55);
+}
+.tl-snap-guide::before, .tl-snap-guide::after {
+  content: ""; position: absolute; left: -4px; width: 10px; height: 10px;
+  border: 2px solid #ffd166; background: transparent; border-radius: 50%;
+}
+.tl-snap-guide::before { top: 2px; }
+.tl-snap-guide::after { bottom: 2px; }
 
 /* playhead */
 .playhead2 { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); pointer-events: none; z-index: 8; }

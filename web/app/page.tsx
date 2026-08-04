@@ -65,6 +65,9 @@ export default function EditorPage() {
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+  /** Which track the clip was clicked on — inspector title (וידאו/שמע). */
+  const [selectionTrack, setSelectionTrack] = useState<"video" | "audio" | null>(null);
   const [script, setScript] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
@@ -115,8 +118,15 @@ export default function EditorPage() {
       getMedia: () => mediaRef.current,
       getSubs: () => subsRef.current,
       getCanvas: () => canvasRef.current,
-      selectClip: (id) => { setSelectedId(id); if (id) setSelectedOverlayId(null); },
-      selectOverlay: (id) => { setSelectedOverlayId(id); if (id) setSelectedId(null); },
+      selectClip: (id) => {
+        setSelectedId(id);
+        if (id) { setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack("video"); }
+        else setSelectionTrack(null);
+      },
+      selectOverlay: (id) => {
+        setSelectedOverlayId(id);
+        if (id) { setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null); }
+      },
       seek: (t) => { setCur(t); previewRef.current?.seek(t); },
       getPlayhead: () => curRef.current,
       getCaptionStyle: () => captionStyleRef.current,
@@ -242,7 +252,7 @@ export default function EditorPage() {
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
       resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas, captionStyle: st.captionStyle });
-      setCur(0); setSelectedId(null); setSelectedOverlayId(null);
+      setCur(0); setSelectedId(null); setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack(null);
       setRestored(true);
     })();
   }, [projectId]);
@@ -321,7 +331,7 @@ export default function EditorPage() {
       const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
       const apply = (iw?: number, ih?: number) => {
         const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end, iw && ih ? { width: iw, height: ih } : undefined);
-        addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+        addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
         // ensure playhead is inside the overlay's visible window
         if (cur < o.start || cur > o.end) seek(o.start);
       };
@@ -336,17 +346,41 @@ export default function EditorPage() {
   const addTextOverlay = () => {
     const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
     const o = makeTextOverlay(canvas.width, canvas.height, overlays, "טקסט חדש", cur, end);
-    addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null);
+    addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
-  const selectClip = (id: string | null) => { setSelectedId(id); if (id) setSelectedOverlayId(null); };
+  const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
+    setSelectedId(id);
+    if (id) {
+      setSelectedOverlayId(null);
+      setSelectedSubId(null);
+      setSelectionTrack(track);
+    } else {
+      setSelectionTrack(null);
+    }
+  };
   const selectOverlay = (id: string | null) => {
     setSelectedOverlayId(id);
     if (id) {
       setSelectedId(null);
+      setSelectedSubId(null);
+      setSelectionTrack(null);
       const o = overlays.find((x) => x.id === id);
       // jump playhead into the overlay window so it becomes visible in preview
       if (o && (cur < o.start - 1e-3 || cur > o.end + 1e-3)) seek(o.start + 0.01);
     }
+  };
+  const selectSub = (id: string | null) => {
+    setSelectedSubId(id);
+    if (id) {
+      setSelectedId(null);
+      setSelectedOverlayId(null);
+      setSelectionTrack(null);
+      const s = subs?.find((x) => x.id === id);
+      if (s && (cur < s.start - 1e-3 || cur > s.end + 1e-3)) seek(s.start + 0.01);
+    }
+  };
+  const updateSub = (id: string, patch: Partial<Sub>) => {
+    setSubs((ss) => ss?.map((s) => (s.id === id ? { ...s, ...patch } : s)) || ss);
   };
   const onCanvasDetected = (w: number, h: number) => {
     // only auto-set once from the first video if still at the default 1920×1080
@@ -436,6 +470,11 @@ export default function EditorPage() {
       if (!res.ok) setError(res.error);
       return;
     }
+    if (selectedSubId) {
+      setSubs((ss) => ss?.filter((s) => s.id !== selectedSubId) || ss);
+      setSelectedSubId(null);
+      return;
+    }
     if (selectedId) deleteClipById(selectedId, leaveGap);
   };
   const duplicateClip = (id: string) => {
@@ -460,8 +499,19 @@ export default function EditorPage() {
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
   const selectedOverlay = overlays.find((o) => o.id === selectedOverlayId) || null;
+  const selectedSub = subs?.find((s) => s.id === selectedSubId) || null;
   const selectedIndex = selectedClip ? clips!.indexOf(selectedClip) : -1;
   const menuClip = clipMenu ? clips?.find((c) => c.id === clipMenu.id) || null : null;
+  const inspectorFocus = selectedOverlay
+    ? "overlay" as const
+    : selectedSub
+      ? "caption" as const
+      : selectedClip
+        ? (selectionTrack === "audio" ? "audio" as const : "video" as const)
+        : "project" as const;
+  const inspectorTrackName = selectionTrack === "audio"
+    ? (tracks.find((t) => t.type === "audio")?.name || "אודיו")
+    : (videoTrack(tracks)?.name || "וידאו");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -471,8 +521,8 @@ export default function EditorPage() {
       if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
-      else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId)) { e.preventDefault(); deleteSel(e.shiftKey); }
-      else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); }
+      else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId || selectedSubId)) { e.preventDefault(); deleteSel(e.shiftKey); }
+      else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
       else if (selectedId && !videoLocked(tracks) && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
@@ -494,7 +544,9 @@ export default function EditorPage() {
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay
     ? (selectedOverlay.kind === "text" ? (selectedOverlay.text || "טקסט") : (mediaById(media, selectedOverlay.assetId || "")?.name || "תמונה"))
-    : selectedClip ? (isGapClip(selectedClip) ? "רווח" : (mediaById(media, selectedClip.sourceId)?.name || "קטע")) : null;
+    : selectedSub
+      ? (selectedSub.text.slice(0, 40) || "כתובית")
+      : selectedClip ? (isGapClip(selectedClip) ? "רווח" : (mediaById(media, selectedClip.sourceId)?.name || "קטע")) : null;
   const clampOverlayRange = (start: number, end: number) => {
     const s = Math.max(0, Math.min(start, end - 0.05));
     const e = Math.max(end, s + 0.05);
@@ -610,13 +662,16 @@ export default function EditorPage() {
               width={inspW}
               clip={selectedClip}
               overlay={selectedOverlay}
+              sub={selectedSub}
+              focus={inspectorFocus}
               assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : (selectedOverlay?.kind === "image" ? (mediaById(media, selectedOverlay.assetId || "")?.name || "?") : "")}
               assetKind={(selectedClip && (mediaById(media, selectedClip.sourceId)?.kind as "video" | "image" | "audio")) || "video"}
               assetDuration={selectedClip ? mediaById(media, selectedClip.sourceId)?.duration || duration : 0}
-              trackName={videoTrack(tracks)?.name || "וידאו"}
+              trackName={inspectorTrackName}
               timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
               onUpdate={(patch) => selectedClip && updateClip(selectedClip.id, patch)}
               onUpdateOverlay={(patch) => selectedOverlay && updateOverlay(selectedOverlay.id, patch)}
+              onUpdateSub={(patch) => selectedSub && updateSub(selectedSub.id, patch)}
               canvas={canvas}
               projectName={projectName} mediaCount={media.length} sourceDuration={duration} editedDuration={totalEdited}
             />
@@ -626,7 +681,7 @@ export default function EditorPage() {
             <div className="tl-resize" onMouseDown={startResizeTL} title="גרור לשינוי גובה" />
             <TimelineToolbar
               selInfo={selectedOverlay ? `${(selectedOverlay.end - selectedOverlay.start).toFixed(1)}s` : selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
-              canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId}
+              canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId || !!selectedSubId}
               onSplit={splitAtPlayhead} onDelete={deleteSel}
               onDeleteLeaveGap={() => deleteSel(true)} canLeaveGap={!!selectedClip && !selectedIsGap && !vLocked}
               canRoll={!!selectedId && !vLocked && !!clips && clips.length >= 2 && !selectedIsGap}
@@ -639,8 +694,9 @@ export default function EditorPage() {
                 media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={timelineDuration}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
+                selectedSubId={selectedSubId} selectionTrack={selectionTrack}
                 zoom={zoom} onZoom={setZoom} snap={snap}
-                onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay}
+                onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay} onSelectSub={selectSub}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => {
                   if (!c) return c;

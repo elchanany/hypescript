@@ -1,19 +1,25 @@
 "use client";
 
 // Right-side Inspector. No selection -> project settings. Clip selected ->
-// clip properties. Overlay selected -> transform + text/image properties.
-// Every edit flows through onUpdate / onUpdateOverlay -> useEditor -> History.
+// clip properties (video/audio). Sub selected -> caption properties.
+// Overlay selected -> transform + text/image properties.
+// Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
 import { Clip, clipEnabled, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
+import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "lucide-react";
 import { Section, Toggle } from "@/components/ui";
 
+export type InspectorFocus = "project" | "video" | "audio" | "caption" | "overlay";
+
 interface Props {
   width?: number;
   clip: Clip | null;
   overlay?: Overlay | null;
+  sub?: Sub | null;
+  focus?: InspectorFocus;
   assetName: string;
   assetKind: "video" | "image" | "audio";
   assetDuration: number;
@@ -21,6 +27,7 @@ interface Props {
   timelineStart: number;
   onUpdate: (patch: Partial<Clip>) => void;
   onUpdateOverlay?: (patch: Partial<Overlay>) => void;
+  onUpdateSub?: (patch: Partial<Sub>) => void;
   canvas?: CanvasSize;
   // project fallback
   projectName: string;
@@ -31,9 +38,23 @@ interface Props {
 
 const KIND = { video: "וידאו", image: "תמונה", audio: "שמע" } as const;
 
+function titleFor(focus: InspectorFocus): string {
+  switch (focus) {
+    case "video": return "מאפייני וידאו";
+    case "audio": return "מאפייני שמע";
+    case "caption": return "מאפייני כתובית";
+    case "overlay": return "מאפייני שכבה";
+    default: return "הגדרות פרויקט";
+  }
+}
+
 export default function InspectorPanel(p: Props) {
-  const { clip, overlay } = p;
-  const title = overlay ? (overlay.kind === "text" ? "מאפייני טקסט" : "מאפייני שכבה") : clip ? "מאפייני קטע" : "הגדרות פרויקט";
+  const { clip, overlay, sub } = p;
+  const focus: InspectorFocus = p.focus
+    || (overlay ? "overlay" : sub ? "caption" : clip ? (p.assetKind === "audio" ? "audio" : "video") : "project");
+  const title = overlay
+    ? (overlay.kind === "text" ? "מאפייני טקסט" : "מאפייני שכבה")
+    : titleFor(focus);
 
   return (
     <aside className="inspector2" style={p.width ? { width: p.width } : undefined}>
@@ -43,6 +64,8 @@ export default function InspectorPanel(p: Props) {
       <div className="insp-scroll">
         {overlay ? (
           <OverlayInspector overlay={overlay} onUpdate={p.onUpdateOverlay!} assetName={p.assetName} canvas={p.canvas} />
+        ) : sub ? (
+          <SubInspector sub={sub} onUpdate={p.onUpdateSub!} />
         ) : !clip ? (
           <Section title="פרויקט">
             <div className="prop"><span className="k">שם</span><span className="v">{p.projectName || "—"}</span></div>
@@ -55,7 +78,7 @@ export default function InspectorPanel(p: Props) {
             {p.mediaCount === 0 && <div className="insp-empty" style={{ padding: "12px 0 0" }}>בחר קטע בציר הזמן כדי לערוך את מאפייניו.</div>}
           </Section>
         ) : (
-          <ClipInspector {...p} clip={clip} />
+          <ClipInspector {...p} clip={clip} focus={focus} />
         )}
       </div>
     </aside>
@@ -64,6 +87,30 @@ export default function InspectorPanel(p: Props) {
 
 function num(v: number, digits = 1) {
   return Number.isFinite(v) ? +v.toFixed(digits) : 0;
+}
+
+function SubInspector({ sub, onUpdate }: { sub: Sub; onUpdate: (patch: Partial<Sub>) => void }) {
+  const dur = Math.max(0, sub.end - sub.start);
+  return (
+    <>
+      <Section title="תוכן">
+        <div className="prop-input" style={{ alignItems: "flex-start" }}><span className="k">טקסט</span>
+          <textarea rows={4} value={sub.text} dir="rtl"
+            onChange={(e) => onUpdate({ text: e.target.value })}
+            style={{ flex: 1, resize: "vertical", minHeight: 72 }} /></div>
+      </Section>
+      <Section title="תזמון בציר">
+        <div className="prop-input"><span className="k">התחלה</span>
+          <input type="number" step={0.05} min={0} value={num(sub.start, 3)}
+            onChange={(e) => onUpdate({ start: Math.max(0, Math.min(+e.target.value, sub.end - 0.05)) })} /></div>
+        <div className="prop-input"><span className="k">סיום</span>
+          <input type="number" step={0.05} min={0} value={num(sub.end, 3)}
+            onChange={(e) => onUpdate({ end: Math.max(+e.target.value, sub.start + 0.05) })} /></div>
+        <div className="prop"><span className="k">משך</span><span className="v mono">{dur.toFixed(2)}s</span></div>
+        <div className="prop"><span className="k">מיקום</span><span className="v mono">{formatTimecode(sub.start)}</span></div>
+      </Section>
+    </>
+  );
 }
 
 function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
@@ -144,11 +191,20 @@ function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
   );
 }
 
-function ClipInspector(p: Props & { clip: Clip }) {
-  const { clip, assetDuration } = p;
+function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
+  const { clip, assetDuration, focus } = p;
   const dur = Math.max(0, clip.end - clip.start);
   const setIn = (v: number) => p.onUpdate({ start: Math.max(0, Math.min(v, clip.end - 0.05)) });
   const setOut = (v: number) => p.onUpdate({ end: Math.min(assetDuration || v, Math.max(v, clip.start + 0.05)) });
+  const showAudio = p.assetKind !== "image";
+  const audioFirst = focus === "audio";
+
+  const audioSection = showAudio && (
+    <Section title="שמע">
+      <div className="prop"><span className="k">עוצמה</span><span className="v mono">{Math.round(clipVolume(clip) * 100)}%</span></div>
+      <input type="range" min={0} max={2} step={0.05} value={clipVolume(clip)} onChange={(e) => p.onUpdate({ volume: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
+    </Section>
+  );
 
   return (
     <>
@@ -164,6 +220,8 @@ function ClipInspector(p: Props & { clip: Clip }) {
         </div>
       </Section>
 
+      {audioFirst && audioSection}
+
       <Section title="עריכה">
         <div className="prop"><span className="k">מיקום בציר</span><span className="v mono">{formatTimecode(p.timelineStart)}</span></div>
         <div className="prop-input"><span className="k">In (שנ')</span>
@@ -173,12 +231,7 @@ function ClipInspector(p: Props & { clip: Clip }) {
         <div className="prop"><span className="k">משך</span><span className="v mono">{dur.toFixed(2)}s</span></div>
       </Section>
 
-      {p.assetKind !== "image" && (
-        <Section title="שמע">
-          <div className="prop"><span className="k">עוצמה</span><span className="v mono">{Math.round(clipVolume(clip) * 100)}%</span></div>
-          <input type="range" min={0} max={2} step={0.05} value={clipVolume(clip)} onChange={(e) => p.onUpdate({ volume: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
-        </Section>
-      )}
+      {!audioFirst && audioSection}
     </>
   );
 }

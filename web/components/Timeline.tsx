@@ -6,7 +6,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { isGapClip } from "@/lib/editor/timelineOps";
-import { ZOOM_MIN } from "@/lib/editor/time";
+import { ZOOM_MIN, snapTimeTo } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
@@ -23,12 +23,16 @@ interface Props {
   currentAssembled: number;
   selectedId: string | null;
   selectedOverlayId?: string | null;
+  selectedSubId?: string | null;
+  /** Which track the clip selection came from — drives inspector title. */
+  selectionTrack?: "video" | "audio" | null;
   zoom: number;
   onZoom: (z: number) => void;
   snap: boolean;
   onSeek: (assembled: number) => void;
-  onSelect: (id: string | null) => void;
+  onSelect: (id: string | null, track?: "video" | "audio") => void;
   onSelectOverlay?: (id: string | null) => void;
+  onSelectSub?: (id: string | null) => void;
   onTrimBegin: () => void;
   onTrim: (id: string, start: number, end: number) => void;
   onTrimEnd: () => void;
@@ -51,17 +55,32 @@ const SOURCE_COLORS = ["#3f5f8f", "#5b4d8a", "#8a4d68", "#8a6a3f", "#3f7d72", "#
 const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const;
 
 export default function Timeline(p: Props) {
-  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, zoom, snap } = p;
+  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, selectedSubId, zoom, snap } = p;
   const scrollRef = useRef<HTMLDivElement>(null);
   const laneRef = useRef<HTMLDivElement>(null);
   const overlayLaneRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const snapGuideRef = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<number | null>(null);
   const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
   const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
-  const drag = useRef<{ kind: "clip" | "overlay"; mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredSubId, setHoveredSubId] = useState<string | null>(null);
+  const drag = useRef<{
+    kind: "clip" | "overlay";
+    mode: "move" | "l" | "r";
+    id: string;
+    x0: number;
+    laneW: number;
+    s0: number;
+    e0: number;
+    moved: boolean;
+    px: number;
+    /** Assembled-time start of the clip being trimmed (for edge snap). */
+    assembled0?: number;
+  } | null>(null);
 
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
@@ -143,19 +162,36 @@ export default function Timeline(p: Props) {
   const vTrack = videoTrack(tracks);
   const vLocked = !!vTrack?.locked;
 
-  // snap targets in assembled time: clip boundaries + playhead.
+  // CapCut-like snap targets: clip edges, overlay edges, caption edges, playhead, timeline ends.
   const snapPts = useMemo(() => {
-    const pts = [0, total];
+    const pts = [0, total, currentAssembled];
     let acc = 0;
     for (const c of clips) { pts.push(acc); acc += clipDur(c); pts.push(acc); }
+    for (const o of overlays) { pts.push(o.start, o.end); }
+    for (const s of (subs || [])) { pts.push(s.start, s.end); }
     return pts;
-  }, [clips, total]);
-  const applySnap = (t: number) => {
-    if (!snap) return t;
-    const thresh = total * 0.012;
-    let best = t, bd = thresh;
-    for (const s of snapPts) { const d = Math.abs(s - t); if (d < bd) { bd = d; best = s; } }
-    return best;
+  }, [clips, overlays, subs, total, currentAssembled]);
+
+  const snapTol = () => {
+    // ~10px at current zoom → time, with floor/ceiling so it stays usable
+    const laneW = laneRef.current?.clientWidth || overlayLaneRef.current?.clientWidth || portW || 800;
+    const pxTol = 10;
+    return Math.max(0.04, Math.min(0.35, (pxTol / Math.max(1, laneW)) * total));
+  };
+
+  const applySnap = (t: number, exclude?: number[]) => {
+    if (!snap) return { time: t, snapped: false as boolean, target: null as number | null };
+    const skip = new Set((exclude || []).map((x) => +x.toFixed(4)));
+    const targets = snapPts.filter((s) => !skip.has(+s.toFixed(4)));
+    return snapTimeTo(t, targets, snapTol());
+  };
+
+  const showSnapGuide = (t: number | null) => {
+    const g = snapGuideRef.current;
+    if (!g) return;
+    if (t == null) { g.style.display = "none"; return; }
+    g.style.display = "block";
+    g.style.left = `${pct(t)}%`;
   };
 
   const ticks = useMemo(() => {
@@ -181,10 +217,22 @@ export default function Timeline(p: Props) {
     return { index, boundary: assembledStart(clips, index) };
   };
 
-  const onDown = (e: React.MouseEvent, clip: Clip, mode: "move" | "l" | "r") => {
+  const selectClip = (id: string, track: "video" | "audio" = "video") => {
+    p.onSelectSub?.(null);
+    p.onSelect(id, track);
+  };
+
+  const onDown = (e: React.MouseEvent, clip: Clip, mode: "move" | "l" | "r", track: "video" | "audio" = "video") => {
     if (vLocked) return;
     e.stopPropagation();
-    drag.current = { kind: "clip", mode, id: clip.id, x0: e.clientX, laneW: laneRef.current?.clientWidth || 1, s0: clip.start, e0: clip.end, moved: false, px: e.clientX };
+    const idx = clips.findIndex((c) => c.id === clip.id);
+    const assembled0 = idx >= 0 ? assembledStart(clips, idx) : 0;
+    drag.current = {
+      kind: "clip", mode, id: clip.id, x0: e.clientX,
+      laneW: laneRef.current?.clientWidth || 1,
+      s0: clip.start, e0: clip.end, moved: false, px: e.clientX, assembled0,
+    };
+    selectClip(clip.id, track);
     if (mode === "move") { const a = mediaById(media, clip.sourceId); setDragLabel({ name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע", dur: clipDur(clip) }); }
     if (mode === "l" || mode === "r") p.onTrimBegin();
     window.addEventListener("mousemove", onMove);
@@ -192,6 +240,7 @@ export default function Timeline(p: Props) {
   };
   const onOverlayDown = (e: React.MouseEvent, overlay: Overlay, mode: "move" | "l" | "r") => {
     e.stopPropagation();
+    p.onSelectSub?.(null);
     p.onSelectOverlay?.(overlay.id);
     p.onOverlayTrimBegin?.();
     drag.current = {
@@ -214,28 +263,73 @@ export default function Timeline(p: Props) {
     if (Math.abs(dx) > 3) d.moved = true;
     const dt = (dx / d.laneW) * total;
     if (d.kind === "overlay") {
-      if (d.mode === "l") p.onOverlayTrim?.(d.id, d.s0 + dt, d.e0);
-      else if (d.mode === "r") p.onOverlayTrim?.(d.id, d.s0, d.e0 + dt);
-      else if (d.moved) {
+      if (d.mode === "l") {
+        const raw = d.s0 + dt;
+        const { time, snapped, target } = applySnap(raw, [d.e0]);
+        showSnapGuide(snapped ? target : null);
+        p.onOverlayTrim?.(d.id, Math.min(time, d.e0 - 0.05), d.e0);
+      } else if (d.mode === "r") {
+        const raw = d.e0 + dt;
+        const { time, snapped, target } = applySnap(raw, [d.s0]);
+        showSnapGuide(snapped ? target : null);
+        p.onOverlayTrim?.(d.id, d.s0, Math.max(time, d.s0 + 0.05));
+      } else if (d.moved) {
         const dur = d.e0 - d.s0;
-        const start = d.s0 + dt;
+        const rawStart = d.s0 + dt;
+        // Prefer snap of either edge (start or end) like CapCut
+        const sSnap = applySnap(rawStart, []);
+        const eSnap = applySnap(rawStart + dur, []);
+        let start = rawStart;
+        let guide: number | null = null;
+        if (sSnap.snapped && eSnap.snapped) {
+          if (Math.abs(sSnap.time - rawStart) <= Math.abs(eSnap.time - (rawStart + dur))) {
+            start = sSnap.time; guide = sSnap.target;
+          } else {
+            start = eSnap.time - dur; guide = eSnap.target;
+          }
+        } else if (sSnap.snapped) { start = sSnap.time; guide = sSnap.target; }
+        else if (eSnap.snapped) { start = eSnap.time - dur; guide = eSnap.target; }
+        showSnapGuide(guide);
         p.onOverlayMove?.(d.id, start, start + dur);
       }
       return;
     }
-    if (d.mode === "l") p.onTrim(d.id, d.s0 + dt, d.e0);
-    else if (d.mode === "r") p.onTrim(d.id, d.s0, d.e0 + dt);
-    else if (d.mode === "move" && d.moved) {
-      // ghost + drop indicator updated imperatively (no React render per mouse move)
+    if (d.mode === "l" || d.mode === "r") {
+      // Snap the assembled-time edge being dragged to neighboring clip/overlay/sub edges.
+      const a0 = d.assembled0 ?? 0;
+      const dur0 = d.e0 - d.s0;
+      if (d.mode === "l") {
+        const rawAssembled = a0 + dt;
+        const { time: snappedA, snapped, target } = applySnap(rawAssembled, [a0 + dur0]);
+        showSnapGuide(snapped ? target : null);
+        const deltaAssembled = snappedA - a0;
+        p.onTrim(d.id, d.s0 + deltaAssembled, d.e0);
+      } else {
+        const rawAssembled = a0 + dur0 + dt;
+        const { time: snappedA, snapped, target } = applySnap(rawAssembled, [a0]);
+        showSnapGuide(snapped ? target : null);
+        const newDur = snappedA - a0;
+        p.onTrim(d.id, d.s0, d.s0 + newDur);
+      }
+    } else if (d.mode === "move" && d.moved) {
+      // ghost + drop indicator; also snap drop boundary to nearby edges
       const g = ghostRef.current;
       if (g) { g.style.display = "flex"; g.style.left = `${e.clientX + 12}px`; g.style.top = `${e.clientY + 14}px`; }
       const drop = dropRef.current;
-      if (drop && laneRef.current) { const { boundary } = dropTarget(e.clientX); drop.style.display = "block"; drop.style.left = `${pct(boundary)}%`; }
+      if (drop && laneRef.current) {
+        const { boundary } = dropTarget(e.clientX);
+        const { time, snapped, target } = applySnap(boundary);
+        const line = snapped && target != null ? target : boundary;
+        drop.style.display = "block";
+        drop.style.left = `${pct(line)}%`;
+        showSnapGuide(snapped ? target : null);
+      }
     }
   };
   const endDragVisuals = () => {
     if (ghostRef.current) ghostRef.current.style.display = "none";
     if (dropRef.current) dropRef.current.style.display = "none";
+    showSnapGuide(null);
   };
   const onUp = () => {
     const d = drag.current;
@@ -246,18 +340,36 @@ export default function Timeline(p: Props) {
     if (d.kind === "overlay") p.onOverlayTrimEnd?.();
     else if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
     else if (d.mode === "move") {
-      if (!d.moved) p.onSelect(d.id);
-      else p.onReorder(d.id, dropTarget(d.px).index);
+      if (!d.moved) { /* already selected on mousedown */ }
+      else {
+        // Snap reorder index: if drop boundary snapped, use that boundary's index
+        let { index, boundary } = dropTarget(d.px);
+        if (snap) {
+          const { snapped, target } = applySnap(boundary);
+          if (snapped && target != null) {
+            // find index whose assembledStart matches target
+            for (let i = 0; i <= clips.length; i++) {
+              if (Math.abs(assembledStart(clips, i) - target) < 1e-4) { index = i; break; }
+            }
+          }
+        }
+        p.onReorder(d.id, index);
+      }
     }
     drag.current = null;
   };
 
   const seekFromRow = (e: React.MouseEvent, el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
-    p.onSeek(applySnap(Math.max(0, Math.min(total, ((e.clientX - rect.left) / rect.width) * total))));
+    const raw = Math.max(0, Math.min(total, ((e.clientX - rect.left) / rect.width) * total));
+    const { time } = applySnap(raw);
+    p.onSeek(time);
   };
   const Playhead = () => <div className="playhead2" style={{ left: `${pct(currentAssembled)}%` }} />;
   const Grid = () => (<>{ticks.out.map((t) => <div key={t} className="tl-gridline" style={{ left: `${pct(t)}%` }} />)}</>);
+
+  const clipHover = (id: string) => hoveredId === id || selectedId === id;
+  const linkedSel = (id: string) => selectedId === id;
 
   return (
     <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
@@ -269,6 +381,9 @@ export default function Timeline(p: Props) {
         className="tl-inner"
         style={{ width: portW > 0 ? Math.max(portW, portW * Math.max(ZOOM_MIN, zoom)) : `${Math.max(ZOOM_MIN, zoom) * 100}%` }}
       >
+        {/* CapCut-style snap guide — full height across all tracks */}
+        <div className="tl-snap-guide" ref={snapGuideRef} />
+
         {/* ruler */}
         <div className="tl-rowline tl-rulerline">
           <div className="tl-corner2" />
@@ -292,36 +407,41 @@ export default function Timeline(p: Props) {
                     {track.name}
                   </span>
                 </div>
-                <div className="hd-ctrls">
-                  <IconButton icon={ChevronUp} tip="העבר למעלה" tipPos="up" onClick={() => p.reorderTrack(track.id, -1)} />
-                  <IconButton icon={ChevronDown} tip="העבר למטה" tipPos="up" onClick={() => p.reorderTrack(track.id, 1)} />
-                  <IconButton icon={ChevronsUpDown} tip="גובה רצועה" tipPos="up" onClick={() => p.cycleHeight(track.id)} />
-                  {track.type === "audio" && (
-                    <IconButton icon={track.muted ? VolumeX : Volume2} tip={track.muted ? "בטל השתקה" : "השתק"} tipPos="up"
-                      active={track.muted} onClick={() => p.toggleMute(track.id)} />
-                  )}
+                {/* Fixed 5-slot grid so mute on audio doesn't shift other icons */}
+                <div className="hd-ctrls" dir="ltr">
                   <IconButton icon={track.locked ? Lock : Unlock} tip={track.locked ? "שחרר נעילה" : "נעל"} tipPos="up"
                     active={track.locked} onClick={() => p.toggleLock(track.id)} />
+                  {track.type === "audio" ? (
+                    <IconButton icon={track.muted ? VolumeX : Volume2} tip={track.muted ? "בטל השתקה" : "השתק"} tipPos="up"
+                      active={track.muted} onClick={() => p.toggleMute(track.id)} />
+                  ) : (
+                    <span className="hd-slot" aria-hidden />
+                  )}
+                  <IconButton icon={ChevronsUpDown} tip="גובה רצועה" tipPos="up" onClick={() => p.cycleHeight(track.id)} />
+                  <IconButton icon={ChevronDown} tip="העבר למטה" tipPos="up" onClick={() => p.reorderTrack(track.id, 1)} />
+                  <IconButton icon={ChevronUp} tip="העבר למעלה" tipPos="up" onClick={() => p.reorderTrack(track.id, -1)} />
                 </div>
               </div>
 
               {track.type === "video" && (
                 <div className="tl-lane2" ref={laneRef}
-                  onClick={(e) => { if (!drag.current) { p.onSelect(null); seekFromRow(e, e.currentTarget); } }}>
+                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
                   {clips.map((c, i) => {
                     const gap = isGapClip(c);
                     if (gap) {
                       return (
                         <div key={c.id}
-                          className={`clip-gap ${c.id === selectedId ? "selected" : ""} ${vLocked ? "locked" : ""}`}
+                          className={`clip-gap ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
                           style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
-                          onMouseDown={(e) => onDown(e, c, "move")}
-                          onContextMenu={(e) => { e.preventDefault(); p.onSelect(c.id); p.onClipMenu(c.id, e.clientX, e.clientY); }}
+                          onMouseDown={(e) => onDown(e, c, "move", "video")}
+                          onMouseEnter={() => setHoveredId(c.id)}
+                          onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
+                          onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
                           title={`רווח · ${clipDur(c).toFixed(1)}s`}>
-                          {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l")} />}
+                          {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "video")} />}
                           <span className="clip-label"><span>רווח</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
-                          {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r")} />}
+                          {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "video")} />}
                         </div>
                       );
                     }
@@ -330,18 +450,20 @@ export default function Timeline(p: Props) {
                     const thumbH = Math.max(28, track.height - 8);
                     return (
                       <div key={c.id}
-                        className={`clip2 ${c.id === selectedId ? "selected" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
+                        className={`clip2 ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
                         style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
-                        onMouseDown={(e) => onDown(e, c, "move")}
-                        onContextMenu={(e) => { e.preventDefault(); p.onSelect(c.id); p.onClipMenu(c.id, e.clientX, e.clientY); }}
+                        onMouseDown={(e) => onDown(e, c, "move", "video")}
+                        onMouseEnter={() => setHoveredId(c.id)}
+                        onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
+                        onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
                         title={`${short} · ${clipDur(c).toFixed(1)}s`}>
                         <div className="clip-fill" style={{ background: colorOf(c.sourceId) }} />
                         {asset?.kind === "video" && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
                         {asset?.kind === "image" && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
                         <span className="clip-accent" style={{ background: colorOf(c.sourceId) }} />
-                        {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l")} />}
+                        {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "video")} />}
                         <span className="clip-label"><span>{short || `קטע ${i + 1}`}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
-                        {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r")} />}
+                        {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "video")} />}
                       </div>
                     );
                   })}
@@ -351,15 +473,31 @@ export default function Timeline(p: Props) {
               )}
 
               {track.type === "audio" && (
-                <div className={`tl-lane2 ${track.muted ? "muted" : ""}`} onClick={(e) => seekFromRow(e, e.currentTarget)}>
+                <div className={`tl-lane2 ${track.muted ? "muted" : ""}`}
+                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
                   {clips.map((c, i) => {
                     const gap = isGapClip(c);
                     const asset = mediaById(media, c.sourceId);
                     return (
-                      <div key={c.id} className={`clip-audio ${gap ? "gap" : ""}`} style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}>
+                      <div
+                        key={c.id}
+                        className={`clip-audio ${gap ? "gap" : ""} ${linkedSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !linkedSel(c.id) ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
+                        style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
+                        onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio"); }}
+                        onMouseEnter={() => setHoveredId(c.id)}
+                        onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
+                        onContextMenu={(e) => { e.preventDefault(); if (!gap) { selectClip(c.id, "audio"); p.onClipMenu(c.id, e.clientX, e.clientY); } }}
+                        title={gap ? "רווח" : `${(asset?.name || "").replace(/\.[^.]+$/, "")} · ${clipDur(c).toFixed(1)}s`}
+                      >
                         {!gap && asset && (asset.kind === "video" || asset.kind === "audio") && (
                           <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />
+                        )}
+                        {!gap && !vLocked && (
+                          <>
+                            <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "audio")} />
+                            <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "audio")} />
+                          </>
                         )}
                       </div>
                     );
@@ -369,10 +507,18 @@ export default function Timeline(p: Props) {
               )}
 
               {track.type === "caption" && (
-                <div className="tl-lane2" onClick={(e) => seekFromRow(e, e.currentTarget)}>
+                <div className="tl-lane2" onClick={(e) => { if (!drag.current) { p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
                   {(subs || []).map((s) => (
-                    <div key={s.id} className="cue2" style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }} title={s.text}>
+                    <div
+                      key={s.id}
+                      className={`cue2 ${selectedSubId === s.id ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""}`}
+                      style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }}
+                      title={s.text}
+                      onClick={(e) => { e.stopPropagation(); p.onSelect(null); p.onSelectOverlay?.(null); p.onSelectSub?.(s.id); }}
+                      onMouseEnter={() => setHoveredSubId(s.id)}
+                      onMouseLeave={() => setHoveredSubId((h) => (h === s.id ? null : h))}
+                    >
                       <span className="cue-txt">{s.text}</span>
                     </div>
                   ))}
@@ -390,6 +536,9 @@ export default function Timeline(p: Props) {
               <Layers className="hd-type" size={14} strokeWidth={1.75} />
               <span className="hd-name">שכבות</span>
             </div>
+            <div className="hd-ctrls" dir="ltr" aria-hidden>
+              <span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" />
+            </div>
           </div>
           <div className="tl-lane2" ref={overlayLaneRef} onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
             <Grid />
@@ -403,7 +552,7 @@ export default function Timeline(p: Props) {
                   style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%` }}
                   title={`${label} · ${dur.toFixed(1)}s`}
                   onMouseDown={(e) => onOverlayDown(e, o, "move")}
-                  onClick={(e) => { e.stopPropagation(); p.onSelectOverlay?.(o.id); }}>
+                  onClick={(e) => { e.stopPropagation(); p.onSelectSub?.(null); p.onSelectOverlay?.(o.id); }}>
                   <span className="trim l" onMouseDown={(e) => onOverlayDown(e, o, "l")} />
                   <span className="clip-label"><span>{label}</span><span className="cl-dur">{dur.toFixed(1)}s</span></span>
                   <span className="trim r" onMouseDown={(e) => onOverlayDown(e, o, "r")} />

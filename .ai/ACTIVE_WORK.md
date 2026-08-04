@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימת bootstrap פתוחה — המערכת המשותפת זמינה על `main`.
+טיימליין CapCut-like: inspector לפי בחירה, hover, snap guides, יישור אייקוני אודיו, linked split
 
 ## Branch
-`main`
+`cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-טיפ `main` אחרי merge של PR #9 (cross-agent continuity bootstrap)
+(pending — ראה git log על הענף)
 
 ## Status
-idle — מוכן לעבודת מוצר הבאה
+implementation complete — awaiting manual verify + PR merge
 
 ## Exact continuation point
-אימות בפריסת Vercel מ-`main`; הרחבת CommandBus/AG-4 לפי `docs/GAP_MAP.md`; בלי Auth/Supabase בלי אישור.
+בדיקת UI: לחיצה על וידאו/אודיו/כתובית → פאנל מאפיינים; גרירת קצה עם Magnet; Split (S) מראה חיתוך גם ברצועת האודיו.
