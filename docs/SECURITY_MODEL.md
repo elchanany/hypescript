@@ -14,7 +14,7 @@
 | `/api/config` | ✔ מחזיר בוליאני "מוגדר?" בלבד, לא ערכים | תקין |
 | מפתח תמלול (Groq) | ⚠️ env קודם; עדיין יש fallback ממפתח לקוח ל-dev | **פער**: להסיר fallback client-side לגמרי |
 | מפתח ElevenLabs | ✔ `ELEVENLABS_API_KEY` server-side בלבד (`/api/transcribe`, `/api/elevenlabs/*`); לא נחשף ללקוח | תקין — לא להוסיף `NEXT_PUBLIC_` |
-| Auth / roles / RLS | ◐ אופציונלי | Supabase Auth (Google) כשמוגדרים `NEXT_PUBLIC_SUPABASE_URL` + Publishable key ב-`NEXT_PUBLIC_SUPABASE_ANON_KEY`. בלי מפתחות — מצב מקומי רגיל. פרויקטים/וידאו נשארים ב-IndexedDB. RLS/roles לענן־פרויקטים — עתידי. מדריך: `docs/SETUP_AUTH.md`. אין Secret/service_role בצד לקוח. |
+| Auth / roles / RLS | ◐ Package A | Supabase Auth (Google + email/password + magic link) כשמוגדרים `NEXT_PUBLIC_SUPABASE_URL` + Publishable key. Migration: `supabase/migrations/20260804170000_pkg_a_foundation.sql` — profiles, RBAC, system_owner protection, audit, credit_accounts stub, RLS. Bootstrap: `BOOTSTRAP_SUPER_ADMIN_EMAIL` + `SUPABASE_SERVICE_ROLE_KEY` (server-only). Guest editor: `ALLOW_GUEST_EDITOR`. פרויקטים/וידאו עדיין ב-IndexedDB. MFA/Admin UI/Ledger — חבילות הבאות. מדריך: `docs/SETUP_AUTH.md`. אין Secret בצד לקוח. |
 | Zero-cost enforcement | ✖ אין Policy engine | חבילת ספקים: לחסום user-billed/unknown ללא אישור |
 | Secrets בלוגים/הודעות סוכן | ✔ אין הדפסת מפתחות; שגיאות ספק חתוכות ל-400 תווים | לוודא sanitization ב-AppError (חבילת שגיאות) |
 

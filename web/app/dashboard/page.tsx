@@ -12,6 +12,7 @@ import {
 } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
+import BrandLogo from "@/components/BrandLogo";
 import { toast } from "@/lib/ui/toast";
 import { getProjectCoverUrl } from "@/lib/projects/preview";
 import { useOutside } from "@/components/ui";
@@ -200,7 +201,9 @@ export default function DashboardPage() {
   return (
     <div className="dash-root">
       <header className="dash-top">
-        <Link href="/dashboard" className="dash-brand"><span className="tb-logo">hs</span> hypescript</Link>
+        <Link href="/dashboard" className="dash-brand dash-brand-link" aria-label="Hypescript">
+          <BrandLogo variant="horizontal" size="sm" theme="auto" priority decorative />
+        </Link>
         <nav className="dash-nav">
           <Link href="/" className="dash-link"><Film size={16} />עורך</Link>
           <Link href="/settings" className="dash-link"><Settings size={16} />הגדרות</Link>

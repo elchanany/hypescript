@@ -1,10 +1,11 @@
 "use client";
 
 // OAuth return URL. Supabase puts tokens in the URL hash; the browser client
-// picks them up via detectSessionInUrl. We just wait briefly then go to dashboard.
+// picks them up via detectSessionInUrl. We wait briefly then route onward.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BrandLogo from "@/components/BrandLogo";
 import { getSupabaseBrowser } from "@/lib/auth/supabase";
 
 export default function AuthCallbackPage() {
@@ -20,7 +21,6 @@ export default function AuthCallbackPage() {
     }
     let cancelled = false;
     (async () => {
-      // Give the client a moment to parse the hash / exchange the code.
       const { data, error } = await sb.auth.getSession();
       if (cancelled) return;
       if (error) {
@@ -28,26 +28,37 @@ export default function AuthCallbackPage() {
         setTimeout(() => router.replace("/login?error=1"), 1200);
         return;
       }
-      const goDash = () => {
-        try { sessionStorage.setItem("hs_just_logged_in", "1"); } catch { /* private mode */ }
-        router.replace("/dashboard");
-      };
-      if (data.session) goDash();
-      else {
-        // PKCE / code flow: try exchange if present
-        const qs = new URLSearchParams(window.location.search);
-        const code = qs.get("code");
-        if (code) {
-          const ex = await sb.auth.exchangeCodeForSession(code);
-          if (cancelled) return;
-          if (ex.error) {
-            setMsg(ex.error.message);
-            setTimeout(() => router.replace("/login?error=1"), 1200);
-            return;
+      const finish = async () => {
+        try {
+          const { data: s } = await sb.auth.getSession();
+          const token = s.session?.access_token;
+          if (token) {
+            await fetch("/api/auth/bootstrap", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
           }
-        }
-        goDash();
+        } catch { /* ignore */ }
+        try { sessionStorage.setItem("hs_just_logged_in", "1"); } catch { /* private mode */ }
+        const done = localStorage.getItem("hs_onboarding_done") === "1";
+        router.replace(done ? "/dashboard" : "/onboarding");
+      };
+      if (data.session) {
+        await finish();
+        return;
       }
+      const qs = new URLSearchParams(window.location.search);
+      const code = qs.get("code");
+      if (code) {
+        const ex = await sb.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (ex.error) {
+          setMsg(ex.error.message);
+          setTimeout(() => router.replace("/login?error=1"), 1200);
+          return;
+        }
+      }
+      await finish();
     })();
     return () => { cancelled = true; };
   }, [router]);
@@ -55,7 +66,8 @@ export default function AuthCallbackPage() {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <h1>hypescript</h1>
+        <BrandLogo variant="icon" size="lg" theme="dark" priority />
+        <h1>Hypescript</h1>
         <p>{msg}</p>
       </div>
     </div>

@@ -19,8 +19,15 @@ Hypescript כרגע **local-first ללא backend**. מקור-אמת לעריכה
 - אין `TransitionInstance`/`EffectInstance`/`PropertyKeyframe`/`AudioEnvelope`.
 - אין `contentHash`/`AssetReplica` (local/cloud/hybrid).
 
-## מודל יעד (Supabase Postgres — חבילת מעטפת מוצר B/6, לא ממומש)
-טבלאות (RLS בכל טבלה חשופה): `profiles, organizations, organization_members, invitations, projects, project_members, project_snapshots, project_events, assets, asset_replicas, brand_kits, brand_assets, templates, template_versions, provider_definitions, provider_connections, provider_policies, agent_threads, agent_messages, agent_tool_runs, agent_checkpoints, jobs, usage_events, credit_accounts, credit_ledger, cost_reservations, audit_logs, notifications`.
+## Package A — Auth foundation (Supabase migration קיימת)
+קובץ: `supabase/migrations/20260804170000_pkg_a_foundation.sql` (`saas_foundation_schema_version = 1`).
+
+טבלאות עם RLS: `profiles`, `user_settings`, `roles`, `permissions`, `role_permissions`, `user_roles`, `audit_logs`, `login_events`, `credit_accounts` (stub ללא ledger מלא), `system_settings`.
+
+הגנות: trigger `protect_system_owner` (אין delete/demote/suspend ל-system_owner), `handle_new_user` ליצירת profile+settings+role, helpers `is_system_owner` / `has_permission`.
+
+## מודל יעד (חבילות B–G)
+טבלאות נוספות מתוכננות: `organizations, organization_members, invitations, projects, project_members, project_snapshots, project_events, assets, asset_replicas, brand_kits, brand_assets, templates, template_versions, provider_definitions, provider_connections, provider_policies, agent_threads, agent_messages, agent_tool_runs, agent_checkpoints, jobs, usage_events, credit_grants, credit_reservations, credit_ledger_entries, cost_reservations, notifications, plans, subscriptions, …`.
 
 עקרונות:
 - `projects.project_document` (JSONB) = מסמך העריכה (הרחבה של ה-`ProjectState` הנוכחי) + `schema_version`.

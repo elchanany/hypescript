@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 import { PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
 import { Provider } from "@/lib/agent/types";
 import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
 import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
 import type { ProviderStatusInfo } from "@/lib/providers/types";
 import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
+import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 
 export default function SettingsPage() {
+  const { mode, setMode } = useTheme();
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [transcribePref, setTranscribePref] = useState<TranscribeProviderPref>("auto");
   const [transcribeModel, setTranscribeModel] = useState("");
@@ -50,8 +53,11 @@ export default function SettingsPage() {
   return (
     <div>
       <header className="site-header">
-        <Link href="/" className="brand">hypescript</Link>
+        <Link href="/dashboard" className="brand" aria-label="Hypescript">
+          <BrandLogo variant="horizontal" size="sm" theme="auto" decorative />
+        </Link>
         <nav>
+          <Link href="/dashboard">לוח פרויקטים</Link>
           <Link href="/">חזרה לעורך</Link>
         </nav>
       </header>
@@ -66,6 +72,35 @@ export default function SettingsPage() {
           {" · "}
           <Link href="/login">התחברות</Link>
         </p>
+      </div>
+
+      <div className="card">
+        <h2>מראה</h2>
+        <div className="controls">
+          {([
+            ["system", "לפי המערכת"],
+            ["dark", "כהה"],
+            ["light", "בהיר"],
+          ] as const).map(([id, label]) => (
+            <label key={id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: mode === id ? "var(--card-2)" : "transparent" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="radio" name="theme" checked={mode === id} onChange={() => setMode(id as ThemeMode)} />
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>אודות המוצר</h2>
+        <div className="brand-about">
+          <BrandLogo variant="icon" size="lg" decorative />
+          <div>
+            <strong>Hypescript</strong>
+            <p>עריכת וידאו מקצועית עם סוכן AI מובנה. הווידאו נשאר במכשיר שלך.</p>
+          </div>
+        </div>
       </div>
 
       <div className="card">

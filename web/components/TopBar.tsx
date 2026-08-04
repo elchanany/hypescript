@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Undo2, Redo2, Bot, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
+import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 
@@ -34,7 +35,9 @@ export default function TopBar({
   return (
     <div className="topbar2">
       <div className="tb-group tb-brand">
-        <Link href="/dashboard" className="tb-logo" style={{ fontWeight: 700, fontSize: 12 }} title="לוח פרויקטים">hs</Link>
+        <Link href="/dashboard" className="tb-logo" title="Hypescript — לוח פרויקטים" aria-label="Hypescript">
+          <BrandLogo variant="icon" size="sm" decorative priority />
+        </Link>
         <button className="tb-project" onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left, y: r.bottom + 4 }); }}>
           <span className="pname">{projectName || "פרויקט"}</span>
           <ChevronDown size={15} strokeWidth={1.75} />

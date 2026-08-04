@@ -1,17 +1,21 @@
-# HANDOFF
+# HANDOFF — Package A + Branding
 
-## Goal
-עורך CapCut-class + סוכן AI + ElevenLabs + Auth אופציונלי.
+## Branch
+`cursor/saas-pkg-a-branding-505e` (base: `main`)
 
-## Current State (verified)
-ענף: `cursor/timeline-media-drag-ghost-e91a`
-- גרירת קליפים/שכבות בטיימליין עם **כרטיס תצוגה מקדימה** (תמונה/פעימות) ליד העכבר
-- גרירה מספריית מדיה לציר עם drag-image ויזואלי + קו drop
-- `onDropMedia` מכניס קליפ באינדקס היעד (תמונה → overlay)
+## Verified state
+- Brand assets under `web/public/brand/` (sources + derivatives + favicon/PWA/OG)
+- `BrandLogo` + `web/lib/brand/assets.ts` as single source of truth
+- Theme: System/Dark/Light via `ThemeProvider` + no-flash script in layout
+- Package A migration: `supabase/migrations/20260804170000_pkg_a_foundation.sql`
+- Auth UI: login (Google/password/magic/reset), onboarding, legal stubs, bootstrap API
+- Middleware soft-gates editor when Auth configured and guest disabled
+- Docs: `docs/BRAND_GUIDELINES.md`, SETUP_AUTH + SECURITY_MODEL updated
 
-## Exact Next Steps
-1. למזג ולרענן פריסה — לאמת גרירה מהמדיה + ghost בקליפ
-2. EDL אודיו נפרד / רצועות וידאו מרובות — בהמשך
+## Not done (by design for Package A stop)
+- MFA, session revoke UI, Admin dashboard, Ledger/Trial grants, Billing, BYOK
+- Migration not applied to live Supabase from this environment (no production push)
+- Do **not** merge to `main` without explicit approval
 
-## Risks
-- `setDragImage` דורש thumb מסונכרן; thumbs נטענים מראש לרשת
+## Exact next step
+After Package A approval: execute Package B (Dashboard projects wizard Local/Cloud/Hybrid).
