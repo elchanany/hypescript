@@ -1,23 +1,17 @@
-# HANDOFF — Package A + official Hypescript branding
+# HANDOFF — Package B started + branding on main
 
-## Goal
-עורך CapCut-class + סוכן AI (v0.3.0) + תשתית SaaS.
+## On main
+- Official branding from user PNGs (exact icon)
+- Package A Auth foundation
 
-## Branch / merge
-`cursor/saas-pkg-a-branding-505e` → `main` (user requested merge).
+## Branch
+`cursor/saas-pkg-b-projects-505e`
 
-## Verified state
-- Brand: exact user PNGs in `web/public/brand/sources/`
-  - navy icon → `hypescript-icon.png` (bit-exact)
-  - wordmark → transparent horizontal lockup
-  - black icon → reference only
-- `BrandLogo` + theme System/Dark/Light
-- Package A migration + Auth UI + bootstrap System Owner
-- Editor Continuity (PR #32) already on main
+## Package B done so far
+- New Project Wizard (6 steps): details, data mode, storage, preset, providers, review
+- `ProjectExecutionPolicy` persisted in IndexedDB (`p:<id>:policy`)
+- Project cards show Local/Cloud/Hybrid badge
+- Cloud storage providers NOT marked connected without health-check
 
-## Not done
-- Package B–G (Dashboard wizard, Ledger, Billing, BYOK, Admin…)
-- MFA / live Supabase migration apply
-
-## Exact next step
-Package B — New Project Wizard (Local/Cloud/Hybrid) after confirmation.
+## Next
+Package B remainder (archive/trash, duplicate, relink local source) then C–G.

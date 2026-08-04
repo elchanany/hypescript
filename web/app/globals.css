@@ -1230,3 +1230,68 @@ button.quote-chip:hover svg { color: var(--accent); }
   .dash-email { max-width: 100px; }
   .toast-host { inset-inline-end: 12px; bottom: 12px; }
 }
+
+/* ---- New Project Wizard (Package B) ---- */
+.dash-card-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--text-2); background: var(--inset);
+  text-transform: uppercase; letter-spacing: .02em;
+}
+.dash-badge.mode-local { border-color: color-mix(in srgb, var(--success) 40%, var(--border)); color: var(--success); }
+.dash-badge.mode-cloud { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); }
+.dash-badge.mode-hybrid { border-color: color-mix(in srgb, var(--ai) 40%, var(--border)); color: var(--ai); }
+
+.wiz-backdrop {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center;
+  padding: 16px; background: rgba(0,0,0,.55);
+}
+.wiz-card {
+  width: min(640px, 100%); max-height: min(90vh, 820px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: 0 24px 60px rgba(0,0,0,.45); display: flex; flex-direction: column;
+}
+.wiz-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.wiz-head h2 { margin: 0; font-size: 17px; }
+.wiz-sub { margin: 2px 0 0; color: var(--text-3); font-size: 12px; }
+.wiz-close { margin-inline-start: auto; border: 0; background: transparent; color: var(--text-2); font-size: 22px; cursor: pointer; line-height: 1; }
+.wiz-steps { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.wiz-steps li { font-size: 11px; color: var(--text-3); padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; }
+.wiz-steps li.on { color: var(--text); border-color: var(--accent); background: var(--accent-tint); }
+.wiz-steps li.done { color: var(--success); }
+.wiz-body { padding: 16px 18px; flex: 1; }
+.wiz-fields { display: grid; gap: 12px; }
+.wiz-modes { display: grid; gap: 8px; }
+.wiz-mode {
+  text-align: right; border: 1px solid var(--border); background: var(--inset);
+  border-radius: var(--r-md); padding: 12px; cursor: pointer; display: grid; gap: 4px; color: var(--text);
+}
+.wiz-mode strong { font-size: 14px; }
+.wiz-mode span { font-size: 12px; color: var(--text-2); line-height: 1.45; }
+.wiz-mode.on { border-color: var(--accent); background: var(--accent-tint); }
+.wiz-mode.compact { padding: 10px 12px; }
+.wiz-check { margin-top: 8px; }
+.wiz-option {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--r-md); cursor: pointer;
+}
+.wiz-option.on { border-color: var(--accent); background: var(--accent-tint); }
+.wiz-option.disabled { opacity: .75; }
+.wiz-option em { color: var(--text-3); font-style: normal; font-size: 12px; }
+.wiz-option em.ok { color: var(--success); }
+.wiz-hint { margin: 0 0 8px; color: var(--text-2); font-size: 12px; line-height: 1.5; }
+.wiz-warn {
+  padding: 10px 12px; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--text); font-size: 12px; line-height: 1.5;
+}
+.wiz-cap-row {
+  display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.wiz-cap-row em { grid-column: 2; color: var(--text-3); font-style: normal; font-size: 11px; }
+.wiz-review ul { margin: 0; padding: 0 18px 0 0; line-height: 1.7; color: var(--text-2); }
+.wiz-review h3 { margin: 0 0 10px; }
+.wiz-foot {
+  display: flex; justify-content: space-between; gap: 8px; padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
