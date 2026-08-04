@@ -7,7 +7,7 @@
 `cursor/agent-commandbus-multitrack-7940`
 
 ## Latest commit
-`9a4981b` — docs continuity + graphify (PR #32)
+`c6124a8` — docs continuity + graphify (PR #32)
 
 ## Status
 הושלם בקוד על הענף · PR #32 טיוטה OPEN · ממתין לאימות ידני / מיזוג
