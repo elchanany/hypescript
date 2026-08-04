@@ -1,24 +1,27 @@
 # HANDOFF
 
 ## Goal
-מודל אינטראקציה מקצועי Canvas/Timeline/Inspector — לסגור פערים מול 45 בדיקות הקבלה.
+מודל אינטראקציה מקצועי Canvas/Timeline/Inspector מול 45 בדיקות הקבלה.
 
-## Current State (verified)
+## Current State (verified 2026-08-04)
 - Branch: `cursor/pro-interaction-model-505e` · PR #25
-- **Export = Canvas Element Scale**: `appendMainVideoTransform` אחרי concat, לפני overlays; identity כש-Fit מלא. יחידות ב-`mainVideoTransform.test.ts`.
-- **Viewer Zoom**: Fit/25/50/100/200 + Ctrl+Wheel — נפרד מ-Element Scale.
-- **Edge handles** על main video + overlays + captions.
-- **Alt+Click** מחזור שכבות תחת הסמן.
-- **Caption timeline**: trim/move + context menu (עריכה/פיצול/מיזוג/מחיקה).
-- **Context menus**: video (detach/relink/ripple/leave-gap), gap, caption. אין פריטים ללא מימוש (effects/freeze).
-- **Keyboard**: Ctrl+D שכפול; חצים מזיזים אלמנט נבחר (Shift=10px).
-- Tests: 84 editor/render; `tsc` + `next build` עוברים.
+- יישום ליבה + Export Element Scale + Viewer Zoom + edge handles + menus + caption TL + keyboard.
+- CSS shell: `flex-direction: row` + `align-self: stretch` על toolrail/leftpanel (הגנה אחרי כשל `.next` ששבר CSS ב-smoke).
+- Unit: 84 editor/render · `tsc` · `next build` ירוקים.
+- Smoke דפדפן (אחרי restart נקי של Next):
+  - Inspector Fit/Fill/Original — PASS
+  - Canvas handles (corners+edges) — PASS
+  - Element Scale shrink + רקע — PASS
+  - Viewer Zoom 50% לא משנה Element Scale — PASS
+  - Drag Ghost — PASS
+  - Context menu (leave-gap / ripple / detach) — PASS
+  - Undo Ctrl+Z — PASS
+  - Upload חדש של fixture — SKIP (פרויקט כבר עם מדיה)
 
-## Remaining honest gaps (לא Complete)
-- Export E2E עם ffmpeg.wasm + מדיה אמיתית (גרף מכוסה ביחידה; אין הרצת wasm מלאה ב-CI כאן).
-- תפריטי סעיף 16 שלא קיימים במוצר (effects/transitions/freeze/stickers) — לא מוצגים במכוון.
-- בדיקת דפדפן אינטראקטיבית מלאה מול כל 45 הסעיפים — smoke חלקי.
+## Remaining (לא Complete מלא)
+- Export E2E עם ffmpeg.wasm מול Preview (גרף מכוסה ביחידה בלבד).
+- פריטי סעיף 16 ללא מימוש (effects/transitions/freeze) — לא מוצגים במכוון.
+- לא כל 45 סעיפי הקבלה כוסו ידנית (למשל Alt+Click layers, caption split, Free Drop overwrite).
 
 ## Exact Next Steps
-1. Smoke דפדפן עם `/tmp/test-clip.mp4`.
-2. Push + עדכון גוף PR #25.
+אין חסימה לקוד בסבב זה. המשך אפשרי: Export wasm E2E, או סגירת סעיפי קבלה שנותרו.

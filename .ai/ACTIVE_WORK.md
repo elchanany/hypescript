@@ -1,7 +1,7 @@
 # ACTIVE_WORK
 
 ## Focus
-סגירת מודל אינטראקציה מקצועי (Export transform, Viewer Zoom, menus, handles) על `cursor/pro-interaction-model-505e`.
+אין עבודה פעילה חוסמת על מודל האינטראקציה — הסבב הנוכחי נדחף ל-PR #25.
 
 ## Status
-יישום הקוד הושלם לסבב זה; נשארו אימות דפדפן + דוח קבלה כנה (לא לסמן Complete מלא).
+קוד + unit + smoke דפדפן חלקי מאומתים. לא מסומן Complete מלא (Export wasm E2E + כיסוי 45 מלא).
