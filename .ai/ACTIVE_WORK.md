@@ -7,7 +7,7 @@
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-(pending push)
+`504b946` — fix(captions): סנכרון לקצב דיבור + אכיפת ElevenLabs
 
 ## Status
 implementation complete — tests+build green; awaiting merge
