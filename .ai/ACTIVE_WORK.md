@@ -7,7 +7,7 @@
 `main`
 
 ## Latest commit
-`ec42a83` — docs: stabilize continuity on feature tip 0022f1d (כולל פיצ׳ר הטיימליין)
+`13a35f7` — docs after merge to main (טיימליין CapCut)
 
 ## Status
 idle — מוכן לעבודת מוצר הבאה
