@@ -39,6 +39,7 @@ interface Props {
   onOverlayTrimEnd?: () => void;
   onOverlayMove?: (id: string, start: number, end: number) => void;
   renameTrack: (id: string, name: string) => void;
+  onRequestRenameTrack?: (id: string, name: string) => void;
   toggleLock: (id: string) => void;
   toggleMute: (id: string) => void;
   cycleHeight: (id: string) => void;
@@ -287,7 +288,7 @@ export default function Timeline(p: Props) {
                 <div className="hd-top">
                   <TypeIcon className="hd-type" size={14} strokeWidth={1.75} />
                   <span className="hd-name" title="לחיצה כפולה לשינוי שם"
-                    onDoubleClick={() => { const n = prompt("שם הרצועה:", track.name); if (n) p.renameTrack(track.id, n); }}>
+                    onDoubleClick={() => p.onRequestRenameTrack?.(track.id, track.name)}>
                     {track.name}
                   </span>
                 </div>

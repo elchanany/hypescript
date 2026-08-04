@@ -7,9 +7,10 @@ import { Clip } from "./model";
 import { Sub } from "./subtitlesEdl";
 import { Overlay } from "./overlay";
 import { CanvasSize } from "./canvasCoords";
+import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "./captionStyle";
 
-// v3: added canvas (project coordinates) + overlays (image/text/logo elements).
-export const SCHEMA_VERSION = 3;
+// v3: canvas + overlays. v4: captionStyle (project-level look for preview).
+export const SCHEMA_VERSION = 4;
 
 export const DEFAULT_CANVAS: CanvasSize = { width: 1920, height: 1080 };
 export function normalizeCanvas(input: any): CanvasSize {
@@ -37,7 +38,11 @@ export interface ProjectState {
   tracks: TrackMeta[];
   overlays: Overlay[]; // שכבות ויזואליות (תמונה/לוגו/טקסט) מעל הווידאו
   canvas: CanvasSize; // מידות הפרויקט (קואורדינטות פרויקט, בלתי תלויות במסך)
+  captionStyle: CaptionStyle;
 }
+
+export { DEFAULT_CAPTION_STYLE, normalizeCaptionStyle };
+export type { CaptionStyle };
 
 export function defaultTracks(): TrackMeta[] {
   return [

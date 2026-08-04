@@ -12,6 +12,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { createHistory } from "@/lib/editor/history";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { defaultTracks, DEFAULT_CANVAS, TrackMeta } from "@/lib/editor/project";
+import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "@/lib/editor/captionStyle";
 
 export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; tracks: TrackMeta[]; overlays: Overlay[]; }
 type Updater<T> = T | ((prev: T) => T);
@@ -105,11 +106,16 @@ export function useEditor() {
   const cancelTransaction = useCallback(() => { pending.current = null; }, []);
 
   const setCanvas = useCallback((c: CanvasSize) => { setCanvasState(c); }, []);
+  const [captionStyle, setCaptionStyleState] = useState<CaptionStyle>({ ...DEFAULT_CAPTION_STYLE });
+  const setCaptionStyle = useCallback((u: Updater<CaptionStyle>) => {
+    setCaptionStyleState((prev) => typeof u === "function" ? (u as (p: CaptionStyle) => CaptionStyle)(prev) : u);
+  }, []);
 
-  const reset = useCallback((s: EditorSnapshot & { canvas?: CanvasSize }) => {
+  const reset = useCallback((s: EditorSnapshot & { canvas?: CanvasSize; captionStyle?: CaptionStyle }) => {
     hist.current.reset(); pending.current = null;
     apply({ clips: s.clips, subs: s.subs, tracks: s.tracks?.length ? s.tracks : defaultTracks(), overlays: s.overlays || [] });
     if (s.canvas) setCanvasState(s.canvas);
+    setCaptionStyleState(normalizeCaptionStyle(s.captionStyle));
     touch();
   }, [touch]);
 
@@ -117,9 +123,9 @@ export function useEditor() {
   const redo = useCallback(() => { const n = hist.current.redo(now()); if (n) { apply(n); touch(); } }, [touch]);
 
   return {
-    clips, subs, tracks, overlays, canvas,
+    clips, subs, tracks, overlays, canvas, captionStyle,
     setClips, setSubs, setProject, updateClip,
-    setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
+    setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
     renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     reset, undo, redo,

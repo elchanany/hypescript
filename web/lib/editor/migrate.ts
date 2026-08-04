@@ -5,7 +5,7 @@
 import { Clip } from "./model";
 import { Sub } from "./subtitlesEdl";
 import { Overlay } from "./overlay";
-import { normalizeCanvas, normalizeTracks, ProjectState, SCHEMA_VERSION } from "./project";
+import { normalizeCanvas, normalizeCaptionStyle, normalizeTracks, ProjectState, SCHEMA_VERSION } from "./project";
 
 export function migrateState(old: any): ProjectState {
   const clips = old && Array.isArray(old.clips) ? (old.clips as Clip[]) : null;
@@ -13,5 +13,6 @@ export function migrateState(old: any): ProjectState {
   const tracks = normalizeTracks(old?.tracks); // בטוח ל-null/פגום, משלים חסרות
   const overlays = old && Array.isArray(old.overlays) ? (old.overlays as Overlay[]) : [];
   const canvas = normalizeCanvas(old?.canvas);
-  return { schemaVersion: SCHEMA_VERSION, clips, subs, tracks, overlays, canvas };
+  const captionStyle = normalizeCaptionStyle(old?.captionStyle);
+  return { schemaVersion: SCHEMA_VERSION, clips, subs, tracks, overlays, canvas, captionStyle };
 }

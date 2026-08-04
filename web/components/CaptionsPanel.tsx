@@ -3,16 +3,20 @@
 import { useRef } from "react";
 import { Captions, FileDown, FileUp, Trash2, Wand2 } from "lucide-react";
 import { Sub } from "@/lib/editor/subtitlesEdl";
-import { Button, IconButton, Section } from "@/components/ui";
+import { CaptionBg, CaptionPosition, CaptionStyle } from "@/lib/editor/captionStyle";
+import { Button, IconButton, Section, Toggle } from "@/components/ui";
 
 export default function CaptionsPanel({
   script, onScript, onAnalyze, analyzing, hasMain, hasWords,
   subs, onGenerate, onImportSrt, onExportSrt, onEditSub, onDelSub,
+  captionStyle, onCaptionStyle,
 }: {
   script: string; onScript: (v: string) => void; onAnalyze: () => void; analyzing: boolean;
   hasMain: boolean; hasWords: boolean;
   subs: Sub[] | null; onGenerate: () => void; onImportSrt: (f: File | null) => void; onExportSrt: () => void;
   onEditSub: (id: string, text: string) => void; onDelSub: (id: string) => void;
+  captionStyle: CaptionStyle;
+  onCaptionStyle: (patch: Partial<CaptionStyle>) => void;
 }) {
   const srtRef = useRef<HTMLInputElement>(null);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -31,6 +35,55 @@ export default function CaptionsPanel({
               {analyzing ? "מנתח…" : hasWords ? "בנה ציר מחדש מהסקריפט" : "תמלל ובנה ציר"}
             </Button>
             <div className="cap-hint">מתמלל את הסרטון (פעם אחת) ובונה את הציר לפי הטקסט שסימנת.</div>
+          </div>
+        </Section>
+
+        <Section title="סגנון כתוביות">
+          <div className="cap-body cap-style" style={{ padding: 0 }}>
+            <label className="cap-field">
+              <span>גודל</span>
+              <input
+                type="range" min={2.5} max={9} step={0.25}
+                value={captionStyle.fontSize}
+                onChange={(e) => onCaptionStyle({ fontSize: +e.target.value })}
+              />
+              <span className="mono">{captionStyle.fontSize.toFixed(1)}</span>
+            </label>
+            <label className="cap-field">
+              <span>צבע</span>
+              <input
+                type="color"
+                value={captionStyle.color}
+                onChange={(e) => onCaptionStyle({ color: e.target.value })}
+              />
+            </label>
+            <label className="cap-field">
+              <span>מיקום</span>
+              <select
+                value={captionStyle.position}
+                onChange={(e) => onCaptionStyle({ position: e.target.value as CaptionPosition })}
+              >
+                <option value="bottom">למטה</option>
+                <option value="center">מרכז</option>
+                <option value="top">למעלה</option>
+              </select>
+            </label>
+            <label className="cap-field">
+              <span>רקע</span>
+              <select
+                value={captionStyle.bg}
+                onChange={(e) => onCaptionStyle({ bg: e.target.value as CaptionBg })}
+              >
+                <option value="soft">רך</option>
+                <option value="box">קופסה</option>
+                <option value="none">ללא</option>
+              </select>
+            </label>
+            <div className="cap-field">
+              <span>מודגש</span>
+              <Toggle checked={captionStyle.bold} onChange={(v) => onCaptionStyle({ bold: v })} />
+            </div>
+            <div className="cap-hint">הסגנון מופיע בתצוגה המקדימה ונשמר עם הפרויקט.</div>
           </div>
         </Section>
 

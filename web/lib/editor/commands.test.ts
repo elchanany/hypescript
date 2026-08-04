@@ -36,6 +36,8 @@ describe("CommandBus builtins", () => {
     expect(ids).toContain("clip.delete.ripple");
     expect(ids).toContain("clip.delete.leaveGap");
     expect(ids).toContain("overlay.addText");
+    expect(ids).toContain("clip.duplicate");
+    expect(ids).toContain("caption.setStyle");
   });
 
   it("leave-gap delete preserves timeline duration", () => {
@@ -48,6 +50,27 @@ describe("CommandBus builtins", () => {
     expect(api.clips).toHaveLength(2);
     expect(api.clips[1].sourceId).toBe("__gap__");
     expect(api.clips[1].end - api.clips[1].start).toBeCloseTo(3, 5);
+  });
+
+  it("duplicate inserts a copy after the source clip", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
+    const r = runCommand("clip.duplicate", api, { id: "a" });
+    expect(r.ok).toBe(true);
+    expect(api.clips).toHaveLength(2);
+    expect(api.clips[0].id).toBe("a");
+    expect(api.clips[1].id).not.toBe("a");
+    expect(api.clips[1].end).toBe(2);
+  });
+
+  it("caption.setStyle patches via api hooks", () => {
+    const api = fakeApi([]) as any;
+    api.style = { fontSize: 4.5, color: "#ffffff", bold: true, position: "bottom", bg: "soft" };
+    api.getCaptionStyle = () => api.style;
+    api.setCaptionStyle = (s: any) => { api.style = s; };
+    const r = runCommand("caption.setStyle", api, { position: "top", fontSize: 7 });
+    expect(r.ok).toBe(true);
+    expect(api.style.position).toBe("top");
+    expect(api.style.fontSize).toBe(7);
   });
 
   it("queryProject reports counts", () => {

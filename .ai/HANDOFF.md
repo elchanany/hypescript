@@ -1,19 +1,19 @@
 # HANDOFF
 
 ## Goal
-עורך CapCut-class + סוכן AI + ElevenLabs + Auth/Dashboard אופציונלי (Supabase).
+להמשיך לפי GAP_MAP אחרי מיזוג Dashboard (#14): תיקון URL Supabase + TX-1 (סגנון כתוביות) + AG-2 (CommandBus).
 
 ## Current State (verified)
-- `main` כולל Auth (PR #7), ElevenLabs, תיקוני זום/טיימליין.
-- באג מדווח בפרודקשן: OAuth מגיע ל־`…/rest/v1/auth/v1/authorize` → `No API key found`.
-  סיבה: `NEXT_PUBLIC_SUPABASE_URL` ב־Vercel כולל `/rest/v1`.
-- ענף תיקון: `cursor/fix-supabase-url-505e` — נרמול URL בקוד + אזהרה במדריך.
+- `main` כולל PR #14 (Dashboard polish) — ממוזג.
+- ענף פעיל: `cursor/editor-next-505e`
+- נרמול `NEXT_PUBLIC_SUPABASE_URL` (הסרת `/rest/v1`) הועתק מענף #13.
 
 ## Exact Next Steps
-1. ב־Vercel: לתקן ידנית `NEXT_PUBLIC_SUPABASE_URL` ל־`https://dbfednzsladjxjhlwfxr.supabase.co` (בלי `/rest/v1`) → Redeploy.
-2. למזג את PR של `cursor/fix-supabase-url-505e` (הגנה מפני העתקה שגויה בעתיד).
-3. לבדוק `/login` → Google → `/dashboard` ב־https://hypescript.vercel.app/login
+1. להשלים TX-1: CaptionStyle בפריוויו + פאנל כתוביות + persistence (schema v4).
+2. AG-2: מחיקת קליפ/רווח דרך CommandBus + בדיקות parity.
+3. להחליף `prompt` לשינוי שם רצועה / טקסט אוברליי ב-NameDialog.
+4. commit / push / PR; לסגור #13 כמיותר אחרי המיזוג.
 
 ## Risks
-- בלי תיקון ה־env ב־Vercel — גם אחרי מיזוג הקוד, אם ה־URL עדיין עם `/rest/v1` הקוד החדש ינרמל; אבל Redeploy נדרש.
-- Secret/service_role אסור בצד לקוח.
+- סגנון כתוביות בפרויקט ישן חייב migration עם ברירת מחדל.
+- Burn-in של סגנון בייצוא — אם לא בטווח החבילה, לפחות Preview + persist.
