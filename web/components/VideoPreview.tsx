@@ -198,7 +198,16 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
               style={inGap ? { visibility: "hidden" } : undefined} />
             {inGap && <div className="pv-gap" aria-hidden />}
             {(() => {
-              const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02);
+              const list = subs || [];
+              // progressive: prefer the latest matching cue (most words revealed)
+              let cue = null as (typeof list)[number] | null;
+              for (let i = list.length - 1; i >= 0; i--) {
+                const s = list[i];
+                if (t >= s.start - 0.01 && t < s.end - 0.001) { cue = s; break; }
+              }
+              if (!cue) {
+                cue = list.find((s) => t >= s.start - 0.02 && t <= s.end + 0.02) || null;
+              }
               if (!cue) return null;
               const st = captionStyle || DEFAULT_CAPTION_STYLE;
               return <div className="pv-caption" style={captionStyleToCss(st)}>{cue.text}</div>;

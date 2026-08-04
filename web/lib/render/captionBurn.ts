@@ -1,4 +1,4 @@
-import { Sub } from "@/lib/editor/subtitlesEdl";
+import { Sub, collapseProgressiveForBurn } from "@/lib/editor/subtitlesEdl";
 import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "@/lib/editor/captionStyle";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { RenderTarget } from "./graph";
@@ -122,20 +122,22 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 /**
- * Materialize caption cues for burn-in. Caps at 80 cues to keep the filter graph
- * tractable in ffmpeg.wasm (long lessons can produce many short cues).
+ * Materialize caption cues for burn-in.
+ * Progressive (word-by-word) cues can be hundreds — collapse to phrase blocks
+ * when over the cap so ffmpeg.wasm filter graphs stay tractable.
  */
 export async function materializeCaptions(
   subs: Sub[] | null | undefined,
   style: CaptionStyle | null | undefined,
   canvas: CanvasSize,
   target: RenderTarget,
-  maxCues = 80,
+  maxCues = 200,
 ): Promise<MaterializedOverlay[]> {
   if (!subs?.length) return [];
   const st = normalizeCaptionStyle(style || DEFAULT_CAPTION_STYLE);
   const baseLayout = captionLayoutForTarget(st, canvas, target, 1);
-  const list = subs.filter((s) => s.end > s.start && (s.text || "").trim()).slice(0, maxCues);
+  const usable = subs.filter((s) => s.end > s.start && (s.text || "").trim());
+  const list = collapseProgressiveForBurn(usable, maxCues);
   const out: MaterializedOverlay[] = [];
   // Deduplicate identical text → shared PNG bytes
   const pngCache = new Map<string, { bytes: Uint8Array; w: number; h: number }>();

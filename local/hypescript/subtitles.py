@@ -6,20 +6,28 @@
 
 טיפול RTL: קובץ UTF-8, וכל שורה מתחילה ב-U+200F (RLM) כדי שפיסוק ומספרים
 בקצוות לא יתהפכו.
+
+ברירת מחדל (mode=progressive): חשיפה מצטברת לפי קצב הדיבור — מילה נוספת
+מופיעה כשהיא נאמרת, עם שבירת ביטוי בפאוזה/פיסוק. לא בלוק מילים מראש.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
+import re
+from typing import List, Literal, Tuple
 
-from .models import KeepInterval, Word
+from .models import KeepInterval, Word, is_speech_word
 
 log = logging.getLogger("hypescript")
 
 RLM = "‏"  # Right-to-Left Mark
 
 Cue = Tuple[float, float, str]  # (start_edited, end_edited, text)
+CaptionMode = Literal["progressive", "phrase"]
+
+_SENTENCE_END = (".", "?", "!", "׃", "…")
+_PHRASE_END_RE = re.compile(r"[.?!…׃:,،;]$")
 
 
 # --------------------------------------------------------------------------- #
@@ -37,65 +45,12 @@ def map_to_edited(t: float, keeps: List[KeepInterval]) -> float:
     return elapsed
 
 
-# --------------------------------------------------------------------------- #
-# בניית cues
-# --------------------------------------------------------------------------- #
-def build_cues(
-    words: List[Word],
-    keeps: List[KeepInterval],
-    *,
-    max_chars: int = 42,
-    max_lines: int = 2,
-    max_gap: float = 0.7,
-    max_duration: float = 5.0,
-) -> List[Cue]:
-    """מקבץ מילים לכתוביות, ושובר לפי אורך תווים, פאוזות וגבולות חיתוך.
-
-    ``max_gap`` נמדד על הציר *המקורי* — פער גדול פירושו פאוזה או חיתוך,
-    ולכן פותחים כתובית חדשה (מתאים לשינוי סצנה אחרי חיתוך).
-    """
-    words = sorted(words, key=lambda w: w.start)
-    cues: List[Cue] = []
-    budget = max_chars * max_lines
-
-    cur: List[Word] = []
-    cur_chars = 0
-    prev: Word | None = None
-
-    def flush() -> None:
-        if not cur:
-            return
-        start = map_to_edited(cur[0].start, keeps)
-        end = map_to_edited(cur[-1].end, keeps)
-        text = _format_cue_text([w.text for w in cur], max_chars, max_lines)
-        cues.append((start, end, text))
-
-    for w in words:
-        if cur:
-            gap = w.start - prev.end  # type: ignore[union-attr]
-            new_chars = cur_chars + 1 + len(w.text)
-            edited_span = map_to_edited(w.end, keeps) - map_to_edited(cur[0].start, keeps)
-            if gap > max_gap or new_chars > budget or edited_span > max_duration:
-                flush()
-                cur, cur_chars = [], 0
-        cur.append(w)
-        cur_chars += len(w.text) if cur_chars == 0 else 1 + len(w.text)
-        prev = w
-        # שבירה מועדפת בסוף משפט (. ? !) כשכבר יש מספיק תוכן — קריא יותר.
-        if _ends_sentence(w.text) and cur_chars >= max_chars // 2:
-            flush()
-            cur, cur_chars = [], 0
-    flush()
-
-    log.info("נוצרו %d כתוביות", len(cues))
-    return cues
-
-
-_SENTENCE_END = (".", "?", "!", "׃", "…")
-
-
 def _ends_sentence(text: str) -> bool:
     return text.rstrip().endswith(_SENTENCE_END)
+
+
+def _ends_phrase(text: str) -> bool:
+    return bool(_PHRASE_END_RE.search(text.rstrip()))
 
 
 def _format_cue_text(word_texts: List[str], max_chars: int, max_lines: int) -> str:
@@ -112,6 +67,128 @@ def _format_cue_text(word_texts: List[str], max_chars: int, max_lines: int) -> s
     if cur:
         lines.append(cur)
     return "\n".join(RLM + ln for ln in lines)
+
+
+def _to_edited(words: List[Word], keeps: List[KeepInterval]) -> List[Tuple[str, float, float]]:
+    out: List[Tuple[str, float, float]] = []
+    for w in sorted((x for x in words if is_speech_word(x)), key=lambda x: x.start):
+        out.append((w.text, map_to_edited(w.start, keeps), map_to_edited(w.end, keeps)))
+    return out
+
+
+def _split_phrases(
+    words: List[Tuple[str, float, float]],
+    max_chars: int,
+    max_gap: float,
+) -> List[List[Tuple[str, float, float]]]:
+    phrases: List[List[Tuple[str, float, float]]] = []
+    cur: List[Tuple[str, float, float]] = []
+    chars = 0
+    for text, start, end in words:
+        gap = (start - cur[-1][2]) if cur else 0.0
+        over = bool(cur) and chars + 1 + len(text) > max_chars
+        if cur and (gap > max_gap or _ends_phrase(cur[-1][0]) or over):
+            phrases.append(cur)
+            cur, chars = [], 0
+        cur.append((text, start, end))
+        chars += (1 if chars else 0) + len(text)
+    if cur:
+        phrases.append(cur)
+    return phrases
+
+
+def _seal(cues: List[Cue]) -> List[Cue]:
+    if len(cues) < 2:
+        return cues
+    out = [(s, e, t) for s, e, t in cues]
+    for i in range(len(out) - 1):
+        s, e, t = out[i]
+        ns = out[i + 1][0]
+        gap = ns - e
+        if gap < 0 or (0 < gap < 0.35):
+            e = ns
+        if e <= s:
+            e = s + 0.12
+        out[i] = (s, e, t)
+    s, e, t = out[-1]
+    if e <= s:
+        out[-1] = (s, s + 0.25, t)
+    return out
+
+
+def _progressive(phrases: List[List[Tuple[str, float, float]]], max_chars: int, max_lines: int) -> List[Cue]:
+    cues: List[Cue] = []
+    for phrase in phrases:
+        for i, (text, start, end) in enumerate(phrase):
+            if i + 1 < len(phrase):
+                e = max(start + 0.08, phrase[i + 1][1])
+            else:
+                e = max(start + 0.25, end + 0.12)
+            texts = [w[0] for w in phrase[: i + 1]]
+            cues.append((start, e, _format_cue_text(texts, max_chars, max_lines)))
+    return _seal(cues)
+
+
+def _phrase_blocks(phrases: List[List[Tuple[str, float, float]]], max_chars: int, max_lines: int) -> List[Cue]:
+    cues: List[Cue] = []
+    for phrase in phrases:
+        start = phrase[0][1]
+        end = max(start + 0.2, phrase[-1][2] + 0.08)
+        texts = [w[0] for w in phrase]
+        cues.append((start, end, _format_cue_text(texts, max_chars, max_lines)))
+    return _seal(cues)
+
+
+# --------------------------------------------------------------------------- #
+# בניית cues
+# --------------------------------------------------------------------------- #
+def build_cues(
+    words: List[Word],
+    keeps: List[KeepInterval],
+    *,
+    max_chars: int = 28,
+    max_lines: int = 2,
+    max_gap: float = 0.45,
+    max_duration: float = 5.0,
+    mode: CaptionMode = "progressive",
+) -> List[Cue]:
+    """מקבץ מילים לכתוביות לפי קצב דיבור.
+
+    ``mode="progressive"`` (ברירת מחדל): מילה נוספת מופיעה כשהיא נאמרת.
+    ``mode="phrase"``: בלוק שלם לכל ביטוי (פאוזה/פיסוק/תקציב).
+    ``max_gap`` נמדד על הציר *הערוך*.
+    """
+    edited = _to_edited(words, keeps)
+    if not edited:
+        return []
+
+    budget = max_chars * max_lines
+    phrases = _split_phrases(edited, budget, max_gap)
+
+    if mode == "phrase":
+        # פיצול נוסף לפי משך / סוף משפט (תאימות להתנהגות הישנה)
+        refined: List[List[Tuple[str, float, float]]] = []
+        for phrase in phrases:
+            cur: List[Tuple[str, float, float]] = []
+            chars = 0
+            for text, start, end in phrase:
+                if cur and end - cur[0][1] > max_duration:
+                    refined.append(cur)
+                    cur, chars = [], 0
+                cur.append((text, start, end))
+                chars += (1 if chars else 0) + len(text)
+                if _ends_sentence(text) and chars >= max_chars // 2:
+                    refined.append(cur)
+                    cur, chars = [], 0
+            if cur:
+                refined.append(cur)
+        phrases = refined
+        cues = _phrase_blocks(phrases, max_chars, max_lines)
+    else:
+        cues = _progressive(phrases, max_chars, max_lines)
+
+    log.info("נוצרו %d כתוביות (mode=%s)", len(cues), mode)
+    return cues
 
 
 # --------------------------------------------------------------------------- #

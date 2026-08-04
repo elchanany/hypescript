@@ -1,18 +1,22 @@
 # HANDOFF
 
 ## Goal
-המשך ROADMAP/GAP — אחרי caption burn-in: chunking לתמלול ארוך ב-web.
+תיקון כתוביות חתוכות/משובשות + סנכרון לקצב דיבור + אכיפת ElevenLabs כשמבקשים.
 
 ## Current State (verified)
-- `main` כולל צריבת כתוביות (#19).
-- ענף: `cursor/transcribe-chunking-505e`
-  - פיצול אודיו ל-20 דק׳ (כמו local), תמלול לכל חלק, איחוד מילים עם offset
-  - משותף לעורך + כלי הסוכן `transcribe_video`
-- בדיקות + build עברו.
+- ענף: `cursor/fix-captions-speech-sync-c816`
+- ליבת כתוביות (web+local): ברירת מחדל **progressive** — מילה מצטברת כשהיא נאמרת; שבירת ביטוי בפאוזה/פיסוק.
+- `edlToCuesWithScript`: תיקון ASR מול סקריפט; תזמון 1:1 כשספירת מילים תואמת; סינון `audio_event`.
+- סוכן: מטמון תמלול שומר provider/model; בקשת `provider=elevenlabs` לא מחזירה מטמון Groq; `ctx.script` אוטומטי ל-`generate_subtitles`.
+- UI: כפתור «צור» משתמש בסקריפט אם קיים; Chat מעביר script ל-ctx.
+- צריבה: קיפול progressive→phrase כשיש יותר מ-200 cues.
+- בדיקות כתוביות + `web build` עברו.
 
 ## Exact Next Steps
-1. למזג PR chunking (Deploy אוטומטי ב-Vercel).
-2. הבא: אינטרו/אאוטרו, תצוגה מקדימה לפני הורדה, או AG-4.
+1. למזג PR אחרי review.
+2. בפריסה: לוודא `ELEVENLABS_API_KEY` ב-Vercel אם רוצים Scribe.
+3. אופציונלי: צריבת ASS/SRT במקום PNG לשיעורים ארוכים מאוד.
 
 ## Risks
-- פיצול בגבול 20 דק׳ עלול לחתוך מילה באמצע — מקובל כמו ב-local.
+- צריבת PNG עדיין מוגבלת (~200 אחרי קיפול) — תצוגה מקדימה/SRT נשארים progressive מלא.
+- מטמון תמלול ישן (מערך בלי provider) נדחה כשמבקשים ספק ספציפי — יתמלל מחדש (עלות).

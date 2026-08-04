@@ -28,6 +28,10 @@ export interface AgentContext {
   duration: number; // משך המקור הראשי
   words: Word[] | null; // התמלול של המקור הראשי (תאימות)
   transcripts: Record<string, Word[]>; // תמלול לכל מקור לפי id (מולטי-וידאו)
+  /** מטא-דאטה של תמלול שמור (ספק/מודל) — כדי לא לערבב Groq עם בקשת ElevenLabs */
+  transcriptMeta?: Record<string, { provider: string; model: string }>;
+  /** סקריפט נקי מהפאנל / keep_by_script — מקור אמת לכתוביות */
+  script?: string;
   clips: Clip[] | null;
   subs: Sub[] | null;
   overlays: Overlay[];
@@ -90,9 +94,41 @@ function download(blob: Blob, name: string) {
 }
 
 // --- אחסון תמלול לפי טביעת-אצבע (לא מתמללים שוב אותו סרטון) ---
+type TxCache = { words: Word[]; provider: string; model: string; v: 2 };
+
 function txKey(f: File) { return `hs_tx_${f.name}_${f.size}_${(f as any).lastModified || 0}`; }
-function txRead(k: string): Word[] | null { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } }
-function txWrite(k: string, w: Word[]) { try { localStorage.setItem(k, JSON.stringify(w)); } catch { /* quota */ } }
+
+function txRead(k: string): TxCache | null {
+  try {
+    const r = localStorage.getItem(k);
+    if (!r) return null;
+    const parsed = JSON.parse(r);
+    // פורמט ישן: מערך מילים בלבד — בלי ספק, לא סומכים כשמבקשים ספק ספציפי
+    if (Array.isArray(parsed)) return { words: parsed, provider: "unknown", model: "", v: 2 };
+    if (parsed?.words && Array.isArray(parsed.words)) {
+      return {
+        words: parsed.words,
+        provider: String(parsed.provider || "unknown"),
+        model: String(parsed.model || ""),
+        v: 2,
+      };
+    }
+    return null;
+  } catch { return null; }
+}
+
+function txWrite(k: string, words: Word[], provider: string, model: string) {
+  try {
+    const payload: TxCache = { words, provider, model, v: 2 };
+    localStorage.setItem(k, JSON.stringify(payload));
+  } catch { /* quota */ }
+}
+
+function providerMatches(cached: string, wanted: string): boolean {
+  if (!wanted || wanted === "auto") return true;
+  if (!cached || cached === "unknown") return false;
+  return cached === wanted;
+}
 
 async function fetchTranscribeConfigured(): Promise<{ elevenlabs: boolean; groq: boolean }> {
   try {
@@ -128,6 +164,12 @@ async function resolveSttChoice(
     prefRaw === "elevenlabs" || prefRaw === "groq" || prefRaw === "auto" ? prefRaw : "auto";
   const provider = resolveTranscribeProvider(pref, configured);
   if (!provider) {
+    if (pref === "elevenlabs") {
+      throw new Error("ElevenLabs לא מוגדר. הוסף ELEVENLABS_API_KEY ב-Vercel או ב-web/.env.local.");
+    }
+    if (pref === "groq") {
+      throw new Error("Groq לא מוגדר. הוסף GROQ_API_KEY ב-Vercel או ב-web/.env.local.");
+    }
     throw new Error(
       "אין ספק תמלול מוגדר. הוסף ELEVENLABS_API_KEY ו/או GROQ_API_KEY ב-Vercel או ב-web/.env.local.",
     );
@@ -192,25 +234,36 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
+
+      const { provider, model } = await resolveSttChoice(a.provider, a.model);
+      const explicitProvider = String(a.provider || "").toLowerCase();
+      const wantsSpecific = explicitProvider === "elevenlabs" || explicitProvider === "groq";
+
+      // אם המשתמש ביקש ספק ספציפי — לא מחזירים תמלול ישן מספק אחר
       if (!a.force && ctx.transcripts[asset.id]) {
-        const n = ctx.transcripts[asset.id].filter(isSpeechWord).length;
-        return `"${asset.name}" כבר תומלל (${n} מילים). להחלפה: force=true.`;
+        const meta = ctx.transcriptMeta?.[asset.id];
+        if (!wantsSpecific || (meta && providerMatches(meta.provider, provider))) {
+          const n = ctx.transcripts[asset.id].filter(isSpeechWord).length;
+          const who = meta ? ` (${meta.provider}/${meta.model || "?"})` : "";
+          return `"${asset.name}" כבר תומלל${who}: ${n} מילים. להחלפה/ספק אחר: force=true או provider=...`;
+        }
       }
       const isMain = asset.id === mainVideo(ctx)?.id;
       const key = txKey(asset.file);
       if (!a.force) {
         const cached = txRead(key);
-        if (cached) {
-          ctx.transcripts[asset.id] = cached;
-          if (isMain) { ctx.words = cached; if (!ctx.duration) ctx.duration = asset.duration; }
-          return `נטען תמלול שמור ל-"${asset.name}" (${cached.filter(isSpeechWord).length} מילים).`;
+        if (cached && (!wantsSpecific || providerMatches(cached.provider, provider))) {
+          ctx.transcripts[asset.id] = cached.words;
+          if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
+          ctx.transcriptMeta[asset.id] = { provider: cached.provider, model: cached.model };
+          if (isMain) { ctx.words = cached.words; if (!ctx.duration) ctx.duration = asset.duration; }
+          return `נטען תמלול שמור ל-"${asset.name}" (${cached.provider}/${cached.model || "?"}, ${cached.words.filter(isSpeechWord).length} מילים).`;
         }
       }
       try { await import("@/lib/ffmpeg"); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
 
-      const { provider, model } = await resolveSttChoice(a.provider, a.model);
-      report(`מתמלל ${asset.name} (${provider} / ${model})…`);
+      report(`מתמלל ${asset.name} ב-${provider} / ${model}…`);
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
       try { ({ transcribeMediaFile } = await import("@/lib/transcribe/client")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב."); }
@@ -231,8 +284,10 @@ export const TOOLS: ToolMeta[] = [
         onPhase: (msg) => report(msg),
       });
       ctx.transcripts[asset.id] = words;
+      if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
+      ctx.transcriptMeta[asset.id] = { provider, model };
       if (isMain) { ctx.words = words; if (!ctx.duration) ctx.duration = asset.duration; }
-      txWrite(key, words);
+      txWrite(key, words, provider, model);
       const speech = words.filter(isSpeechWord).length;
       const events = words.filter((w) => w.type === "audio_event").length;
       const speakers = new Set(words.map((w) => w.speakerId).filter(Boolean));
@@ -390,7 +445,9 @@ export const TOOLS: ToolMeta[] = [
       const words = transcriptOf(ctx, asset);
       if (!words) return `צריך לתמלל קודם את "${asset.name}" (transcribe_video source="${asset.name}").`;
       report(`מיישר סקריפט ל-"${asset.name}"…`);
-      const clips = scriptToClips(words, String(a.script || ""), asset.id);
+      const scriptText = String(a.script || "").trim();
+      if (scriptText) ctx.script = scriptText;
+      const clips = scriptToClips(words, scriptText, asset.id);
       if (!clips.length) return `לא נמצאו התאמות ב-"${asset.name}".`;
       ctx.clips = a.append ? [...(ctx.clips || []), ...clips] : clips;
       return `${a.append ? "נוספו" : "נבנו"} קליפים מ-"${asset.name}". ${clipsSummary(ctx.clips)}`;
@@ -697,12 +754,16 @@ export const TOOLS: ToolMeta[] = [
     name: "generate_subtitles", label: "יצירת כתוביות", color: "#8b5cf6", icon: "💬",
     schema: {
       name: "generate_subtitles",
-      description: "מייצר כתוביות על הציר. אם המשתמש נתן טקסט נקי — חובה להעביר אותו ב-script כדי לתקן שיבושי ASR (לא להשאיר מילים משובשות כמו 'טיפרת'/'קשר'). בלי script משתמש בתמלול הגולמי.",
+      description:
+        "מייצר כתוביות מסונכרנות לקצב הדיבור (חשיפה מצטברת מילה-מילה בתוך ביטוי; שבירה בפאוזה). " +
+        "אם המשתמש נתן טקסט נקי — חובה להעביר אותו ב-script (או שהוא יימשך מ-ctx.script אחרי keep_by_script). " +
+        "בלי script משתמש בתמלול הגולמי (עלול לכלול שיבושי ASR).",
       parameters: {
         type: "object",
         properties: {
-          max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" },
-          script: { type: "string", description: "טקסט נקי מהמשתמש — מומלץ מאוד; מתקן כתיב ומחליף זבל ASR" },
+          max_chars: { type: "number", description: "מקס תווים בביטוי לפני שבירה (ברירת מחדל 28)" },
+          script: { type: "string", description: "טקסט נקי מהמשתמש — חובה כשיש; מתקן כתיב ומחליף זבל ASR" },
+          mode: { type: "string", description: "progressive (ברירת מחדל, לפי קצב דיבור) | phrase (בלוק שלם לביטוי)" },
         },
       },
     },
@@ -712,14 +773,17 @@ export const TOOLS: ToolMeta[] = [
       const clips = ctx.clips?.length ? ctx.clips : main ? [{ id: uid(), sourceId: main.id, start: 0, end: ctx.duration || main.duration }] : [];
       if (!clips.length) return "אין תוכן ליצירת כתוביות.";
       const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === main?.id ? ctx.words : null);
-      const max = (a.max_chars | 0) || 42;
-      const script = String(a.script || "").trim();
+      const max = (a.max_chars | 0) || 28;
+      const script = String(a.script || ctx.script || "").trim();
+      if (script) ctx.script = script;
+      const modeRaw = String(a.mode || "progressive").toLowerCase();
+      const mode = modeRaw === "phrase" ? "phrase" as const : "progressive" as const;
       ctx.subs = script
-        ? edlToSubsWithScript(clips, getWords, script, max)
-        : edlToSubs(clips, getWords, max);
+        ? edlToSubsWithScript(clips, getWords, script, max, { mode })
+        : edlToSubs(clips, getWords, max, { mode });
       return script
-        ? `נוצרו ${ctx.subs.length} כתוביות לפי הסקריפט הנקי (תזמון מהתמלול, טקסט מתוקן). בדוק list_subtitles ותקן אם צריך.`
-        : `נוצרו ${ctx.subs.length} כתוביות מהתמלול הגולמי. אם יש טקסט נקי מהמשתמש — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
+        ? `נוצרו ${ctx.subs.length} כתוביות (${mode}) לפי הסקריפט הנקי — תזמון מהתמלול, טקסט מתוקן, חשיפה לפי קצב דיבור. בדוק list_subtitles.`
+        : `נוצרו ${ctx.subs.length} כתוביות (${mode}) מהתמלול הגולמי. אם יש טקסט נקי — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
     },
   },
   {
@@ -939,6 +1003,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 ═══ תמלול וקריינות (ElevenLabs / Groq) ═══
 - ספקי תמלול: elevenlabs (Scribe — מומלץ לדיוק בעברית, חותמות-מילה, צחוק/אירועי שמע, הפרדת דוברים) או groq (Whisper).
 - ברירת מחדל: לפי הגדרות (auto מעדיף ElevenLabs אם המפתח קיים). המשתמש יכול לבקש מודל ספציפי — העבר model= (למשל scribe_v2 / scribe_v1 / whisper-large-v3) או provider=.
+- אם המשתמש מבקש במפורש ElevenLabs / אליוון / Scribe — חובה transcribe_video עם provider="elevenlabs". אם כבר יש תמלול מספק אחר — force=true. אסור להסתפק במטמון Groq כשהמשתמש ביקש ElevenLabs.
 - list_stt_models: מה זמין ומה ברירת המחדל. אל תקבע מודל שלא קיים.
 - לתמלול תורני: אפשר keyterms עם שמות/מונחים. אל תפעיל no_verbatim כשרוצים לשמור צחוק/נשימות כאירועים.
 - get_transcript מציג גם אירועי שמע אם יש (מ-ElevenLabs).
@@ -951,12 +1016,13 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה.
 4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → generate_subtitles(script=אותו טקסט נקי) → list_subtitles ובדיקה → render בסוף.
 5. תמלול ASR משובש לעיתים (שמות, מילים נדירות). הטקסט שהמשתמש כתב הוא מקור האמת לכתוביות ולחיתוך. לעולם אל תשאיר בכתוביות מילים מוזרות/משובשות מה-ASR אם יש סקריפט נקי — העבר script ל-generate_subtitles.
-6. אחרי get_transcript / list_subtitles: אם אתה רואה שיבושי כתיב או מילים חסרות-היגיון מול הסקריפט — תקן (generate_subtitles עם script, או edit_subtitle). אל תתעלם.
+6. אחרי get_transcript / list_subtitles: אם אתה רואה שיבושי כתיב או מילים חסרות-היגיון מול הסקריפט — תקן (generate_subtitles עם script). אל תתעלם ואל תמציא כתוביות ידנית במקום generate_subtitles+script.
 7. שגיאת "Loading chunk … failed": בקש מהמשתמש לרענן את הדף (Ctrl+Shift+R). אל תנסה שוב ושוב בלי רענון.
 8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה. תכנן פעם אחת ובצע.
 9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק/לא רלוונטי — תקן עם keep_source_range או trim_clip / delete_clips, לא עם עשרות מחיקות.
 10. חסר נכס (תמונה/סאונד שהמשתמש אמר שיביא אחר כך) — ask_user או ציין שתחכה; אל תמציא ואל תיתקע.
 11. קריינות/תמלול בתשלום: אל תריץ generate_narration או תמלול חוזר מיותר בלי צורך. אם חסר מפתח — הסבר להגדיר ELEVENLABS_API_KEY בהגדרות/Vercel.
+12. כתוביות: generate_subtitles חושף מילים לפי קצב הדיבור. אל תערוך עשרות כתוביות ידנית לתזמון — הרץ מחדש עם script. אסור להשאיר מילים חתוכות/משובשות.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -964,7 +1030,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
 - delete_clips / clear_clips: מחיקות המוניות.
 - trim_clip: אפשר רק start או רק end.
-- generate_subtitles עם script=טקסט נקי מהמשתמש.
+- generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
 - render_video רק בסוף / כשמבקשים.

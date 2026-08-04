@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימת bootstrap פתוחה — המערכת המשותפת זמינה על `main`.
+תיקון כתוביות (progressive + script + ElevenLabs enforcement)
 
 ## Branch
-`main`
+`cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-טיפ `main` אחרי merge של PR #9 (cross-agent continuity bootstrap)
+(pending push)
 
 ## Status
-idle — מוכן לעבודת מוצר הבאה
+implementation complete — tests+build green; awaiting merge
 
 ## Exact continuation point
-אימות בפריסת Vercel מ-`main`; הרחבת CommandBus/AG-4 לפי `docs/GAP_MAP.md`; בלי Auth/Supabase בלי אישור.
+Merge PR; verify on Vercel that ElevenLabs key is set; optional ASS burn for long lessons.

@@ -1,18 +1,35 @@
 // ייצור כתוביות SRT מ-EDL (על ציר-הזמן הסופי), בלי צריבה לסרטון — כדי להכניס
 // ל-CapCut ולשנות גופן/מיקום שם. תומך בסדר/חזרות של הקליפים.
+//
+// ברירת מחדל: חשיפה מצטברת לפי קצב הדיבור (מילה נוספת כשהיא נאמרת),
+// עם שבירת ביטוי בפאוזה/פיסוק — לא בלוק אחד של כל המילים מראש.
 
-import { Word } from "@/lib/models";
+import { isSpeechWord, Word } from "@/lib/models";
 import { getOpcodes, normalizeHebrew } from "@/lib/align";
 import { Clip, assembledStart, clipDur, uid } from "./model";
 import { buildSrt, Cue } from "@/lib/subtitles";
 
 const RLM = "‏";
+const PHRASE_END = /[.?!…׃:,،;]$/;
 
 // כתובית הניתנת לעריכה (על ציר-הזמן הסופי).
 export interface Sub { id: string; start: number; end: number; text: string; }
 
-export function edlToSubs(clips: Clip[], getWords: WordsBySource, maxChars = 42): Sub[] {
-  return edlToCues(clips, getWords, maxChars).map((c) => ({ id: uid("s"), ...c }));
+export type CaptionMode = "progressive" | "phrase";
+
+export interface CaptionBuildOpts {
+  maxChars?: number;
+  /** progressive = מילה מצטברת לפי דיבור (ברירת מחדל); phrase = בלוק שלם לביטוי */
+  mode?: CaptionMode;
+  /** פאוזה (שנ') ששוברת ביטוי חדש */
+  maxGap?: number;
+}
+
+const DEFAULT_MAX_CHARS = 28;
+const DEFAULT_MAX_GAP = 0.45;
+
+export function edlToSubs(clips: Clip[], getWords: WordsBySource, maxChars = DEFAULT_MAX_CHARS, opts?: CaptionBuildOpts): Sub[] {
+  return edlToCues(clips, getWords, maxChars, opts).map((c) => ({ id: uid("s"), ...c }));
 }
 
 /** כתוביות עם טקסט נקי מסקריפט המשתמש + תזמונים מהתמלול (מתקן שיבושי ASR). */
@@ -20,9 +37,10 @@ export function edlToSubsWithScript(
   clips: Clip[],
   getWords: WordsBySource,
   scriptText: string,
-  maxChars = 42,
+  maxChars = DEFAULT_MAX_CHARS,
+  opts?: CaptionBuildOpts,
 ): Sub[] {
-  return edlToCuesWithScript(clips, getWords, scriptText, maxChars).map((c) => ({ id: uid("s"), ...c }));
+  return edlToCuesWithScript(clips, getWords, scriptText, maxChars, opts).map((c) => ({ id: uid("s"), ...c }));
 }
 
 export function subsToSrt(subs: Sub[]): string {
@@ -53,40 +71,22 @@ export function parseSrt(text: string): Sub[] {
 // מהתמלול של *המקור שלו*, לא מתמלול גלובלי אחד.
 export type WordsBySource = (sourceId: string) => Word[] | null | undefined;
 
-export function edlToCues(clips: Clip[], getWords: WordsBySource, maxChars = 42): Cue[] {
-  const cues: Cue[] = [];
-  clips.forEach((c, ci) => {
-    const base = assembledStart(clips, ci);
-    const ws = (getWords(c.sourceId) || [])
-      .filter((w) => w.start >= c.start - 0.05 && w.end <= c.end + 0.05)
-      .sort((a, b) => a.start - b.start);
-    let cur: Word[] = [];
-    let chars = 0;
-    const flush = () => {
-      if (!cur.length) return;
-      const s = base + (cur[0].start - c.start);
-      const e = base + (cur[cur.length - 1].end - c.start);
-      cues.push({ start: s, end: e, text: RLM + cur.map((w) => w.text).join(" ") });
-      cur = [];
-      chars = 0;
-    };
-    for (const w of ws) {
-      if (cur.length && (chars + w.text.length > maxChars || w.start - cur[cur.length - 1].end > 0.6)) flush();
-      cur.push(w);
-      chars += w.text.length + 1;
-    }
-    flush();
-  });
-  return cues;
+function endsPhrase(text: string | undefined): boolean {
+  if (!text) return false;
+  return PHRASE_END.test(text.trimEnd());
 }
 
 type TimedTok = { text: string; start: number; end: number };
+
+function speechOnly(words: Word[]): Word[] {
+  return words.filter(isSpeechWord);
+}
 
 function assembledWords(clips: Clip[], getWords: WordsBySource): TimedTok[] {
   const out: TimedTok[] = [];
   clips.forEach((c, ci) => {
     const base = assembledStart(clips, ci);
-    const ws = (getWords(c.sourceId) || [])
+    const ws = speechOnly(getWords(c.sourceId) || [])
       .filter((w) => w.start >= c.start - 0.05 && w.end <= c.end + 0.05)
       .sort((a, b) => a.start - b.start);
     for (const w of ws) {
@@ -100,27 +100,90 @@ function assembledWords(clips: Clip[], getWords: WordsBySource): TimedTok[] {
   return out;
 }
 
-function chunkTimed(words: TimedTok[], maxChars: number): Cue[] {
-  const cues: Cue[] = [];
+/** מפצל לביטויים לפי פאוזה / פיסוק / תקציב תווים. */
+export function splitPhrases(words: TimedTok[], maxChars: number, maxGap: number): TimedTok[][] {
+  const phrases: TimedTok[][] = [];
   let cur: TimedTok[] = [];
   let chars = 0;
-  const flush = () => {
-    if (!cur.length) return;
-    cues.push({
-      start: cur[0].start,
-      end: Math.max(cur[0].start + 0.2, cur[cur.length - 1].end),
-      text: RLM + cur.map((w) => w.text).join(" "),
-    });
-    cur = [];
-    chars = 0;
-  };
   for (const w of words) {
-    if (cur.length && (chars + w.text.length > maxChars || w.start - cur[cur.length - 1].end > 0.6)) flush();
+    const gap = cur.length ? w.start - cur[cur.length - 1].end : 0;
+    const overBudget = cur.length > 0 && chars + 1 + w.text.length > maxChars;
+    if (cur.length && (gap > maxGap || endsPhrase(cur[cur.length - 1].text) || overBudget)) {
+      phrases.push(cur);
+      cur = [];
+      chars = 0;
+    }
     cur.push(w);
-    chars += w.text.length + 1;
+    chars += (chars ? 1 : 0) + w.text.length;
   }
-  flush();
-  return cues;
+  if (cur.length) phrases.push(cur);
+  return phrases;
+}
+
+function sealCueEdges(cues: Cue[]): Cue[] {
+  if (cues.length < 2) return cues;
+  const out = cues.map((c) => ({ ...c }));
+  for (let i = 0; i < out.length - 1; i++) {
+    const gap = out[i + 1].start - out[i].end;
+    if (gap < 0) {
+      // חפיפה — קוצרים את הקודם
+      out[i].end = out[i + 1].start;
+    } else if (gap > 0 && gap < 0.35) {
+      // פער קטן — מאריכים כדי שמילים לא "יברחו" בין כתוביות
+      out[i].end = out[i + 1].start;
+    }
+    if (out[i].end <= out[i].start) out[i].end = out[i].start + 0.12;
+  }
+  const last = out[out.length - 1];
+  if (last.end <= last.start) last.end = last.start + 0.25;
+  return out;
+}
+
+/**
+ * חשיפה מצטברת לפי קצב דיבור: בתוך ביטוי מופיעה מילה נוספת כשהיא נאמרת.
+ * בין ביטויים (פאוזה/פיסוק) מתחילים מחדש.
+ */
+export function progressiveCues(words: TimedTok[], maxChars: number, maxGap: number): Cue[] {
+  const phrases = splitPhrases(words, maxChars, maxGap);
+  const cues: Cue[] = [];
+  for (const phrase of phrases) {
+    for (let i = 0; i < phrase.length; i++) {
+      const start = phrase[i].start;
+      const end = i + 1 < phrase.length
+        ? Math.max(start + 0.08, phrase[i + 1].start)
+        : Math.max(start + 0.25, phrase[i].end + 0.12);
+      cues.push({
+        start,
+        end,
+        text: RLM + phrase.slice(0, i + 1).map((w) => w.text).join(" "),
+      });
+    }
+  }
+  return sealCueEdges(cues);
+}
+
+/** בלוק שלם לכל ביטוי (ללא חשיפה מילה-מילה). */
+export function phraseCues(words: TimedTok[], maxChars: number, maxGap: number): Cue[] {
+  const phrases = splitPhrases(words, maxChars, maxGap);
+  const cues: Cue[] = phrases.map((p) => ({
+    start: p[0].start,
+    end: Math.max(p[0].start + 0.2, p[p.length - 1].end + 0.08),
+    text: RLM + p.map((w) => w.text).join(" "),
+  }));
+  return sealCueEdges(cues);
+}
+
+function timedToCues(words: TimedTok[], maxChars: number, opts?: CaptionBuildOpts): Cue[] {
+  if (!words.length) return [];
+  const gap = opts?.maxGap ?? DEFAULT_MAX_GAP;
+  const mode = opts?.mode ?? "progressive";
+  return mode === "phrase"
+    ? phraseCues(words, maxChars, gap)
+    : progressiveCues(words, maxChars, gap);
+}
+
+export function edlToCues(clips: Clip[], getWords: WordsBySource, maxChars = DEFAULT_MAX_CHARS, opts?: CaptionBuildOpts): Cue[] {
+  return timedToCues(assembledWords(clips, getWords), maxChars, opts);
 }
 
 /**
@@ -131,12 +194,13 @@ export function edlToCuesWithScript(
   clips: Clip[],
   getWords: WordsBySource,
   scriptText: string,
-  maxChars = 42,
+  maxChars = DEFAULT_MAX_CHARS,
+  opts?: CaptionBuildOpts,
 ): Cue[] {
   const asr = assembledWords(clips, getWords);
   const scriptToks = scriptText.split(/\s+/).map((t) => t.trim()).filter(Boolean)
     .map((raw) => ({ raw, norm: normalizeHebrew(raw) })).filter((t) => t.norm);
-  if (!asr.length || !scriptToks.length) return edlToCues(clips, getWords, maxChars);
+  if (!asr.length || !scriptToks.length) return edlToCues(clips, getWords, maxChars, opts);
 
   const asrNorm = asr.map((w) => normalizeHebrew(w.text));
   const scriptNorm = scriptToks.map((t) => t.norm);
@@ -150,29 +214,82 @@ export function edlToCuesWithScript(
       if (!scriptSlice.length) continue; // מחיקת זבל ASR שלא בסקריפט
       if (!asrSlice.length) {
         const t = polished.length ? polished[polished.length - 1].end : 0;
-        for (const s of scriptSlice) polished.push({ text: s.raw, start: t, end: t + 0.12 });
+        for (const s of scriptSlice) polished.push({ text: s.raw, start: t, end: t + 0.18 });
         continue;
       }
       const t0 = asrSlice[0].start;
       const t1 = Math.max(t0 + 0.05, asrSlice[asrSlice.length - 1].end);
       const n = scriptSlice.length;
       for (let i = 0; i < n; i++) {
-        const s = t0 + ((t1 - t0) * i) / n;
-        const e = t0 + ((t1 - t0) * (i + 1)) / n;
-        polished.push({ text: scriptSlice[i].raw, start: s, end: Math.max(s + 0.05, e) });
+        // פיזור אחיד רק כשיש אי-התאמת ספירה; אחרת שומרים זמן ASR 1:1
+        if (n === asrSlice.length) {
+          polished.push({
+            text: scriptSlice[i].raw,
+            start: asrSlice[i].start,
+            end: Math.max(asrSlice[i].start + 0.05, asrSlice[i].end),
+          });
+        } else {
+          const s = t0 + ((t1 - t0) * i) / n;
+          const e = t0 + ((t1 - t0) * (i + 1)) / n;
+          polished.push({ text: scriptSlice[i].raw, start: s, end: Math.max(s + 0.05, e) });
+        }
       }
     } else if (op.tag === "insert") {
       const scriptSlice = scriptToks.slice(op.b1, op.b2);
-      const t = polished.length ? polished[polished.length - 1].end : (asr[Math.min(op.a1, asr.length - 1)]?.start ?? 0);
-      for (const s of scriptSlice) polished.push({ text: s.raw, start: t, end: t + 0.12 });
+      const anchor = polished.length
+        ? polished[polished.length - 1].end
+        : (asr[Math.min(op.a1, asr.length - 1)]?.start ?? 0);
+      // מחלקים את משך ה"חור" הבא אם אפשר, אחרת 0.18 שנ' למילה
+      const nextAsr = asr[Math.min(op.a2, asr.length - 1)];
+      const slot = nextAsr && nextAsr.start > anchor
+        ? Math.max(0.12, (nextAsr.start - anchor) / Math.max(1, scriptSlice.length))
+        : 0.18;
+      let t = anchor;
+      for (const s of scriptSlice) {
+        polished.push({ text: s.raw, start: t, end: t + slot });
+        t += slot;
+      }
     }
     // delete = מילות ASR עודפות — נזרקות
   }
-  return polished.length ? chunkTimed(polished, maxChars) : edlToCues(clips, getWords, maxChars);
+  return polished.length ? timedToCues(polished, maxChars, opts) : edlToCues(clips, getWords, maxChars, opts);
 }
 
-export function edlToSrt(clips: Clip[], getWords: WordsBySource, maxChars = 42): string {
-  return buildSrt(edlToCues(clips, getWords, maxChars));
+export function edlToSrt(clips: Clip[], getWords: WordsBySource, maxChars = DEFAULT_MAX_CHARS, opts?: CaptionBuildOpts): string {
+  return buildSrt(edlToCues(clips, getWords, maxChars, opts));
+}
+
+/**
+ * לצריבת PNG: אם יש יותר מדי cues מצטברים — מקפלים לביטוי סופי (הטקסט המלא של כל שרשרת).
+ * התצוגה המקדימה ו-SRT נשארים progressive.
+ */
+export function collapseProgressiveForBurn(subs: Sub[], maxCues = 200): Sub[] {
+  if (subs.length <= maxCues) return subs;
+  const strip = (t: string) => t.replace(/\u200F/g, "").trim();
+  const out: Sub[] = [];
+  let i = 0;
+  while (i < subs.length) {
+    let j = i;
+    while (
+      j + 1 < subs.length &&
+      strip(subs[j + 1].text).startsWith(strip(subs[j].text)) &&
+      strip(subs[j + 1].text).length > strip(subs[j].text).length
+    ) {
+      j++;
+    }
+    // קח את הכתובית האחרונה בשרשרת (טקסט מלא) עם טווח מההתחלה
+    out.push({
+      id: subs[j].id,
+      start: subs[i].start,
+      end: Math.max(subs[i].start + 0.2, subs[j].end),
+      text: subs[j].text,
+    });
+    i = j + 1;
+  }
+  if (out.length <= maxCues) return out;
+  // עדיין יותר מדי — דגימה אחידה
+  const step = Math.ceil(out.length / maxCues);
+  return out.filter((_, k) => k % step === 0).slice(0, maxCues);
 }
 
 export { clipDur };
