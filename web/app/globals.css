@@ -626,6 +626,21 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .dots2 i:nth-child(3) { animation-delay: .3s; }
 @keyframes bounce { 0%,100% { transform: translateY(0); opacity: .4; } 50% { transform: translateY(-3px); opacity: 1; } }
 
+/* אינדיקטור "הסוכן חושב" בין קריאות כלים / בזמן המתנה ל-LLM */
+.think2 {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-lg);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  min-height: 32px;
+}
+.think2 .dots2 i { width: 5px; height: 5px; background: var(--text-2); }
+
 /* status strip (analyze/render progress) */
 .status-strip { height: 30px; flex: none; direction: rtl; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--panel-2); font-size: var(--fs-2); }
 .status-strip .s-msg { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
