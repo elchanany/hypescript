@@ -7,7 +7,8 @@
 `cursor/agent-commandbus-multitrack-7940`
 
 ## Latest commit
-`c6124a8` — docs continuity + graphify (PR #32)
+`a17f540` — feat(web): סוכן דרך CommandBus + רצועות וידאו מרובות  
+(+ commits של continuity/graphify על אותו ענף / PR #32)
 
 ## Status
 הושלם בקוד על הענף · PR #32 טיוטה OPEN · ממתין לאימות ידני / מיזוג
