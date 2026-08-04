@@ -10,6 +10,7 @@ export default function CaptionsPanel({
   script, onScript, onAnalyze, analyzing, hasMain, hasWords,
   subs, onGenerate, onImportSrt, onExportSrt, onEditSub, onDelSub,
   captionStyle, onCaptionStyle,
+  burnCaptions, onBurnCaptions,
 }: {
   script: string; onScript: (v: string) => void; onAnalyze: () => void; analyzing: boolean;
   hasMain: boolean; hasWords: boolean;
@@ -17,6 +18,8 @@ export default function CaptionsPanel({
   onEditSub: (id: string, text: string) => void; onDelSub: (id: string) => void;
   captionStyle: CaptionStyle;
   onCaptionStyle: (patch: Partial<CaptionStyle>) => void;
+  burnCaptions: boolean;
+  onBurnCaptions: (v: boolean) => void;
 }) {
   const srtRef = useRef<HTMLInputElement>(null);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -83,7 +86,11 @@ export default function CaptionsPanel({
               <span>מודגש</span>
               <Toggle checked={captionStyle.bold} onChange={(v) => onCaptionStyle({ bold: v })} />
             </div>
-            <div className="cap-hint">הסגנון מופיע בתצוגה המקדימה ונשמר עם הפרויקט.</div>
+            <div className="cap-field">
+              <span>צריבה</span>
+              <Toggle checked={burnCaptions} onChange={onBurnCaptions} tip="צרוב כתוביות בתוך הייצוא" />
+            </div>
+            <div className="cap-hint">הסגנון מופיע בתצוגה המקדימה. עם «צריבה» — נכלל גם בקובץ הייצוא.</div>
           </div>
         </Section>
 
