@@ -1,25 +1,48 @@
 // זום טיימליין — חישוב גורם מגלגלת + עגינה לשמאל (התחלה נשארת בהתחלה).
 // כותרות הרצועות (sticky) ברוחב קבוע — רק אזור ה-lane משתנה עם הזום.
+// zoom < 1 → תוכן צר מה-viewport (ריק מימין); zoom > 1 → גלילה אופקית.
 
-import { clampZoom } from "./time";
+import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "./time";
 
 /** רוחב כותרת רצועה / פינת הסרגל — חייב להתאים ל-CSS (.tl-head2 / .tl-corner2). */
 export const TIMELINE_GUTTER = 136;
+
+/** מינימום רוחב ל-lane (אחרי gutter) — מונע קריסת פריסה בזום קיצוני החוצה. */
+export const MIN_LANE_PX = 48;
 
 /**
  * גורם זום מ-deltaY (אפשר מצטבר על פני כמה אירועי wheel באותו frame).
  * Pinch רגיש יותר מגלגלת רגילה.
  */
 export function zoomFactorFromWheel(deltaY: number, pinch = false): number {
-  const k = pinch ? 0.004 : 0.0028;
+  const k = pinch ? 0.0045 : 0.0032;
   const raw = Math.exp(-deltaY * k);
-  const lo = pinch ? 0.72 : 0.8;
-  const hi = pinch ? 1.4 : 1.28;
+  const lo = pinch ? 0.7 : 0.78;
+  const hi = pinch ? 1.45 : 1.32;
   return Math.min(hi, Math.max(lo, raw));
 }
 
-export function nextZoom(current: number, deltaY: number, pinch = false): number {
-  return clampZoom(current * zoomFactorFromWheel(deltaY, pinch));
+/** זום מינימלי אפקטיבי לרוחב viewport — מתחתיו ה-lane קטן מדי. */
+export function effectiveZoomMin(portWidth: number, gutter = TIMELINE_GUTTER): number {
+  if (!(portWidth > 0)) return ZOOM_MIN;
+  return Math.max(ZOOM_MIN, (gutter + MIN_LANE_PX) / portWidth);
+}
+
+export function clampZoomForPort(z: number, portWidth: number, gutter = TIMELINE_GUTTER): number {
+  const lo = effectiveZoomMin(portWidth, gutter);
+  return Math.min(ZOOM_MAX, Math.max(lo, z));
+}
+
+export function nextZoom(current: number, deltaY: number, pinch = false, portWidth = 0): number {
+  const next = current * zoomFactorFromWheel(deltaY, pinch);
+  return portWidth > 0 ? clampZoomForPort(next, portWidth) : clampZoom(next);
+}
+
+/** רוחב תוכן הטיימליין בפיקסלים לפי זום — גם מתחת ל-100% (הקטנה אמיתית). */
+export function timelineContentWidth(portWidth: number, zoom: number, gutter = TIMELINE_GUTTER): number {
+  if (!(portWidth > 0)) return 0;
+  const z = clampZoomForPort(zoom, portWidth, gutter);
+  return Math.max(portWidth * z, gutter + MIN_LANE_PX);
 }
 
 /**
@@ -40,8 +63,8 @@ export function scrollLeftAfterZoom(opts: {
   } = opts;
   if (!(oldZoom > 0) || !(newZoom > 0) || !(portWidth > 0)) return scrollLeft;
 
-  const oldContentW = Math.max(portWidth, portWidth * oldZoom);
-  const newContentW = Math.max(portWidth, portWidth * newZoom);
+  const oldContentW = timelineContentWidth(portWidth, oldZoom, gutter);
+  const newContentW = timelineContentWidth(portWidth, newZoom, gutter);
   const oldLaneW = Math.max(1, oldContentW - gutter);
   const newLaneW = Math.max(1, newContentW - gutter);
 
