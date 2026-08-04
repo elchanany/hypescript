@@ -4,7 +4,7 @@
 תיקון כתוביות חתוכות/משובשות + סנכרון לקצב דיבור + אכיפת ElevenLabs כשמבקשים.
 
 ## Current State (verified)
-- ענף: `cursor/fix-captions-speech-sync-c816`
+- ענף: `cursor/fix-captions-speech-sync-c816` · PR #23
 - ליבת כתוביות (web+local): ברירת מחדל **progressive** — מילה מצטברת כשהיא נאמרת; שבירת ביטוי בפאוזה/פיסוק.
 - `edlToCuesWithScript`: תיקון ASR מול סקריפט; תזמון 1:1 כשספירת מילים תואמת; סינון `audio_event`.
 - סוכן: מטמון תמלול שומר provider/model; בקשת `provider=elevenlabs` לא מחזירה מטמון Groq; `ctx.script` אוטומטי ל-`generate_subtitles`.

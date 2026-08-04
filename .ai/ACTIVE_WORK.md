@@ -7,10 +7,10 @@
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-`504b946` — fix(captions): סנכרון לקצב דיבור + אכיפת ElevenLabs
+`79b324d` — docs: עדכון ACTIVE_WORK אחרי push
 
 ## Status
-implementation complete — tests+build green; awaiting merge
+PR #23 draft — מוכן ל-review/merge
 
 ## Exact continuation point
 Merge PR; verify on Vercel that ElevenLabs key is set; optional ASS burn for long lessons.
