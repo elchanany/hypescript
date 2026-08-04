@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange } from "./clipFilter";
+import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange, snapSpeechToWords } from "./clipFilter";
 import { Clip } from "./model";
 
 const c = (id: string, start: number, end: number, sourceId = "v1"): Clip => ({ id, sourceId, start, end });
@@ -30,5 +30,24 @@ describe("intersectClipsWithSpeech", () => {
     expect(r).toHaveLength(2);
     expect(r[0]).toMatchObject({ start: 1, end: 3 });
     expect(r[1]).toMatchObject({ start: 5, end: 7 });
+  });
+});
+
+describe("snapSpeechToWords", () => {
+  it("expands soft opening word cut by energy detection", () => {
+    // energy said speech starts at 1.7; transcript has "שלום" at 1.5
+    const speech = [c("s", 1.7, 5.0)];
+    const words = [
+      { text: "שלום", start: 1.5, end: 1.9 },
+      { text: "וברכה", start: 2.0, end: 2.5 },
+    ];
+    const r = snapSpeechToWords(speech, words, { maxSnapSec: 0.5, padSec: 0 });
+    expect(r[0].start).toBeLessThanOrEqual(1.5);
+    expect(r[0].end).toBeGreaterThanOrEqual(5.0);
+  });
+
+  it("is no-op without transcript", () => {
+    const speech = [c("s", 1.7, 5.0)];
+    expect(snapSpeechToWords(speech, null)[0].start).toBe(1.7);
   });
 });

@@ -1,18 +1,18 @@
 # HANDOFF
 
 ## Goal
-טיימליין CapCut (בחירה→אינספקטור, snap, יישור אודיו, linked A/V) — מוזג ל־`main`.
+מיזוג PR #23 ל־`main` (כתוביות/תמלול ציר + תיקוני סוכן) מעל טיימליין CapCut שכבר ב־`main` (PR #24).
 
 ## Current State (verified)
-- `main` — טיימליין CapCut מוזג (fast-forward מ־`cursor/timeline-inspector-snap-328b`); PR #24 MERGED.
-- לחיצה על וידאו/אודיו/כתובית/שכבה פותחת מאפיינים בפאנל הימני.
-- Hover; בחירה מקושרת; snap guide (Magnet); headers ברשת 5 משבצות; Split חותך גם אודיו.
-- אימות קודם: vitest time+model, tsc, build, בדיקה ידנית.
+- `main` כולל טיימליין CapCut (inspector/snap/linked A/V) מ־PR #24.
+- PR #23 ממוזג עכשיו: כתוביות progressive, `transcribe_timeline`, אנטי-לופ סוכן, `scriptToClips` סדרתי, `snapSpeechToWords`, within-silence כברירת מחדל עם EDL.
+- D-007 ב-DECISIONS.
 
 ## Exact Next Steps
-1. אימות בפריסת Vercel מ־`main` (אם רלוונטי).
+1. אימות בפריסת Vercel מ־`main` (כתוביות + keep_by_script → remove_silence within).
 2. הבא לפי GAP_MAP: AG-4 / intro-outro / preview.
-3. אופציונלי: Alt לביטול snap בטיימליין.
+3. אופציונלי: Alt לביטול snap; Cache-Control ל-chunks אם חוזר Loading chunk failed.
 
 ## Risks
-- סף snap ~10px לפי זום.
+- אנטי-לופ חוסם מעל ~3 `delete_clip` — להשתמש ב-`delete_clips` / `keep_source_range`.
+- snap למילים תלוי בתמלול; סף snap טיימליין ~10px לפי זום.

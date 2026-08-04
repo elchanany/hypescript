@@ -32,3 +32,8 @@
 - **בחירה:** `.ai/*`, חוקי Cursor, skills/hooks של Graphify, ו-handoff — כולם בריפו.
 - **סיבה:** מקור אמת אחד לכל הסוכנים והסביבות.
 - **השלכה:** שיחות read-only לא מעדכנות continuity; אין deploy אוטומטי; אין Git הרסני.
+
+## D-007 — התנהגות סוכן אחרי בחירת סקריפט
+- **בחירה:** (1) `remove_silence` עם EDL קיים → within כברירת מחדל (רק `replace_all` מחליף); (2) `scriptToClips` סדרתי/forward בלי קפיצה גלובלית; (3) runtime חוסם לופי delete_clip/edit_subtitle ומפנה לכלים המוניים.
+- **סיבה:** כשלים מצ'אט אמיתי — החלפת EDL מלאה, קפיצות ל־117s, עשרות מחיקות בודדות.
+- **השלכה:** pipeline מומלץ: transcribe → keep_by_script → remove_silence(within) → transcribe_timeline → generate_subtitles(script).

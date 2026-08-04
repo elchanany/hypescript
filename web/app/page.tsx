@@ -9,7 +9,7 @@ import {
 import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
-import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { Sub, edlToSubs, edlToSubsWithScript, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
@@ -437,11 +437,22 @@ export default function EditorPage() {
   const generateSubs = () => {
     if (!words || !main) { setError("צריך לתמלל קודם."); return; }
     const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
-    setSubs(edlToSubs(cl, (sid) => (sid === main?.id ? words : null)));
+    const getWords = (sid: string) => (sid === main?.id ? words : null);
+    const clean = script.trim();
+    setSubs(clean
+      ? edlToSubsWithScript(cl, getWords, clean)
+      : edlToSubs(cl, getWords));
   };
   const exportSrt = () => {
     let s = subs;
-    if (!s) { if (!words || !main) return; const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]; s = edlToSubs(cl, (sid) => (sid === main?.id ? words : null)); setSubs(s); }
+    if (!s) {
+      if (!words || !main) return;
+      const cl = clips?.length ? clips : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
+      const getWords = (sid: string) => (sid === main?.id ? words : null);
+      const clean = script.trim();
+      s = clean ? edlToSubsWithScript(cl, getWords, clean) : edlToSubs(cl, getWords);
+      setSubs(s);
+    }
     download(new Blob([subsToSrt(s)], { type: "text/plain;charset=utf-8" }), (main?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
   };
   const importSrt = (file: File | null) => {
@@ -571,7 +582,7 @@ export default function EditorPage() {
       {dockSide === "right" && dockHandle}
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
-          overlays={overlays} canvas={canvas} projectId={projectId}
+          script={script} overlays={overlays} canvas={canvas} projectId={projectId}
           onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
             setWords(w); setProject(c, s);
             if (ovs) setOverlays(ovs);

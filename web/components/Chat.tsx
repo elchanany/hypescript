@@ -38,6 +38,7 @@ const now = () => { const d = new Date(); return `${String(d.getHours()).padStar
 // tool name -> icon (single consistent family; falls back to a generic wrench).
 const TOOL_ICON: Record<string, LucideIcon> = {
   get_video_info: Info, list_media: Layers, transcribe_video: Type, find_in_transcript: Search, get_transcript: Type,
+  transcribe_timeline: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
   trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, delete_clips: Trash2, keep_source_range: Scissors,
   clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,
@@ -64,7 +65,7 @@ const SLASH: SlashCmd[] = [
   { cmd: "/plan", label: "מצב תכנון", icon: ClipboardList, enabled: true, kind: "mode", mode: "plan" },
   { cmd: "/act", label: "מצב ביצוע", icon: Wand2, enabled: true, kind: "mode", mode: "act" },
   { cmd: "/transcribe", label: "תמלל את הסרטון", icon: Type, enabled: true, kind: "prompt", template: "תמלל את הסרטון הראשי." },
-  { cmd: "/captions", label: "צור כתוביות", icon: Captions, enabled: true, kind: "prompt", template: "צור כתוביות יפות לפי הטקסט הנקי שנתתי (generate_subtitles עם script)." },
+  { cmd: "/captions", label: "צור כתוביות", icon: Captions, enabled: true, kind: "prompt", template: "צור כתוביות מסונכרנות לקצב הדיבור לפי הטקסט הנקי שנתתי (generate_subtitles עם script). אל תשאיר שיבושי ASR." },
   { cmd: "/new", label: "שיחה חדשה", icon: MessageSquarePlus, enabled: true, kind: "prompt", template: "" },
   { cmd: "/clean", label: "נקה שתיקות ונשימות", icon: AudioLines, enabled: true, kind: "prompt", template: "הסר שתיקות ונשימות מהסרטון." },
   { cmd: "/edit", label: "ערוך לפי סקריפט", icon: Scissors, enabled: true, kind: "prompt", template: "השאר רק את החלקים הבאים לפי הסקריפט: " },
@@ -83,6 +84,8 @@ interface ChatProps {
   words: Word[] | null;
   clips: Clip[] | null;
   subs: Sub[] | null;
+  /** סקריפט נקי מהפאנל — מקור אמת לכתוביות */
+  script?: string;
   overlays?: Overlay[];
   canvas?: CanvasSize;
   projectId: string | null;
@@ -99,7 +102,7 @@ interface ChatProps {
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -211,7 +214,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     const c = ctxRef.current;
     c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
     c.overlays = overlays; c.canvas = canvas || defaultCanvasFor();
-  }, [media, words, clips, subs, overlays, canvas]);
+    if (script.trim()) c.script = script.trim();
+  }, [media, words, clips, subs, overlays, canvas, script]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
