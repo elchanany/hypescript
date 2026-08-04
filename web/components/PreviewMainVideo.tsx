@@ -8,12 +8,18 @@ import { CanvasSize, rotatePoint } from "@/lib/editor/canvasCoords";
 import { VideoTransform, resolveVideoRect } from "@/lib/editor/videoTransform";
 import { RotateCw } from "lucide-react";
 
-type Handle = "nw" | "ne" | "se" | "sw" | "rot";
+type Handle = "nw" | "ne" | "se" | "sw" | "n" | "e" | "s" | "w" | "rot";
 const CORNERS: { h: Handle; cx: number; cy: number; cursor: string }[] = [
   { h: "nw", cx: 0, cy: 0, cursor: "nwse-resize" },
   { h: "ne", cx: 1, cy: 0, cursor: "nesw-resize" },
   { h: "se", cx: 1, cy: 1, cursor: "nwse-resize" },
   { h: "sw", cx: 0, cy: 1, cursor: "nesw-resize" },
+];
+const EDGES: { h: Handle; cx: number; cy: number; cursor: string }[] = [
+  { h: "n", cx: 0.5, cy: 0, cursor: "ns-resize" },
+  { h: "e", cx: 1, cy: 0.5, cursor: "ew-resize" },
+  { h: "s", cx: 0.5, cy: 1, cursor: "ns-resize" },
+  { h: "w", cx: 0, cy: 0.5, cursor: "ew-resize" },
 ];
 
 interface Props {
@@ -31,6 +37,7 @@ interface Props {
   onLive: (vt: VideoTransform) => void;
   onCommit: () => void;
   onCancel?: () => void;
+  onAltCycle?: (clientX: number, clientY: number) => void;
 }
 
 interface DragState {
@@ -45,7 +52,7 @@ interface DragState {
 
 export default function PreviewMainVideo({
   boxRef, canvas, videoTransform, sourceW, sourceH, selected, hovered, locked,
-  onHover, onSelect, onBegin, onLive, onCommit, onCancel,
+  onHover, onSelect, onBegin, onLive, onCommit, onCancel, onAltCycle,
 }: Props) {
   const drag = useRef<DragState | null>(null);
   const [boxPx, setBoxPx] = useState({ w: 1, h: 1 });
@@ -89,13 +96,19 @@ export default function PreviewMainVideo({
       return;
     }
     const local = rotatePoint(projX, projY, d.s.x, d.s.y, -d.s.rotation);
-    let w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
-    let h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
-    if (e.shiftKey || d.uniform) {
-      const k = Math.max(w / d.s.w, h / d.s.h);
-      w = d.s.w * k; h = d.s.h * k;
+    let w = d.s.w, h = d.s.h;
+    if (d.mode === "n" || d.mode === "s") {
+      h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
+    } else if (d.mode === "e" || d.mode === "w") {
+      w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
+    } else {
+      w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
+      h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
+      if (e.shiftKey || d.uniform) {
+        const k = Math.max(w / d.s.w, h / d.s.h);
+        w = d.s.w * k; h = d.s.h * k;
+      }
     }
-    // Alt = resize around center (already center-anchored)
     onLive({ ...videoTransform, fitMode: "custom", x: d.s.x, y: d.s.y, w, h, rotation: d.s.rotation, opacity: d.s.opacity });
   };
 
@@ -117,6 +130,11 @@ export default function PreviewMainVideo({
   };
 
   const startDrag = (e: React.PointerEvent, mode: DragState["mode"]) => {
+    if (e.altKey && onAltCycle) {
+      e.stopPropagation(); e.preventDefault();
+      onAltCycle(e.clientX, e.clientY);
+      return;
+    }
     if (locked) { e.stopPropagation(); onSelect(); return; }
     e.stopPropagation();
     e.preventDefault();
@@ -148,8 +166,8 @@ export default function PreviewMainVideo({
       onPointerEnter={() => onHover?.(true)}
       onPointerLeave={() => onHover?.(false)}
       onPointerDown={(e) => startDrag(e, "move")}
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      title={locked ? "נעול" : "גרור להזזה · פינות לשינוי גודל"}
+      onClick={(e) => { e.stopPropagation(); if (!e.altKey) onSelect(); }}
+      title={locked ? "נעול" : "גרור להזזה · פינות/צלעות לשינוי גודל · Alt+לחיצה = שכבה הבאה"}
     >
       {selected && !locked && (
         <>
@@ -157,6 +175,14 @@ export default function PreviewMainVideo({
             <span
               key={h}
               className={`ov-handle ${h}`}
+              style={{ left: `${cx * 100}%`, top: `${cy * 100}%`, cursor }}
+              onPointerDown={(e) => startDrag(e, h)}
+            />
+          ))}
+          {EDGES.map(({ h, cx, cy, cursor }) => (
+            <span
+              key={h}
+              className={`ov-handle edge ${h}`}
               style={{ left: `${cx * 100}%`, top: `${cy * 100}%`, cursor }}
               onPointerDown={(e) => startDrag(e, h)}
             />

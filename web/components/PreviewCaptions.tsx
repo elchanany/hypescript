@@ -11,12 +11,18 @@ import { CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { captionLayoutToCss, resolveCaptionLayout } from "@/lib/editor/captionLayout";
 import { RotateCw } from "lucide-react";
 
-type Handle = "nw" | "ne" | "se" | "sw" | "rot";
+type Handle = "nw" | "ne" | "se" | "sw" | "n" | "e" | "s" | "w" | "rot";
 const CORNERS: { h: Handle; cx: number; cy: number; cursor: string }[] = [
   { h: "nw", cx: 0, cy: 0, cursor: "nwse-resize" },
   { h: "ne", cx: 1, cy: 0, cursor: "nesw-resize" },
   { h: "se", cx: 1, cy: 1, cursor: "nwse-resize" },
   { h: "sw", cx: 0, cy: 1, cursor: "nesw-resize" },
+];
+const EDGES: { h: Handle; cx: number; cy: number; cursor: string }[] = [
+  { h: "n", cx: 0.5, cy: 0, cursor: "ns-resize" },
+  { h: "e", cx: 1, cy: 0.5, cursor: "ew-resize" },
+  { h: "s", cx: 0.5, cy: 1, cursor: "ns-resize" },
+  { h: "w", cx: 0, cy: 0.5, cursor: "ew-resize" },
 ];
 
 interface Props {
@@ -94,7 +100,13 @@ export default function PreviewCaptions({
       return;
     }
     const local = rotatePoint(projX, projY, d.layout.x, d.layout.y, -d.layout.rotation);
-    let w = Math.max(40, Math.abs(local.x - d.layout.x) * 2);
+    if (d.mode === "n" || d.mode === "s") {
+      const h = Math.max(20, Math.abs(local.y - d.layout.y) * 2);
+      const k = h / Math.max(1, d.layout.h);
+      onLive((prev) => (prev || []).map((s) => (s.id === d.id ? { ...s, scale: d.layout.scale * k } : s)));
+      return;
+    }
+    const w = Math.max(40, Math.abs(local.x - d.layout.x) * 2);
     if (e.shiftKey) {
       const k = w / d.layout.w;
       onLive((prev) => (prev || []).map((s) => (s.id === d.id ? { ...s, w, scale: d.layout.scale * k } : s)));
@@ -157,6 +169,14 @@ export default function PreviewCaptions({
             <span
               key={h}
               className={`ov-handle ${h}`}
+              style={{ left: `${cx * 100}%`, top: `${cy * 100}%`, cursor }}
+              onPointerDown={(e) => startDrag(e, active.id, h, layout)}
+            />
+          ))}
+          {EDGES.map(({ h, cx, cy, cursor }) => (
+            <span
+              key={h}
+              className={`ov-handle edge ${h}`}
               style={{ left: `${cx * 100}%`, top: `${cy * 100}%`, cursor }}
               onPointerDown={(e) => startDrag(e, active.id, h, layout)}
             />

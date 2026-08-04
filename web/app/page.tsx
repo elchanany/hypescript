@@ -19,7 +19,7 @@ import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed } from "lucide-react";
+import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed, Unlink, Link2, Type } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -98,6 +98,7 @@ export default function EditorPage() {
   const [snap, setSnap] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [subMenu, setSubMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -479,6 +480,7 @@ export default function EditorPage() {
         {
           media, clips, audioMuted: audioMuted(tracks), overlays, canvas,
           subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
+          videoTransform, sourceSize,
         },
         (r) => setProgress(Math.min(1, r)),
       );
@@ -605,6 +607,33 @@ export default function EditorPage() {
       else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId || selectedSubId)) { e.preventDefault(); deleteSel(e.shiftKey); }
       else if (e.key === "Escape") { clearAllSelection(); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
+      else if (meta && e.key.toLowerCase() === "d" && selectedId && !vLocked) {
+        e.preventDefault();
+        duplicateClip(selectedId);
+      }
+      else if (selectedOverlayId && !meta && !e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const o = overlays.find((x) => x.id === selectedOverlayId);
+        if (o && !o.locked) updateOverlay(o.id, { transform: { ...o.transform, x: o.transform.x + dx, y: o.transform.y + dy } });
+      }
+      else if (selectedSubId && !meta && !e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        const s = subs?.find((x) => x.id === selectedSubId);
+        if (s) updateSub(s.id, { x: (s.x ?? canvas.width / 2) + dx, y: (s.y ?? canvas.height * 0.88) + dy });
+      }
+      else if (selectedId && selectionTrack !== "audio" && !selectedIsGap && !meta && !e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        setVideoTransform((vt) => ({ ...vt, fitMode: "custom", x: vt.x + dx, y: vt.y + dy }));
+      }
       else if (selectedId && !videoLocked(tracks) && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
         slipSelected(e.key === "]" ? 0.1 : -0.1);
@@ -664,24 +693,70 @@ export default function EditorPage() {
     </>
   ) : null;
 
+  const menuSub = subMenu ? subs?.find((s) => s.id === subMenu.id) || null : null;
+
   const clipMenuItems: CtxItem[] = menuClip ? isGapClip(menuClip) ? [
     { label: "סגור רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
+    { label: "מחק רווח (ריפל)", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
   ] : [
     { label: "שכפל", icon: Copy, onClick: () => duplicateClip(menuClip.id), disabled: vLocked },
     { label: "פצל בראש-הנגן", icon: Scissors, onClick: splitAtPlayhead, disabled: vLocked },
     { label: clipEnabled(menuClip) ? "השבת" : "הפעל", icon: clipEnabled(menuClip) ? EyeOff : Eye, onClick: () => updateClip(menuClip.id, { enabled: !clipEnabled(menuClip) }) },
-    ...(avLinked
-      ? [{ label: "נתק אודיו", icon: SquareDashed, onClick: () => {
-          const res = runCommand("av.detachAudio", editorApiRef.current!);
-          if (!res.ok) setError(res.error);
-        }, disabled: vLocked } as CtxItem]
-      : [{ label: "קשר מחדש A/V", icon: SquareDashed, onClick: () => {
-          const res = runCommand("av.relink", editorApiRef.current!);
-          if (!res.ok) setError(res.error);
-        }, disabled: vLocked } as CtxItem]),
+    ...(selectionTrack === "audio" || !avLinked ? [] : [
+      { label: "נתק אודיו", icon: Unlink, onClick: () => {
+        const res = runCommand("av.detachAudio", editorApiRef.current!);
+        if (!res.ok) setError(res.error);
+      }, disabled: vLocked } as CtxItem,
+    ]),
+    ...(!avLinked ? [
+      { label: "קשר מחדש A/V", icon: Link2, onClick: () => {
+        const res = runCommand("av.relink", editorApiRef.current!);
+        if (!res.ok) setError(res.error);
+      }, disabled: vLocked } as CtxItem,
+    ] : []),
     { sep: true, label: "" },
     { label: "מחק והשאר רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id, true), disabled: vLocked, kbd: "Shift+Delete" },
     { label: "מחק (ריפל)", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked, kbd: "Delete" },
+  ] : [];
+
+  const subMenuItems: CtxItem[] = menuSub ? [
+    { label: "ערוך טקסט", icon: Type, onClick: () => setNameDlg({ kind: "captionText", id: menuSub.id, text: menuSub.text }) },
+    { label: "פצל בכתובית", icon: Scissors, onClick: () => {
+      const mid = (menuSub.start + menuSub.end) / 2;
+      if (mid - menuSub.start < 0.05 || menuSub.end - mid < 0.05) return;
+      setSubs((ss) => {
+        if (!ss) return ss;
+        const i = ss.findIndex((x) => x.id === menuSub.id);
+        if (i < 0) return ss;
+        const left = { ...ss[i], end: mid };
+        const right = { ...ss[i], id: uid("s"), start: mid };
+        return [...ss.slice(0, i), left, right, ...ss.slice(i + 1)];
+      });
+    } },
+    { label: "מזג עם הקודמת", icon: Link2, onClick: () => {
+      setSubs((ss) => {
+        if (!ss) return ss;
+        const i = ss.findIndex((x) => x.id === menuSub.id);
+        if (i <= 0) return ss;
+        const prev = ss[i - 1];
+        const cur = ss[i];
+        const merged = { ...prev, end: cur.end, text: `${prev.text} ${cur.text}`.trim() };
+        return [...ss.slice(0, i - 1), merged, ...ss.slice(i + 1)];
+      });
+    } },
+    { label: "מזג עם הבאה", icon: Link2, onClick: () => {
+      setSubs((ss) => {
+        if (!ss) return ss;
+        const i = ss.findIndex((x) => x.id === menuSub.id);
+        if (i < 0 || i >= ss.length - 1) return ss;
+        const cur = ss[i];
+        const next = ss[i + 1];
+        const merged = { ...cur, end: next.end, text: `${cur.text} ${next.text}`.trim() };
+        return [...ss.slice(0, i), merged, ...ss.slice(i + 2)];
+      });
+    } },
+    { sep: true, label: "" },
+    { label: "מחק", icon: Trash2, danger: true, onClick: () => delSub(menuSub.id) },
   ] : [];
 
   return (
@@ -853,6 +928,17 @@ export default function EditorPage() {
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}
                 onOverlayMove={setOverlayMoveLive}
+                onSubTrimBegin={beginTransaction}
+                onSubTrim={(id, start, end) => {
+                  setSubsLive((ss) => ss?.map((s) => (s.id === id ? { ...s, start, end } : s)) || ss);
+                }}
+                onSubTrimEnd={commitTransaction}
+                onSubMove={(id, start, end) => {
+                  const dur = Math.max(0.05, end - start);
+                  const s0 = Math.max(0, start);
+                  setSubsLive((ss) => ss?.map((s) => (s.id === id ? { ...s, start: s0, end: s0 + dur } : s)) || ss);
+                }}
+                onSubMenu={(id, x, y) => setSubMenu({ id, x, y })}
                 renameTrack={renameTrack}
                 onRequestRenameTrack={(id, name) => setNameDlg({ kind: "track", id, name })}
                 toggleLock={toggleLock} toggleMute={toggleMute}
@@ -868,6 +954,7 @@ export default function EditorPage() {
       </div>
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
+      {subMenu && menuSub && <ContextMenu x={subMenu.x} y={subMenu.y} items={subMenuItems} onClose={() => setSubMenu(null)} />}
 
       <NameDialog
         open={projDlg === "create"}

@@ -8,14 +8,35 @@ export interface CanvasSize { width: number; height: number; }
 export interface Rect { x: number; y: number; width: number; height: number; }
 export interface Point { x: number; y: number; }
 
-// The rectangle (CSS px, relative to stage top-left) where the canvas is drawn,
-// letterboxed to preserve aspect ratio inside the stage.
-export function displayRect(stageW: number, stageH: number, canvas: CanvasSize): Rect {
-  if (stageW <= 0 || stageH <= 0 || canvas.width <= 0 || canvas.height <= 0) return { x: 0, y: 0, width: 0, height: 0 };
-  const scale = Math.min(stageW / canvas.width, stageH / canvas.height);
+// The rectangle (CSS px, relative to stage top-left) where the canvas is drawn.
+// viewerZoom: "fit" = contain in stage; number = CSS px per project px (1 = 100%).
+export function displayRect(
+  stageW: number,
+  stageH: number,
+  canvas: CanvasSize,
+  viewerZoom: number | "fit" = "fit",
+): Rect {
+  if (stageW <= 0 || stageH <= 0 || canvas.width <= 0 || canvas.height <= 0) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+  const fitScale = Math.min(stageW / canvas.width, stageH / canvas.height);
+  const scale = viewerZoom === "fit" ? fitScale : Math.max(0.05, viewerZoom);
   const width = canvas.width * scale;
   const height = canvas.height * scale;
   return { x: (stageW - width) / 2, y: (stageH - height) / 2, width, height };
+}
+
+export const VIEWER_ZOOM_PRESETS: { label: string; value: number | "fit" }[] = [
+  { label: "Fit", value: "fit" },
+  { label: "25%", value: 0.25 },
+  { label: "50%", value: 0.5 },
+  { label: "100%", value: 1 },
+  { label: "200%", value: 2 },
+];
+
+export function viewerZoomLabel(z: number | "fit"): string {
+  if (z === "fit") return "Fit";
+  return `${Math.round(z * 100)}%`;
 }
 
 // project px per 1 CSS px would be 1/scale; this returns CSS px per project px.

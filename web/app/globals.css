@@ -301,6 +301,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 /* Preview */
 .preview2 { flex: 1; min-height: 0; direction: rtl; display: flex; flex-direction: column; background: var(--bg); }
 .pv-stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; background: var(--canvas-surround, #05070a); padding: 10px; overflow: hidden; }
+.pv-stage.zoomed { overflow: auto; place-items: center; }
 /* letterboxed project-canvas box: holds the video + overlays + captions */
 .pv-canvas { position: relative; background: #000; box-shadow: 0 0 0 1px var(--border); overflow: hidden; container-type: size; }
 /* Main video positioned via Element Scale (videoTransform) — canvas chrome stays black around it */
@@ -386,6 +387,15 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .transport .tp-vol { display: flex; align-items: center; gap: 6px; width: 108px; }
 .transport .tp-vol input[type="range"] { flex: 1; }
 .transport .tp-grow { flex: 1; }
+.transport .tp-viewer-zoom {
+  display: flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 11px;
+}
+.transport .tp-viewer-zoom select {
+  background: var(--inset); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 2px 4px; font-size: 11px; direction: ltr;
+}
+.transport .tp-vz-label { font-family: var(--mono); font-size: 10px; color: var(--text-3); min-width: 28px; }
+.ov-handle.edge { width: 9px; height: 9px; border-radius: 1px; }
 
 /* ============================ Media panel ============================ */
 .media-list { display: flex; flex-direction: column; gap: 2px; padding: 6px; }
@@ -596,6 +606,10 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .cue2.hovered:not(.selected), .cue2:hover:not(.selected) { border-color: rgba(196,140,255,.95); box-shadow: 0 0 0 1px rgba(168,85,247,.45); z-index: 2; }
 .cue2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.cue2 .trim { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; opacity: 0; background: rgba(255,255,255,.9); }
+.cue2 .trim.l { left: 0; } .cue2 .trim.r { right: 0; }
+.cue2:hover .trim, .cue2.selected .trim { opacity: .55; }
+.cue2 .trim:hover { opacity: .9; }
 
 /* drag ghost + drop indicator (timeline move) */
 .tl-ghost {

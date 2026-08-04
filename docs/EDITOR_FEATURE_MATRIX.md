@@ -19,8 +19,9 @@
 |---|---|---|---|---|---|---|---|---|
 | Playback (play/pause/frame/seek) | — | ✔ | ✔ | n/a | — | — | ✖ | Partial |
 | Caption overlay בנגן | ✔ | ✔ | ✔ | ✔(burn) | — | ✔ | — | Partial |
-| Direct manipulation (select/box/drag/resize/rotate) | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | Not started |
-| Project coordinates / PreviewCompositor | ✖ | ✖ | ✖ | ✖ | — | ✖ | — | Not started |
+| Direct manipulation (select/box/drag/resize/rotate) | ✔ | ✔ | ✔ | ✔(main VT) | ✔ | ✔(coords/VT) | ✔(cmds) | Partial |
+| Project coordinates / PreviewCompositor | ✔ | ✔ | ✔ | ✔ | — | ✔ | — | Partial |
+| Viewer Zoom ≠ Element Scale | ✔ | ✔ | ✔ | n/a | — | ✔ | — | Partial |
 
 ## Timeline
 | Feature | Model | UI | Preview | Export | Undo | Tests | Agent | סטטוס |
@@ -32,8 +33,10 @@
 | Split | ✔ | ✔ | ✔ | ✔ | ✔ | ✔(time) | ✔ | Partial |
 | Trim (normal) | ✔ | ✔ | ✔ | ✔ | ✔ | ✖ | ✔ | Partial |
 | Ripple / Roll / Slip | ✔ Ripple+LeaveGap+Roll+Slip | ✔ | — | Preview/Export | ✔ | ✖ | ✖ | Roll/Slip via CommandBus |
-| Delete leaves Gap / Gap entity / Ripple-delete | ✖ | ✖ | — | — | — | ✖ | ✖ | Not started |
+| Delete leaves Gap / Gap entity / Ripple-delete | ✔ | ✔ | — | ✔ | ✔ | ✔(ops) | ✔ | Partial |
 | Drag Ghost + Drop indicator | ✔ | ✔ | — | — | ✔ | ✖ | — | Partial |
+| Free Drop (moveToTime) + Magnetic snap | ✔ | ✔ | — | ✔ | ✔ | ✔ | ✔ | Partial |
+| Linked A/V (detach/relink/split) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Partial |
 | Transitions / Effects / Keyframes visuals | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | Not started |
 
 ## Inspector
@@ -41,7 +44,7 @@
 |---|---|
 | Project (no selection) | Partial |
 | Clip In/Out + volume | Partial |
-| Transform / tabs / keyframes / mixed-state | Not started |
+| Transform (Fit/Fill/Original/Custom) / contextual panels | Partial (keyframes/mixed-state Not started) |
 
 ## אודיו / כתוביות
 | Feature | Model | UI | Preview | Export | Undo | Tests | Agent | סטטוס |

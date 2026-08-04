@@ -47,6 +47,11 @@ interface Props {
   onOverlayTrim?: (id: string, start: number, end: number) => void;
   onOverlayTrimEnd?: () => void;
   onOverlayMove?: (id: string, start: number, end: number) => void;
+  onSubTrimBegin?: () => void;
+  onSubTrim?: (id: string, start: number, end: number) => void;
+  onSubTrimEnd?: () => void;
+  onSubMove?: (id: string, start: number, end: number) => void;
+  onSubMenu?: (id: string, x: number, y: number) => void;
   renameTrack: (id: string, name: string) => void;
   onRequestRenameTrack?: (id: string, name: string) => void;
   toggleLock: (id: string) => void;
@@ -77,7 +82,7 @@ export default function Timeline(p: Props) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredSubId, setHoveredSubId] = useState<string | null>(null);
   const drag = useRef<{
-    kind: "clip" | "overlay";
+    kind: "clip" | "overlay" | "sub";
     mode: "move" | "l" | "r";
     id: string;
     x0: number;
@@ -263,6 +268,26 @@ export default function Timeline(p: Props) {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
+  const onSubDown = (e: React.MouseEvent, sub: Sub, mode: "move" | "l" | "r") => {
+    e.stopPropagation();
+    p.onSelect?.(null);
+    p.onSelectOverlay?.(null);
+    p.onSelectSub?.(sub.id);
+    p.onSubTrimBegin?.();
+    drag.current = {
+      kind: "sub",
+      mode,
+      id: sub.id,
+      x0: e.clientX,
+      laneW: laneRef.current?.clientWidth || 1,
+      s0: sub.start,
+      e0: sub.end,
+      moved: false,
+      px: e.clientX,
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
   const onOverlayDown = (e: React.MouseEvent, overlay: Overlay, mode: "move" | "l" | "r") => {
     e.stopPropagation();
     p.onSelectSub?.(null);
@@ -319,6 +344,26 @@ export default function Timeline(p: Props) {
       }
       return;
     }
+    if (d.kind === "sub") {
+      if (d.mode === "l") {
+        const raw = d.s0 + dt;
+        const { time, snapped, target } = applySnap(raw, [d.e0]);
+        showSnapGuide(snapped ? target : null);
+        p.onSubTrim?.(d.id, Math.min(time, d.e0 - 0.05), d.e0);
+      } else if (d.mode === "r") {
+        const raw = d.e0 + dt;
+        const { time, snapped, target } = applySnap(raw, [d.s0]);
+        showSnapGuide(snapped ? target : null);
+        p.onSubTrim?.(d.id, d.s0, Math.max(time, d.s0 + 0.05));
+      } else if (d.moved) {
+        const dur = d.e0 - d.s0;
+        const rawStart = Math.max(0, d.s0 + dt);
+        const { time, snapped, target } = applySnap(rawStart, []);
+        showSnapGuide(snapped ? target : null);
+        p.onSubMove?.(d.id, time, time + dur);
+      }
+      return;
+    }
     if (d.mode === "l" || d.mode === "r") {
       // Snap the assembled-time edge being dragged to neighboring clip/overlay/sub edges.
       const a0 = d.assembled0 ?? 0;
@@ -369,6 +414,7 @@ export default function Timeline(p: Props) {
     endDragVisuals();
     if (!d) { drag.current = null; return; }
     if (d.kind === "overlay") p.onOverlayTrimEnd?.();
+    else if (d.kind === "sub") p.onSubTrimEnd?.();
     else if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
     else if (d.mode === "move") {
       if (!d.moved) { /* already selected on mousedown */ }
@@ -563,11 +609,15 @@ export default function Timeline(p: Props) {
                       className={`cue2 ${selectedSubId === s.id ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""}`}
                       style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }}
                       title={s.text}
+                      onMouseDown={(e) => onSubDown(e, s, "move")}
                       onClick={(e) => { e.stopPropagation(); p.onSelect(null); p.onSelectOverlay?.(null); p.onSelectSub?.(s.id); }}
                       onMouseEnter={() => setHoveredSubId(s.id)}
                       onMouseLeave={() => setHoveredSubId((h) => (h === s.id ? null : h))}
+                      onContextMenu={(e) => { e.preventDefault(); p.onSelectSub?.(s.id); p.onSubMenu?.(s.id, e.clientX, e.clientY); }}
                     >
+                      <span className="trim l" onMouseDown={(e) => onSubDown(e, s, "l")} />
                       <span className="cue-txt">{s.text}</span>
+                      <span className="trim r" onMouseDown={(e) => onSubDown(e, s, "r")} />
                     </div>
                   ))}
                   <Playhead />
