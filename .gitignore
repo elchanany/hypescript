@@ -3,6 +3,8 @@
 __pycache__/
 *.pyc
 .env
+.env.local
+.env.*.local
 *_edited.mp4
 *_cuts.json
 *_transcript.txt
@@ -14,6 +16,11 @@ node_modules/
 out/
 .vercel/
 *.tsbuildinfo
+web/.env.local
+web/.env.*.local
+# תבניות כן נשמרות ב-git:
+!web/.env.example
+!local/.env.example
 
 # Local env / secrets (never commit)
 .env.*
