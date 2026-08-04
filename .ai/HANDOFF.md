@@ -1,21 +1,19 @@
 # HANDOFF
 
 ## Goal
-ליטוש Dashboard + UX פרויקטים (תצוגות מקדימות, מודאלים במקום prompt, toasts, תפריט משתמש).
+עורך CapCut-class + סוכן AI + ElevenLabs + Auth/Dashboard אופציונלי (Supabase).
 
 ## Current State (verified)
-- ענף: `cursor/dashboard-polish-505e`
-- ToastHost גלובלי + `lib/ui/toast.ts`
-- Modal: NameDialog / ConfirmDialog
-- `/dashboard`: כרטיסים עם cover ממדיה מקומית, תפריט ⋯ (פתח/שם/מחק), תפריט משתמש Google
-- עורך: יצירה/שינוי שם/מחיקה בלי `window.prompt`/`confirm`
-- אחרי OAuth: toast «התחברת בהצלחה» דרך `hs_just_logged_in`
+- `main` כולל Auth (PR #7), ElevenLabs, תיקוני זום/טיימליין.
+- באג מדווח בפרודקשן: OAuth מגיע ל־`…/rest/v1/auth/v1/authorize` → `No API key found`.
+  סיבה: `NEXT_PUBLIC_SUPABASE_URL` ב־Vercel כולל `/rest/v1`.
+- ענף תיקון: `cursor/fix-supabase-url-505e` — נרמול URL בקוד + אזהרה במדריך.
 
 ## Exact Next Steps
-1. `npm test` + `npm run build` ב-web
-2. commit / push / PR
-3. אחרי מיזוג — Redeploy ב-Vercel ובדיקה ידנית ב-/dashboard
+1. ב־Vercel: לתקן ידנית `NEXT_PUBLIC_SUPABASE_URL` ל־`https://dbfednzsladjxjhlwfxr.supabase.co` (בלי `/rest/v1`) → Redeploy.
+2. למזג את PR של `cursor/fix-supabase-url-505e` (הגנה מפני העתקה שגויה בעתיד).
+3. לבדוק `/login` → Google → `/dashboard` ב־https://hypescript.vercel.app/login
 
 ## Risks
-- תצוגה מקדימה תלויה במדיה ב-IndexedDB של אותו דפדפן/מחשב.
-- פרויקטים בלי וידאו/תמונה נשארים עם אייקון תיקייה.
+- בלי תיקון ה־env ב־Vercel — גם אחרי מיזוג הקוד, אם ה־URL עדיין עם `/rest/v1` הקוד החדש ינרמל; אבל Redeploy נדרש.
+- Secret/service_role אסור בצד לקוח.
