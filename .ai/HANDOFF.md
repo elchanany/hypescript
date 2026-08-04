@@ -4,7 +4,7 @@
 עורך CapCut-class + סוכן AI: CommandBus parity + רצועות וידאו מרובות עם רענון מיידי בעורך.
 
 ## Current State (verified)
-ענף: `cursor/agent-commandbus-multitrack-7940`
+ענף: `cursor/agent-commandbus-multitrack-7940` · PR #32
 - סוכן → `EditorApi` / `runCommand` ל-split/trim/move/add + track ops; `_editorDirty` מונע History כפול
 - `clip.trackId` + כמה רצועות `video` (schema v5); Timeline מציג לפי רצועה; `+` להוספת רצועה
 - נגן+ייצוא: `flattenVideoTracks` (cutaway — רצועה עליונה מנצחת)
