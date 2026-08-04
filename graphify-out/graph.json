@@ -5057,8 +5057,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "web_lib_editor_assembletranscript_wordsbysource",
-      "community": 2,
-      "community_name": "subtitlesEdl.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "wordsbysource"
     },
     {
@@ -7521,8 +7521,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_normalize_test",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "elevenlabs/normalize.test.ts"
     },
     {
@@ -7609,8 +7609,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "prefs.ts"
     },
     {
@@ -7620,8 +7620,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_transcribeproviderid",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "transcribeproviderid"
     },
     {
@@ -7631,8 +7631,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_transcribeproviderpref",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "transcribeproviderpref"
     },
     {
@@ -7642,8 +7642,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_default_transcribe_pref",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "default_transcribe_pref"
     },
     {
@@ -7653,8 +7653,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_transcribeconfigured",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "transcribeconfigured"
     },
     {
@@ -7664,8 +7664,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_resolvetranscribeprovider",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "resolvetranscribeprovider()"
     },
     {
@@ -7675,8 +7675,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "web_lib_elevenlabs_prefs_defaultmodelfor",
-      "community": 7,
-      "community_name": "tools.ts",
+      "community": 100,
+      "community_name": "assembleTranscript.ts",
       "norm_label": "defaultmodelfor()"
     },
     {
@@ -9490,8 +9490,8 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "web_lib_subtitles_formattimestamp",
-      "community": 2,
-      "community_name": "subtitlesEdl.ts",
+      "community": 3,
+      "community_name": "subtitles.ts",
       "norm_label": "formattimestamp()"
     },
     {
@@ -11390,7 +11390,7 @@
       "label": "Exact Next Steps",
       "file_type": "document",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L12",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "ai_handoff_exact_next_steps",
       "community": 34,
@@ -11401,7 +11401,7 @@
       "label": "Risks",
       "file_type": "document",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L16",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "ai_handoff_risks",
       "community": 34,
@@ -45114,7 +45114,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L12",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ai_handoff_handoff",
@@ -45136,7 +45136,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L16",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ai_handoff_handoff",
@@ -48863,5 +48863,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0b9eeedfab97d380bd4ffd69b8d467115a77476e"
+  "built_at_commit": "d553ec1349b28e9b371b8d27a86e4f65635a0b8c"
 }

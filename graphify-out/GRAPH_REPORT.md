@@ -1,7 +1,7 @@
 # Graph Report - workspace  (2026-08-04)
 
 ## Corpus Check
-- 193 files · ~122,683 words
+- 193 files · ~122,750 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0b9eeedf`
+- Built from commit: `d553ec13`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -154,12 +154,12 @@ Cohesion: 0.06
 Nodes (52): CaptionsPanel(), ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num(), OverlayInspector(), SubInspector() (+44 more)
 
 ### Community 2 - "subtitlesEdl.ts"
-Cohesion: 0.17
-Nodes (21): WordsBySource, assembledWords(), CaptionBuildOpts, CaptionMode, collapseProgressiveForBurn(), edlToCues(), edlToCuesWithScript(), edlToSrt() (+13 more)
+Cohesion: 0.20
+Nodes (19): assembledWords(), CaptionBuildOpts, CaptionMode, collapseProgressiveForBurn(), edlToCues(), edlToCuesWithScript(), edlToSrt(), edlToSubs() (+11 more)
 
 ### Community 3 - "subtitles.ts"
-Cohesion: 0.23
-Nodes (14): buildCues(), CaptionMode, Cue, endsPhrase(), endsSentence(), formatCueText(), mapToEdited(), phraseBlocks() (+6 more)
+Cohesion: 0.21
+Nodes (15): buildCues(), CaptionMode, Cue, endsPhrase(), endsSentence(), formatCueText(), formatTimestamp(), mapToEdited() (+7 more)
 
 ### Community 4 - "models.ts"
 Cohesion: 0.13
@@ -174,8 +174,8 @@ Cohesion: 0.11
 Nodes (7): Frame, build_command(), HypescriptGUI, main(), ממשק משתמש גרפי קליל ל-hypescript (Tkinter, בלי תלויות נוספות). ה-GUI הוא…, בונה את רשימת הארגומנטים ל-``python -m hypescript`` מתוך ערכי הטופס., Tk
 
 ### Community 7 - "tools.ts"
-Cohesion: 0.07
-Nodes (29): clipsSummary(), dispatch(), ensureTrackId(), fetchTranscribeConfigured(), fmt(), mainVideo(), readTranscribeModelPref(), readTranscribePref() (+21 more)
+Cohesion: 0.08
+Nodes (23): clipsSummary(), dispatch(), ensureTrackId(), fetchTranscribeConfigured(), fmt(), mainVideo(), readTranscribeModelPref(), readTranscribePref() (+15 more)
 
 ### Community 8 - "transcription.py"
 Cohesion: 0.14
@@ -470,8 +470,8 @@ Cohesion: 0.29
 Nodes (6): BeatAudioPlayer(), ChatMediaCard(), fmt(), LABEL, MKind, Props
 
 ### Community 100 - "assembleTranscript.ts"
-Cohesion: 0.43
-Nodes (6): assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), GAP_SOURCE, isSpeechWord()
+Cohesion: 0.17
+Nodes (13): assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), WordsBySource, GAP_SOURCE, DEFAULT_TRANSCRIBE_PREF, defaultModelFor() (+5 more)
 
 ## Knowledge Gaps
 - **456 isolated node(s):** `track-edit.sh script`, `runtime`, `maxDuration`, `runtime`, `runtime` (+451 more)

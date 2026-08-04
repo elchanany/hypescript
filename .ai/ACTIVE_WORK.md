@@ -7,10 +7,10 @@
 `cursor/agent-commandbus-multitrack-7940`
 
 ## Latest commit
-`d2d9093` — PR #32
+`9a4981b` — docs continuity + graphify (PR #32)
 
 ## Status
-ביצוע · PR #32 טיוטה · ממתין לאימות ידני
+הושלם בקוד על הענף · PR #32 טיוטה OPEN · ממתין לאימות ידני / מיזוג
 
 ## Exact continuation point
-לאמת ב-UI: add_video_track מהסוכן משתקף מיד; flatten cutaway בנגן. אחר כך AG-2 נוסף או PiP.
+אימות ידני ב-UI (Act → רצועה/טרים). אין פיצ'ר חדש עד בקשת משתמש. אחרי מיזוג — עדכון PROJECT_STATE ל-main.

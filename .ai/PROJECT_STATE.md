@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — מצב יציב של hypescript
 
-עודכן לאחרונה: 2026-08-04 (מיזוג PR #23 ל־`main` מעל טיימליין CapCut מ־PR #24).
+עודכן לאחרונה: 2026-08-04 (PR #32 טיוטה — CommandBus agent + multi video tracks; עדיין לא ב-`main`).
 
 ## מה המוצר
 
@@ -19,14 +19,16 @@
 
 - **ליבה משותפת (מסונכרנת):** יישור-סקריפט, keep intervals + הסרת מהססים, SRT/RTL — ב-`web/lib` וב-`local/hypescript`.
 - **web:** Next.js על Vercel; ffmpeg.wasm מקומי; תמלול דרך proxy (`/api/transcribe` → Groq); מפתחות ב-`localStorage`/env; `npm run build` עובר.
-- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים דרך proxy, צ'אט עם כרטיסי כלים, multi-chat, within_existing silence (ברירת מחדל כשיש EDL), delete_clips/keep_source_range, אנטי-לופ runtime, scriptToClips סדרתי, snapSpeechToWords, כתוביות עם script + progressive, תמלול ציר (`transcribe_timeline`).
-- **עורך (פאזה 1+):** shell דו-צדדי, preview עם השמעה ערוכה, timeline רב-מסלולי, Inspector לפי בחירת קליפ/אודיו/כתובית/שכבה, snap guides + Magnet, headers מיושרים, חיתוך A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום בצ'אט, זום גלגלת (~0.15×–128×), קיבוץ כרטיסי-כלי + נקודות "חושב".
+- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים דרך proxy, צ'אט עם כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, אנטי-לופ, scriptToClips סדרתי, snapSpeechToWords, כתוביות + תמלול ציר. **על PR #32 (לא main):** מוטציות EDL/רצועות דרך EditorApi/CommandBus עם רענון מיידי.
+- **עורך (פאזה 1+):** shell, preview, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום. **על PR #32:** כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
-- **בדיקות web (מאומתות בסביבה זו):** `vitest` — 19 files / 85 tests עברו, כולל אינטגרציית render.
+- **בדיקות web:** על ענף PR #32 — vitest 151; ממוקד tracks/commands/migrate/model 24/24 + tsc עבר.
 
 ## מגבלות ידועות
 
-- Roll/Slip קיימים חלקית (כפתורים+מקלדת); transitions חסרים; לא כל UI עובר עדיין דרך CommandBus.
+- Roll/Slip חלקיים; transitions חסרים; לא כל UI דרך CommandBus (AG-2 חלקי גם אחרי PR #32).
+- Multi-track cutaway מחליף גם אודיו מהרצועה המנצחת (אין A-roll audio שמור עדיין).
+- יכולות PR #32 אינן ב-`main` עד מיזוג.
 - Auth/Dashboard/Supabase — דורשים אישור מפורש (RULES §7); קוד חלקי קיים.
 - Provider policies / health-check / Zero-cost — חלקיים.
 - intro/outro + preview לפני הורדה ב-web — מתוכננים ל-v0.2.0.
