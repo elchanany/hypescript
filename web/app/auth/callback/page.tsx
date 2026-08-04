@@ -28,7 +28,11 @@ export default function AuthCallbackPage() {
         setTimeout(() => router.replace("/login?error=1"), 1200);
         return;
       }
-      if (data.session) router.replace("/dashboard");
+      const goDash = () => {
+        try { sessionStorage.setItem("hs_just_logged_in", "1"); } catch { /* private mode */ }
+        router.replace("/dashboard");
+      };
+      if (data.session) goDash();
       else {
         // PKCE / code flow: try exchange if present
         const qs = new URLSearchParams(window.location.search);
@@ -42,7 +46,7 @@ export default function AuthCallbackPage() {
             return;
           }
         }
-        router.replace("/dashboard");
+        goDash();
       }
     })();
     return () => { cancelled = true; };
