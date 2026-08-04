@@ -41,3 +41,71 @@ export function trimGap(clips: Clip[], id: string, duration: number): Clip[] {
     return { ...c, start: 0, end: Math.max(0.05, duration) };
   });
 }
+
+/**
+ * Roll edit between clips[leftIndex] and clips[leftIndex+1].
+ * Positive delta moves the cut to the right: left grows, right shrinks.
+ * Total duration of the pair is preserved. Gaps are not rolled.
+ */
+export function rollAtBoundary(
+  clips: Clip[],
+  leftIndex: number,
+  delta: number,
+  maxDurBySource: (sourceId: string) => number,
+): Clip[] {
+  if (!Number.isFinite(delta) || delta === 0) return clips;
+  if (leftIndex < 0 || leftIndex >= clips.length - 1) return clips;
+  const left = clips[leftIndex];
+  const right = clips[leftIndex + 1];
+  if (isGapClip(left) || isGapClip(right)) return clips;
+
+  const maxL = Math.max(left.end, maxDurBySource(left.sourceId) || left.end);
+  const maxR = Math.max(right.end, maxDurBySource(right.sourceId) || right.end);
+
+  const minLeftDur = 0.05;
+  const minRightDur = 0.05;
+  const leftRoomGrow = Math.max(0, maxL - left.end);
+  const leftRoomShrink = Math.max(0, clipDur(left) - minLeftDur);
+  const rightRoomGrow = Math.max(0, right.start); // can move start earlier
+  const rightRoomShrink = Math.max(0, clipDur(right) - minRightDur);
+
+  let d = delta;
+  if (d > 0) {
+    // left grows (end++), right shrinks (start++)
+    d = Math.min(d, leftRoomGrow, rightRoomShrink);
+  } else {
+    // left shrinks (end--), right grows (start--)
+    d = -Math.min(-d, leftRoomShrink, rightRoomGrow);
+  }
+  if (d === 0) return clips;
+
+  const arr = [...clips];
+  arr[leftIndex] = { ...left, end: left.end + d };
+  arr[leftIndex + 1] = { ...right, start: right.start + d };
+  return arr;
+}
+
+/**
+ * Slip: slide the source window of a clip without changing its timeline duration.
+ * Positive delta reveals later source material.
+ */
+export function slipClip(
+  clips: Clip[],
+  id: string,
+  delta: number,
+  maxDuration: number,
+): Clip[] {
+  if (!Number.isFinite(delta) || delta === 0) return clips;
+  return clips.map((c) => {
+    if (c.id !== id || isGapClip(c)) return c;
+    const dur = clipDur(c);
+    if (dur < 0.05) return c;
+    const max = Number.isFinite(maxDuration) && maxDuration > 0 ? maxDuration : c.end;
+    let s = c.start + delta;
+    let e = s + dur;
+    if (s < 0) { s = 0; e = dur; }
+    if (e > max) { e = max; s = Math.max(0, e - dur); }
+    if (e - s < 0.05) return c;
+    return { ...c, start: s, end: e };
+  });
+}

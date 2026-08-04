@@ -17,7 +17,9 @@ export type CommandId =
   | "clip.setEnabled"
   | "clip.setVolume"
   | "clip.duplicate"
-  | "caption.setStyle";
+  | "caption.setStyle"
+  | "clip.roll"
+  | "clip.slip";
 
 export interface EditorApi {
   getClips(): Clip[] | null;
@@ -37,6 +39,8 @@ export interface EditorApi {
   getPlayhead(): number;
   getCaptionStyle?: () => import("./captionStyle").CaptionStyle;
   setCaptionStyle?: (style: import("./captionStyle").CaptionStyle) => void;
+  /** Source media duration for roll/slip clamping */
+  getMediaDuration?: (sourceId: string) => number;
 }
 
 export interface CommandDef {
