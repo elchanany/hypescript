@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { ZOOM_MIN } from "@/lib/editor/time";
-import { nextZoom, scrollLeftAfterZoom } from "@/lib/editor/zoom";
+import { nextZoom, scrollLeftAfterZoom, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
@@ -57,6 +57,8 @@ export default function Timeline(p: Props) {
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<number | null>(null);
+  const zoomAcc = useRef({ delta: 0, clientX: 0 });
+  const zoomRaf = useRef(0);
   const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
   const drag = useRef<{ kind: "clip" | "overlay"; mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
 
@@ -65,7 +67,8 @@ export default function Timeline(p: Props) {
   const onZoomRef = useRef(p.onZoom);
   onZoomRef.current = p.onZoom;
 
-  useEffect(() => {
+  // apply scroll before paint — מונע קפיצת playhead אחרי זום
+  useLayoutEffect(() => {
     if (pendingScroll.current == null || !scrollRef.current) return;
     scrollRef.current.scrollLeft = pendingScroll.current;
     pendingScroll.current = null;
@@ -83,32 +86,42 @@ export default function Timeline(p: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // wheel: pinch/Ctrl = זום; שתי אצבעות לצד / Shift = גלילה אופקית (לא זום!)
+  // wheel: pinch/Ctrl = זום (מצטבר ל-rAF); שתי אצבעות לצד / Shift = גלילה אופקית
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const flushZoom = () => {
+      zoomRaf.current = 0;
+      const { delta, clientX } = zoomAcc.current;
+      zoomAcc.current.delta = 0;
+      if (delta === 0) return;
+      const z = zoomRef.current;
+      const next = nextZoom(z, delta, true);
+      if (Math.abs(next - z) < 1e-4) return;
+      const rect = el.getBoundingClientRect();
+      pendingScroll.current = scrollLeftAfterZoom({
+        oldZoom: z,
+        newZoom: next,
+        scrollLeft: el.scrollLeft,
+        clientX,
+        containerLeft: rect.left,
+        portWidth: el.clientWidth,
+        gutter: TIMELINE_GUTTER,
+      });
+      zoomRef.current = next;
+      onZoomRef.current(next);
+    };
     const onWheel = (e: WheelEvent) => {
       const pinch = e.ctrlKey || e.metaKey;
       if (pinch) {
         e.preventDefault();
-        const z = zoomRef.current;
-        const next = nextZoom(z, e.deltaY, true);
-        if (Math.abs(next - z) < 1e-4) return;
-        const rect = el.getBoundingClientRect();
-        pendingScroll.current = scrollLeftAfterZoom({
-          oldZoom: z,
-          newZoom: next,
-          scrollLeft: el.scrollLeft,
-          clientX: e.clientX,
-          containerLeft: rect.left,
-          scrollWidth: el.scrollWidth,
-        });
-        onZoomRef.current(next);
+        zoomAcc.current.delta += e.deltaY;
+        zoomAcc.current.clientX = e.clientX;
+        if (!zoomRaf.current) zoomRaf.current = requestAnimationFrame(flushZoom);
         return;
       }
       const absX = Math.abs(e.deltaX);
       const absY = Math.abs(e.deltaY);
-      // Shift+גלגלת או שתי אצבעות לצד בטאצפד → פאן אופקי על הציר
       if (e.shiftKey) {
         el.scrollLeft += absY > 0 ? e.deltaY : e.deltaX;
         e.preventDefault();
@@ -118,10 +131,12 @@ export default function Timeline(p: Props) {
         el.scrollLeft += e.deltaX;
         e.preventDefault();
       }
-      // גלגלת/שתי אצבעות אנכית — גלילה אנכית של הרצועות (ברירת מחדל)
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (zoomRaf.current) cancelAnimationFrame(zoomRaf.current);
+    };
   }, []);
 
   const colorOf = (sourceId: string) => SOURCE_COLORS[Math.max(0, media.findIndex((m) => m.id === sourceId)) % SOURCE_COLORS.length];

@@ -462,9 +462,9 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-rowline { display: flex; align-items: stretch; }
 .tl-rowline + .tl-rowline { border-top: 1px solid var(--border); }
 
-/* headers pinned to the start while lanes scroll horizontally */
+/* headers pinned — z מעל playhead כדי שהסמן לא ייכנס מעל הנעילה/שמות */
 .tl-head2 {
-  width: 136px; flex: none; position: sticky; left: 0; z-index: 4;
+  width: 136px; flex: none; position: sticky; left: 0; z-index: 12;
   display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px;
   background: var(--panel); border-right: 1px solid var(--border); direction: rtl;
 }
@@ -474,8 +474,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-head2 .hd-ctrls { display: flex; align-items: center; gap: 1px; }
 
 /* ruler */
-.tl-rulerline { height: 26px; position: sticky; top: 0; z-index: 5; background: var(--panel); }
-.tl-corner2 { width: 136px; flex: none; position: sticky; left: 0; z-index: 6; background: var(--panel); border-right: 1px solid var(--border); }
+.tl-rulerline { height: 26px; position: sticky; top: 0; z-index: 13; background: var(--panel); }
+.tl-corner2 { width: 136px; flex: none; position: sticky; left: 0; z-index: 14; background: var(--panel); border-right: 1px solid var(--border); }
 .tl-ruler2 { position: relative; flex: 1; cursor: pointer; border-bottom: 1px solid var(--border); }
 .tl-tick2 { position: absolute; top: 0; bottom: 0; border-inline-start: 1px solid var(--border); }
 .tl-tick2 > span { position: absolute; top: 5px; inset-inline-start: 4px; font-size: 10px; color: var(--text-3); font-family: var(--mono); white-space: nowrap; }
