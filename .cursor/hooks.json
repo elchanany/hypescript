@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/track-edit.sh"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/end-of-turn-maintenance.sh",
+        "loop_limit": 1,
+        "timeout": 30
+      }
+    ]
+  }
+}

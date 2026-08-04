@@ -1,0 +1,36 @@
+---
+description: Shared cross-agent continuity protocol for this repository
+alwaysApply: true
+---
+
+# Cross-agent continuity
+
+This repository is the shared source of truth for Cursor Local, Cursor Cloud, Codex, Claude Code, Cowork, and future agents.
+
+## Before substantial work
+
+1. Read `AGENTS.md`, `RULES.md`, `.ai/HANDOFF.md`, `.ai/ACTIVE_WORK.md`.
+2. Inspect git branch/status/diff; preserve unrelated work.
+3. For codebase questions, run `graphify query "<question>"` before broad exploration when `graphify-out/graph.json` exists.
+4. Verify the actual source files before editing.
+5. Read `.ai/DECISIONS.md` only for architecture, security, API, data-model, deployment, or workflow decisions.
+
+## After relevant changes
+
+Relevant = source, tests, schemas, migrations, dependencies, build/CI, runtime config, deployment/product behavior.
+
+1. Run appropriate verification.
+2. Run `graphify update .`.
+3. Update `.ai/HANDOFF.md` (concise, replace stale info, <800 words) before the final response.
+4. Update `.ai/ACTIVE_WORK.md` with task/branch/commit/status/continuation point.
+5. Update `.ai/PROJECT_STATE.md` only for stable capability/limitation changes.
+6. Update `.ai/DECISIONS.md` only for durable decisions.
+7. Commit app + continuity + needed Graphify artifacts together; push the working branch.
+
+## Do not
+
+- Update continuity files for read-only conversations.
+- Commit secrets, tokens, credentials, private env values, or production data.
+- Deploy automatically.
+- Force-push, delete branches, or overwrite protected `main` history without explicit approval.
+- Load all of `graph.json` / `graph.html` into context.
