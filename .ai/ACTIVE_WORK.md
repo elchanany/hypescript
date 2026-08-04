@@ -7,7 +7,7 @@
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-`0022f1d` — fix(web): keep clip selection when clicking timeline clips
+`9b03306` — docs: finalize HANDOFF/ACTIVE_WORK for timeline PR #24
 
 ## Status
 verified — PR #24 OPEN, ready for review (לא על `main`)

@@ -4,7 +4,7 @@
 שיפורי טיימליין CapCut: בחירה→אינספקטור, hover, snap guides, יישור כותרות אודיו, חיתוך מקושר A/V.
 
 ## Current State (verified 2026-08-04)
-- Branch: `cursor/timeline-inspector-snap-328b` · tip `0022f1d` · PR #24 OPEN
+- Branch: `cursor/timeline-inspector-snap-328b` · tip `9b03306` · PR #24 OPEN
 - לחיצה על וידאו/אודיו/כתובית/שכבה → מאפיינים בפאנל הימני (לא «הגדרות פרויקט»).
 - `stopPropagation` על click של קליפ — מונע ביטול בחירה ע״י ה־lane.
 - Hover; בחירה מקושרת וידאו↔אודיו; snap guide צהוב (Magnet); headers ברשת 5 משבצות.
