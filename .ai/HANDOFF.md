@@ -4,10 +4,10 @@
 עורך CapCut-class + סוכן AI מעל אותו מנוע. ענף מבודד; **אין merge בלי אישור מפורש**.
 
 ## Current State (verified)
-ענף: `main` (מיזוג PR #4+…).
-- Package A על main: shell, Agent dock, Canvas, Export overlays, DeepSeek normalize.
-- CommandBus / gaps / Provider Registry / Chat retry — ממוזגים.
-- **Chat UX:** קיבוץ כרטיסי-כלי זהים (`collapseTools`) + נקודות "חושב" בין פעולות.
+ענף: `main` (מיזוג PR #4 + #5…).
+- Package A / CommandBus / gaps / Provider Registry — על main.
+- **Chat UX:** קיבוץ כרטיסי-כלי + נקודות "חושב".
+- **Agent workflow:** `remove_silence` within_existing; `delete_clips` / `keep_source_range` / `clear_clips`; כתוביות עם `script=`; שיחות מרובות (`chatStore`); JSON parse בטוח.
 - Graphify: לא מותקן בסביבה זו.
 
 ## Exact Next Steps

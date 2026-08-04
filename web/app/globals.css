@@ -547,6 +547,15 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 }
 
 /* mode selector: Ask / Plan / Act */
+.chat-threads {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  border-bottom: 1px solid var(--border); direction: rtl;
+}
+.chat-threads select {
+  flex: 1; min-width: 0; height: 28px; padding: 0 8px; font-size: 12px;
+}
+.chat-threads .iconbtn { flex: none; }
+
 .agent-modes { display: flex; gap: 3px; padding: 6px 8px; border-bottom: 1px solid var(--border); direction: rtl; }
 .mode-tab { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text-2); border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
 .mode-tab:hover { color: var(--text); border-color: var(--border-strong); }

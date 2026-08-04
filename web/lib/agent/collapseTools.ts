@@ -11,6 +11,7 @@ export type CollapsibleTool = {
   state: "running" | "ok" | "error";
   summary: string;
   time: string;
+  providerLabel?: string;
 };
 
 export type CollapsedToolView = CollapsibleTool & { count: number };
