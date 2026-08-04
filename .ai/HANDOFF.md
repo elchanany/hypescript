@@ -1,22 +1,20 @@
 # HANDOFF
 
 ## Goal
-עורך CapCut-class + סוכן AI מעל אותו מנוע. ענף מבודד; **אין merge בלי אישור מפורש**.
+עורך CapCut-class + סוכן AI מעל אותו מנוע.
 
 ## Current State (verified)
-ענף: `main` (מיזוג PR #4 + #5…).
-- Package A / CommandBus / gaps / Provider Registry — על main.
-- **Chat UX:** קיבוץ כרטיסי-כלי + נקודות "חושב".
-- **Agent workflow:** `remove_silence` within_existing; `delete_clips` / `keep_source_range` / `clear_clips`; כתוביות עם `script=`; שיחות מרובות (`chatStore`); JSON parse בטוח.
-- Graphify: לא מותקן בסביבה זו.
+ענף: `main` — ממוזגים PR #4 + #5 + #6 (2026-08-04).
+- קיבוץ כרטיסי-כלי + נקודות "חושב"
+- Agent workflow: within_existing silence, delete_clips/keep_source_range, כתוביות עם script, שיחות מרובות
+- ציטוט מקום בצ'אט + זום טיימליין בגלגלת (~0.15×–128×)
+- על בסיס CommandBus / gaps / Provider Registry שכבר היו ב-main
 
 ## Exact Next Steps
-1. להרחיב CommandBus ליותר פעולות UI + parity tests.
-2. AG-4 מלא: checkpoints/cost/retry אמיתי לפי tool-call אם יידרש.
-3. PR-1 המשך: ProviderConnection/health-check/ExecutionPolicy/Zero-cost.
-4. **לא** להתחיל Supabase/Auth בלי אישור (RULES §7).
+1. לאמת בפריסת Vercel אחרי deploy מ-main
+2. להרחיב CommandBus / AG-4 לפי GAP_MAP
+3. **לא** Supabase/Auth בלי אישור
 
 ## Risks
-- Roll/Slip/transitions עדיין חסרים.
-- חלק מפעולות ה-UI עדיין לא עוברות דרך CommandBus.
-- Graphify לא מותקן בסביבה.
+- Roll/Slip/transitions חסרים
+- Graphify לא מותקן בסביבה
