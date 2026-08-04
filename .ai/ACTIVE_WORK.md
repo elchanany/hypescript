@@ -7,7 +7,7 @@
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-(יועדכן אחרי commit של תיקון stopPropagation)
+`0022f1d` — fix: stopPropagation so clip click keeps inspector open
 
 ## Status
 verified manually — ready for review (PR #24)
