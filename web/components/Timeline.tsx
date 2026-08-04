@@ -34,7 +34,6 @@ interface Props {
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
-  onWheelZoom?: (deltaY: number, clientX: number, laneEl: HTMLElement) => void;
   onOverlayTrimBegin?: () => void;
   onOverlayTrim?: (id: string, start: number, end: number) => void;
   onOverlayTrimEnd?: () => void;
@@ -72,30 +71,54 @@ export default function Timeline(p: Props) {
     pendingScroll.current = null;
   }, [zoom]);
 
-  // native wheel (passive:false) — כדי ש-preventDefault יעבוד בדפדפן
+  // רוחב יציב לפי viewport של הגלילה — מונע התרחבות פריסה בזום גבוה
+  const [portW, setPortW] = useState(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const sync = () => setPortW(el.clientWidth);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // wheel: pinch/Ctrl = זום; שתי אצבעות לצד / Shift = גלילה אופקית (לא זום!)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      const pinch = e.ctrlKey || e.metaKey;
+      if (pinch) {
+        e.preventDefault();
+        const z = zoomRef.current;
+        const next = nextZoom(z, e.deltaY, true);
+        if (Math.abs(next - z) < 1e-4) return;
+        const rect = el.getBoundingClientRect();
+        pendingScroll.current = scrollLeftAfterZoom({
+          oldZoom: z,
+          newZoom: next,
+          scrollLeft: el.scrollLeft,
+          clientX: e.clientX,
+          containerLeft: rect.left,
+          scrollWidth: el.scrollWidth,
+        });
+        onZoomRef.current(next);
+        return;
+      }
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
+      // Shift+גלגלת או שתי אצבעות לצד בטאצפד → פאן אופקי על הציר
       if (e.shiftKey) {
-        el.scrollLeft += e.deltaY;
+        el.scrollLeft += absY > 0 ? e.deltaY : e.deltaX;
         e.preventDefault();
         return;
       }
-      e.preventDefault();
-      const z = zoomRef.current;
-      const next = nextZoom(z, e.deltaY);
-      if (Math.abs(next - z) < 1e-4) return;
-      const rect = el.getBoundingClientRect();
-      pendingScroll.current = scrollLeftAfterZoom({
-        oldZoom: z,
-        newZoom: next,
-        scrollLeft: el.scrollLeft,
-        clientX: e.clientX,
-        containerLeft: rect.left,
-        scrollWidth: el.scrollWidth,
-      });
-      onZoomRef.current(next);
+      if (absX > absY && absX > 0.5) {
+        el.scrollLeft += e.deltaX;
+        e.preventDefault();
+      }
+      // גלגלת/שתי אצבעות אנכית — גלילה אנכית של הרצועות (ברירת מחדל)
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -225,12 +248,15 @@ export default function Timeline(p: Props) {
   const Grid = () => (<>{ticks.out.map((t) => <div key={t} className="tl-gridline" style={{ left: `${pct(t)}%` }} />)}</>);
 
   return (
-    <div className="tl-scroll" ref={scrollRef} title="גלגלת להגדלה/הקטנה · Shift+גלגלת לגלילה אופקית">
+    <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
       <div className="tl-ghost" ref={ghostRef}>
         <span className="g-name">{dragLabel?.name}</span>
         <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
       </div>
-      <div className="tl-inner" style={{ width: `${Math.max(ZOOM_MIN, zoom) * 100}%` }}>
+      <div
+        className="tl-inner"
+        style={{ width: portW > 0 ? Math.max(portW, portW * Math.max(ZOOM_MIN, zoom)) : `${Math.max(ZOOM_MIN, zoom) * 100}%` }}
+      >
         {/* ruler */}
         <div className="tl-rowline tl-rulerline">
           <div className="tl-corner2" />

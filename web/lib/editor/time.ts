@@ -36,10 +36,10 @@ export function formatQuoteTime(s: number): string {
   return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
 }
 
-/** טקסט שמכניסים להיסטוריית הסוכן / ציטוט. */
+/** טקסט קצר להדבקה בתיבת ההודעה של הצ'אט. */
 export function quotePlaceText(s: number): string {
   const t = roundToMs(s);
-  return `📍 ציטוט מקום: ${formatQuoteTime(t)} (${t.toFixed(2)}s על הציר)`;
+  return `📍 ${formatQuoteTime(t)}`;
 }
 
 /** גבולות זום טיימליין — כמעט ללא מגבלה מעשית. */

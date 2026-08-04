@@ -20,7 +20,7 @@ import {
   activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore,
   switchConversation, upsertActive,
 } from "@/lib/agent/chatStore";
-import { formatQuoteTime, quotePlaceText, roundToMs } from "@/lib/editor/time";
+import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   Bot, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
@@ -229,20 +229,27 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [displayItems, ask, showThinking]);
 
+  // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
   const insertQuote = (seconds: number) => {
-    const sec = roundToMs(seconds);
-    const text = quotePlaceText(sec);
-    setItems((p) => [...p, { kind: "quote", seconds: sec, text, time: now() }]);
-    // נשמר בהיסטוריית הסוכן כדי שיבין את ההפניה בסיבוב הבא
-    const msg: ChatMessage = { role: "user", content: text };
-    savedHistory.current = [...savedHistory.current, msg];
-    if (runnerRef.current) {
-      if (runnerRef.current.isRunning) runnerRef.current.injectMessage(text);
-      else runnerRef.current.history = [...runnerRef.current.history, msg];
-    }
+    const snippet = quotePlaceText(seconds);
+    setInput((v) => {
+      const pad = v && !/\s$/.test(v) ? " " : "";
+      return v + pad + snippet + " ";
+    });
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      const end = ta.value.length;
+      ta.selectionStart = ta.selectionEnd = end;
+    });
   };
 
-  if (quoteSink) quoteSink.current = insertQuote;
+  useEffect(() => {
+    if (!quoteSink) return;
+    quoteSink.current = insertQuote;
+    return () => { if (quoteSink.current === insertQuote) quoteSink.current = null; };
+  });
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
@@ -408,8 +415,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
       </div>
 
       <div className="agent-ctx" aria-label="הקשר נוכחי">
-        <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לצ'אט"
-          data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום בצ'אט">
+        <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
+          data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
           <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
         </button>
         {selectionLabel

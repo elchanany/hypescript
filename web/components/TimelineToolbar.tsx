@@ -33,7 +33,7 @@ export default function TimelineToolbar({
           aria-label="זום ציר זמן" />
         <IconButton icon={ZoomIn} tip="הגדל תצוגה" tipPos="up" disabled={zoom >= ZOOM_MAX - 1e-6}
           onClick={() => onZoom(clampZoom(zoom * 1.25))} />
-        <span className="tl-zoom-pct" title="גלגלת על הציר להגדלה/הקטנה">{Math.round(zoom * 100)}%</span>
+        <span className="tl-zoom-pct" title="Pinch או Ctrl+גלגלת לזום · שתי אצבעות לצד לגלילה">{Math.round(zoom * 100)}%</span>
         <IconButton icon={Maximize2} tip="התאם לרוחב" tipPos="up" onClick={onFit} />
       </div>
     </div>
