@@ -479,22 +479,23 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-rowline { display: flex; align-items: stretch; }
 .tl-rowline + .tl-rowline { border-top: 1px solid var(--border); }
 
-/* headers pinned — z מעל playhead כדי שהסמן לא ייכנס מעל הנעילה/שמות */
+/* headers — שורה אחת קומפקטית כדי שלא יישבו אחד על השני בגבהים קצרים */
 .tl-head2 {
   width: 136px; flex: none; position: sticky; left: 0; z-index: 12;
-  display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px;
+  display: flex; flex-direction: row; align-items: center; gap: 4px;
+  padding: 0 6px; overflow: hidden; min-height: 0;
   background: var(--panel); border-right: 1px solid var(--border); direction: rtl;
 }
-.tl-head2 .hd-top { display: flex; align-items: center; gap: 6px; }
+.tl-head2 .hd-top { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
 .tl-head2 .hd-type { color: var(--text-3); flex: none; }
-.tl-head2 .hd-name { font-size: var(--fs-2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; flex: 1; }
+.tl-head2 .hd-name { font-size: 11px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; flex: 1; min-width: 0; }
 /* Fixed 5 columns (lock | mute|spacer | height | down | up) — mute on audio never shifts siblings */
 .tl-head2 .hd-ctrls {
-  display: grid; grid-template-columns: repeat(5, 24px); align-items: center; justify-items: center; gap: 0;
-  width: 120px;
+  display: grid; grid-template-columns: repeat(5, 18px); align-items: center; justify-items: center; gap: 0;
+  width: 90px; flex: none;
 }
-.tl-head2 .hd-ctrls .iconbtn { width: 24px; height: 24px; padding: 0; }
-.tl-head2 .hd-slot { width: 24px; height: 24px; display: block; }
+.tl-head2 .hd-ctrls .iconbtn { width: 18px; height: 18px; padding: 0; }
+.tl-head2 .hd-slot { width: 18px; height: 18px; display: block; }
 
 /* ruler */
 .tl-rulerline { height: 26px; position: sticky; top: 0; z-index: 13; background: var(--panel); }
@@ -601,9 +602,23 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-snap-guide::before { top: 2px; }
 .tl-snap-guide::after { bottom: 2px; }
 
-/* playhead */
-.playhead2 { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); pointer-events: none; z-index: 8; }
-.playhead2::before { content: ""; position: absolute; top: 0; left: -4px; width: 9px; height: 7px; background: var(--accent); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+/* playhead — ניתן לגרירה, מודגש ב-hover */
+.playhead2 {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+  background: var(--accent); pointer-events: auto; z-index: 8; cursor: ew-resize;
+}
+.playhead2::before {
+  content: ""; position: absolute; top: 0; left: -5px; width: 11px; height: 9px;
+  background: var(--accent); clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.playhead2::after {
+  content: ""; position: absolute; inset: -4px -6px; /* אזור לחיצה רחב */
+}
+.playhead2:hover, .playhead2.dragging {
+  background: var(--accent-hover, #8aafff);
+  box-shadow: 0 0 0 1px rgba(108,146,255,.35), 0 0 10px rgba(108,146,255,.35);
+}
+.playhead2:hover::before, .playhead2.dragging::before { background: var(--accent-hover, #8aafff); }
 
 .tl-empty { padding: 40px 16px; text-align: center; color: var(--text-3); font-size: var(--fs-2); line-height: 1.7; }
 
@@ -705,13 +720,74 @@ button.quote-chip:hover svg { color: var(--accent); }
 .tool2 .stt.err { color: var(--danger); }
 .tool2 .stt.run { color: var(--accent); }
 
-.out2 { align-self: stretch; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px; display: flex; flex-direction: column; gap: 8px; }
+.out2 { align-self: stretch; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px; display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; overflow: hidden; }
 .out2 .oh { display: flex; align-items: center; gap: 7px; font-size: var(--fs-2); font-weight: 500; }
-.out2 video, .out2 img { width: 100%; border-radius: var(--r-sm); background: #000; max-height: 180px; }
+.out2 video, .out2 img, .out-video, .out-img { width: 100%; border-radius: var(--r-sm); background: #000; max-height: 200px; object-fit: contain; }
+.out-srt {
+  margin: 0; max-height: 140px; overflow: auto; padding: 8px;
+  background: var(--inset); border-radius: var(--r-sm); border: 1px solid var(--border);
+  font-size: 11px; line-height: 1.45; white-space: pre-wrap; color: var(--text-2);
+}
+.out-dl { align-self: stretch; justify-content: center; }
 
-.ask2 { align-self: stretch; background: var(--panel-2); border: 1px solid var(--accent); border-radius: var(--r-md); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.ask2 .q { font-size: var(--fs); }
+/* נגן שמע עם פעימות */
+.beat-player {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: linear-gradient(135deg, #12161f, #1a2230); border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+.beat-play {
+  width: 36px; height: 36px; border-radius: 50%; border: none; flex: none;
+  background: var(--accent); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
+.beat-play:hover { filter: brightness(1.08); }
+.beat-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.beat-bars { display: flex; align-items: flex-end; gap: 2px; height: 28px; }
+.beat-bars i {
+  flex: 1; min-width: 2px; border-radius: 1px; background: rgba(108,146,255,.25);
+  transition: background .12s;
+}
+.beat-bars i.on { background: var(--accent); }
+.beat-seek { width: 100%; accent-color: var(--accent); }
+.beat-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); direction: ltr; }
+
+/* markdown בצ'אט */
+.md-body { line-height: 1.55; word-break: break-word; }
+.md-bold { font-weight: 700; color: var(--text); }
+.md-code {
+  font-family: var(--mono); font-size: 0.92em; padding: 1px 5px;
+  background: var(--inset); border-radius: 4px; border: 1px solid var(--border);
+  direction: ltr; unicode-bidi: isolate;
+}
+.md-ul, .md-ol { margin: 6px 0; padding-inline-start: 1.2em; }
+.md-ul li, .md-ol li { margin: 2px 0; }
+.md-ask {
+  margin: 6px 0; padding: 8px 10px; border-radius: var(--r-md);
+  background: rgba(234, 179, 8, .1); border: 1px solid rgba(234, 179, 8, .45);
+  color: var(--text); font-weight: 500;
+}
+.md-pre {
+  margin: 8px 0; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--inset); overflow: hidden;
+}
+.md-pre-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-3);
+}
+.md-copy {
+  display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent;
+  color: var(--text-2); cursor: pointer; font-size: 11px; font-family: inherit;
+}
+.md-copy:hover { color: var(--accent); }
+.md-pre pre {
+  margin: 0; padding: 8px 10px; max-height: 220px; overflow: auto;
+  font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; direction: rtl;
+}
+
+.ask2 { align-self: stretch; background: linear-gradient(180deg, rgba(108,146,255,.08), var(--panel-2)); border: 1px solid var(--accent); border-radius: var(--r-md); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.ask2 .q { font-size: var(--fs); font-weight: 600; line-height: 1.45; }
 .ask2 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.ask2 .opts .btn { border-color: var(--accent); }
 .ask2 .free { display: flex; gap: 6px; }
 .ask2 .free input { flex: 1; }
 
@@ -743,7 +819,11 @@ button.quote-chip:hover svg { color: var(--accent); }
   color: var(--text-3);
   min-height: 32px;
 }
-.think2 .dots2 i { width: 5px; height: 5px; background: var(--text-2); }
+.think2 .dots2 { gap: 4px; }
+.think2 .dots2 i {
+  width: 6px; height: 6px; background: var(--accent);
+  animation: bounce 1s infinite ease-in-out;
+}
 
 /* status strip (analyze/render progress) */
 .status-strip { height: 30px; flex: none; direction: rtl; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--panel-2); font-size: var(--fs-2); }

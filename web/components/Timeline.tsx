@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, clipOpacity, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
@@ -26,6 +26,8 @@ interface Props {
   selectedSubId?: string | null;
   /** Which track the clip selection came from — drives inspector title. */
   selectionTrack?: "video" | "audio" | null;
+  /** כשמקושר — בחירה/חיתוך משותפים לווידאו ואודיו; לחיצה משחררת */
+  avLinked?: boolean;
   zoom: number;
   onZoom: (z: number) => void;
   snap: boolean;
@@ -55,7 +57,7 @@ const SOURCE_COLORS = ["#3f5f8f", "#5b4d8a", "#8a4d68", "#8a6a3f", "#3f7d72", "#
 const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const;
 
 export default function Timeline(p: Props) {
-  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, selectedSubId, zoom, snap } = p;
+  const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, selectedSubId, selectionTrack, avLinked = true, zoom, snap } = p;
   const scrollRef = useRef<HTMLDivElement>(null);
   const laneRef = useRef<HTMLDivElement>(null);
   const overlayLaneRef = useRef<HTMLDivElement>(null);
@@ -365,11 +367,44 @@ export default function Timeline(p: Props) {
     const { time } = applySnap(raw);
     p.onSeek(time);
   };
-  const Playhead = () => <div className="playhead2" style={{ left: `${pct(currentAssembled)}%` }} />;
+
+  const [phDrag, setPhDrag] = useState(false);
+  const seekFromClientX = (clientX: number, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const raw = Math.max(0, Math.min(total, ((clientX - rect.left) / rect.width) * total));
+    const { time } = applySnap(raw);
+    p.onSeek(time);
+  };
+  const onPlayheadDown = (e: React.MouseEvent, laneEl: HTMLElement) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPhDrag(true);
+    seekFromClientX(e.clientX, laneEl);
+    const onMove = (ev: MouseEvent) => seekFromClientX(ev.clientX, laneEl);
+    const onUp = () => {
+      setPhDrag(false);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+  const Playhead = ({ laneEl }: { laneEl?: HTMLElement | null }) => (
+    <div
+      className={`playhead2 ${phDrag ? "dragging" : ""}`}
+      style={{ left: `${pct(currentAssembled)}%` }}
+      title="גרור לניווט בציר"
+      onMouseDown={(e) => {
+        const el = laneEl || (e.currentTarget.parentElement as HTMLElement);
+        if (el) onPlayheadDown(e, el);
+      }}
+    />
+  );
   const Grid = () => (<>{ticks.out.map((t) => <div key={t} className="tl-gridline" style={{ left: `${pct(t)}%` }} />)}</>);
 
-  const clipHover = (id: string) => hoveredId === id || selectedId === id;
-  const linkedSel = (id: string) => selectedId === id;
+  const videoSel = (id: string) => selectedId === id && (avLinked || selectionTrack !== "audio");
+  const audioSel = (id: string) => selectedId === id && (avLinked || selectionTrack === "audio");
+  const clipHover = (id: string) => hoveredId === id;
 
   return (
     <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
@@ -391,7 +426,7 @@ export default function Timeline(p: Props) {
             {ticks.out.map((t) => (
               <div key={t} className="tl-tick2" style={{ left: `${pct(t)}%` }}><span>{fmt(t)}</span></div>
             ))}
-            <Playhead />
+            <Playhead laneEl={null} />
           </div>
         </div>
 
@@ -432,7 +467,7 @@ export default function Timeline(p: Props) {
                     if (gap) {
                       return (
                         <div key={c.id}
-                          className={`clip-gap ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
+                          className={`clip-gap ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
                           style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
                           onMouseDown={(e) => onDown(e, c, "move", "video")}
                           onClick={(e) => e.stopPropagation()}
@@ -451,8 +486,8 @@ export default function Timeline(p: Props) {
                     const thumbH = Math.max(28, track.height - 8);
                     return (
                       <div key={c.id}
-                        className={`clip2 ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
-                        style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
+                        className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
+                        style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%`, opacity: clipOpacity(c) }}
                         onMouseDown={(e) => onDown(e, c, "move", "video")}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
@@ -470,7 +505,7 @@ export default function Timeline(p: Props) {
                     );
                   })}
                   <div className="tl-drop" ref={dropRef} />
-                  <Playhead />
+                  <Playhead laneEl={null} />
                 </div>
               )}
 
@@ -484,7 +519,7 @@ export default function Timeline(p: Props) {
                     return (
                       <div
                         key={c.id}
-                        className={`clip-audio ${gap ? "gap" : ""} ${linkedSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !linkedSel(c.id) ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
+                        className={`clip-audio ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
                         style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
                         onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio"); }}
                         onClick={(e) => e.stopPropagation()}
@@ -505,7 +540,7 @@ export default function Timeline(p: Props) {
                       </div>
                     );
                   })}
-                  <Playhead />
+                  <Playhead laneEl={null} />
                 </div>
               )}
 
@@ -525,7 +560,7 @@ export default function Timeline(p: Props) {
                       <span className="cue-txt">{s.text}</span>
                     </div>
                   ))}
-                  <Playhead />
+                  <Playhead laneEl={null} />
                 </div>
               )}
             </div>
@@ -533,7 +568,7 @@ export default function Timeline(p: Props) {
         })}
 
         {/* Overlay lane — visual track for image/text layers (not a TrackMeta type yet) */}
-        <div className="tl-rowline" style={{ height: 40 }}>
+        <div className="tl-rowline" style={{ height: Math.max(48, overlays.length ? 52 : 48) }}>
           <div className="tl-head2">
             <div className="hd-top">
               <Layers className="hd-type" size={14} strokeWidth={1.75} />
@@ -552,7 +587,7 @@ export default function Timeline(p: Props) {
               return (
                 <div key={o.id}
                   className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""}`}
-                  style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%` }}
+                  style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%`, opacity: o.hidden ? 0.35 : (o.transform?.opacity ?? 1) }}
                   title={`${label} · ${dur.toFixed(1)}s`}
                   onMouseDown={(e) => onOverlayDown(e, o, "move")}
                   onClick={(e) => { e.stopPropagation(); p.onSelectSub?.(null); p.onSelectOverlay?.(o.id); }}>
@@ -562,7 +597,7 @@ export default function Timeline(p: Props) {
                 </div>
               );
             })}
-            <Playhead />
+            <Playhead laneEl={null} />
           </div>
         </div>
       </div>

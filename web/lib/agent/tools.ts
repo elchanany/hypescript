@@ -224,6 +224,35 @@ export const TOOLS: ToolMeta[] = [
     run: async (_a, ctx) => ctx.media.length ? ctx.media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n") : "אין מדיה טעונה.",
   },
   {
+    name: "rename_media", label: "שינוי שם מדיה", color: "#64748b", icon: "✏️",
+    schema: {
+      name: "rename_media",
+      description: "משנה את שם קובץ המדיה לפי הקשר (למשל קריינות/שמע). source=שם או אינדקס 1-based, name=שם חדש כולל סיומת.",
+      parameters: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "שם נוכחי או אינדקס" },
+          name: { type: "string", description: "שם חדש (למשל קריינות_פתיחה.mp3)" },
+        },
+        required: ["source", "name"],
+      },
+    },
+    run: async (a, ctx) => {
+      const src = String(a.source || "").trim();
+      let name = String(a.name || "").trim();
+      if (!src || !name) return "שגיאה: חסרים source או name.";
+      const idx = /^\d+$/.test(src) ? Math.max(0, parseInt(src, 10) - 1) : ctx.media.findIndex((m) => m.name === src || m.name.includes(src));
+      if (idx < 0 || idx >= ctx.media.length) return `שגיאה: לא נמצא מקור "${src}".`;
+      if (!/\.[a-z0-9]+$/i.test(name)) {
+        const old = ctx.media[idx].name;
+        const ext = old.includes(".") ? old.slice(old.lastIndexOf(".")) : "";
+        name += ext;
+      }
+      ctx.media[idx] = { ...ctx.media[idx], name };
+      return `שם המדיה עודכן ל-"${name}".`;
+    },
+  },
+  {
     name: "transcribe_video", label: "תמלול הסרטון", color: "#8b5cf6", icon: "📝",
     schema: {
       name: "transcribe_video",
@@ -981,7 +1010,9 @@ export const TOOLS: ToolMeta[] = [
     schema: { name: "export_srt", description: "מייצא את הכתוביות הנוכחיות כקובץ SRT (לא צרוב) — קישור בצ'אט.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות. הרץ generate_subtitles.";
-      const name = (mainVideo(ctx)?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt";
+      const { contextualFileName } = await import("@/lib/chat/markdown");
+      const sample = (ctx.subs?.[0]?.text || mainVideo(ctx)?.name || "כתוביות").slice(0, 40);
+      const name = contextualFileName(sample, "srt", (mainVideo(ctx)?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
       ctx.onOutput?.(new Blob([subsToSrt(ctx.subs)], { type: "text/plain;charset=utf-8" }), name, "srt");
       return `יוצא SRT (${ctx.subs.length} כתוביות) — קישור להורדה בצ'אט.`;
     },
@@ -1106,7 +1137,8 @@ export const TOOLS: ToolMeta[] = [
       }
       const blob = await resp.blob();
       const modelId = resp.headers.get("X-Model-Id") || a.model_id || DEFAULT_TTS_MODEL;
-      const name = `narration_${voiceId.slice(0, 8)}.mp3`;
+      const { contextualFileName } = await import("@/lib/chat/markdown");
+      const name = contextualFileName(text, "audio", `narration_${voiceId.slice(0, 8)}.mp3`);
       const file = new File([blob], name, { type: blob.type || "audio/mpeg" });
       const url = URL.createObjectURL(file);
       // משך משוער — נטען אסינכרונית אם אפשר
@@ -1160,6 +1192,11 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - אחרי עריכת הציר: חובה לרענן הבנה עם transcribe_timeline (mode=remap חינמי) או get_transcript(timeline=true). mode=retranscribe = אודיו זמני + STT מחדש (בתשלום).
 - קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
+
+═══ עיצוב תשובות בצ'אט ═══
+- השתמש ב-markdown קל: **מודגש**, קוד קצר בין backticks, ורשימות עם מקף.
+- לבלוק להעתקה (סקריפט/כותרות): עטוף ב-fence של שלושה backticks.
+- שאלות למשתמש: העדף ask_user; בטקסט חופשי אפשר להתחיל ב-"שאלה:".
 
 ═══ חוקי ברזל (אל תשבור) ═══
 1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות ארוכות — תכנן בראש ובצע.

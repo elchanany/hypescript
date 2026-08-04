@@ -20,10 +20,16 @@ export interface Clip {
   end: number; // out-point במקור
   volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
   enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
+  opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
 }
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
 export const clipVolume = (c: Clip): number => (c.volume == null ? 1 : c.volume);
+export const clipOpacity = (c: Clip): number => {
+  const o = c.opacity;
+  if (o == null || !Number.isFinite(o)) return 1;
+  return Math.max(0, Math.min(1, o));
+};
 
 export function uid(prefix = "c"): string {
   return prefix + Math.random().toString(36).slice(2, 9);
