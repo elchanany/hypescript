@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, clipEnabled, firstVideo, mediaById, moveClip, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, addClip, clipEnabled, firstVideo, mediaById, moveClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
@@ -326,14 +326,13 @@ export default function EditorPage() {
     setOverlays((os) => os.filter((o) => o.assetId !== id));
     if (selectedOverlayId) setSelectedOverlayId(null);
   };
-  const addMediaClip = (asset: MediaAsset) => {
+  const addMediaClip = (asset: MediaAsset, atIndex?: number) => {
     if (asset.kind === "image") {
       // image -> canvas overlay (CapCut-style), not a main-track clip
       const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
       const apply = (iw?: number, ih?: number) => {
         const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end, iw && ih ? { width: iw, height: ih } : undefined);
         addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
-        // ensure playhead is inside the overlay's visible window
         if (cur < o.start || cur > o.end) seek(o.start);
       };
       const img = new Image();
@@ -342,7 +341,17 @@ export default function EditorPage() {
       img.src = asset.url;
       return;
     }
-    setClips((cs) => [...(cs || []), { id: uid(), sourceId: asset.id, start: 0, end: asset.duration }]);
+    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration };
+    setClips((cs) => addClip(cs || [], clip, atIndex));
+    setSelectedId(clip.id);
+    setSelectedOverlayId(null);
+    setSelectedSubId(null);
+    setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
+  };
+  const dropMediaOnTimeline = (assetId: string, atIndex: number) => {
+    const asset = mediaById(media, assetId);
+    if (!asset) return;
+    addMediaClip(asset, atIndex);
   };
   const addTextOverlay = () => {
     const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
@@ -704,9 +713,9 @@ export default function EditorPage() {
               snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
               avLinked={avLinked} onAvLinked={setAvLinked}
             />
-            {clips ? (
+            {clips || media.length > 0 ? (
               <Timeline
-                media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
+                media={media} clips={clips || []} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={timelineDuration}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
                 selectedSubId={selectedSubId} selectionTrack={selectionTrack} avLinked={avLinked}
@@ -721,6 +730,7 @@ export default function EditorPage() {
                 onTrimEnd={commitTransaction}
                 onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
+                onDropMedia={dropMediaOnTimeline}
                 onOverlayTrimBegin={beginTransaction}
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}
@@ -731,7 +741,7 @@ export default function EditorPage() {
                 cycleHeight={cycleHeight} reorderTrack={reorderTrack}
               />
             ) : (
-              <div className="tl-empty">טען מדיה כדי להתחיל — הסרטון יופיע כאן כקטע בציר, ותוכל לחתוך, לגרור ולפצל. או בקש מהסוכן ב-AI.</div>
+              <div className="tl-empty">טען מדיה כדי להתחיל — גרור קבצים מהספרייה לציר, או לחתוך/לפצל. אפשר גם לבקש מהסוכן ב-AI.</div>
             )}
           </div>
         </div>

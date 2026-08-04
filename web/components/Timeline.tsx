@@ -8,6 +8,7 @@ import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { ZOOM_MIN, snapTimeTo } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, TIMELINE_GUTTER } from "@/lib/editor/zoom";
+import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
@@ -40,6 +41,8 @@ interface Props {
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
+  /** גרירה מספריית מדיה — assetId + אינדקס הכנסה */
+  onDropMedia?: (assetId: string, atIndex: number) => void;
   onOverlayTrimBegin?: () => void;
   onOverlayTrim?: (id: string, start: number, end: number) => void;
   onOverlayTrimEnd?: () => void;
@@ -67,7 +70,12 @@ export default function Timeline(p: Props) {
   const pendingScroll = useRef<number | null>(null);
   const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
-  const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
+  const [dragLabel, setDragLabel] = useState<{
+    name: string;
+    dur: number;
+    kind: "video" | "image" | "audio" | "overlay" | "gap";
+    thumbUrl?: string | null;
+  } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredSubId, setHoveredSubId] = useState<string | null>(null);
   const drag = useRef<{
@@ -235,7 +243,25 @@ export default function Timeline(p: Props) {
       s0: clip.start, e0: clip.end, moved: false, px: e.clientX, assembled0,
     };
     selectClip(clip.id, track);
-    if (mode === "move") { const a = mediaById(media, clip.sourceId); setDragLabel({ name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע", dur: clipDur(clip) }); }
+    if (mode === "move") {
+      const a = mediaById(media, clip.sourceId);
+      const gap = isGapClip(clip);
+      const name = gap ? "רווח" : ((a?.name || "").replace(/\.[^.]+$/, "") || "קטע");
+      const kind = gap ? "gap" as const : (a?.kind || "video");
+      setDragLabel({
+        name,
+        dur: clipDur(clip),
+        kind,
+        thumbUrl: a?.kind === "image" ? a.url : null,
+      });
+      if (a?.kind === "video") {
+        void import("@/lib/media/thumbnails").then(({ getThumbnail }) =>
+          getThumbnail(a.file, Math.min(a.duration * 0.1, Math.max(0, clip.start + 0.2)), 90)
+            .then((u) => setDragLabel((prev) => (prev && prev.name === name ? { ...prev, thumbUrl: u } : prev)))
+            .catch(() => {}),
+        );
+      }
+    }
     if (mode === "l" || mode === "r") p.onTrimBegin();
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -256,6 +282,18 @@ export default function Timeline(p: Props) {
       moved: false,
       px: e.clientX,
     };
+    if (mode === "move") {
+      const asset = overlay.assetId ? mediaById(media, overlay.assetId) : undefined;
+      const name = overlay.kind === "text"
+        ? (overlay.text || "טקסט")
+        : ((asset?.name || "").replace(/\.[^.]+$/, "") || "תמונה");
+      setDragLabel({
+        name,
+        dur: Math.max(0.05, overlay.end - overlay.start),
+        kind: overlay.kind === "image" ? "image" : "overlay",
+        thumbUrl: asset?.kind === "image" ? asset.url : null,
+      });
+    }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
@@ -293,6 +331,12 @@ export default function Timeline(p: Props) {
         else if (eSnap.snapped) { start = eSnap.time - dur; guide = eSnap.target; }
         showSnapGuide(guide);
         p.onOverlayMove?.(d.id, start, start + dur);
+        const g = ghostRef.current;
+        if (g) {
+          g.style.display = "flex";
+          g.style.left = `${e.clientX + 12}px`;
+          g.style.top = `${e.clientY + 14}px`;
+        }
       }
       return;
     }
@@ -332,6 +376,39 @@ export default function Timeline(p: Props) {
     if (ghostRef.current) ghostRef.current.style.display = "none";
     if (dropRef.current) dropRef.current.style.display = "none";
     showSnapGuide(null);
+    setDragLabel(null);
+  };
+
+  const hasMediaDrag = (dt: DataTransfer) =>
+    Array.from(dt.types || []).includes(MEDIA_DRAG_MIME);
+
+  const showMediaDropAt = (clientX: number) => {
+    const drop = dropRef.current;
+    if (!drop || !laneRef.current) return;
+    const { boundary } = dropTarget(clientX);
+    drop.style.display = "block";
+    drop.style.left = `${pct(boundary)}%`;
+  };
+
+  const onLaneDragOver = (e: React.DragEvent) => {
+    if (!hasMediaDrag(e.dataTransfer)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    e.currentTarget.classList.add("drop-target");
+    showMediaDropAt(e.clientX);
+  };
+  const onLaneDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("drop-target");
+    if (dropRef.current) dropRef.current.style.display = "none";
+  };
+  const onLaneDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("drop-target");
+    if (dropRef.current) dropRef.current.style.display = "none";
+    const id = e.dataTransfer.getData(MEDIA_DRAG_MIME);
+    if (!id || !p.onDropMedia) return;
+    const { index } = dropTarget(e.clientX);
+    p.onDropMedia(id, index);
   };
   const onUp = () => {
     const d = drag.current;
@@ -409,8 +486,21 @@ export default function Timeline(p: Props) {
   return (
     <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
       <div className="tl-ghost" ref={ghostRef}>
-        <span className="g-name">{dragLabel?.name}</span>
-        <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+        <div className={`g-preview ${dragLabel?.kind === "audio" ? "audio" : ""} ${!dragLabel?.thumbUrl && dragLabel?.kind !== "audio" ? "glyph" : ""}`}>
+          {dragLabel?.thumbUrl ? (
+            <img src={dragLabel.thumbUrl} alt="" draggable={false} />
+          ) : dragLabel?.kind === "audio" ? (
+            Array.from({ length: 10 }, (_, i) => (
+              <i key={i} style={{ height: `${35 + ((i * 19) % 50)}%` }} />
+            ))
+          ) : (
+            <span>{dragLabel?.kind === "gap" ? "▭" : dragLabel?.kind === "overlay" ? "Aa" : "🎬"}</span>
+          )}
+        </div>
+        <div className="g-meta">
+          <span className="g-name">{dragLabel?.name}</span>
+          <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+        </div>
       </div>
       <div
         className="tl-inner"
@@ -460,7 +550,10 @@ export default function Timeline(p: Props) {
 
               {track.type === "video" && (
                 <div className="tl-lane2" ref={laneRef}
-                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
+                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}
+                  onDragOver={onLaneDragOver}
+                  onDragLeave={onLaneDragLeave}
+                  onDrop={onLaneDrop}>
                   <Grid />
                   {clips.map((c, i) => {
                     const gap = isGapClip(c);
@@ -511,7 +604,10 @@ export default function Timeline(p: Props) {
 
               {track.type === "audio" && (
                 <div className={`tl-lane2 ${track.muted ? "muted" : ""}`}
-                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
+                  onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}
+                  onDragOver={onLaneDragOver}
+                  onDragLeave={onLaneDragLeave}
+                  onDrop={onLaneDrop}>
                   <Grid />
                   {clips.map((c, i) => {
                     const gap = isGapClip(c);
