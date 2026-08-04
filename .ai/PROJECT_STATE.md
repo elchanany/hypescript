@@ -19,7 +19,7 @@
 
 - **ליבה משותפת (מסונכרנת):** יישור-סקריפט, keep intervals + הסרת מהססים, SRT/RTL — ב-`web/lib` וב-`local/hypescript`.
 - **web:** Next.js על Vercel; ffmpeg.wasm מקומי; תמלול דרך proxy (`/api/transcribe` → Groq); מפתחות ב-`localStorage`/env; `npm run build` עובר.
-- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים דרך proxy, צ'אט עם כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, כתוביות עם script.
+- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים דרך proxy, צ'אט עם כרטיסי כלים, multi-chat, within_existing silence (ברירת מחדל כשיש EDL), delete_clips/keep_source_range, אנטי-לופ runtime, scriptToClips סדרתי, snapSpeechToWords, כתוביות עם script + progressive, תמלול ציר (`transcribe_timeline`).
 - **עורך (פאזה 1+):** shell דו-צדדי, preview עם השמעה ערוכה, timeline רב-מסלולי, CommandBus/gaps, Provider Registry, ציטוט מקום בצ'אט, זום גלגלת (~0.15×–128×), קיבוץ כרטיסי-כלי + נקודות "חושב".
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
 - **בדיקות web (מאומתות בסביבה זו):** `vitest` — 19 files / 85 tests עברו, כולל אינטגרציית render.
