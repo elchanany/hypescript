@@ -11,7 +11,7 @@
 | גרסה | סטטוס |
 |---|---|
 | v0.1.0 | קיים — web MVP + local מלא |
-| v0.2.0 | מתוכנן — ליטוש web (chunking, intro/outro, preview) |
+| v0.2.0 | חלקי ב־`main` — chunking + caption burn-in; חסר intro/outro/preview |
 | v0.3.0 | **אושר במפורש, בעבודה** — סוכן AI + עורך בסגנון CapCut |
 | v1.0.0 | יעד יציב עתידי |
 
