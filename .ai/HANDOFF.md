@@ -1,13 +1,12 @@
 # HANDOFF
 
 ## main (after merge)
-Fix PKCE with `@supabase/ssr` + server `/auth/callback` route.
+- Auth PKCE: `@supabase/ssr` + server `/auth/callback`
+- Timeline zoom: true zoom-out below fit (`timelineContentWidth`), range 5%–×400
 
-## Auth
-- Browser: `createBrowserClient` (cookie PKCE verifier)
-- Callback: Route Handler exchanges code server-side
-- Continue page confirms session then routes to onboarding/dashboard
-- Middleware refreshes cookies
+## Zoom (merged)
+- Removed viewport lock (`Math.max(portW,…)` + `min-width:100%`)
+- `nextZoom(..., portWidth)` respects effective min for viewport
 
 ## Next
-Package C — Usage foundation.
+Package C — Usage foundation. Verify zoom pinch/wheel on production after deploy.

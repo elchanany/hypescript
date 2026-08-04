@@ -7,8 +7,8 @@ import { Overlay } from "@/lib/editor/overlay";
 import { primaryVideoTrackId, sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack } from "@/lib/editor/tracks";
 import { isGapClip } from "@/lib/editor/timelineOps";
-import { ZOOM_MIN, snapTimeTo } from "@/lib/editor/time";
-import { nextZoom, scrollLeftAfterZoom, TIMELINE_GUTTER } from "@/lib/editor/zoom";
+import { snapTimeTo } from "@/lib/editor/time";
+import { nextZoom, scrollLeftAfterZoom, timelineContentWidth, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
 import { IconButton } from "@/components/ui";
@@ -129,13 +129,14 @@ export default function Timeline(p: Props) {
       zoomAcc.current = 0;
       if (delta === 0) return;
       const z = zoomRef.current;
-      const next = nextZoom(z, delta, true);
+      const port = el.clientWidth;
+      const next = nextZoom(z, delta, true, port);
       if (Math.abs(next - z) < 1e-4) return;
       pendingScroll.current = scrollLeftAfterZoom({
         oldZoom: z,
         newZoom: next,
         scrollLeft: el.scrollLeft,
-        portWidth: el.clientWidth,
+        portWidth: port,
         gutter: TIMELINE_GUTTER,
       });
       zoomRef.current = next;
@@ -524,7 +525,7 @@ export default function Timeline(p: Props) {
       </div>
       <div
         className="tl-inner"
-        style={{ width: portW > 0 ? Math.max(portW, portW * Math.max(ZOOM_MIN, zoom)) : `${Math.max(ZOOM_MIN, zoom) * 100}%` }}
+        style={{ width: portW > 0 ? timelineContentWidth(portW, zoom) : `${Math.max(0.05, zoom) * 100}%` }}
       >
         {/* CapCut-style snap guide — full height across all tracks */}
         <div className="tl-snap-guide" ref={snapGuideRef} />
