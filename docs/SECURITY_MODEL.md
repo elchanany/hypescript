@@ -13,7 +13,7 @@
 | מפתחות LLM (deepseek/openai/anthropic/gemini) | ✔ server-side env בלבד; proxy `/api/agent`; לא מגיעים לדפדפן | תקין |
 | `/api/config` | ✔ מחזיר בוליאני "מוגדר?" בלבד, לא ערכים | תקין |
 | מפתח תמלול (Groq) | ⚠️ **נשלח מהדפדפן** ל-`/api/transcribe` (proxy שלא שומר). ה-README מציין שהמפתח מוזן בצד-לקוח | **פער**: להעביר לניהול server-side/connection בחבילת הספקים. עד אז לתעד ולא להרחיב שימוש client-side. |
-| Auth / roles / RLS | ✖ אין backend | חבילת מעטפת מוצר (Supabase Auth + RLS בכל טבלה; לא `user_metadata` לתפקידים; אין חשיפת service role) |
+| Auth / roles / RLS | ◐ אופציונלי | Supabase Auth (Google) כשמוגדרים `NEXT_PUBLIC_SUPABASE_URL` + `ANON_KEY`. בלי מפתחות — מצב מקומי רגיל. פרויקטים/וידאו נשארים ב-IndexedDB. RLS/roles לענן־פרויקטים — עתידי. מדריך: `docs/SETUP_AUTH.md`. אין שימוש ב-service_role בצד לקוח. |
 | Zero-cost enforcement | ✖ אין Policy engine | חבילת ספקים: לחסום user-billed/unknown ללא אישור |
 | Secrets בלוגים/הודעות סוכן | ✔ אין הדפסת מפתחות; שגיאות ספק חתוכות ל-400 תווים | לוודא sanitization ב-AppError (חבילת שגיאות) |
 

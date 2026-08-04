@@ -62,8 +62,8 @@
 | פריט | סטטוס | פער |
 |---|---|---|
 | פרויקטים מקומיים (IndexedDB) | OK | — |
-| Login / Google OAuth / session | MISSING | דורש אישור (RULES §7 — שירות חדש) |
-| Dashboard / project cards / wizard | MISSING | — |
+| Login / Google OAuth / session | PARTIAL | קוד מוכן; דורש מפתחות Supabase מהמשתמש (`SETUP_AUTH.md`). בלי מפתחות — לא נשבר |
+| Dashboard / project cards | OK | `/dashboard` על פרויקטים מקומיים |
 | Organizations / roles / RLS | MISSING | — |
 
 ## 7. Providers

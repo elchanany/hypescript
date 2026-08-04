@@ -42,6 +42,13 @@ export default function SettingsPage() {
       <div className="hero">
         <h1>הגדרות</h1>
         <p>המפתחות נשמרים כמשתני-סביבה ב-Vercel (או ב-<code>web/.env.local</code> להרצה מקומית) — לא בדפדפן ולא בקוד.</p>
+        <p style={{ color: "var(--muted)", fontSize: 13 }}>
+          התחברות Google (אופציונלי): ראה מדריך <Link href="https://github.com/elchanany/hypescript/blob/main/docs/SETUP_AUTH.md">SETUP_AUTH.md</Link>
+          {" · "}
+          <Link href="/dashboard">לוח פרויקטים</Link>
+          {" · "}
+          <Link href="/login">התחברות</Link>
+        </p>
       </div>
 
       <div className="card">
