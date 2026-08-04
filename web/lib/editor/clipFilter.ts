@@ -1,5 +1,6 @@
 // פעולות סינון/מחיקה המוניות על EDL — כדי שהסוכן לא ימחק עשרות קליפים אחד-אחד.
 
+import { speechWords, Word } from "@/lib/models";
 import { Clip, uid } from "./model";
 
 /** משאיר רק חפיפה עם [start,end] בזמן-מקור (ומקצץ גבולות). מקורות אחרים נשארים כמו שהם אם sourceId ניתן. */
@@ -52,4 +53,38 @@ export function intersectClipsWithSpeech(clips: Clip[], speech: Clip[], sourceId
     }
   }
   return out;
+}
+
+/**
+ * מרחיב קטעי-דיבור (מזיהוי עוצמה) לגבולות מילים מהתמלול.
+ * מונע חיתוך מילת פתיחה רכה כמו "שלום" שנחשבה בטעות כשקט.
+ */
+export function snapSpeechToWords(
+  speech: Clip[],
+  words: Word[] | null | undefined,
+  opts?: { maxSnapSec?: number; padSec?: number },
+): Clip[] {
+  const list = speechWords(words || []);
+  if (!list.length) return speech;
+  const maxSnap = opts?.maxSnapSec ?? 0.45;
+  const pad = opts?.padSec ?? 0.04;
+
+  return speech.map((seg) => {
+    let start = seg.start;
+    let end = seg.end;
+    for (const w of list) {
+      // מילה שמתחילה מעט לפני תחילת הדיבור שזוהה — כלול אותה
+      if (w.start < seg.start && w.end > seg.start - 0.08 && seg.start - w.start <= maxSnap) {
+        start = Math.min(start, w.start);
+      }
+      // מילה שמסתיימת מעט אחרי סוף הדיבור שזוהה
+      if (w.end > seg.end && w.start < seg.end + 0.08 && w.end - seg.end <= maxSnap) {
+        end = Math.max(end, w.end);
+      }
+    }
+    start = Math.max(0, start - pad);
+    end = end + pad;
+    if (!(end > start)) return seg;
+    return { ...seg, start, end };
+  });
 }

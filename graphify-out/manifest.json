@@ -220,13 +220,13 @@
     "semantic_hash": "751c5db208a936d715c303dd9e95ecb2"
   },
   "web/lib/agent/runtime.ts": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "a58ec63ef4d35135c13723029a94bae9",
-    "semantic_hash": "a58ec63ef4d35135c13723029a94bae9"
+    "mtime": 1785839058.121973,
+    "ast_hash": "19c29cdf3f146ba4258e9e027d78e5e0",
+    "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1785838774.9518979,
-    "ast_hash": "6e51a49f1e4a7bb197259e2a558dc380",
+    "mtime": 1785839075.7701218,
+    "ast_hash": "fe9457677da4ea9a3975c9d55af93d5b",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -260,14 +260,14 @@
     "semantic_hash": "5e37fc9de071cf2a0a36930ea5cfd0da"
   },
   "web/lib/editor/clipFilter.test.ts": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "a4ce6ae44180912d15aa9e25c0c73e80",
-    "semantic_hash": "a4ce6ae44180912d15aa9e25c0c73e80"
+    "mtime": 1785839105.6583264,
+    "ast_hash": "7e1a67dd0046ca6021bb7b03b99f9135",
+    "semantic_hash": ""
   },
   "web/lib/editor/clipFilter.ts": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "6299c31f59932f79c50980c08266f456",
-    "semantic_hash": "6299c31f59932f79c50980c08266f456"
+    "mtime": 1785839023.573615,
+    "ast_hash": "79d4306c9d7cede0b230b8c75a13166f",
+    "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
     "mtime": 1785838018.4739296,
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.ts": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "ec75c35f8d5af1be848979760ef8b2d4",
+    "mtime": 1785839138.3264885,
+    "ast_hash": "0c71d3fc9fd824827c709cb66fed08ff",
     "semantic_hash": ""
   },
   "web/lib/editor/subtitlesEdl.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1785838791.9397464,
-    "ast_hash": "ad6787bc7bbe9114a24f7404267bb94b",
+    "mtime": 1785838811.227566,
+    "ast_hash": "1df20b6766602af833687fe3d4e96082",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -922,6 +922,16 @@
   "web/lib/editor/assembleTranscript.ts": {
     "mtime": 1785838583.2566442,
     "ast_hash": "702af143a9d533fbe72735d8dcf1a929",
+    "semantic_hash": ""
+  },
+  "web/lib/agent/loopGuard.test.ts": {
+    "mtime": 1785839097.2342744,
+    "ast_hash": "f7d6953abf3af5be1684342a5cdb8f32",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/scriptClips.test.ts": {
+    "mtime": 1785839124.8144288,
+    "ast_hash": "f9c81c02df1193e99a71f926f75cdb56",
     "semantic_hash": ""
   }
 }

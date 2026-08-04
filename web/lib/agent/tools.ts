@@ -18,7 +18,7 @@ import { Overlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
-import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange } from "@/lib/editor/clipFilter";
+import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange, snapSpeechToWords } from "@/lib/editor/clipFilter";
 import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import {
   assembleTranscript,
@@ -513,7 +513,8 @@ export const TOOLS: ToolMeta[] = [
       if (!asset || asset.kind !== "video") return "אין סרטון.";
       report("מנתח עוצמת סאונד…");
       const prof = await analyzeAudio(asset.file);
-      const padding = a.padding != null ? +a.padding : 0.08;
+      // ריפוד גדול יותר + snap למילים — מונע חיתוך מילת פתיחה רכה ("שלום")
+      const padding = a.padding != null ? +a.padding : 0.12;
       const thr = a.threshold_db != null ? +a.threshold_db : prof.floorDb + 8;
       const sil = findSilences(prof, thr, a.min_silence != null ? +a.min_silence : 0.35);
       const dur = asset.duration;
@@ -523,15 +524,22 @@ export const TOOLS: ToolMeta[] = [
       if (dur - prev > 0.05) raw.push([prev, dur]);
       if (!raw.length) return "לא זוהו קטעי דיבור מעל הסף.";
       const padded = raw.map(([s, e]) => ({ start: Math.max(0, s - padding), end: Math.min(dur, e + padding) }));
-      const speech: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
+      let speech: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
       for (const k of padded.slice(1)) {
         const last = speech[speech.length - 1];
         if (k.start <= last.end + 1e-3) last.end = Math.max(last.end, k.end);
         else speech.push({ id: uid(), sourceId: asset.id, start: k.start, end: k.end });
       }
+      const words = transcriptOf(ctx, asset);
+      speech = snapSpeechToWords(speech, words, { maxSnapSec: 0.5, padSec: 0.03 }).map((c) => ({
+        ...c,
+        start: Math.max(0, c.start),
+        end: Math.min(dur, c.end),
+      }));
       const hasEdl = !!(ctx.clips && ctx.clips.length);
       const replaceAll = a.replace_all === true;
-      const within = a.within_existing === true || (!replaceAll && hasEdl && a.within_existing !== false);
+      // כשיש EDL — תמיד within אלא אם replace_all=true במפורש
+      const within = !replaceAll && (a.within_existing === true || (hasEdl && a.within_existing !== false));
       let merged: Clip[];
       if (within && hasEdl) {
         merged = intersectClipsWithSpeech(ctx.clips!, speech, asset.id);
@@ -539,10 +547,14 @@ export const TOOLS: ToolMeta[] = [
         setClips(ctx, merged);
         return `הוסרו שתיקות *בתוך הבחירה הקיימת* מ-"${asset.name}" (סף ${thr.toFixed(0)}dB). ${clipsSummary(merged)}`;
       }
+      if (hasEdl && replaceAll) {
+        // אזהרה מפורשת כשמחליפים בחירה קיימת
+      }
       merged = speech;
       setClips(ctx, merged);
       const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
-      return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s. ${clipsSummary(merged)}`;
+      const warn = hasEdl && replaceAll ? " (הוחלף EDL קודם — replace_all)" : "";
+      return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s.${warn} ${clipsSummary(merged)}`;
     },
   },
   {
@@ -931,7 +943,7 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "edit_subtitle", label: "עריכת כתובית", color: "#a855f7", icon: "✏️",
-    schema: { name: "edit_subtitle", description: "משנה את הטקסט של כתובית מסוימת (לקיצור/תיקון/ניסוח).", parameters: { type: "object", properties: { index: { type: "number", description: "מספר הכתובית (1-based)" }, text: { type: "string" } }, required: ["index", "text"] } },
+    schema: { name: "edit_subtitle", description: "משנה טקסט של כתובית אחת. לתיקון המוני/סנכרון — clear_subtitles + generate_subtitles(script), לא לולאת edit.", parameters: { type: "object", properties: { index: { type: "number", description: "מספר הכתובית (1-based)" }, text: { type: "string" } }, required: ["index", "text"] } },
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
@@ -1150,19 +1162,20 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
 
 ═══ חוקי ברזל (אל תשבור) ═══
-1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות.
-2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = אתה עושה את זה לא נכון.
-3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה.
-4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → transcribe_timeline (remap) או get_transcript(timeline=true) → generate_subtitles(script=אותו טקסט נקי) → list_subtitles ובדיקה → render בסוף.
-5. תמלול ASR משובש לעיתים (שמות, מילים נדירות). הטקסט שהמשתמש כתב הוא מקור האמת לכתוביות ולחיתוך. לעולם אל תשאיר בכתוביות מילים מוזרות/משובשות מה-ASR אם יש סקריפט נקי — העבר script ל-generate_subtitles.
-6. אחרי get_transcript / list_subtitles: אם אתה רואה שיבושי כתיב או מילים חסרות-היגיון מול הסקריפט — תקן (generate_subtitles עם script). אל תתעלם ואל תמציא כתוביות ידנית במקום generate_subtitles+script.
-7. שגיאת "Loading chunk … failed": בקש מהמשתמש לרענן את הדף (Ctrl+Shift+R). אל תנסה שוב ושוב בלי רענון.
-8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה. תכנן פעם אחת ובצע.
-9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק/לא רלוונטי — תקן עם keep_source_range או trim_clip / delete_clips, לא עם עשרות מחיקות.
-10. חסר נכס (תמונה/סאונד שהמשתמש אמר שיביא אחר כך) — ask_user או ציין שתחכה; אל תמציא ואל תיתקע.
-11. קריינות/תמלול בתשלום: אל תריץ generate_narration או תמלול חוזר מיותר בלי צורך. אם חסר מפתח — הסבר להגדיר ELEVENLABS_API_KEY בהגדרות/Vercel.
-12. כתוביות: generate_subtitles חושף מילים לפי קצב הדיבור. אל תערוך עשרות כתוביות ידנית לתזמון — הרץ מחדש עם script. אסור להשאיר מילים חתוכות/משובשות.
-13. אחרי חיתוך/סידור — אל תסתמך על זמני המקור. השתמש ב-transcribe_timeline או get_transcript(timeline=true). retranscribe רק כשremap לא מספיק (הרכבה מורכבת/בקשת משתמש).
+1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות ארוכות — תכנן בראש ובצע.
+2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = חסום אוטומטית.
+3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון.
+4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video (ElevenLabs אם ביקשו) → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → transcribe_timeline (remap) → generate_subtitles(script=אותו טקסט) → list_subtitles קצר → render בסוף.
+5. תמלול ASR משובש לעיתים. הטקסט שהמשתמש כתב הוא מקור האמת. לעולם אל תשאיר בכתוביות זבל ASR — העבר script ל-generate_subtitles.
+6. כתוביות משובשות/חסרות/לא מסונכרנות: clear_subtitles + generate_subtitles(script=...) פעם אחת. אסור לולאת edit_subtitle (נחסם אחרי 4).
+7. שגיאת "Loading chunk … failed" / chunk: בקש מיד Ctrl+Shift+R. אל תנסה שוב ושוב בלי רענון.
+8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה.
+9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק — keep_source_range או delete_clips, לא עשרות מחיקות.
+10. חסר נכס (תמונה/סאונד בהמשך) — ask_user / חכה; אל תמציא.
+11. קריינות/תמלול בתשלום: אל תריץ מיותר. חסר מפתח — הפנה להגדרות.
+12. אחרי חיתוך — transcribe_timeline או get_transcript(timeline=true). אל תסתמך על זמני מקור לכתוביות.
+13. ספק 503 / "too busy" / Failed to fetch: עצור, דווח למשתמש בקצרה, אל תמשיך בלולאה.
+14. אל תחתוך מילות פתיחה/סיום — remove_silence כבר מריפד ומיישר למילים; אם חסרה מילה בהתחלה, הרחב עם trim_clip/add_clip לפי find_in_transcript.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.

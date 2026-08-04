@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-כתוביות progressive + תמלול ציר ערוך אחרי חיתוך
+תיקוני סוכן/מבנה לפי באגים מצ'אט DeepSeek (קפיצות, silence, לופים, chunk)
 
 ## Branch
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-`76396a9` — feat(agent): תמלול על הציר הערוך אחרי חיתוך
+(pending) — fix(agent): אנטי-לופ + scriptClips סדרתי + snap למילים
 
 ## Status
-PR #23 updated — captions + timeline transcript
+מימוש הושלם מקומית; commit/push/PR update בתהליך
 
 ## Exact continuation point
-Merge PR #23; verify remap/retranscribe in Act mode after cuts.
+אחרי push: לעדכן גוף PR #23; למזג ל־main כשמוכן.

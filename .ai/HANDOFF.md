@@ -1,23 +1,21 @@
 # HANDOFF
 
 ## Goal
-תיקון כתוביות + תמלול על הציר הערוך אחרי חיתוך.
+תיקון באגים מסוכן DeepSeek בצ'אט אמיתי: קפיצות keep_by_script, remove_silence מחליף EDL, לופי מחיקה/כתוביות, chunk/503, חיתוך מילת פתיחה.
 
 ## Current State (verified)
 - ענף: `cursor/fix-captions-speech-sync-c816` · PR #23
-- כתוביות progressive + אכיפת ElevenLabs (קודם).
-- חדש: `assembleTranscript` — מיפוי תמלול מקורות → ציר EDL (חינמי).
-- כלי `transcribe_timeline`: `remap` (ברירת מחדל) או `retranscribe` (אודיו זמני + STT).
-- `get_transcript(timeline=true)` / ברירת מחדל כשיש קליפים — זמנים כמו בנגן.
-- `extractAssembledAudio` בונה mp3 זמני מהעריכה לתמלול מחדש.
-- שינוי EDL מבטל `assembledWords` שמור.
-- build + בדיקות assemble/subtitles עברו.
+- `scriptToClips`: חיפוש סדרתי + העדפת forward; בלי קפיצה ל־117s; סינון קליפים זעירים.
+- `remove_silence`: כשיש EDL — within כברירת מחדל; `snapSpeechToWords` + ריפוד 0.12 מונעים חיתוך "שלום".
+- `AgentRunner`: אנטי-לופ ל־delete_clip / edit_subtitle / list_clips / get_transcript; הודעות chunk/503/Failed to fetch.
+- SYSTEM_PROMPT מחוזק (pipeline, קיצור, ElevenLabs, timeline).
+- בדיקות: scriptClips / clipFilter / loopGuard עברו; `tsc` עבר.
 
 ## Exact Next Steps
 1. למזג PR #23.
-2. בפריסה: `ELEVENLABS_API_KEY` אם רוצים Scribe/retranscribe.
-3. אופציונלי: צריבת ASS לשיעורים ארוכים.
+2. לוודא בפריסה: אחרי keep_by_script → remove_silence לא מחליף את כל הסרטון.
+3. אם chunk error חוזר אחרי auto-reload — לבדוק Cache-Control ל־`_next/static`.
 
 ## Risks
-- `retranscribe` עולה כסף API וזמן ffmpeg.
-- lavfi `anullsrc` לרווחים — לוודא תמיכה ב-ffmpeg.wasm בסביבות שונות.
+- אנטי-לופ עלול לחסום מחיקות בודדות לגיטימיות (מעל 3) — יש `delete_clips`.
+- snap למילים תלוי בתמלול; בלי תמלול נשאר רק ריפוד עוצמה.
