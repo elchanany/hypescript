@@ -360,22 +360,16 @@ export default function EditorPage() {
     try {
       let ws = words;
       if (!ws) {
-        const { extractAudio } = await import("@/lib/ffmpeg");
-        setPhase("מחלץ אודיו…");
-        const audio = await extractAudio(main.file, (r) => setProgress(r));
-        setPhase("מתמלל…"); setProgress(0);
-        const fd = new FormData();
-        fd.append("file", audio, "audio.mp3"); fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
-        const ctrl = new AbortController();
-        const to = setTimeout(() => ctrl.abort(), 180000);
-        let data: any;
-        try {
-          const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal });
-          data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
-        } finally { clearTimeout(to); }
-        ws = (data.words || []).filter((w: any) => w.start != null && w.end != null && (w.word || w.text)).map((w: any) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
-        if (!ws!.length) throw new Error("התמלול לא החזיר מילים.");
+        setPhase("מתמלל…");
+        const { transcribeMediaFile } = await import("@/lib/transcribe/client");
+        ws = await transcribeMediaFile({
+          file: main.file,
+          durationSec: duration || main.duration || 0,
+          provider: "groq",
+          model: "whisper-large-v3",
+          onPhase: setPhase,
+          onProgress: setProgress,
+        });
         setWords(ws);
       }
       const built = script.trim() ? scriptToClips(ws!, script, main.id) : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];

@@ -82,6 +82,63 @@ export async function extractAudio(file: File, onProgress?: (r: number) => void)
   });
 }
 
+/** Extract a time-slice of mono mp3 for chunked cloud transcription. */
+export async function extractAudioSegment(
+  file: File,
+  startSec: number,
+  durationSec: number,
+  onProgress?: (r: number) => void,
+): Promise<Blob> {
+  return runExclusive(async () => {
+    const ff = await getFFmpeg();
+    const input = `in_${uid()}.${extOf(file.name)}`;
+    const out = `au_${uid()}.mp3`;
+    await ff.writeFile(input, await fetchFile(file));
+    if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
+    const ss = Math.max(0, startSec);
+    const t = Math.max(0.1, durationSec);
+    await ff.exec([
+      "-ss", ss.toFixed(3), "-t", t.toFixed(3),
+      "-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out,
+    ]);
+    const data = (await ff.readFile(out)) as Uint8Array;
+    await ff.deleteFile(out).catch(() => {});
+    await ff.deleteFile(input).catch(() => {});
+    return new Blob([data as unknown as BlobPart], { type: "audio/mpeg" });
+  });
+}
+
+/**
+ * Plan + extract audio chunks for long files (local parity).
+ * Short files → one full extractAudio call.
+ */
+export async function extractAudioChunks(
+  file: File,
+  mediaDurationSec: number,
+  opts?: {
+    chunkSec?: number;
+    onProgress?: (r: number) => void;
+    onChunk?: (i: number, n: number) => void;
+  },
+): Promise<{ blob: Blob; offset: number }[]> {
+  const { planChunkOffsets, DEFAULT_CHUNK_SEC } = await import("@/lib/transcribe/chunking");
+  const chunkSec = opts?.chunkSec ?? DEFAULT_CHUNK_SEC;
+  const offsets = planChunkOffsets(mediaDurationSec, chunkSec);
+  if (offsets.length === 1) {
+    opts?.onChunk?.(0, 1);
+    return [{ blob: await extractAudio(file, opts?.onProgress), offset: 0 }];
+  }
+  const out: { blob: Blob; offset: number }[] = [];
+  for (let i = 0; i < offsets.length; i++) {
+    opts?.onChunk?.(i, offsets.length);
+    const start = offsets[i];
+    const dur = Math.min(chunkSec, Math.max(0.1, mediaDurationSec - start));
+    const blob = await extractAudioSegment(file, start, dur, opts?.onProgress);
+    out.push({ blob, offset: start });
+  }
+  return out;
+}
+
 // מחלץ פריים בודד בשנייה נתונה (seek מהיר). מחזיר PNG.
 export async function extractFrame(file: File, atSeconds: number): Promise<Blob> {
   return runExclusive(async () => {

@@ -206,47 +206,30 @@ export const TOOLS: ToolMeta[] = [
           return `נטען תמלול שמור ל-"${asset.name}" (${cached.filter(isSpeechWord).length} מילים).`;
         }
       }
-      let extractAudio: typeof import("@/lib/ffmpeg").extractAudio;
-      try { ({ extractAudio } = await import("@/lib/ffmpeg")); }
+      try { await import("@/lib/ffmpeg"); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
-      report(`מחלץ אודיו מ-${asset.name}…`);
-      const audio = await extractAudio(asset.file);
-      report(`שולח לתמלול (${provider} / ${model})…`);
-      const fd = new FormData();
-      fd.append("file", audio, "audio.mp3");
-      fd.append("provider", provider);
-      fd.append("model", model);
-      fd.append("language", "he");
+      report(`מתמלל ${asset.name} (${provider} / ${model})…`);
+      let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
+      try { ({ transcribeMediaFile } = await import("@/lib/transcribe/client")); }
+      catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב."); }
+
+      const formExtras: Record<string, string> = {};
       if (provider === "elevenlabs") {
-        if (a.tag_audio_events === false) fd.append("tag_audio_events", "false");
-        if (a.diarize === false) fd.append("diarize", "false");
-        if (a.num_speakers != null) fd.append("num_speakers", String(a.num_speakers));
-        if (a.keyterms) fd.append("keyterms", String(a.keyterms));
+        if (a.tag_audio_events === false) formExtras.tag_audio_events = "false";
+        if (a.diarize === false) formExtras.diarize = "false";
+        if (a.num_speakers != null) formExtras.num_speakers = String(a.num_speakers);
+        if (a.keyterms) formExtras.keyterms = String(a.keyterms);
       }
-      const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 180000);
-      let data: any;
-      try {
-        const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal });
-        data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
-      } catch (e: any) {
-        throw new Error(e?.name === "AbortError" ? "התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר." : (e?.message || "התמלול נכשל."));
-      } finally { clearTimeout(to); }
-      const words: Word[] = (data.words || [])
-        .filter((w: any) => w.start != null && w.end != null && (w.word || w.text))
-        .map((w: any) => {
-          const text = String(w.word || w.text).trim();
-          const out: Word = { text, start: +w.start, end: +w.end };
-          const type = w.type as Word["type"] | undefined;
-          if (type === "word" || type === "spacing" || type === "audio_event") out.type = type;
-          else if (/^\[[^\]]+\]$/.test(text)) out.type = "audio_event";
-          if (w.speaker_id) out.speakerId = String(w.speaker_id);
-          return out;
-        });
-      if (!words.length) throw new Error("התמלול לא החזיר מילים.");
+      const words = await transcribeMediaFile({
+        file: asset.file,
+        durationSec: asset.duration || 0,
+        provider,
+        model,
+        formExtras,
+        onPhase: (msg) => report(msg),
+      });
       ctx.transcripts[asset.id] = words;
       if (isMain) { ctx.words = words; if (!ctx.duration) ctx.duration = asset.duration; }
       txWrite(key, words);
