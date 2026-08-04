@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימה פתוחה — PR #23 ממוזג ל־`main`.
+סוכן דרך CommandBus + רצועות וידאו מרובות (רענון מיידי בעורך)
 
 ## Branch
-`main`
+
 
 ## Latest commit
-`79d844e` — Merge branch `cursor/fix-captions-speech-sync-c816` (PR #23)
+ — feat(web): סוכן דרך CommandBus + רצועות וידאו מרובות
 
 ## Status
-הושלם · ב־`main`
+ביצוע · ממתין ל-PR / אימות ידני
 
 ## Exact continuation point
-GAP_MAP: AG-4 / intro-outro / preview; בלי Auth/Supabase בלי אישור.
+לאמת ב-UI: add_video_track מהסוכן משתקף מיד; flatten cutaway בנגן. אחר כך AG-2 נוסף או PiP.

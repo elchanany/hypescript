@@ -2,7 +2,7 @@
 
 עיקרון: *No feature is complete until it is controllable through both the UI and the AI agent using the same validated command* (כשהפעולה מתאימה סמנטית לסוכן).
 
-**מצב נוכחי (אמת):** אין עדיין CommandBus מרכזי. ה-UI משנה state דרך `useEditor` (History), והסוכן משנה state דרך כלים ב-`lib/agent/tools.ts` הפועלים על אותו מודל EDL (`clips`/`subs`). הלוגיקה מנותבת לפונקציות טהורות משותפות ב-`lib/editor/model.ts` (split/trim/move/remove) ו-`subtitlesEdl.ts` — כך שיש **שיתוף מנוע**, אך לא רישום Command אחיד עם schema/permissions/validation. איחוד ל-CommandBus הוא חבילת "CommandBus & Agent parity" (Package C/5).
+**מצב נוכחי (אמת):** יש CommandBus קל (`commands.ts` + builtins). ה-UI קורא ל-`runCommand` לחלק מהפעולות; הסוכן מעביר split/trim/move/add + רצועות וידאו דרך אותו `EditorApi` (עדכון מיידי + Undo), עם נפילה למוטציה ישירה כשאין גשר. מודל: `clip.trackId` + כמה רצועות `video` (cutaway). עדיין חסרים schema/permissions מלאים לכל פעולת UI.
 
 ## מקרא
 UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהורה) · Command (עתידי מזהה)
@@ -29,7 +29,8 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | תזמון/מחיקה/ניקוי כתוביות | ✔(חלקי) | `retime/delete/clear_subtitles` | ✔ | `UPDATE_CAPTION_TIMING`... | ✔ | |
 | ייבוא/ייצוא SRT | ✔ | `import/export_srt` | ✔ | `IMPORT_SRT`/`EXPORT_SRT` | ✔ | |
 | רינדור/ייצוא | ✔(Export) | `render_video` | ✔ `RenderBackend` | `EXPORT_PROJECT` | n/a | native verified |
-| רצועות (rename/lock/mute/height/reorder) | ✔ | ✖ | ✔ `useEditor` | `*_TRACK` | ✔ | להוסיף כלי-סוכן |
+| רצועות (rename/lock/mute/height/reorder) | ✔ | חלקי | ✔ `useEditor` | `track.*` | ✔ | add/remove video + list_tracks בסוכן; rename/lock עדיין UI |
+| רצועת וידאו נוספת / העברת קליפ | ✔(+) | ✔ `add_video_track` / `move_clip_to_track` | ✔ | `track.addVideo` / `clip.moveToTrack` | ✔ | cutaway בנגן+ייצוא |
 | שינוי מצב סוכן Ask/Plan/Act | ✔(dock) | n/a | — | — | n/a | חדש |
 
 ## פערי Parity מיידיים (לחבילה הבאה)
