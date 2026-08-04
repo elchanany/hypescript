@@ -13,12 +13,18 @@ import { Overlay, overlayVisibleAt } from "@/lib/editor/overlay";
 import { CanvasSize, rotatePoint } from "@/lib/editor/canvasCoords";
 import { RotateCw } from "lucide-react";
 
-type Handle = "nw" | "ne" | "se" | "sw" | "rot";
+type Handle = "nw" | "ne" | "se" | "sw" | "n" | "e" | "s" | "w" | "rot";
 const CORNERS: { h: Handle; cx: number; cy: number; cursor: string }[] = [
   { h: "nw", cx: 0, cy: 0, cursor: "nwse-resize" },
   { h: "ne", cx: 1, cy: 0, cursor: "nesw-resize" },
   { h: "se", cx: 1, cy: 1, cursor: "nwse-resize" },
   { h: "sw", cx: 0, cy: 1, cursor: "nesw-resize" },
+];
+const EDGES: { h: Handle; cx: number; cy: number; cursor: string }[] = [
+  { h: "n", cx: 0.5, cy: 0, cursor: "ns-resize" },
+  { h: "e", cx: 1, cy: 0.5, cursor: "ew-resize" },
+  { h: "s", cx: 0.5, cy: 1, cursor: "ns-resize" },
+  { h: "w", cx: 0, cy: 0.5, cursor: "ew-resize" },
 ];
 
 interface Props {
@@ -34,6 +40,7 @@ interface Props {
   onCommit: () => void;
   onCancel?: () => void;
   onEditText: (id: string, currentText: string) => void; // request edit (parent opens modal)
+  onAltCycle?: (clientX: number, clientY: number) => void;
 }
 
 interface DragState {
@@ -46,7 +53,7 @@ interface DragState {
   moved: boolean;
 }
 
-export default function PreviewOverlays({ boxRef, canvas, overlays, media, currentTime, selectedId, onSelect, onBegin, onLive, onCommit, onCancel, onEditText }: Props) {
+export default function PreviewOverlays({ boxRef, canvas, overlays, media, currentTime, selectedId, onSelect, onBegin, onLive, onCommit, onCancel, onEditText, onAltCycle }: Props) {
   const drag = useRef<DragState | null>(null);
   const [boxPx, setBoxPx] = useState({ w: 1, h: 1 });
 
@@ -89,11 +96,18 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
       onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, rotation: deg } } : o)));
       return;
     }
-    // corner resize — symmetric around center, in the element's local (un-rotated) frame
+    // corner / edge resize — in the element's local (un-rotated) frame
     const local = rotatePoint(projX, projY, d.s.x, d.s.y, -d.s.rotation);
-    let w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
-    let h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
-    if (e.shiftKey) { const k = Math.max(w / d.s.w, h / d.s.h); w = d.s.w * k; h = d.s.h * k; }
+    let w = d.s.w, h = d.s.h;
+    if (d.mode === "n" || d.mode === "s") {
+      h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
+    } else if (d.mode === "e" || d.mode === "w") {
+      w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
+    } else {
+      w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
+      h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
+      if (e.shiftKey) { const k = Math.max(w / d.s.w, h / d.s.h); w = d.s.w * k; h = d.s.h * k; }
+    }
     onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, w, h } } : o)));
   };
   const onPointerUp = () => {
@@ -107,6 +121,11 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
     }
   };
   const startDrag = (e: React.PointerEvent, o: Overlay, mode: DragState["mode"]) => {
+    if (e.altKey && onAltCycle) {
+      e.stopPropagation(); e.preventDefault();
+      onAltCycle(e.clientX, e.clientY);
+      return;
+    }
     if (o.locked) { onSelect(o.id); return; }
     e.stopPropagation(); e.preventDefault();
     const box = boxRef.current?.getBoundingClientRect() || new DOMRect(0, 0, 1, 1);
@@ -153,6 +172,10 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
               <>
                 {CORNERS.map((c) => (
                   <span key={c.h} className="ov-handle" style={{ left: `${c.cx * 100}%`, top: `${c.cy * 100}%`, cursor: c.cursor }}
+                    onPointerDown={(e) => startDrag(e, o, c.h)} />
+                ))}
+                {EDGES.map((c) => (
+                  <span key={c.h} className="ov-handle edge" style={{ left: `${c.cx * 100}%`, top: `${c.cy * 100}%`, cursor: c.cursor }}
                     onPointerDown={(e) => startDrag(e, o, c.h)} />
                 ))}
                 <span className="ov-rot" onPointerDown={(e) => startDrag(e, o, "rot")} title="סיבוב">

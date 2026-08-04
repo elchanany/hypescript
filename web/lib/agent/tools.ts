@@ -691,6 +691,40 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "move_clip_to_time", label: "הזזה לזמן בציר", color: "#0ea5e9", icon: "⏱️",
+    schema: {
+      name: "move_clip_to_time",
+      description: "מזיז קליפ לזמן מדויק בציר (שניות מורכבות). משאיר רווח במקום הישן (Move/Overwrite). זהה ל-CommandBus clip.moveToTime.",
+      parameters: { type: "object", properties: { index: { type: "number" }, time: { type: "number", description: "זמן התחלה מבוקש בציר (שניות)" } }, required: ["index", "time"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
+      if (!Number.isFinite(+a.time)) return "שגיאה: time לא תקין.";
+      const { moveClipToTime } = await import("@/lib/editor/timelineOps");
+      setClips(ctx, moveClipToTime(ctx.clips!, c.id, +a.time));
+      return `הוזז ל-${(+a.time).toFixed(2)}s. ${clipsSummary(ctx.clips!)}`;
+    },
+  },
+  {
+    name: "split_linked_av", label: "פיצול A/V מקושר", color: "#0ea5e9", icon: "🔗",
+    schema: {
+      name: "split_linked_av",
+      description: "מפצל את הווידאו והאודיו המקושרים יחד בראש-הנגן או בזמן נתון (אותו EDL — Linked Group).",
+      parameters: { type: "object", properties: { time: { type: "number", description: "זמן בציר; ברירת מחדל = playhead אם הועבר ב-ctx" } } },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const t = a.time != null ? +a.time : 0;
+      const { index, source } = assembledToSource(ctx.clips!, t);
+      if (index < 0) return "אין קליפ בזמן זה.";
+      const c = ctx.clips![index];
+      if (isGapClip(c)) return "לא ניתן לפצל רווח.";
+      setClips(ctx, splitClip(ctx.clips!, c.id, source));
+      return `פוצל A/V מקושר ב-${t.toFixed(2)}s. ${clipsSummary(ctx.clips!)}`;
+    },
+  },
+  {
     name: "delete_clip", label: "מחיקת קליפ", color: "#ef4444", icon: "🗑️",
     schema: {
       name: "delete_clip",

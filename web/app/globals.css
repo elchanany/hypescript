@@ -301,13 +301,38 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 /* Preview */
 .preview2 { flex: 1; min-height: 0; direction: rtl; display: flex; flex-direction: column; background: var(--bg); }
 .pv-stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; background: var(--canvas-surround, #05070a); padding: 10px; overflow: hidden; }
+.pv-stage.zoomed { overflow: auto; place-items: center; }
 /* letterboxed project-canvas box: holds the video + overlays + captions */
 .pv-canvas { position: relative; background: #000; box-shadow: 0 0 0 1px var(--border); overflow: hidden; container-type: size; }
-.pv-canvas video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; cursor: pointer; }
+/* Main video positioned via Element Scale (videoTransform) — canvas chrome stays black around it */
+.pv-canvas video { display: block; background: transparent; cursor: pointer; z-index: 1; pointer-events: none; }
 .pv-empty { color: var(--text-3); font-size: var(--fs); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pv-empty svg { color: var(--text-3); opacity: .6; }
 .pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: none; white-space: pre-line; line-height: 1.35; z-index: 5; margin: 0 4%; }
-.pv-gap { position: absolute; inset: 0; background: #000; z-index: 4; pointer-events: none; }
+.pv-gap { position: absolute; inset: 0; background: #000; z-index: 2; pointer-events: none; }
+
+/* Main video hit-target + handles (Element Scale ≠ Viewer Zoom) */
+.pv-main-hit {
+  position: absolute; z-index: 4; box-sizing: border-box; pointer-events: auto;
+  border: 1.5px solid transparent; cursor: move;
+}
+.pv-main-hit.hovered { border-color: rgba(108,146,255,.65); }
+.pv-main-hit.selected { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(108,146,255,.35); }
+.pv-main-hit.locked { cursor: default; }
+.pv-lock-badge {
+  position: absolute; top: 4px; inset-inline-end: 4px; font-size: 10px; padding: 1px 6px;
+  background: rgba(0,0,0,.65); color: #fff; border-radius: 4px; pointer-events: none;
+}
+
+/* Interactive caption on canvas */
+.pv-caption-box {
+  z-index: 6; pointer-events: auto; cursor: move; box-sizing: border-box;
+  border: 1.5px solid transparent; user-select: none;
+}
+.pv-caption-box.hovered { border-color: rgba(196,140,255,.85); }
+.pv-caption-box.selected { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(168,85,247,.4); }
+.pv-caption-box .pv-caption-txt { display: block; width: 100%; pointer-events: none; }
+.pv-caption-box .ov-handle { z-index: 3; }
 
 /* ---- direct-manipulation overlay layer (project coordinates) ---- */
 .pv-overlays { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
@@ -362,6 +387,15 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .transport .tp-vol { display: flex; align-items: center; gap: 6px; width: 108px; }
 .transport .tp-vol input[type="range"] { flex: 1; }
 .transport .tp-grow { flex: 1; }
+.transport .tp-viewer-zoom {
+  display: flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 11px;
+}
+.transport .tp-viewer-zoom select {
+  background: var(--inset); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 2px 4px; font-size: 11px; direction: ltr;
+}
+.transport .tp-vz-label { font-family: var(--mono); font-size: 10px; color: var(--text-3); min-width: 28px; }
+.ov-handle.edge { width: 9px; height: 9px; border-radius: 1px; }
 
 /* ============================ Media panel ============================ */
 .media-list { display: flex; flex-direction: column; gap: 2px; padding: 6px; }
@@ -572,17 +606,31 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .cue2.hovered:not(.selected), .cue2:hover:not(.selected) { border-color: rgba(196,140,255,.95); box-shadow: 0 0 0 1px rgba(168,85,247,.45); z-index: 2; }
 .cue2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.cue2 .trim { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; opacity: 0; background: rgba(255,255,255,.9); }
+.cue2 .trim.l { left: 0; } .cue2 .trim.r { right: 0; }
+.cue2:hover .trim, .cue2.selected .trim { opacity: .55; }
+.cue2 .trim:hover { opacity: .9; }
 
 /* drag ghost + drop indicator (timeline move) */
 .tl-ghost {
   position: fixed; z-index: 320; pointer-events: none; direction: rtl;
-  display: none; align-items: center; gap: 6px; max-width: 240px;
-  height: 26px; padding: 0 9px; border-radius: var(--r-md);
+  display: none; flex-direction: column; gap: 2px; max-width: 280px;
+  min-width: 140px; padding: 6px 10px; border-radius: var(--r-md);
   background: var(--elevated); border: 1px solid var(--accent); color: var(--text);
   font-size: 11px; box-shadow: 0 8px 22px rgba(0,0,0,.5);
 }
-.tl-ghost .g-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-ghost .g-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.tl-ghost .g-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; flex: 1; }
 .tl-ghost .g-dur { margin-inline-start: auto; color: var(--text-2); font-family: var(--mono); font-size: 10px; direction: ltr; }
+.tl-ghost .g-meta { display: flex; gap: 8px; font-size: 10px; color: var(--text-2); font-family: var(--mono); direction: ltr; }
+.tl-ghost .g-mode {
+  align-self: flex-start; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px;
+  background: rgba(108,146,255,.2); color: var(--accent-hover);
+}
+.tl-ghost .g-mode.reject { background: rgba(239,68,68,.2); color: #f87171; }
+.tl-ghost .g-thumb {
+  width: 36px; height: 22px; border-radius: 3px; object-fit: cover; background: #111; flex: none;
+}
 .tl-drop { display: none; position: absolute; top: 0; bottom: 0; width: 3px; margin-inline-start: -1.5px; background: var(--accent-hover); z-index: 7; pointer-events: none; box-shadow: 0 0 8px 1px var(--accent), inset 0 0 0 1px rgba(255,255,255,.55); border-radius: 1px; }
 .tl-drop::before, .tl-drop::after { content: ""; position: absolute; left: -3.5px; width: 10px; height: 6px; background: var(--accent-hover); }
 .tl-drop::before { top: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }

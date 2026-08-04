@@ -15,6 +15,9 @@ import { materializeOverlays } from "./render/materializeOverlays";
 import { materializeCaptions } from "./render/captionBurn";
 import { Sub } from "./editor/subtitlesEdl";
 import { CaptionStyle } from "./editor/captionStyle";
+import { VideoTransform } from "./editor/videoTransform";
+import { appendMainVideoTransform } from "./render/mainVideoTransform";
+import { DEFAULT_CANVAS } from "./editor/project";
 
 export type { RenderTarget } from "./render/graph";
 
@@ -254,6 +257,10 @@ export interface RenderOpts {
   subs?: Sub[] | null;
   captionStyle?: CaptionStyle | null;
   burnCaptions?: boolean;
+  /** Main video Element Scale — must match Preview. */
+  videoTransform?: VideoTransform | null;
+  /** Source frame size for Fit/Fill resolution (fallback = canvas). */
+  sourceSize?: { w: number; h: number } | null;
 }
 
 export async function renderEDL(
@@ -266,17 +273,26 @@ export async function renderEDL(
   return runExclusive(async () => {
     if (opts.signal?.aborted) throw new Error("בוטל");
     const ff = await getFFmpeg();
-    const base = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted });
+    const canvas = opts.canvas || DEFAULT_CANVAS;
+    // Prefer target matching project canvas so Element Scale maps 1:1.
+    const effectiveTarget = opts.canvas
+      ? { w: opts.canvas.width, h: opts.canvas.height, fps: target.fps }
+      : target;
+    const base = buildConcatGraph(clips, media, effectiveTarget, { audioMuted: opts.audioMuted });
+    const src = opts.sourceSize || { w: canvas.width, h: canvas.height };
+    const withMain = (opts.videoTransform
+      ? appendMainVideoTransform(base, opts.videoTransform, canvas, effectiveTarget, src.w, src.h)
+      : base);
     // Burn-in overlays AFTER the verified concat (identity when empty).
     const mats = (opts.overlays?.length && opts.canvas)
-      ? await materializeOverlays(opts.overlays, media, opts.canvas, target)
+      ? await materializeOverlays(opts.overlays, media, opts.canvas, effectiveTarget)
       : [];
     const capMats = (opts.burnCaptions !== false && opts.subs?.length && opts.canvas)
-      ? await materializeCaptions(opts.subs, opts.captionStyle, opts.canvas, target)
+      ? await materializeCaptions(opts.subs, opts.captionStyle, opts.canvas, effectiveTarget)
       : [];
     const allMats = [...mats, ...capMats];
     const totalDur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
-    const graph = appendOverlayBurns(base, allMats.map((m) => m.spec), totalDur);
+    const graph = appendOverlayBurns(withMain, allMats.map((m) => m.spec), totalDur);
     const matByFile = new Map(allMats.map((m) => [m.spec.filename, m]));
 
     // כותבים כל קובץ-מקור / שכבה בשימוש ל-FS של ffmpeg.

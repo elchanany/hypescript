@@ -5,11 +5,14 @@ import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabl
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
-import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
-import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film } from "lucide-react";
+import { CanvasSize, displayRect, VIEWER_ZOOM_PRESETS, viewerZoomLabel } from "@/lib/editor/canvasCoords";
+import { CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
+import { VideoTransform, defaultVideoTransformFor, resolveVideoRect, videoTransformCss } from "@/lib/editor/videoTransform";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, ZoomIn } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import PreviewOverlays from "@/components/PreviewOverlays";
+import PreviewCaptions from "@/components/PreviewCaptions";
+import PreviewMainVideo from "@/components/PreviewMainVideo";
 
 export interface PreviewHandle { seek: (assembled: number) => void; toggle: () => void; }
 
@@ -20,7 +23,6 @@ interface Props {
   onTime: (assembled: number) => void;
   onCopyPosition?: (assembled: number) => void;
   audioMuted?: boolean;
-  // canvas + overlays (direct manipulation)
   canvas: CanvasSize;
   overlays: Overlay[];
   selectedOverlayId?: string | null;
@@ -32,6 +34,27 @@ interface Props {
   onEditOverlayText?: (id: string, text: string) => void;
   onCanvasDetected?: (w: number, h: number) => void;
   captionStyle?: CaptionStyle;
+  // Main video transform (Element Scale)
+  videoTransform?: VideoTransform;
+  selectedMainVideo?: boolean;
+  onSelectMainVideo?: () => void;
+  onBeginVideoTransform?: () => void;
+  onVideoTransformLive?: (vt: VideoTransform) => void;
+  onCommitVideoTransform?: () => void;
+  onCancelVideoTransform?: () => void;
+  // Captions as visual elements
+  selectedSubId?: string | null;
+  hoveredSubId?: string | null;
+  onHoverSub?: (id: string | null) => void;
+  onSelectSub?: (id: string | null) => void;
+  onBeginSub?: () => void;
+  onSubLive?: (updater: (prev: Sub[] | null) => Sub[] | null) => void;
+  onCommitSub?: () => void;
+  onCancelSub?: () => void;
+  onEditSubText?: (id: string, text: string) => void;
+  /** Clear all selections (click on empty canvas chrome). */
+  onClearSelection?: () => void;
+  videoLocked?: boolean;
 }
 
 const FRAME = 1 / 30;
@@ -42,7 +65,15 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({
+  media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays,
+  selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText,
+  onCanvasDetected, captionStyle,
+  videoTransform, selectedMainVideo, onSelectMainVideo,
+  onBeginVideoTransform, onVideoTransformLive, onCommitVideoTransform, onCancelVideoTransform,
+  selectedSubId, hoveredSubId, onHoverSub, onSelectSub, onBeginSub, onSubLive, onCommitSub, onCancelSub, onEditSubText,
+  onClearSelection, videoLocked,
+}, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
@@ -57,6 +88,11 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [inGap, setInGap] = useState(false);
   const gapRaf = useRef<number | null>(null);
+  const [sourceSize, setSourceSize] = useState({ w: 1920, h: 1080 });
+  const [hoverMain, setHoverMain] = useState(false);
+  /** Viewer Zoom only — never mutates Element Scale / videoTransform. */
+  const [viewerZoom, setViewerZoom] = useState<number | "fit">("fit");
+  const layerCycle = useRef(0);
 
   const edl = clips && clips.length ? clips : null;
   const byId = (id: string) => media.find((m) => m.id === id);
@@ -75,8 +111,69 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     const ro = new ResizeObserver(measure); ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const box = displayRect(stageSize.w, stageSize.h, canvas);
+  const box = displayRect(stageSize.w, stageSize.h, canvas, viewerZoom);
   const total = edl ? totalDur(edl) : dur;
+
+  // Ctrl/pinch wheel over viewer → Viewer Zoom (not Element Scale)
+  useEffect(() => {
+    const el = stageRef.current; if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const dir = e.deltaY > 0 ? -1 : 1;
+      setViewerZoom((z) => {
+        const cur = z === "fit"
+          ? Math.min(stageSize.w / canvas.width, stageSize.h / canvas.height) || 0.5
+          : z;
+        const next = Math.max(0.1, Math.min(4, cur * (dir > 0 ? 1.12 : 1 / 1.12)));
+        // snap near presets
+        for (const p of [0.25, 0.5, 1, 2]) if (Math.abs(next - p) < 0.04) return p;
+        return +next.toFixed(3);
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [canvas.width, canvas.height, stageSize.w, stageSize.h]);
+
+  /** Alt+Click cycles top→bottom among overlays + caption + main under the pointer. */
+  const cycleLayerAt = (clientX: number, clientY: number, alt: boolean) => {
+    const boxEl = canvasBoxRef.current; if (!boxEl) return;
+    const r = boxEl.getBoundingClientRect();
+    const scale = r.width / Math.max(1, canvas.width);
+    const px = (clientX - r.left) / scale;
+    const py = (clientY - r.top) / scale;
+    type Hit = { kind: "overlay" | "caption" | "main"; id: string; z: number };
+    const hits: Hit[] = [];
+    const vt = videoTransform || defaultVideoTransformFor(canvas);
+    const mainRect = resolveVideoRect(vt, canvas, sourceSize.w, sourceSize.h);
+    const inMain =
+      Math.abs(px - mainRect.x) <= mainRect.w / 2 && Math.abs(py - mainRect.y) <= mainRect.h / 2;
+    if (inMain) hits.push({ kind: "main", id: "__main__", z: 0 });
+    for (const o of overlays) {
+      if (o.hidden) continue;
+      if (t < o.start - 1e-3 || t > o.end + 1e-3) continue;
+      const tr = o.transform;
+      const localX = px; const localY = py;
+      if (Math.abs(localX - tr.x) <= tr.w / 2 && Math.abs(localY - tr.y) <= tr.h / 2) {
+        hits.push({ kind: "overlay", id: o.id, z: o.zIndex + 10 });
+      }
+    }
+    for (const s of (subs || [])) {
+      if (t < s.start - 0.01 || t >= s.end) continue;
+      hits.push({ kind: "caption", id: s.id, z: 1000 });
+    }
+    hits.sort((a, b) => b.z - a.z);
+    if (!hits.length) { onClearSelection?.(); return; }
+    if (alt && hits.length > 1) {
+      layerCycle.current = (layerCycle.current + 1) % hits.length;
+    } else {
+      layerCycle.current = 0;
+    }
+    const pick = hits[layerCycle.current];
+    if (pick.kind === "overlay") onSelectOverlay?.(pick.id);
+    else if (pick.kind === "caption") onSelectSub?.(pick.id);
+    else onSelectMainVideo?.();
+  };
 
   const clearGapClock = () => { if (gapRaf.current != null) { cancelAnimationFrame(gapRaf.current); gapRaf.current = null; } };
 
@@ -144,7 +241,14 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
 
   const onLoaded = () => {
     const p = pending.current; const v = videoRef.current;
-    if (v) { setDur(edl ? totalDur(edl) : v.duration || 0); v.volume = vol; if (v.videoWidth && v.videoHeight) onCanvasDetected?.(v.videoWidth, v.videoHeight); }
+    if (v) {
+      setDur(edl ? totalDur(edl) : v.duration || 0);
+      v.volume = vol;
+      if (v.videoWidth && v.videoHeight) {
+        setSourceSize({ w: v.videoWidth, h: v.videoHeight });
+        onCanvasDetected?.(v.videoWidth, v.videoHeight);
+      }
+    }
     if (p && v) { v.currentTime = p.t; if (p.play) { v.play(); setPlaying(true); } pending.current = null; }
   };
 
@@ -182,6 +286,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const fullscreen = () => { const el = stageRef.current; if (!el) return; if (document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen?.(); };
 
   const hasVideo = !!firstVid;
+  const vt = videoTransform || defaultVideoTransformFor(canvas);
+  const videoRect = resolveVideoRect(vt, canvas, sourceSize.w, sourceSize.h);
   const menuItems: CtxItem[] = [
     { label: "צלם פריים נוכחי", icon: Camera, onClick: capture, disabled: !hasVideo },
     { label: "ציטוט מקום לתיבת ההודעה", icon: MapPin, onClick: quotePlace, disabled: !hasVideo },
@@ -189,29 +295,75 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
 
   return (
     <div className="preview2">
-      <div className="pv-stage" ref={stageRef}>
+      <div className={`pv-stage ${viewerZoom !== "fit" ? "zoomed" : ""}`} ref={stageRef}>
         {hasVideo ? (
-          <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
-            <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
-              onClick={() => { onSelectOverlay?.(null); toggle(); }}
-              style={inGap ? { visibility: "hidden" } : undefined} />
+          <div
+            className="pv-canvas"
+            ref={canvasBoxRef}
+            style={{ width: box.width || "100%", height: box.height || "100%", flex: "none" }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                if (e.altKey) cycleLayerAt(e.clientX, e.clientY, true);
+                else { onClearSelection?.(); toggle(); }
+              }
+            }}
+          >
+            <video
+              ref={videoRef}
+              onTimeUpdate={onTimeUpdate}
+              onLoadedData={onLoaded}
+              onDurationChange={onLoaded}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (e.altKey) { cycleLayerAt(e.clientX, e.clientY, true); return; }
+                if (!selectedMainVideo) onSelectMainVideo?.();
+                else toggle();
+              }}
+              style={{
+                ...videoTransformCss(videoRect, canvas),
+                visibility: inGap ? "hidden" : undefined,
+                pointerEvents: "none",
+                cursor: "pointer",
+              }}
+            />
             {inGap && <div className="pv-gap" aria-hidden />}
-            {(() => {
-              const list = subs || [];
-              // progressive: prefer the latest matching cue (most words revealed)
-              let cue = null as (typeof list)[number] | null;
-              for (let i = list.length - 1; i >= 0; i--) {
-                const s = list[i];
-                if (t >= s.start - 0.01 && t < s.end - 0.001) { cue = s; break; }
-              }
-              if (!cue) {
-                cue = list.find((s) => t >= s.start - 0.02 && t <= s.end + 0.02) || null;
-              }
-              if (!cue) return null;
-              const st = captionStyle || DEFAULT_CAPTION_STYLE;
-              return <div className="pv-caption" style={captionStyleToCss(st)}>{cue.text}</div>;
-            })()}
+            {onSelectMainVideo && (
+              <PreviewMainVideo
+                boxRef={canvasBoxRef}
+                canvas={canvas}
+                videoTransform={vt}
+                sourceW={sourceSize.w}
+                sourceH={sourceSize.h}
+                selected={!!selectedMainVideo}
+                hovered={hoverMain}
+                locked={!!videoLocked}
+                onHover={setHoverMain}
+                onSelect={() => onSelectMainVideo()}
+                onBegin={() => onBeginVideoTransform?.()}
+                onLive={(next) => onVideoTransformLive?.(next)}
+                onCommit={() => onCommitVideoTransform?.()}
+                onCancel={() => onCancelVideoTransform?.()}
+                onAltCycle={(x, y) => cycleLayerAt(x, y, true)}
+              />
+            )}
+            <PreviewCaptions
+              boxRef={canvasBoxRef}
+              canvas={canvas}
+              subs={subs || []}
+              currentTime={t}
+              captionStyle={captionStyle || DEFAULT_CAPTION_STYLE}
+              selectedId={selectedSubId ?? null}
+              hoveredId={hoveredSubId}
+              onHover={onHoverSub}
+              onSelect={(id) => onSelectSub?.(id)}
+              onBegin={() => onBeginSub?.()}
+              onLive={(u) => onSubLive?.(u)}
+              onCommit={() => onCommitSub?.()}
+              onCancel={() => onCancelSub?.()}
+              onEditText={(id, text) => onEditSubText?.(id, text)}
+            />
             <PreviewOverlays boxRef={canvasBoxRef} canvas={canvas} overlays={overlays} media={media} currentTime={t}
               selectedId={selectedOverlayId ?? null}
               onSelect={(id) => onSelectOverlay?.(id)}
@@ -219,7 +371,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
               onLive={(u) => onOverlayLive?.(u)}
               onCommit={() => onCommitOverlay?.()}
               onCancel={() => onCancelOverlay?.()}
-              onEditText={(id, text) => onEditOverlayText?.(id, text)} />
+              onEditText={(id, text) => onEditOverlayText?.(id, text)}
+              onAltCycle={(x, y) => cycleLayerAt(x, y, true)} />
           </div>
         ) : (
           <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><span>טען מדיה כדי לראות תצוגה מקדימה</span></div>
@@ -242,6 +395,23 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
           <span className="tp-time">{fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span></span>
         </div>
         <div className="tp-grow" />
+        <div className="tp-viewer-zoom" title="Viewer Zoom — לא משנה את גודל האלמנט בפלט">
+          <ZoomIn size={14} strokeWidth={1.75} />
+          <select
+            value={viewerZoom === "fit" ? "fit" : String(viewerZoom)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setViewerZoom(v === "fit" ? "fit" : +v);
+            }}
+            aria-label="זום תצוגה"
+            disabled={!hasVideo}
+          >
+            {VIEWER_ZOOM_PRESETS.map((p) => (
+              <option key={p.label} value={p.value === "fit" ? "fit" : String(p.value)}>{p.label}</option>
+            ))}
+          </select>
+          <span className="tp-vz-label">{viewerZoomLabel(viewerZoom)}</span>
+        </div>
         <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up"
           onClick={quotePlace} disabled={!hasVideo} />
         <IconButton icon={MoreHorizontal} tip="עוד" tipPos="up" disabled={!hasVideo}

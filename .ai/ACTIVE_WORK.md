@@ -1,16 +1,7 @@
-# ACTIVE_WORK.md
+# ACTIVE_WORK
 
-## Current task
-אין משימה פתוחה — PR #23 ממוזג ל־`main`.
-
-## Branch
-`main`
-
-## Latest commit
-`79d844e` — Merge branch `cursor/fix-captions-speech-sync-c816` (PR #23)
+## Focus
+סגירת מודל אינטראקציה מקצועי (Export transform, Viewer Zoom, menus, handles) על `cursor/pro-interaction-model-505e`.
 
 ## Status
-הושלם · ב־`main`
-
-## Exact continuation point
-GAP_MAP: AG-4 / intro-outro / preview; בלי Auth/Supabase בלי אישור.
+יישום הקוד הושלם לסבב זה; נשארו אימות דפדפן + דוח קבלה כנה (לא לסמן Complete מלא).

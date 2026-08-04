@@ -7,6 +7,7 @@ import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CaptionStyle } from "@/lib/editor/captionStyle";
+import { VideoTransform } from "@/lib/editor/videoTransform";
 import { RenderTarget } from "@/lib/render/graph";
 
 export type ExecutionMode = "local-browser" | "local-native" | "cloud";
@@ -29,6 +30,8 @@ export interface RenderRequest {
   subs?: Sub[] | null;
   captionStyle?: CaptionStyle | null;
   burnCaptions?: boolean;
+  videoTransform?: VideoTransform | null;
+  sourceSize?: { w: number; h: number } | null;
 }
 
 export interface RenderBackend {
@@ -63,6 +66,8 @@ class BrowserRenderBackend implements RenderBackend {
       subs: req.subs,
       captionStyle: req.captionStyle,
       burnCaptions: req.burnCaptions,
+      videoTransform: req.videoTransform,
+      sourceSize: req.sourceSize,
     });
   }
 }

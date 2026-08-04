@@ -56,4 +56,18 @@ describe("canvasCoords", () => {
     expect(defaultCanvasFor()).toEqual({ width: 1920, height: 1080 });
     expect(defaultCanvasFor(0, 0)).toEqual({ width: 1920, height: 1080 });
   });
+
+  it("viewerZoom 100% uses 1 CSS px per project px", () => {
+    const canvas = { width: 1920, height: 1080 };
+    const r = displayRect(2000, 2000, canvas, 1);
+    expect(r.width).toBe(1920);
+    expect(r.height).toBe(1080);
+  });
+
+  it("viewerZoom fit still letterboxes", () => {
+    const canvas = { width: 1920, height: 1080 };
+    const r = displayRect(960, 540, canvas, "fit");
+    expect(r.width).toBeCloseTo(960);
+    expect(r.height).toBeCloseTo(540);
+  });
 });

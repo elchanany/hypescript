@@ -12,8 +12,24 @@ import { assembleTranscript, type WordsBySource as AssembleWordsBySource } from 
 const RLM = "‏";
 const PHRASE_END = /[.?!…׃:,،;]$/;
 
-// כתובית הניתנת לעריכה (על ציר-הזמן הסופי).
-export interface Sub { id: string; start: number; end: number; text: string; }
+// כתובית הניתנת לעריכה (על ציר-הזמן הסופי) + טרנספורם אופציונלי על הקנבס.
+// כשאין x/y/w — המיקום נגזר מ-CaptionStyle.position של הפרויקט.
+export interface Sub {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+  /** Center X in project px (optional override). */
+  x?: number;
+  /** Center Y in project px (optional override). */
+  y?: number;
+  /** Text box width in project px. */
+  w?: number;
+  /** Uniform scale multiplier (1 = 100%). */
+  scale?: number;
+  /** Degrees clockwise. */
+  rotation?: number;
+}
 
 export type CaptionMode = "progressive" | "phrase";
 

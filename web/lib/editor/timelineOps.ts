@@ -109,3 +109,123 @@ export function slipClip(
     return { ...c, start: s, end: e };
   });
 }
+
+/**
+ * Free-drop Move: lift the clip (leave a gap at the old spot) and place it so its
+ * timeline start equals `targetStart`. Gaps before/after are allowed; destination
+ * span is overwritten (CapCut-style Overwrite default).
+ */
+export function moveClipToTime(clips: Clip[], id: string, targetStart: number): Clip[] {
+  const i = clips.findIndex((c) => c.id === id);
+  if (i < 0) return clips;
+  const moving = clips[i];
+  if (isGapClip(moving)) return clips;
+  const dur = clipDur(moving);
+  if (dur < 0.05) return clips;
+  const t0 = Math.max(0, Number.isFinite(targetStart) ? targetStart : 0);
+
+  const lifted = removeClipLeaveGap(clips, id);
+  return mergeAdjacentGaps(overwriteRange(lifted, t0, t0 + dur, moving));
+}
+
+/** Replace [start,end) on the assembled timeline with `clip`. */
+export function overwriteRange(clips: Clip[], start: number, end: number, clip: Clip): Clip[] {
+  const span = Math.max(0.05, end - start);
+  const placed: Clip = isGapClip(clip)
+    ? makeGap(span, clip.id)
+    : { ...clip, id: clip.id || uid(), end: clip.start + span };
+  return insertAtAssembledTime(removeSpan(clips, start, end), start, placed);
+}
+
+/** Remove [start,end) from timeline, leaving a single gap of that duration. */
+function removeSpan(clips: Clip[], start: number, end: number): Clip[] {
+  const span = Math.max(0, end - start);
+  if (span < 1e-6) return clips;
+  const out: Clip[] = [];
+  let acc = 0;
+  let gapInserted = false;
+  for (const c of clips) {
+    const d = clipDur(c);
+    const c0 = acc;
+    const c1 = acc + d;
+    acc = c1;
+    if (c1 <= start + 1e-6 || c0 >= end - 1e-6) {
+      out.push(c);
+      continue;
+    }
+    if (c0 < start - 1e-6) {
+      const leftDur = start - c0;
+      if (isGapClip(c)) out.push(makeGap(leftDur));
+      else out.push({ ...c, id: uid(), end: c.start + leftDur });
+    }
+    if (!gapInserted) {
+      out.push(makeGap(span));
+      gapInserted = true;
+    }
+    if (c1 > end + 1e-6) {
+      const rightDur = c1 - end;
+      if (isGapClip(c)) out.push(makeGap(rightDur));
+      else out.push({ ...c, id: uid(), start: c.end - rightDur });
+    }
+  }
+  if (!gapInserted) {
+    const total = clips.reduce((s, c) => s + clipDur(c), 0);
+    if (start > total + 1e-6) out.push(makeGap(start - total));
+    out.push(makeGap(span));
+  }
+  return mergeAdjacentGaps(out);
+}
+
+/** Replace the gap that covers `at` with `clip`, preserving surrounding media. */
+function insertAtAssembledTime(clips: Clip[], at: number, clip: Clip): Clip[] {
+  const dur = clipDur(clip);
+  let acc = 0;
+  for (let i = 0; i < clips.length; i++) {
+    const c = clips[i];
+    const d = clipDur(c);
+    const c0 = acc;
+    const c1 = acc + d;
+    if (at >= c0 - 1e-6 && at <= c1 + 1e-6 && isGapClip(c)) {
+      const before = at - c0;
+      const after = c1 - (at + dur);
+      const next = [...clips];
+      if (dur > d + 1e-6) {
+        next.splice(i, 1, isGapClip(clip) ? makeGap(d, clip.id) : { ...clip, end: clip.start + d });
+      } else {
+        const insert: Clip[] = [];
+        if (before > 0.05) insert.push(makeGap(before));
+        insert.push(clip);
+        if (after > 0.05) insert.push(makeGap(after));
+        next.splice(i, 1, ...insert);
+      }
+      return mergeAdjacentGaps(next);
+    }
+    acc = c1;
+  }
+  const total = acc;
+  const out = [...clips];
+  if (at > total + 0.05) out.push(makeGap(at - total));
+  out.push(clip);
+  return mergeAdjacentGaps(out);
+}
+
+export function mergeAdjacentGaps(clips: Clip[]): Clip[] {
+  const out: Clip[] = [];
+  for (const c of clips) {
+    if (isGapClip(c) && out.length && isGapClip(out[out.length - 1])) {
+      const prev = out[out.length - 1];
+      out[out.length - 1] = makeGap(clipDur(prev) + clipDur(c), prev.id);
+    } else if (!(isGapClip(c) && clipDur(c) < 0.05)) {
+      out.push(c);
+    }
+  }
+  return out;
+}
+
+/** Deep-clone EDL for detached audio (new ids; timing/source preserved). */
+export function cloneEdlAsAudio(clips: Clip[]): Clip[] {
+  return clips.map((c) => ({
+    ...c,
+    id: uid("a"),
+  }));
+}

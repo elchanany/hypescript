@@ -1,19 +1,24 @@
 # HANDOFF
 
 ## Goal
-PR #23 ממוזג ל־`main` (כתוביות/תמלול ציר + תיקוני סוכן) מעל טיימליין CapCut (PR #24).
+מודל אינטראקציה מקצועי Canvas/Timeline/Inspector — לסגור פערים מול 45 בדיקות הקבלה.
 
 ## Current State (verified)
-- `main` @ `79d844e` — כולל PR #23 + PR #24.
-- כתוביות progressive, `transcribe_timeline`, אנטי-לופ סוכן, `scriptToClips` סדרתי, `snapSpeechToWords`, within-silence כברירת מחדל עם EDL.
-- D-007 ב-DECISIONS.
-- אימות במיזוג: 19 בדיקות ממוקדות + tsc + graphify.
+- Branch: `cursor/pro-interaction-model-505e` · PR #25
+- **Export = Canvas Element Scale**: `appendMainVideoTransform` אחרי concat, לפני overlays; identity כש-Fit מלא. יחידות ב-`mainVideoTransform.test.ts`.
+- **Viewer Zoom**: Fit/25/50/100/200 + Ctrl+Wheel — נפרד מ-Element Scale.
+- **Edge handles** על main video + overlays + captions.
+- **Alt+Click** מחזור שכבות תחת הסמן.
+- **Caption timeline**: trim/move + context menu (עריכה/פיצול/מיזוג/מחיקה).
+- **Context menus**: video (detach/relink/ripple/leave-gap), gap, caption. אין פריטים ללא מימוש (effects/freeze).
+- **Keyboard**: Ctrl+D שכפול; חצים מזיזים אלמנט נבחר (Shift=10px).
+- Tests: 84 editor/render; `tsc` + `next build` עוברים.
+
+## Remaining honest gaps (לא Complete)
+- Export E2E עם ffmpeg.wasm + מדיה אמיתית (גרף מכוסה ביחידה; אין הרצת wasm מלאה ב-CI כאן).
+- תפריטי סעיף 16 שלא קיימים במוצר (effects/transitions/freeze/stickers) — לא מוצגים במכוון.
+- בדיקת דפדפן אינטראקטיבית מלאה מול כל 45 הסעיפים — smoke חלקי.
 
 ## Exact Next Steps
-1. אימות בפריסת Vercel מ־`main`.
-2. הבא לפי GAP_MAP: AG-4 / intro-outro / preview.
-3. אופציונלי: Alt לביטול snap; Cache-Control ל-chunks אם חוזר Loading chunk failed.
-
-## Risks
-- אנטי-לופ חוסם מעל ~3 `delete_clip` — `delete_clips` / `keep_source_range`.
-- snap למילים תלוי בתמלול; סף snap טיימליין ~10px לפי זום.
+1. Smoke דפדפן עם `/tmp/test-clip.mp4`.
+2. Push + עדכון גוף PR #25.
