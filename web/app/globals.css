@@ -266,7 +266,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tb-save.saving .dot { background: var(--warning); }
 
 /* Body: toolrail | left panel | center(preview + timeline) | inspector, chat overlay */
-.shell-body { flex: 1; display: flex; direction: ltr; min-height: 0; position: relative; }
+.shell-body { flex: 1; display: flex; direction: ltr; min-height: 0; min-width: 0; overflow: hidden; position: relative; }
 
 /* Tool rail */
 .toolrail {
@@ -289,7 +289,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 
 /* main area (everything right of the tool rail) = upper row + full-width timeline */
 .main-area { flex: 1; min-width: 0; direction: ltr; display: flex; flex-direction: column; min-height: 0; }
-.upper { flex: 1; min-height: 0; display: flex; direction: ltr; }
+.upper { flex: 1; min-height: 0; min-width: 0; display: flex; direction: ltr; overflow: hidden; }
 
 /* Center column */
 .center-col { flex: 1; min-width: 0; direction: ltr; display: flex; flex-direction: column; min-height: 0; }
@@ -427,7 +427,12 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 /* ===================================================================
    TIMELINE — full width, LTR internal.
    =================================================================== */
-.timeline-region { flex: none; direction: ltr; display: flex; flex-direction: column; border-top: 1px solid var(--border); background: var(--panel); }
+.timeline-region {
+  flex: none; direction: ltr; display: flex; flex-direction: column;
+  border-top: 1px solid var(--border); background: var(--panel);
+  /* מונע מהציר המוגדל לדחוף את הפריסה / להיכנס מתחת לפאנלים */
+  min-width: 0; max-width: 100%; overflow: hidden;
+}
 .tl-resize { height: 6px; margin-top: -3px; cursor: row-resize; background: transparent; position: relative; z-index: 6; }
 .tl-resize:hover { background: var(--accent); }
 
@@ -443,8 +448,16 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-selinfo { font-size: var(--fs-2); color: var(--text-2); font-family: var(--mono); direction: ltr; padding: 0 6px; }
 
 /* scroll area */
-.tl-scroll { flex: 1; min-height: 0; overflow: auto; background: var(--inset); }
-.tl-inner { position: relative; min-width: 100%; }
+.tl-scroll {
+  flex: 1; min-height: 0; min-width: 0; max-width: 100%;
+  overflow-x: auto; overflow-y: auto; background: var(--inset);
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+.tl-inner {
+  position: relative; min-width: 100%; height: 100%; box-sizing: border-box;
+  max-width: none; /* רוחב נשלט ב-inline לפי zoom — לא דוחף את הפריסה */
+}
 
 .tl-rowline { display: flex; align-items: stretch; }
 .tl-rowline + .tl-rowline { border-top: 1px solid var(--border); }

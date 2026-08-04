@@ -443,23 +443,6 @@ export default function EditorPage() {
   const agentSelLabel = selectedOverlay
     ? (selectedOverlay.kind === "text" ? (selectedOverlay.text || "טקסט") : (mediaById(media, selectedOverlay.assetId || "")?.name || "תמונה"))
     : selectedClip ? (isGapClip(selectedClip) ? "רווח" : (mediaById(media, selectedClip.sourceId)?.name || "קטע")) : null;
-  const onWheelZoom = (deltaY: number, clientX: number, laneEl: HTMLElement) => {
-    const rect = laneEl.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const scrollEl = laneEl.closest(".tl-scroll") as HTMLElement | null;
-    const anchorAssembled = Math.max(0, Math.min(timelineDuration, ((clientX - rect.left) / rect.width) * timelineDuration));
-    const anchorRatio = anchorAssembled / timelineDuration;
-    setZoom((z) => {
-      const next = Math.max(1, Math.min(12, Math.round((z + (deltaY < 0 ? 0.5 : -0.5)) * 2) / 2));
-      if (next !== z && scrollEl) {
-        requestAnimationFrame(() => {
-          const nextRect = laneEl.getBoundingClientRect();
-          scrollEl.scrollLeft += nextRect.left + anchorRatio * nextRect.width - clientX;
-        });
-      }
-      return next;
-    });
-  };
   const clampOverlayRange = (start: number, end: number) => {
     const s = Math.max(0, Math.min(start, end - 0.05));
     const e = Math.max(end, s + 0.05);
@@ -603,7 +586,6 @@ export default function EditorPage() {
                 onTrimEnd={commitTransaction}
                 onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
-                onWheelZoom={onWheelZoom}
                 onOverlayTrimBegin={beginTransaction}
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}

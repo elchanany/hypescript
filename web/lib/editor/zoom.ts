@@ -2,13 +2,16 @@
 
 import { clampZoom } from "./time";
 
-/** גורם זום מ-deltaY של wheel (חלק גם ב-trackpad). */
-export function zoomFactorFromWheel(deltaY: number): number {
-  return Math.exp(-deltaY * 0.0018);
+/** גורם זום מ-deltaY. ב-pinch (ctrl+wheel) מדכאים קפיצות גדולות. */
+export function zoomFactorFromWheel(deltaY: number, pinch = false): number {
+  const k = pinch ? 0.0022 : 0.0018;
+  const raw = Math.exp(-deltaY * k);
+  // לא יותר מ-~12% לאירוע — מונע פיצוץ זום ב-pinch
+  return Math.min(1.12, Math.max(0.89, raw));
 }
 
-export function nextZoom(current: number, deltaY: number): number {
-  return clampZoom(current * zoomFactorFromWheel(deltaY));
+export function nextZoom(current: number, deltaY: number, pinch = false): number {
+  return clampZoom(current * zoomFactorFromWheel(deltaY, pinch));
 }
 
 /**

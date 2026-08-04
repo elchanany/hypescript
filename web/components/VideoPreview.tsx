@@ -182,7 +182,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const hasVideo = !!firstVid;
   const menuItems: CtxItem[] = [
     { label: "צלם פריים נוכחי", icon: Camera, onClick: capture, disabled: !hasVideo },
-    { label: "ציטוט מקום בצ'אט", icon: MapPin, onClick: quotePlace, disabled: !hasVideo },
+    { label: "ציטוט מקום לתיבת ההודעה", icon: MapPin, onClick: quotePlace, disabled: !hasVideo },
   ];
 
   return (
@@ -226,7 +226,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
           <span className="tp-time">{fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span></span>
         </div>
         <div className="tp-grow" />
-        <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן מדויק לצ'אט" tipPos="up"
+        <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up"
           onClick={quotePlace} disabled={!hasVideo} />
         <IconButton icon={MoreHorizontal} tip="עוד" tipPos="up" disabled={!hasVideo}
           onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left, y: r.top - 8 }); }} />

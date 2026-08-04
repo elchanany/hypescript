@@ -3,19 +3,26 @@ import { nextZoom, scrollLeftAfterZoom, zoomFactorFromWheel } from "./zoom";
 import { ZOOM_MAX, ZOOM_MIN } from "./time";
 
 describe("timeline zoom", () => {
-  it("wheel up zooms in, down zooms out, clamped", () => {
+  it("wheel up zooms in, down zooms out, with per-event damping", () => {
     expect(zoomFactorFromWheel(-100)).toBeGreaterThan(1);
     expect(zoomFactorFromWheel(100)).toBeLessThan(1);
-    expect(nextZoom(1, -5000)).toBeLessThanOrEqual(ZOOM_MAX);
-    expect(nextZoom(1, 5000)).toBeGreaterThanOrEqual(ZOOM_MIN);
+    expect(zoomFactorFromWheel(-5000, true)).toBeLessThanOrEqual(1.12);
+    expect(zoomFactorFromWheel(5000, true)).toBeGreaterThanOrEqual(0.89);
+  });
+
+  it("can still reach clamp bounds over many steps", () => {
+    let z = 1;
+    for (let i = 0; i < 120; i++) z = nextZoom(z, -80, true);
+    expect(z).toBe(ZOOM_MAX);
+    z = 1;
+    for (let i = 0; i < 120; i++) z = nextZoom(z, 80, true);
+    expect(z).toBe(ZOOM_MIN);
   });
 
   it("keeps the pointed position stable after zoom", () => {
-    // content 1000px, zoom 1→2, pointer at 200 from left, scroll 100 → content offset 300
     const next = scrollLeftAfterZoom({
       oldZoom: 1, newZoom: 2, scrollLeft: 100, clientX: 200, containerLeft: 0, scrollWidth: 1000,
     });
-    // new width 2000, ratio 0.3 → 600 - 200 = 400
     expect(next).toBeCloseTo(400, 5);
   });
 });
