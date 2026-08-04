@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ChunkReload from "@/components/ChunkReload";
+import ToastHost from "@/components/ToastHost";
 
 export const metadata: Metadata = {
   title: "hypescript — עריכת שיעורים בעברית",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ChunkReload />
         {children}
+        <ToastHost />
       </body>
     </html>
   );

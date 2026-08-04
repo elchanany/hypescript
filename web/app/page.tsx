@@ -19,6 +19,8 @@ import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
+import { ConfirmDialog, NameDialog } from "@/components/Modal";
+import { toast } from "@/lib/ui/toast";
 import TopBar from "@/components/TopBar";
 import ToolRail, { LeftTab } from "@/components/ToolRail";
 import MediaPanel from "@/components/MediaPanel";
@@ -134,6 +136,7 @@ export default function EditorPage() {
   const [restored, setRestored] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [projDlg, setProjDlg] = useState<"none" | "create" | "rename" | "delete">("none");
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
@@ -239,24 +242,32 @@ export default function EditorPage() {
   }, [words, clips, subs, tracks, overlays, canvas, restored, projectId]);
 
   const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
-  const newProject = async () => {
-    const name = prompt("שם הפרויקט החדש:", `פרויקט ${projects.length + 1}`);
-    if (name === null) return;
+  const newProject = () => setProjDlg("create");
+  const renameCurrent = () => { if (projectId) setProjDlg("rename"); };
+  const deleteCurrent = () => { if (projectId) setProjDlg("delete"); };
+
+  const submitCreate = async (name: string) => {
+    setProjDlg("none");
     const id = await createProject(name || "פרויקט");
     setProjects(await listProjects()); setProjectId(id);
+    toast.success("הפרויקט נוצר", name);
   };
-  const renameCurrent = async () => {
+  const submitRename = async (name: string) => {
     if (!projectId) return;
-    const name = prompt("שנה שם פרויקט:", projects.find((p) => p.id === projectId)?.name || "");
-    if (!name) return;
-    await renameProject(projectId, name); setProjects(await listProjects());
+    setProjDlg("none");
+    await renameProject(projectId, name);
+    setProjects(await listProjects());
+    toast.success("השם עודכן", name);
   };
-  const deleteCurrent = async () => {
-    if (!projectId || !confirm("למחוק את הפרויקט הנוכחי? כל המדיה, העריכה והשיחה יימחקו.")) return;
+  const submitDelete = async () => {
+    if (!projectId) return;
+    setProjDlg("none");
+    const oldName = projects.find((p) => p.id === projectId)?.name || "";
     await deleteProject(projectId);
     const list = await listProjects(); setProjects(list);
     if (list.length) { await setCurrentProject(list[0].id); setProjectId(list[0].id); }
     else { const id = await createProject("פרויקט 1"); setProjects(await listProjects()); setProjectId(id); }
+    toast.success("הפרויקט נמחק", oldName);
   };
 
   useEffect(() => {
@@ -603,6 +614,34 @@ export default function EditorPage() {
       </div>
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
+
+      <NameDialog
+        open={projDlg === "create"}
+        title="פרויקט חדש"
+        label="שם הפרויקט"
+        initial={`פרויקט ${projects.length + 1}`}
+        confirmLabel="צור"
+        onClose={() => setProjDlg("none")}
+        onSubmit={submitCreate}
+      />
+      <NameDialog
+        open={projDlg === "rename"}
+        title="שינוי שם"
+        label="שם הפרויקט"
+        initial={projects.find((p) => p.id === projectId)?.name || ""}
+        confirmLabel="שמור"
+        onClose={() => setProjDlg("none")}
+        onSubmit={submitRename}
+      />
+      <ConfirmDialog
+        open={projDlg === "delete"}
+        title="מחיקת פרויקט"
+        message="למחוק את הפרויקט הנוכחי? כל המדיה, העריכה והשיחה יימחקו מהמחשב הזה."
+        confirmLabel="מחק"
+        danger
+        onClose={() => setProjDlg("none")}
+        onConfirm={submitDelete}
+      />
     </div>
   );
 }
