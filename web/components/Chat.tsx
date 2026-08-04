@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { AgentMode, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
@@ -100,11 +100,17 @@ interface ChatProps {
   onToggleDock?: () => void;
   /** רישום פונקציה להכנסת ציטוט-מקום מצפייה/כפתור */
   quoteSink?: MutableRefObject<((seconds: number) => void) | null>;
+  /** ציטוט שממתין עד שתיבת הצ'אט נטענת (כשהפאנל היה סגור) */
+  pendingQuoteRef?: MutableRefObject<number | null>;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const COMPOSE_H_KEY = "hs_compose_h";
+const COMPOSE_H_DEFAULT = 96;
+const COMPOSE_H_MIN = 72;
+const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -116,11 +122,37 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [askText, setAskText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
   const [mode, setMode] = useState<AgentMode>("act");
-  // popup לפקודות/אזכורים בזמן הקלדה ב-Composer
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
+  const [composeH, setComposeH] = useState(COMPOSE_H_DEFAULT);
+  const composeHRef = useRef(COMPOSE_H_DEFAULT);
+  composeHRef.current = composeH;
   const taRef = useRef<HTMLTextAreaElement>(null);
   const storeRef = useRef(store);
   storeRef.current = store;
+
+  useEffect(() => {
+    const h = parseInt(localStorage.getItem(COMPOSE_H_KEY) || "0", 10);
+    if (h >= COMPOSE_H_MIN && h <= COMPOSE_H_MAX) setComposeH(h);
+  }, []);
+
+  const startResizeCompose = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = composeHRef.current;
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.max(COMPOSE_H_MIN, Math.min(COMPOSE_H_MAX, startH + (startY - ev.clientY)));
+      setComposeH(next);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      localStorage.setItem(COMPOSE_H_KEY, String(composeHRef.current));
+      document.body.style.userSelect = "";
+    };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   useEffect(() => { const m = localStorage.getItem("hs_agentmode"); if (m === "ask" || m === "plan" || m === "act") setMode(m); }, []);
   const changeMode = (m: AgentMode) => { setMode(m); localStorage.setItem("hs_agentmode", m); if (runnerRef.current) runnerRef.current.mode = m; };
@@ -236,26 +268,35 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   }, [displayItems, ask, showThinking]);
 
   // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
-  const insertQuote = (seconds: number) => {
+  const insertQuote = useCallback((seconds: number) => {
     const snippet = quotePlaceText(seconds);
     setInput((v) => {
       const pad = v && !/\s$/.test(v) ? " " : "";
       return v + pad + snippet + " ";
     });
-    requestAnimationFrame(() => {
+    // אחרי שה-state מתעדכן — פוקוס לתיבה (גם אם הצ'אט זה עתה נפתח)
+    setTimeout(() => {
       const ta = taRef.current;
       if (!ta) return;
       ta.focus();
       const end = ta.value.length;
       ta.selectionStart = ta.selectionEnd = end;
-    });
-  };
+    }, 0);
+  }, []);
 
   useEffect(() => {
     if (!quoteSink) return;
     quoteSink.current = insertQuote;
-    return () => { if (quoteSink.current === insertQuote) quoteSink.current = null; };
-  });
+    // פלש ציטוט שממתין מפתיחת הפאנל
+    if (pendingQuoteRef && pendingQuoteRef.current != null) {
+      const s = pendingQuoteRef.current;
+      pendingQuoteRef.current = null;
+      insertQuote(s);
+    }
+    return () => {
+      if (quoteSink.current === insertQuote) quoteSink.current = null;
+    };
+  }, [quoteSink, pendingQuoteRef, insertQuote]);
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
@@ -507,7 +548,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         )}
       </div>
 
-      <div className="composer">
+        <div className="composer">
         {pop && pop.kind === "slash" && slashList.length > 0 && (
           <div className="cmd-pop" role="listbox" aria-label="פקודות">
             {slashList.map((c) => (
@@ -532,18 +573,38 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           </div>
         )}
 
+        <div
+          className="compose-resize"
+          onMouseDown={startResizeCompose}
+          onDoubleClick={() => { setComposeH(COMPOSE_H_DEFAULT); localStorage.setItem(COMPOSE_H_KEY, String(COMPOSE_H_DEFAULT)); }}
+          title="גרור לשינוי גובה תיבת ההודעה · דאבל-קליק לאיפוס"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="שינוי גובה תיבת ההודעה"
+        />
         <div className="chat-compose">
-          <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
-          <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
-          <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Wand2 size={16} strokeWidth={1.75} /></button>
-          <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
-          <textarea ref={taRef} value={input} onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={onComposerKey} onBlur={() => setTimeout(() => setPop(null), 120)}
-            placeholder={running ? "עדכן את הסוכן תוך כדי עבודה…" : mode === "ask" ? "שאל על הפרויקט…  /  @  לאזכור" : mode === "plan" ? "תאר מה לתכנן…  /  @  לאזכור" : "כתוב הוראה…  /  לפקודה,  @  לאזכור"} rows={1} />
-          {running
-            ? <><button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
-               <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="בטל" data-tippos="up" aria-label="בטל"><Square size={15} strokeWidth={2} /></button></>
-            : <button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
+          <div className="chat-compose-tools">
+            <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
+            <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
+            <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Wand2 size={16} strokeWidth={1.75} /></button>
+            <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
+          </div>
+          <textarea
+            ref={taRef}
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={onComposerKey}
+            onBlur={() => setTimeout(() => setPop(null), 120)}
+            placeholder={running ? "עדכן את הסוכן תוך כדי עבודה…" : mode === "ask" ? "שאל על הפרויקט…  /  @  לאזכור" : mode === "plan" ? "תאר מה לתכנן…  /  @  לאזכור" : "כתוב הוראה…  /  לפקודה,  @  לאזכור"}
+            style={{ height: composeH }}
+            rows={3}
+          />
+          <div className="chat-compose-send">
+            {running
+              ? <><button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
+                 <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="בטל" data-tippos="up" aria-label="בטל"><Square size={15} strokeWidth={2} /></button></>
+              : <button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
+          </div>
         </div>
       </div>
     </>
