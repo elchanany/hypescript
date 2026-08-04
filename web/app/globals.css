@@ -306,7 +306,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .pv-canvas video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; cursor: pointer; }
 .pv-empty { color: var(--text-3); font-size: var(--fs); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pv-empty svg { color: var(--text-3); opacity: .6; }
-.pv-caption { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; direction: rtl; color: #fff; font-size: clamp(14px, 4cqw, 30px); font-weight: 600; text-shadow: 0 2px 5px #000, 0 0 10px rgba(0,0,0,.8); padding: 0 6%; pointer-events: none; white-space: pre-line; line-height: 1.35; z-index: 5; }
+.pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: none; white-space: pre-line; line-height: 1.35; z-index: 5; margin: 0 4%; }
 .pv-gap { position: absolute; inset: 0; background: #000; z-index: 4; pointer-events: none; }
 
 /* ---- direct-manipulation overlay layer (project coordinates) ---- */
@@ -416,6 +416,17 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .cap-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
 .cap-body textarea { min-height: 90px; font-size: var(--fs-2); }
 .cap-hint { font-size: 11px; color: var(--text-3); line-height: 1.5; }
+.cap-style .cap-field {
+  display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-2);
+}
+.cap-style .cap-field select,
+.cap-style .cap-field input[type="color"] {
+  width: 100%; height: 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--inset); color: var(--text);
+}
+.cap-style .cap-field input[type="range"] { width: 100%; }
+.cap-style .cap-field .mono { font-size: 11px; color: var(--text-3); min-width: 28px; text-align: center; }
 .sub-list { display: flex; flex-direction: column; gap: 1px; }
 .sub-item { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: var(--r-sm); }
 .sub-item:hover { background: var(--hover); }

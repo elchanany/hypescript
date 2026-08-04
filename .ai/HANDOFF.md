@@ -1,21 +1,19 @@
 # HANDOFF
 
 ## Goal
-ליטוש Dashboard + UX פרויקטים (תצוגות מקדימות, מודאלים במקום prompt, toasts, תפריט משתמש).
+להמשיך לפי GAP_MAP אחרי מיזוג Dashboard (#14): תיקון URL Supabase + TX-1 (סגנון כתוביות) + AG-2 (CommandBus).
 
 ## Current State (verified)
-- ענף: `cursor/dashboard-polish-505e`
-- ToastHost גלובלי + `lib/ui/toast.ts`
-- Modal: NameDialog / ConfirmDialog
-- `/dashboard`: כרטיסים עם cover ממדיה מקומית, תפריט ⋯ (פתח/שם/מחק), תפריט משתמש Google
-- עורך: יצירה/שינוי שם/מחיקה בלי `window.prompt`/`confirm`
-- אחרי OAuth: toast «התחברת בהצלחה» דרך `hs_just_logged_in`
+- `main` כולל PR #14 (Dashboard polish) — ממוזג.
+- ענף פעיל: `cursor/editor-next-505e`
+- נרמול `NEXT_PUBLIC_SUPABASE_URL` (הסרת `/rest/v1`) הועתק מענף #13.
 
 ## Exact Next Steps
-1. `npm test` + `npm run build` ב-web
-2. commit / push / PR
-3. אחרי מיזוג — Redeploy ב-Vercel ובדיקה ידנית ב-/dashboard
+1. להשלים TX-1: CaptionStyle בפריוויו + פאנל כתוביות + persistence (schema v4).
+2. AG-2: מחיקת קליפ/רווח דרך CommandBus + בדיקות parity.
+3. להחליף `prompt` לשינוי שם רצועה / טקסט אוברליי ב-NameDialog.
+4. commit / push / PR; לסגור #13 כמיותר אחרי המיזוג.
 
 ## Risks
-- תצוגה מקדימה תלויה במדיה ב-IndexedDB של אותו דפדפן/מחשב.
-- פרויקטים בלי וידאו/תמונה נשארים עם אייקון תיקייה.
+- סגנון כתוביות בפרויקט ישן חייב migration עם ברירת מחדל.
+- Burn-in של סגנון בייצוא — אם לא בטווח החבילה, לפחות Preview + persist.

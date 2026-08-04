@@ -1,7 +1,8 @@
 // Register built-in editor commands used by UI + Agent.
-import { assembledToSource, clipDur, splitClip } from "./model";
+import { assembledToSource, clipDur, splitClip, uid } from "./model";
 import { makeTextOverlay } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple } from "./timelineOps";
+import { normalizeCaptionStyle } from "./captionStyle";
 import { registerCommand } from "./commands";
 
 let registered = false;
@@ -114,6 +115,32 @@ export function ensureBuiltinCommands() {
       const volume = Number(args?.volume);
       if (!id || !Number.isFinite(volume)) throw new Error("חסרים פרמטרים");
       api.updateClip(id, { volume: Math.max(0, Math.min(2, volume)) });
+    },
+  });
+
+  registerCommand({
+    id: "clip.duplicate",
+    label: "Duplicate clip",
+    labelHe: "שכפל קטע",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clips = api.getClips();
+      if (!clips || !id) throw new Error("אין קטע");
+      const i = clips.findIndex((c) => c.id === id);
+      if (i < 0) throw new Error("קטע לא נמצא");
+      const copy = { ...clips[i], id: uid() };
+      api.setClips([...clips.slice(0, i + 1), copy, ...clips.slice(i + 1)]);
+    },
+  });
+
+  registerCommand({
+    id: "caption.setStyle",
+    label: "Set caption style",
+    labelHe: "סגנון כתוביות",
+    run: (api, args) => {
+      if (!api.getCaptionStyle || !api.setCaptionStyle) throw new Error("סגנון כתוביות לא זמין");
+      const cur = api.getCaptionStyle();
+      api.setCaptionStyle(normalizeCaptionStyle({ ...cur, ...(args || {}) }));
     },
   });
 

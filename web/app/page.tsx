@@ -12,7 +12,7 @@ import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
-import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, trimGap } from "@/lib/editor/timelineOps";
+import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
@@ -60,6 +60,7 @@ export default function EditorPage() {
     renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
+    captionStyle, setCaptionStyle,
   } = useEditor();
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -98,6 +99,7 @@ export default function EditorPage() {
   const mediaRef = useRef(media); mediaRef.current = media;
   const subsRef = useRef(subs); subsRef.current = subs;
   const canvasRef = useRef(canvas); canvasRef.current = canvas;
+  const captionStyleRef = useRef(captionStyle); captionStyleRef.current = captionStyle;
   const curRef = useRef(cur); curRef.current = cur;
   const editorApiRef = useRef<EditorApi | null>(null);
   if (!editorApiRef.current) {
@@ -117,6 +119,8 @@ export default function EditorPage() {
       selectOverlay: (id) => { setSelectedOverlayId(id); if (id) setSelectedId(null); },
       seek: (t) => { setCur(t); previewRef.current?.seek(t); },
       getPlayhead: () => curRef.current,
+      getCaptionStyle: () => captionStyleRef.current,
+      setCaptionStyle: (s) => setCaptionStyle(s),
     };
   }
 
@@ -137,6 +141,11 @@ export default function EditorPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projDlg, setProjDlg] = useState<"none" | "create" | "rename" | "delete">("none");
+  const [nameDlg, setNameDlg] = useState<
+    | { kind: "none" }
+    | { kind: "track"; id: string; name: string }
+    | { kind: "overlayText"; id: string; text: string }
+  >({ kind: "none" });
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
@@ -219,7 +228,7 @@ export default function EditorPage() {
       const raw = await kvGet<any>(pk(projectId, "state"));
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
-      resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas });
+      resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas, captionStyle: st.captionStyle });
       setCur(0); setSelectedId(null); setSelectedOverlayId(null);
       setRestored(true);
     })();
@@ -235,11 +244,11 @@ export default function EditorPage() {
     if (!restored || !projectId) return;
     setSaving(true);
     const t = setTimeout(async () => {
-      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas });
+      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas, captionStyle });
       touchProject(projectId); setSaving(false);
     }, 500);
     return () => clearTimeout(t);
-  }, [words, clips, subs, tracks, overlays, canvas, restored, projectId]);
+  }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId]);
 
   const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
   const newProject = () => setProjDlg("create");
@@ -403,12 +412,12 @@ export default function EditorPage() {
     if (!res.ok) setError(res.error);
   };
   const deleteClipById = (id: string, leaveGap = false) => {
-    if (!clips || videoLocked(tracks)) return;
+    if (!clips || videoLocked(tracks) || !editorApiRef.current) return;
     const c = clips.find((x) => x.id === id);
     if (!c) return;
-    const next = isGapClip(c) ? closeGap(clips, id) : leaveGap ? removeClipLeaveGap(clips, id) : removeClipRipple(clips, id);
-    setClips(next);
-    if (selectedId === id) setSelectedId(null);
+    const cmd = isGapClip(c) ? "gap.close" : leaveGap ? "clip.delete.leaveGap" : "clip.delete.ripple";
+    const res = runCommand(cmd, editorApiRef.current, { id });
+    if (!res.ok) setError(res.error);
   };
   const deleteSel = (leaveGap = false) => {
     if (selectedOverlayId) {
@@ -419,8 +428,9 @@ export default function EditorPage() {
     if (selectedId) deleteClipById(selectedId, leaveGap);
   };
   const duplicateClip = (id: string) => {
-    if (videoLocked(tracks)) return;
-    setClips((cs) => { if (!cs) return cs; const i = cs.findIndex((c) => c.id === id); if (i < 0) return cs; const copy = { ...cs[i], id: uid() }; return [...cs.slice(0, i + 1), copy, ...cs.slice(i + 1)]; });
+    if (videoLocked(tracks) || !editorApiRef.current) return;
+    const res = runCommand("clip.duplicate", editorApiRef.current, { id });
+    if (!res.ok) setError(res.error);
   };
   const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
@@ -527,6 +537,12 @@ export default function EditorPage() {
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
               hasMain={!!main} hasWords={!!words} subs={subs}
               onGenerate={generateSubs} onImportSrt={importSrt} onExportSrt={exportSrt} onEditSub={editSub} onDelSub={delSub}
+              captionStyle={captionStyle}
+              onCaptionStyle={(patch) => {
+                if (!editorApiRef.current) { setCaptionStyle((s) => ({ ...s, ...patch })); return; }
+                const res = runCommand("caption.setStyle", editorApiRef.current, patch);
+                if (!res.ok) setError(res.error);
+              }}
             />
           )}
         </div>
@@ -544,8 +560,9 @@ export default function EditorPage() {
                 onOverlayLive={(u) => setOverlaysLive(u)}
                 onCommitOverlay={commitTransaction}
                 onCancelOverlay={cancelTransaction}
-                onEditOverlayText={(id, text) => updateOverlay(id, { text })}
-                onCanvasDetected={onCanvasDetected} />
+                onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
+                onCanvasDetected={onCanvasDetected}
+                captionStyle={captionStyle} />
               {(working || phase || error) && (
                 <div className="status-strip">
                   <span className={`s-msg ${error ? "err" : ""}`}>{error || phase}</span>
@@ -601,7 +618,9 @@ export default function EditorPage() {
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}
                 onOverlayMove={setOverlayMoveLive}
-                renameTrack={renameTrack} toggleLock={toggleLock} toggleMute={toggleMute}
+                renameTrack={renameTrack}
+                onRequestRenameTrack={(id, name) => setNameDlg({ kind: "track", id, name })}
+                toggleLock={toggleLock} toggleMute={toggleMute}
                 cycleHeight={cycleHeight} reorderTrack={reorderTrack}
               />
             ) : (
@@ -641,6 +660,32 @@ export default function EditorPage() {
         danger
         onClose={() => setProjDlg("none")}
         onConfirm={submitDelete}
+      />
+      <NameDialog
+        open={nameDlg.kind === "track"}
+        title="שם הרצועה"
+        label="שם"
+        initial={nameDlg.kind === "track" ? nameDlg.name : ""}
+        confirmLabel="שמור"
+        onClose={() => setNameDlg({ kind: "none" })}
+        onSubmit={(name) => {
+          if (nameDlg.kind === "track") renameTrack(nameDlg.id, name);
+          setNameDlg({ kind: "none" });
+          toast.success("שם הרצועה עודכן", name);
+        }}
+      />
+      <NameDialog
+        open={nameDlg.kind === "overlayText"}
+        title="עריכת טקסט"
+        label="טקסט"
+        initial={nameDlg.kind === "overlayText" ? nameDlg.text : ""}
+        confirmLabel="שמור"
+        onClose={() => setNameDlg({ kind: "none" })}
+        onSubmit={(text) => {
+          if (nameDlg.kind === "overlayText") updateOverlay(nameDlg.id, { text });
+          setNameDlg({ kind: "none" });
+          toast.success("הטקסט עודכן");
+        }}
       />
     </div>
   );

@@ -35,10 +35,15 @@
 
 | מה ב־Supabase | שם המשתנה אצלנו | איך נראה |
 |---|---|---|
-| **Project URL** (לרוב תחת Data API / Project Settings) | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
+| **Project URL** (Project Settings → General / API) | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` בלבד |
 | **Publishable key** | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | מתחיל ב־`sb_publishable_...` |
 
 ⚠️ **אל תעתיק** את **Secret key** — זה לשרת בלבד, לא לדפדפן ולא ל־`.env.local` הציבורי.
+
+⚠️ **חשוב מאוד ל־URL:** חייב להסתיים ב־`.supabase.co` **בלי** `/rest/v1` בסוף.  
+אם תדביק `https://xxxx.supabase.co/rest/v1` תופיע שגיאה כמו  
+`No API key found in request` והכתובת בדפדפן תכלול `/rest/v1/auth/...` — זה לא נכון.  
+דוגמה נכונה: `https://dbfednzsladjxjhlwfxr.supabase.co`
 
 ---
 
@@ -150,3 +155,19 @@ npm run dev
 | `/settings` | מפתחות AI |
 
 **זכור:** הפרויקטים והווידאו נשארים במחשב (IndexedDB). ההתחברות = מי אתה, לא איפה הסרטון.
+
+---
+
+## פתרון תקלות
+
+### `No API key found in request` / כתובת עם `/rest/v1/auth/...`
+
+הסיבה כמעט תמיד: ב־Vercel (או ב־`.env.local`) הערך של `NEXT_PUBLIC_SUPABASE_URL` כולל `/rest/v1` בסוף.
+
+1. Vercel → Settings → Environment Variables → ערוך `NEXT_PUBLIC_SUPABASE_URL`
+2. שים **רק**: `https://YOUR_REF.supabase.co` (בלי שום נתיב אחרי)
+3. Save → Deployments → **Redeploy**
+4. נסה שוב `/login`
+
+(בקוד יש גם נרמול אוטומטי שמסיר `/rest/v1` — אבל חייבים Redeploy אחרי עדכון הקוד/המשתנים.)
+

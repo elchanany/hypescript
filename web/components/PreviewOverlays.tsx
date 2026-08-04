@@ -33,7 +33,7 @@ interface Props {
   onLive: (updater: (prev: Overlay[]) => Overlay[]) => void;
   onCommit: () => void;
   onCancel?: () => void;
-  onEditText: (id: string, text: string) => void;
+  onEditText: (id: string, currentText: string) => void; // request edit (parent opens modal)
 }
 
 interface DragState {
@@ -137,7 +137,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
         return (
           <div key={o.id} className={`ov-box ${sel ? "sel" : ""} ${o.locked ? "locked" : ""}`} style={style}
             onPointerDown={(e) => startDrag(e, o, "move")}
-            onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); const t = prompt("טקסט:", o.text || ""); if (t != null) onEditText(o.id, t); } }}>
+            onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); onEditText(o.id, o.text || ""); } }}>
             {o.kind === "image" && asset ? (
               // checkerboard behind semi-transparent / dark images so they're never "invisible"
               <div className="ov-img-wrap"><img src={asset.url} alt="" draggable={false} /></div>

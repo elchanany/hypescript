@@ -7,6 +7,18 @@ import { Overlay } from "./overlay";
 import { Sub } from "./subtitlesEdl";
 import { CanvasSize } from "./canvasCoords";
 
+export type CommandId =
+  | "clip.delete.ripple"
+  | "clip.delete.leaveGap"
+  | "clip.splitAtPlayhead"
+  | "gap.close"
+  | "overlay.delete"
+  | "overlay.addText"
+  | "clip.setEnabled"
+  | "clip.setVolume"
+  | "clip.duplicate"
+  | "caption.setStyle";
+
 export interface EditorApi {
   getClips(): Clip[] | null;
   setClips(clips: Clip[] | null): void;
@@ -23,17 +35,9 @@ export interface EditorApi {
   selectOverlay(id: string | null): void;
   seek(t: number): void;
   getPlayhead(): number;
+  getCaptionStyle?: () => import("./captionStyle").CaptionStyle;
+  setCaptionStyle?: (style: import("./captionStyle").CaptionStyle) => void;
 }
-
-export type CommandId =
-  | "clip.delete.ripple"
-  | "clip.delete.leaveGap"
-  | "clip.splitAtPlayhead"
-  | "gap.close"
-  | "overlay.delete"
-  | "overlay.addText"
-  | "clip.setEnabled"
-  | "clip.setVolume";
 
 export interface CommandDef {
   id: CommandId;

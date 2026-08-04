@@ -6,6 +6,7 @@ import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
+import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import PreviewOverlays from "@/components/PreviewOverlays";
@@ -30,6 +31,7 @@ interface Props {
   onCancelOverlay?: () => void;
   onEditOverlayText?: (id: string, text: string) => void;
   onCanvasDetected?: (w: number, h: number) => void;
+  captionStyle?: CaptionStyle;
 }
 
 const FRAME = 1 / 30;
@@ -40,7 +42,7 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
@@ -195,7 +197,12 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
               style={inGap ? { visibility: "hidden" } : undefined} />
             {inGap && <div className="pv-gap" aria-hidden />}
-            {(() => { const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02); return cue ? <div className="pv-caption">{cue.text}</div> : null; })()}
+            {(() => {
+              const cue = (subs || []).find((s) => t >= s.start - 0.02 && t <= s.end + 0.02);
+              if (!cue) return null;
+              const st = captionStyle || DEFAULT_CAPTION_STYLE;
+              return <div className="pv-caption" style={captionStyleToCss(st)}>{cue.text}</div>;
+            })()}
             <PreviewOverlays boxRef={canvasBoxRef} canvas={canvas} overlays={overlays} media={media} currentTime={t}
               selectedId={selectedOverlayId ?? null}
               onSelect={(id) => onSelectOverlay?.(id)}

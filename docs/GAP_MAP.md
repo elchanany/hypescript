@@ -42,7 +42,7 @@
 | פריט | סטטוס | פער |
 |---|---|---|
 | כתוביות: create/edit/timing/SRT | OK | — |
-| כתוביות: style/position/animation/scope | MISSING | — |
+| כתוביות: style/position/animation/scope | PARTIAL | style+position+bg בפרויקט (preview); animation/burn-in חסרים |
 | Text element (add/edit/style) | PARTIAL | style מלא/אנימציה חסרים |
 | Image/Logo overlay | OK | — |
 | Stickers/Shapes | MISSING | — |
@@ -85,7 +85,7 @@
 - **AG-1**: DeepSeek tool_calls ✅
 
 ### P1
-- **CV-1…CV-7** ✅ · **TL-1** ✅ (gaps/ripple/leave-gap/zoom-around-pointer) · **TX-1** PARTIAL (overlay trim ✅; caption style חסר)
+- **CV-1…CV-7** ✅ · **TL-1** ✅ (gaps/ripple/leave-gap/zoom-around-pointer) · **TX-1** PARTIAL (overlay trim ✅; caption style preview ✅; burn-in/animation חסרים)
 
 ### P2 (הבא)
 - **AG-2**: להעביר יותר פעולות UI דרך CommandBus + parity tests
