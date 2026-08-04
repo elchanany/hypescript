@@ -4,17 +4,17 @@
 עורך CapCut-class + סוכן AI מעל אותו מנוע.
 
 ## Current State (verified)
-ענף: `main` — ממוזגים PR #4 + #5 + #6 (2026-08-04).
-- קיבוץ כרטיסי-כלי + נקודות "חושב"
-- Agent workflow: within_existing silence, delete_clips/keep_source_range, כתוביות עם script, שיחות מרובות
-- ציטוט מקום בצ'אט + זום טיימליין בגלגלת (~0.15×–128×)
-- על בסיס CommandBus / gaps / Provider Registry שכבר היו ב-main
+ענף: `cursor/quote-input-timeline-pan-e91a`
+- **ציטוט מקום** נכנס לתיבת הקלט של הצ'אט (`insertQuote` → `setInput`), לא כהודעה בשיחה
+- **זום pinch/Ctrl**: דיכוי per-event + רוחב `tl-inner` בפיקסלים לפי `clientWidth` + `overflow` על shell/upper/timeline — מונע דחיפת פריסה הצידה
+- **גלילה אופקית בטאצפד**: `deltaX` דומיננטי או Shift+גלגלת → `scrollLeft` על הציר
+- `tsc` + `zoom.test.ts` עוברים
 
 ## Exact Next Steps
-1. לאמת בפריסת Vercel אחרי deploy מ-main
-2. להרחיב CommandBus / AG-4 לפי GAP_MAP
-3. **לא** Supabase/Auth בלי אישור
+1. לפתוח/למזג PR של הענף הזה
+2. לאמת ידנית: ציטוט → composer; pinch זום בלי שבירת layout; שתי אצבעות לצד על הטיימליין
+3. **לא** Supabase/Auth בלי אישור; סוכן AI אוטונומי מחוץ לטווח
 
 ## Risks
-- Roll/Slip/transitions חסרים
+- חלק מהטאצפדים ממפים גלילה אופקית רק כ-Shift+deltaY (בדפדפן) — מכוסה
 - Graphify לא מותקן בסביבה
