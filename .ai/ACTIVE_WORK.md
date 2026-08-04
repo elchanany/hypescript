@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-טיימליין CapCut-like: inspector לפי בחירה, hover, snap guides, יישור אייקוני אודיו, linked split
+טיימליין CapCut-like: inspector / hover / snap / יישור אודיו / linked split — סיום משימה, ממתין למיזוג
 
 ## Branch
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-`0022f1d` — fix: stopPropagation so clip click keeps inspector open
+`0022f1d` — fix(web): keep clip selection when clicking timeline clips
 
 ## Status
-verified manually — ready for review (PR #24)
+verified — PR #24 OPEN, ready for review (לא על `main`)
 
 ## Exact continuation point
-מיזוג PR #24 אחרי review; אין באגים פתוחים ידועים בבחירת קליפ.
+מיזוג PR #24 אחרי review. אין עבודת פיצ׳ר פתוחה על הענף.
