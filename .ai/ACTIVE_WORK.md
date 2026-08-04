@@ -7,7 +7,8 @@
 `main`
 
 ## Latest commit
-`65a2528` — Merge PR #32: סוכן דרך CommandBus + רצועות וידאו מרובות
+`65a2528` — Merge PR #32  
+`17b6c9f` — continuity אחרי המיזוג
 
 ## Status
 הושלם · ב־`main`
