@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
+import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
 import { Film, Image as ImageIcon, Music, Plus, Trash2, Upload, LayoutGrid, List } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 
@@ -11,8 +12,6 @@ const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)
 
 type View = "grid" | "list";
 
-// Real thumbnail for a grid cell. Video -> first-frame captured via the shared cache
-// (NO ffmpeg.wasm); image -> its object URL; audio -> a music glyph (no fake artwork).
 function CellThumb({ asset }: { asset: MediaAsset }) {
   const [url, setUrl] = useState<string | null>(asset.kind === "image" ? asset.url : null);
   useEffect(() => {
@@ -54,6 +53,8 @@ export default function MediaPanel({
   const [over, setOver] = useState(false);
   const [view, setView] = useState<View>("grid");
   const [menu, setMenu] = useState<{ x: number; y: number; asset: MediaAsset } | null>(null);
+  const dragPreviewRef = useRef<HTMLElement | null>(null);
+  const thumbCache = useRef<Map<string, string>>(new Map());
 
   useEffect(() => { const v = localStorage.getItem("hs_mediaview"); if (v === "list" || v === "grid") setView(v); }, []);
   const changeView = (v: View) => { setView(v); localStorage.setItem("hs_mediaview", v); };
@@ -63,6 +64,48 @@ export default function MediaPanel({
     { sep: true, label: "" },
     { label: "הסר קובץ", icon: Trash2, danger: true, onClick: () => onRemove(a.id) },
   ];
+
+  const startMediaDrag = (e: React.DragEvent, m: MediaAsset) => {
+    e.dataTransfer.setData(MEDIA_DRAG_MIME, m.id);
+    e.dataTransfer.effectAllowed = "copy";
+    const thumbUrl = m.kind === "image" ? m.url : (thumbCache.current.get(m.id) || null);
+    releaseDragPreviewEl(dragPreviewRef.current);
+    const preview = buildDragPreviewEl({
+      name: m.name.replace(/\.[^.]+$/, "") || m.name,
+      dur: m.duration,
+      kind: m.kind,
+      thumbUrl,
+    });
+    dragPreviewRef.current = preview;
+    try {
+      e.dataTransfer.setDragImage(preview, 28, 28);
+    } catch { /* חלק מהדפדפנים */ }
+    // אם אין תמונה עדיין — נטען לרקע לגרירות הבאות
+    if (!thumbUrl && m.kind === "video") {
+      void import("@/lib/media/thumbnails").then(({ getThumbnail }) =>
+        getThumbnail(m.file, Math.min(1, m.duration * 0.1), 90)
+          .then((u) => thumbCache.current.set(m.id, u))
+          .catch(() => {}),
+      );
+    }
+  };
+
+  const endMediaDrag = () => {
+    releaseDragPreviewEl(dragPreviewRef.current);
+    dragPreviewRef.current = null;
+  };
+
+  // טעינת תמונות מראש לרשת — כדי ש-setDragImage יהיה מיידי
+  useEffect(() => {
+    media.filter((m) => m.kind === "video").slice(0, 12).forEach((m) => {
+      if (thumbCache.current.has(m.id)) return;
+      void import("@/lib/media/thumbnails").then(({ getThumbnail }) =>
+        getThumbnail(m.file, Math.min(1, m.duration * 0.1), 90)
+          .then((u) => thumbCache.current.set(m.id, u))
+          .catch(() => {}),
+      );
+    });
+  }, [media]);
 
   return (
     <>
@@ -79,9 +122,16 @@ export default function MediaPanel({
         onChange={(e) => { onUpload(e.target.files); e.currentTarget.value = ""; }} />
 
       <div className="panel-scroll"
-        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragOver={(e) => {
+          // העלאת קבצים מהמערכת — לא גרירת מדיה פנימית
+          if (Array.from(e.dataTransfer.types).includes(MEDIA_DRAG_MIME)) return;
+          e.preventDefault(); setOver(true);
+        }}
         onDragLeave={() => setOver(false)}
-        onDrop={(e) => { e.preventDefault(); setOver(false); onUpload(e.dataTransfer.files); }}>
+        onDrop={(e) => {
+          if (Array.from(e.dataTransfer.types).includes(MEDIA_DRAG_MIME)) return;
+          e.preventDefault(); setOver(false); onUpload(e.dataTransfer.files);
+        }}>
         {media.length === 0 ? (
           <div className={`dropzone ${over ? "over" : ""}`} onClick={() => fileRef.current?.click()}>
             גרור לכאן קבצי וידאו, שמע או תמונה — או לחץ להעלאה
@@ -91,10 +141,13 @@ export default function MediaPanel({
             {media.map((m) => (
               <div key={m.id}
                 className={`media-cell ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""}`}
+                draggable
+                onDragStart={(e) => startMediaDrag(e, m)}
+                onDragEnd={endMediaDrag}
                 onClick={() => setSel(m.id)}
                 onDoubleClick={() => onAddClip(m)}
                 onContextMenu={(e) => { e.preventDefault(); setSel(m.id); setMenu({ x: e.clientX, y: e.clientY, asset: m }); }}
-                title={m.name}>
+                title={`${m.name} — גרור לציר הזמן`}>
                 <CellThumb asset={m} />
                 {m.id === mainId && <span className="cell-badge">ראשי</span>}
                 <div className="cell-actions">
@@ -112,10 +165,13 @@ export default function MediaPanel({
               return (
                 <div key={m.id}
                   className={`media-item ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""}`}
+                  draggable
+                  onDragStart={(e) => startMediaDrag(e, m)}
+                  onDragEnd={endMediaDrag}
                   onClick={() => setSel(m.id)}
                   onDoubleClick={() => onAddClip(m)}
                   onContextMenu={(e) => { e.preventDefault(); setSel(m.id); setMenu({ x: e.clientX, y: e.clientY, asset: m }); }}
-                  title={m.name}>
+                  title={`${m.name} — גרור לציר הזמן`}>
                   <div className="media-thumb"><Icon size={16} strokeWidth={1.5} /></div>
                   <div className="media-meta">
                     <span className="media-name">{m.name}</span>

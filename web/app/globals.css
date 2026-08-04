@@ -574,16 +574,60 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .cue2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 
-/* drag ghost + drop indicator (timeline move) */
+/* drag ghost + drop indicator (timeline move) — כרטיס תצוגה מקדימה */
 .tl-ghost {
   position: fixed; z-index: 320; pointer-events: none; direction: rtl;
-  display: none; align-items: center; gap: 6px; max-width: 240px;
-  height: 26px; padding: 0 9px; border-radius: var(--r-md);
+  display: none; align-items: stretch; gap: 0; max-width: 220px;
+  min-width: 140px; height: auto; padding: 0; overflow: hidden;
+  border-radius: var(--r-md);
   background: var(--elevated); border: 1px solid var(--accent); color: var(--text);
-  font-size: 11px; box-shadow: 0 8px 22px rgba(0,0,0,.5);
+  font-size: 11px; box-shadow: 0 12px 28px rgba(0,0,0,.55);
 }
-.tl-ghost .g-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tl-ghost .g-dur { margin-inline-start: auto; color: var(--text-2); font-family: var(--mono); font-size: 10px; direction: ltr; }
+.tl-ghost .g-preview {
+  width: 100%; height: 56px; background: #0a0d12; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 0 6px 4px;
+}
+.tl-ghost .g-preview img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.tl-ghost .g-preview.audio i {
+  flex: 1; min-width: 3px; max-width: 6px; border-radius: 1px;
+  background: rgba(63,164,106,.75); align-self: flex-end;
+}
+.tl-ghost .g-preview.glyph {
+  align-items: center; justify-content: center; font-size: 22px; padding: 0;
+}
+.tl-ghost .g-meta {
+  display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+  background: var(--panel);
+}
+.tl-ghost .g-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-weight: 500; }
+.tl-ghost .g-dur { flex: none; color: var(--text-2); font-family: var(--mono); font-size: 10px; direction: ltr; }
+
+/* HTML5 drag image מספריית מדיה */
+.drag-preview-card {
+  display: flex; flex-direction: column; width: 160px; overflow: hidden;
+  border-radius: 8px; background: #1a1f2a; border: 1px solid #6c92ff;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55); color: #e8eaef; font-family: inherit;
+  direction: rtl; pointer-events: none;
+}
+.drag-preview-thumb {
+  height: 56px; background: #0a0d12; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; gap: 2px; padding: 0 6px 4px;
+}
+.drag-preview-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.drag-preview-thumb.audio i {
+  flex: 1; min-width: 3px; border-radius: 1px; background: rgba(63,164,106,.75);
+}
+.drag-preview-thumb.glyph { align-items: center; justify-content: center; font-size: 22px; padding: 0; }
+.drag-preview-meta { display: flex; gap: 6px; padding: 5px 8px; background: #151922; align-items: center; }
+.drag-preview-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.drag-preview-dur { font-size: 10px; color: #9aa3b2; font-variant-numeric: tabular-nums; direction: ltr; }
+
+.media-cell, .media-item { cursor: grab; }
+.media-cell:active, .media-item:active { cursor: grabbing; }
+.tl-lane2.drop-target { outline: 1px dashed var(--accent); outline-offset: -2px; background: rgba(108,146,255,.06); }
+.tl-empty.drop-target { border-color: var(--accent); background: rgba(108,146,255,.06); }
 .tl-drop { display: none; position: absolute; top: 0; bottom: 0; width: 3px; margin-inline-start: -1.5px; background: var(--accent-hover); z-index: 7; pointer-events: none; box-shadow: 0 0 8px 1px var(--accent), inset 0 0 0 1px rgba(255,255,255,.55); border-radius: 1px; }
 .tl-drop::before, .tl-drop::after { content: ""; position: absolute; left: -3.5px; width: 10px; height: 6px; background: var(--accent-hover); }
 .tl-drop::before { top: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }
