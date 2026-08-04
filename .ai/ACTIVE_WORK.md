@@ -7,7 +7,7 @@
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-(pending — ראה git log על הענף)
+`fa2b733` — feat(web): CapCut-like timeline selection, snap guides, linked A/V
 
 ## Status
 implementation complete — awaiting manual verify + PR merge
