@@ -5,14 +5,16 @@
 // הוא נאמר (חיפוש גלובלי בתמלול), ומוסיפים קליפ — בסדר שבו הטקסט נכתב. אם הטקסט
 // חוזר על קטע, הוא ייווצר שוב כקליפ נוסף שמצביע על אותו זמן במקור.
 
-import { Word } from "@/lib/models";
+import { speechWords, Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import { Clip, uid } from "./model";
 
 export function scriptToClips(words: Word[], scriptText: string, sourceId: string, gapTol = 3): Clip[] {
-  const tNorm = words.map((w) => normalizeHebrew(w.text));
+  // מתעלמים מאירועי שמע/רווחים של Scribe — יישור רק מול מילות דיבור.
+  const speech = speechWords(words);
+  const tNorm = speech.map((w) => normalizeHebrew(w.text));
   const sTokens = scriptText.split(/\s+/).map(normalizeHebrew).filter(Boolean);
-  if (!words.length || !sTokens.length) return [];
+  if (!speech.length || !sTokens.length) return [];
 
   // אינדקס: טוקן -> כל המיקומים בתמלול (מאפשר חיפוש גלובלי/חזרות).
   const positions = new Map<string, number[]>();
@@ -43,7 +45,7 @@ export function scriptToClips(words: Word[], scriptText: string, sourceId: strin
       if (len > best.len) best = { len, tStart: ts, tEnd: lastMatch };
     }
     if (best.tStart < 0) { si++; continue; }
-    clips.push({ id: uid(), sourceId, start: words[best.tStart].start, end: words[best.tEnd].end });
+    clips.push({ id: uid(), sourceId, start: speech[best.tStart].start, end: speech[best.tEnd].end });
     si += best.len;
   }
   return clips;

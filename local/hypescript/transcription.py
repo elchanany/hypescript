@@ -21,11 +21,14 @@ CLOUD_PROVIDERS = {
     "openai": "https://api.openai.com/v1",
 }
 
+ELEVENLABS_STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
+
 # מודל ברירת מחדל לכל ספק ענן.
 CLOUD_DEFAULT_MODEL = {
     "groq": "whisper-large-v3",
     "openai": "whisper-1",
     "custom": "whisper-large-v3",
+    "elevenlabs": "scribe_v2",
 }
 
 
@@ -154,7 +157,7 @@ def transcribe_cloud(
     chunk_sec: float = 1200.0,
     max_retries: int = 3,
 ) -> Transcript:
-    """מתמלל בענן דרך endpoint תואם-OpenAI, עם word-level timestamps.
+    """מתמלל בענן (Groq/OpenAI תואם-OpenAI, או ElevenLabs Scribe).
 
     כולל שני שכבות עמידות:
       * **פיצול אוטומטי** של אודיו ארוך מ-``chunk_sec`` (כדי לא לחרוג ממגבלת
@@ -165,6 +168,17 @@ def transcribe_cloud(
         import requests  # noqa: F401
     except ImportError as exc:
         raise RuntimeError("החבילה 'requests' חסרה. הרץ:  pip install requests") from exc
+
+    if provider == "elevenlabs":
+        return _transcribe_elevenlabs(
+            audio_path,
+            model=model,
+            language=language,
+            api_key=api_key,
+            timeout=timeout,
+            chunk_sec=chunk_sec,
+            max_retries=max_retries,
+        )
 
     key = resolve_api_key(api_key, provider)
     root = base_url or CLOUD_PROVIDERS.get(provider)
@@ -188,7 +202,15 @@ def transcribe_cloud(
         if part.text:
             full_text_parts.append(part.text)
         for w in part.all_words():
-            all_words.append(Word(text=w.text, start=w.start + offset, end=w.end + offset))
+            all_words.append(
+                Word(
+                    text=w.text,
+                    start=w.start + offset,
+                    end=w.end + offset,
+                    type=w.type,
+                    speaker_id=w.speaker_id,
+                )
+            )
 
     if not all_words:
         return Transcript(language=detected, segments=[])
@@ -200,6 +222,130 @@ def transcribe_cloud(
     )
     log.info("תמלול ענן הושלם: %d מילים (%d חלקים)", len(all_words), len(chunks))
     return Transcript(language=detected, segments=[segment])
+
+
+def _transcribe_elevenlabs(
+    audio_path: str,
+    *,
+    model: str,
+    language: str,
+    api_key: Optional[str],
+    timeout: int,
+    chunk_sec: float,
+    max_retries: int,
+) -> Transcript:
+    """תמלול דרך ElevenLabs Speech-to-Text (Scribe)."""
+    key = resolve_api_key(api_key, "elevenlabs")
+    log.info("תמלול ElevenLabs: model=%s", model)
+
+    from . import media
+
+    tmp_dir = os.path.dirname(audio_path) or "."
+    chunks = media.split_audio(audio_path, chunk_sec, tmp_dir)
+
+    all_words: List[Word] = []
+    full_text_parts: List[str] = []
+    detected = language
+    for chunk_path, offset in chunks:
+        payload = _post_elevenlabs_stt(key, chunk_path, model, language, timeout, max_retries)
+        part = _elevenlabs_payload_to_transcript(payload, language)
+        detected = part.language or detected
+        if part.text:
+            full_text_parts.append(part.text)
+        for w in part.all_words():
+            all_words.append(
+                Word(
+                    text=w.text,
+                    start=w.start + offset,
+                    end=w.end + offset,
+                    type=w.type,
+                    speaker_id=w.speaker_id,
+                )
+            )
+
+    if not all_words:
+        return Transcript(language=detected, segments=[])
+    segment = Segment(
+        text=" ".join(full_text_parts).strip(),
+        start=all_words[0].start,
+        end=all_words[-1].end,
+        words=all_words,
+    )
+    log.info("תמלול ElevenLabs הושלם: %d טוקנים (%d חלקים)", len(all_words), len(chunks))
+    return Transcript(language=detected, segments=[segment])
+
+
+def _post_elevenlabs_stt(key, audio_path, model, language, timeout, max_retries) -> dict:
+    import time
+
+    import requests
+
+    last_err = ""
+    for attempt in range(1, max_retries + 1):
+        try:
+            with open(audio_path, "rb") as fh:
+                files = {"file": (os.path.basename(audio_path), fh, "audio/mpeg")}
+                data = {
+                    "model_id": model,
+                    "language_code": language,
+                    "tag_audio_events": "true",
+                    "diarize": "true",
+                    "timestamps_granularity": "word",
+                }
+                resp = requests.post(
+                    ELEVENLABS_STT_URL,
+                    headers={"xi-api-key": key},
+                    files=files,
+                    data=data,
+                    timeout=timeout,
+                )
+            if resp.status_code == 200:
+                return resp.json()
+            if resp.status_code in (429, 500, 502, 503, 504):
+                last_err = f"{resp.status_code}: {resp.text[:200]}"
+            else:
+                raise RuntimeError(f"שגיאת ElevenLabs ({resp.status_code}): {resp.text[:500]}")
+        except requests.RequestException as exc:
+            last_err = str(exc)
+
+        if attempt < max_retries:
+            wait = 2 ** attempt
+            log.warning(
+                "ElevenLabs נכשל (ניסיון %d/%d): %s — מנסה שוב בעוד %ds",
+                attempt,
+                max_retries,
+                last_err,
+                wait,
+            )
+            time.sleep(wait)
+
+    raise RuntimeError(f"ElevenLabs נכשל אחרי {max_retries} ניסיונות. אחרון: {last_err}")
+
+
+def _elevenlabs_payload_to_transcript(payload: dict, language: str) -> Transcript:
+    raw_words = payload.get("words") or []
+    words: List[Word] = []
+    for w in raw_words:
+        text = (w.get("text") or w.get("word") or "").strip()
+        if not text or w.get("start") is None or w.get("end") is None:
+            continue
+        wtype = w.get("type")
+        if wtype not in ("word", "spacing", "audio_event"):
+            wtype = "audio_event" if text.startswith("[") and text.endswith("]") else "word"
+        words.append(
+            Word(
+                text=text,
+                start=float(w["start"]),
+                end=float(w["end"]),
+                type=wtype,
+                speaker_id=w.get("speaker_id"),
+            )
+        )
+    if not words:
+        return Transcript(language=payload.get("language_code") or language, segments=[])
+    full_text = (payload.get("text") or "").strip()
+    segments = [Segment(text=full_text, start=words[0].start, end=words[-1].end, words=words)]
+    return Transcript(language=payload.get("language_code") or language, segments=segments)
 
 
 def _post_transcription(url, key, audio_path, model, language, timeout, max_retries) -> dict:

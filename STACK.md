@@ -9,8 +9,10 @@
 |---|---|---|
 | **Next.js 14** (App Router, TS) | frontend + serverless route | נפרס ב-Vercel בקליק, תומך גם ב-proxy התמלול. |
 | **ffmpeg.wasm** (`@ffmpeg/ffmpeg`, `@ffmpeg/util`) | חילוץ אודיו + רינדור בדפדפן | מאפשר עיבוד וידאו מקומי לגמרי מבלי שרת — הליבה של הפרטיות. ליבה חד-תהליכית (בלי דרישת COOP/COEP) לפריסה פשוטה. |
-| **Groq Whisper** (`whisper-large-v3`) | תמלול ענן | הכי מדויק לעברית, מהיר, free-tier נדיב, API תואם-OpenAI. |
-| **localStorage** | שמירת מפתחות | פשוט, נשאר בדפדפן המשתמש, בלי backend. |
+| **ElevenLabs Scribe** (`scribe_v2`) | תמלול ענן בתשלום | דיוק גבוה בעברית, word timestamps, אירועי שמע, diarization. מפתח `ELEVENLABS_API_KEY` בשרת. |
+| **ElevenLabs TTS** (`eleven_v3`) | קריינות | קולות+מודלים דרך API; הסוכן בוחר voice_id. |
+| **Groq Whisper** (`whisper-large-v3`) | תמלול ענן חינמי | מהיר, free-tier נדיב, API תואם-OpenAI. |
+| **localStorage** | העדפות לא-סודיות | בחירת ספק AI/תמלול — לא מפתחות API. |
 
 בלי Tailwind/UI-framework — CSS גלובלי פשוט (`web/app/globals.css`) מספיק וקליל.
 
