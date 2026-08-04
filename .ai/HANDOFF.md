@@ -1,18 +1,14 @@
 # HANDOFF
 
-## Goal
-Dashboard ברמת מוצר + המשך ROADMAP.
+## Auth
+Production `Invalid API key` = bad Supabase public key on Vercel.
+Code sanitizes quotes, rejects secret/service_role as public key, `/api/config` exposes safe diagnostics.
 
-## Current State (verified)
-- ממוזג ל-`main`: כרטיסי פרויקט עם תפריט ⋮ למעלה, פס זהות, בעלים/סטטיסטיקות
-- נשמרו מ-main: BrandLogo, NewProjectWizard, dataMode/aspect badges, Auth PKCE, timeline zoom
-- Auth PKCE: `@supabase/ssr` + server `/auth/callback`
-- Timeline zoom: true zoom-out below fit (`timelineContentWidth`), range 5%–×400
+## User action
+Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redeploy.
 
-## Exact Next Steps
-1. לאמת `/dashboard` ב-Vercel אחרי deploy
-2. Package C — Usage foundation / לפי ROADMAP
-3. **לא** שינויי Auth נוספים בלי צורך
+## Also on main
+Dashboard project cards / timeline zoom merges.
 
-## Risks
-- סטטיסטיקות כרטיס נטענות מ-IndexedDB לכל פרויקט
+## Next
+Package C after login works.

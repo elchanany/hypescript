@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { postLoginPath } from "@/lib/auth/session";
+import { authIssueMessage, type AuthDiagnostics } from "@/lib/auth/config";
 
 type Tab = "login" | "signup" | "magic" | "reset";
 
@@ -26,12 +27,36 @@ function LoginInner() {
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [authDiag, setAuthDiag] = useState<AuthDiagnostics | null>(null);
 
   useEffect(() => {
     if (urlError) {
-      setLocalError(urlMsg ? decodeURIComponent(urlMsg) : "ההתחברות נכשלה. נסה שוב.");
+      const raw = urlMsg ? decodeURIComponent(urlMsg) : "ההתחברות נכשלה. נסה שוב.";
+      // Prefer Hebrew guidance for the common Vercel misconfig.
+      if (/invalid api key/i.test(raw)) {
+        setLocalError("מפתח Supabase לא תקין. ב-Vercel חייב להיות Publishable/anon ב־NEXT_PUBLIC_SUPABASE_ANON_KEY (לא Secret), מאותו פרויקט כמו ה-URL, בלי מרכאות — ואז Redeploy.");
+      } else {
+        setLocalError(raw);
+      }
     }
   }, [urlError, urlMsg]);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.auth) {
+          setAuthDiag({
+            configured: !!j.auth.supabase,
+            urlHost: j.auth.urlHost ?? null,
+            keyKind: j.auth.keyKind ?? "unknown",
+            keyLen: j.auth.keyLen ?? 0,
+            issue: j.auth.issue ?? null,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -77,10 +102,26 @@ function LoginInner() {
           הווידאו נשאר אצלך במחשב. ההתחברות מזהה מי אתה — לא מעלה סרטונים לשרת.
         </p>
 
-        {!configured ? (
+        {!configured || authDiag?.issue ? (
           <div className="auth-warn">
-            <strong>התחברות עדיין לא מופעלת.</strong>
-            <p>הגדר Supabase לפי <code>docs/SETUP_AUTH.md</code>. בינתיים אפשר לעבוד מקומית.</p>
+            <strong>{authDiag?.issue ? "הגדרות ההתחברות לא תקינות" : "התחברות עדיין לא מופעלת."}</strong>
+            <p>
+              {authIssueMessage(authDiag?.issue ?? "missing_both") ||
+                "הגדר Supabase לפי docs/SETUP_AUTH.md."}
+            </p>
+            {authDiag?.urlHost && (
+              <p className="hint" style={{ marginTop: 8 }}>
+                פרויקט מזוהה: <code dir="ltr">{authDiag.urlHost}</code>
+                {authDiag.keyKind ? <> · סוג מפתח: <code dir="ltr">{authDiag.keyKind}</code></> : null}
+                {authDiag.keyLen ? <> · אורך: {authDiag.keyLen}</> : null}
+              </p>
+            )}
+            <p style={{ marginTop: 8 }}>
+              ב-Vercel → Settings → Environment Variables:
+              <br />1) <code dir="ltr">NEXT_PUBLIC_SUPABASE_URL</code> = <code dir="ltr">https://xxxx.supabase.co</code>
+              <br />2) <code dir="ltr">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> = Publishable / anon בלבד
+              <br />3) Save → Deployments → Redeploy
+            </p>
             <Link href="/" className="btn primary tall" style={{ marginTop: 12, display: "inline-flex" }}>
               המשך בלי התחברות (עורך מקומי)
             </Link>

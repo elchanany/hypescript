@@ -154,6 +154,9 @@ export function useAuth(): AuthState {
 
 function humanAuthError(msg: string): string {
   const m = (msg || "").toLowerCase();
+  if (/invalid api key|invalid.*api.*key|jwt.*invalid/i.test(m)) {
+    return "מפתח Supabase לא תקין (Invalid API key). ב-Vercel → Environment Variables ודא ש־NEXT_PUBLIC_SUPABASE_ANON_KEY הוא Publishable/anon (לא Secret), מאותו פרויקט כמו ה-URL, בלי מרכאות — ואז Redeploy.";
+  }
   if (/pkce code verifier not found/i.test(m)) {
     return "ההתחברות נקטעה (PKCE). סגור את הלשונית, פתח מחדש את האתר, ולחץ שוב על «המשך עם Google» מאותו דפדפן.";
   }
