@@ -121,6 +121,7 @@ export default function EditorPage() {
       getPlayhead: () => curRef.current,
       getCaptionStyle: () => captionStyleRef.current,
       setCaptionStyle: (s) => setCaptionStyle(s),
+      getMediaDuration: (sourceId) => mediaRef.current.find((m) => m.id === sourceId)?.duration ?? 0,
     };
   }
 
@@ -432,6 +433,18 @@ export default function EditorPage() {
     const res = runCommand("clip.duplicate", editorApiRef.current, { id });
     if (!res.ok) setError(res.error);
   };
+  const rollSelected = (delta: number) => {
+    if (!selectedId || videoLocked(tracks) || !editorApiRef.current) return;
+    const res = runCommand("clip.roll", editorApiRef.current, { id: selectedId, delta });
+    if (!res.ok) setError(res.error);
+  };
+  const slipSelected = (delta: number) => {
+    if (!selectedId || videoLocked(tracks) || !editorApiRef.current) return;
+    const clip = clipsRef.current?.find((c) => c.id === selectedId);
+    if (!clip || isGapClip(clip)) return;
+    const res = runCommand("clip.slip", editorApiRef.current, { id: selectedId, delta });
+    if (!res.ok) setError(res.error);
+  };
   const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [40, 58, 90]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
@@ -451,6 +464,14 @@ export default function EditorPage() {
       else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId)) { e.preventDefault(); deleteSel(e.shiftKey); }
       else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
+      else if (selectedId && !videoLocked(tracks) && (e.key === "[" || e.key === "]")) {
+        e.preventDefault();
+        slipSelected(e.key === "]" ? 0.1 : -0.1);
+      }
+      else if (selectedId && !videoLocked(tracks) && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        rollSelected(e.key === "ArrowRight" ? 0.1 : -0.1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -596,6 +617,9 @@ export default function EditorPage() {
               canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId}
               onSplit={splitAtPlayhead} onDelete={deleteSel}
               onDeleteLeaveGap={() => deleteSel(true)} canLeaveGap={!!selectedClip && !selectedIsGap && !vLocked}
+              canRoll={!!selectedId && !vLocked && !!clips && clips.length >= 2 && !selectedIsGap}
+              canSlip={!!selectedId && !vLocked && !selectedIsGap}
+              onRoll={rollSelected} onSlip={slipSelected}
               snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
             />
             {clips ? (

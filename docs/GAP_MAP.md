@@ -34,7 +34,7 @@
 | Split/Trim/Move | OK | — |
 | Ghost+Drop indicator | OK | — |
 | Zoom around pointer / Ctrl+wheel | OK | — |
-| Gap entity / Delete-leaves-gap / Ripple-delete | OK | Preview+Export (lavfi black); Roll/Slip חסרים |
+| Gap entity / Delete-leaves-gap / Ripple-delete | OK | Preview+Export (lavfi black); Roll/Slip ✅ (כפתורים + מקלדת) |
 | Transitions/Effects/Keyframes visuals | MISSING | — |
 | Overlay/Text tracks | OK | בחירה + trim/move בציר |
 

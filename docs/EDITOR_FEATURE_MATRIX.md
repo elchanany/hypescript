@@ -31,7 +31,7 @@
 | Zoom around pointer / Ctrl+wheel / pinch | ✖ | ✖ | — | — | — | ✖ | — | Not started |
 | Split | ✔ | ✔ | ✔ | ✔ | ✔ | ✔(time) | ✔ | Partial |
 | Trim (normal) | ✔ | ✔ | ✔ | ✔ | ✔ | ✖ | ✔ | Partial |
-| Ripple / Roll / Slip | ✖ | ✖ | — | — | — | ✖ | ✖ | Not started |
+| Ripple / Roll / Slip | ✔ Ripple+LeaveGap+Roll+Slip | ✔ | — | Preview/Export | ✔ | ✖ | ✖ | Roll/Slip via CommandBus |
 | Delete leaves Gap / Gap entity / Ripple-delete | ✖ | ✖ | — | — | — | ✖ | ✖ | Not started |
 | Drag Ghost + Drop indicator | ✔ | ✔ | — | — | ✔ | ✖ | — | Partial |
 | Transitions / Effects / Keyframes visuals | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | Not started |

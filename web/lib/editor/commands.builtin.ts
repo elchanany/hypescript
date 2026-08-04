@@ -1,7 +1,7 @@
 // Register built-in editor commands used by UI + Agent.
 import { assembledToSource, clipDur, splitClip, uid } from "./model";
 import { makeTextOverlay } from "./overlay";
-import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple } from "./timelineOps";
+import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { registerCommand } from "./commands";
 
@@ -141,6 +141,47 @@ export function ensureBuiltinCommands() {
       if (!api.getCaptionStyle || !api.setCaptionStyle) throw new Error("סגנון כתוביות לא זמין");
       const cur = api.getCaptionStyle();
       api.setCaptionStyle(normalizeCaptionStyle({ ...cur, ...(args || {}) }));
+    },
+  });
+
+  registerCommand({
+    id: "clip.roll",
+    label: "Roll edit",
+    labelHe: "גלגול חיתוך (Roll)",
+    run: (api, args) => {
+      const clips = api.getClips();
+      if (!clips?.length) throw new Error("אין קליפים");
+      const delta = Number(args?.delta);
+      if (!Number.isFinite(delta) || delta === 0) throw new Error("חסר delta");
+      let leftIndex = typeof args?.leftIndex === "number" ? args.leftIndex : -1;
+      if (leftIndex < 0) {
+        const id = String(args?.id || "");
+        const i = clips.findIndex((c) => c.id === id);
+        if (i < 0) throw new Error("אין קטע לגלגול");
+        // Prefer rolling with the next clip; if last, roll with previous.
+        leftIndex = i < clips.length - 1 ? i : i - 1;
+      }
+      if (leftIndex < 0 || leftIndex >= clips.length - 1) throw new Error("אין זוג קטעים לגלגול");
+      const maxDur = (sid: string) => api.getMediaDuration?.(sid) ?? Number.POSITIVE_INFINITY;
+      api.setClips(rollAtBoundary(clips, leftIndex, delta, maxDur));
+    },
+  });
+
+  registerCommand({
+    id: "clip.slip",
+    label: "Slip clip",
+    labelHe: "החלקת מקור (Slip)",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const delta = Number(args?.delta);
+      const clips = api.getClips();
+      if (!clips || !id) throw new Error("אין קטע");
+      if (!Number.isFinite(delta) || delta === 0) throw new Error("חסר delta");
+      const c = clips.find((x) => x.id === id);
+      if (!c) throw new Error("קטע לא נמצא");
+      if (isGapClip(c)) throw new Error("לא ניתן להחליק רווח");
+      const max = api.getMediaDuration?.(c.sourceId) ?? c.end;
+      api.setClips(slipClip(clips, id, delta, max));
     },
   });
 
