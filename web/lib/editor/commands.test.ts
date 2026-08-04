@@ -80,4 +80,16 @@ describe("CommandBus builtins", () => {
     expect(q.selectedClipId).toBe("a");
     expect(q.duration).toBeCloseTo(2, 5);
   });
+
+  it("roll and slip go through CommandBus", () => {
+    const api = fakeApi([
+      { id: "a", sourceId: "m", start: 0, end: 2 },
+      { id: "b", sourceId: "m", start: 2, end: 6 },
+    ]) as any;
+    api.getMediaDuration = () => 100;
+    expect(runCommand("clip.roll", api, { id: "a", delta: 0.5 }).ok).toBe(true);
+    expect(api.clips[0].end).toBeCloseTo(2.5, 5);
+    expect(runCommand("clip.slip", api, { id: "b", delta: 1 }).ok).toBe(true);
+    expect(api.clips[1].start).toBeCloseTo(3.5, 5);
+  });
 });
