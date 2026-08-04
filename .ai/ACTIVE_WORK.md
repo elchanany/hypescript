@@ -7,10 +7,10 @@
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-(pending)
+`76396a9` — feat(agent): תמלול על הציר הערוך אחרי חיתוך
 
 ## Status
-PR #23 — הרחבה: assembleTranscript + transcribe_timeline
+PR #23 updated — captions + timeline transcript
 
 ## Exact continuation point
 Merge PR #23; verify remap/retranscribe in Act mode after cuts.
