@@ -6,11 +6,17 @@ import { Clip, MediaAsset } from "./model";
 import { Overlay } from "./overlay";
 import { Sub } from "./subtitlesEdl";
 import { CanvasSize } from "./canvasCoords";
+import { TrackMeta } from "./project";
 
 export type CommandId =
   | "clip.delete.ripple"
   | "clip.delete.leaveGap"
   | "clip.splitAtPlayhead"
+  | "clip.split"
+  | "clip.trim"
+  | "clip.move"
+  | "clip.add"
+  | "clip.moveToTrack"
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
@@ -19,7 +25,9 @@ export type CommandId =
   | "clip.duplicate"
   | "caption.setStyle"
   | "clip.roll"
-  | "clip.slip";
+  | "clip.slip"
+  | "track.addVideo"
+  | "track.removeVideo";
 
 export interface EditorApi {
   getClips(): Clip[] | null;
@@ -32,6 +40,9 @@ export interface EditorApi {
   updateClip(id: string, patch: Partial<Clip>): void;
   getMedia(): MediaAsset[];
   getSubs(): Sub[] | null;
+  setSubs?(subs: Sub[] | null): void;
+  getTracks(): TrackMeta[];
+  setTracks(tracks: TrackMeta[]): void;
   getCanvas(): CanvasSize;
   selectClip(id: string | null): void;
   selectOverlay(id: string | null): void;
@@ -86,6 +97,7 @@ export interface ProjectQuery {
   selectedClipId: string | null;
   selectedOverlayId: string | null;
   mediaNames: string[];
+  videoTrackCount: number;
 }
 
 export function queryProject(
@@ -95,6 +107,7 @@ export function queryProject(
   const clips = api.getClips() || [];
   const overlays = api.getOverlays();
   const subs = api.getSubs() || [];
+  const tracks = api.getTracks?.() || [];
   const dur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
   return {
     clipCount: clips.length,
@@ -105,5 +118,6 @@ export function queryProject(
     selectedClipId: sel.clipId,
     selectedOverlayId: sel.overlayId,
     mediaNames: api.getMedia().map((m) => m.name),
+    videoTrackCount: tracks.filter((t) => t.type === "video").length,
   };
 }

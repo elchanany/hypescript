@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימה פתוחה — PR #23 ממוזג ל־`main`.
+סוכן דרך CommandBus + רצועות וידאו מרובות (רענון מיידי בעורך)
 
 ## Branch
-`main`
+`cursor/agent-commandbus-multitrack-7940`
 
 ## Latest commit
-`79d844e` — Merge branch `cursor/fix-captions-speech-sync-c816` (PR #23)
+`169d1ab` — continuity maintenance (PR #32)
 
 ## Status
-הושלם · ב־`main`
+הושלם בקוד על הענף · PR #32 טיוטה OPEN · ממתין לאימות ידני / מיזוג
 
 ## Exact continuation point
-GAP_MAP: AG-4 / intro-outro / preview; בלי Auth/Supabase בלי אישור.
+אימות ידני ב-UI (Act → רצועה/טרים). אין פיצ'ר חדש עד בקשת משתמש. אחרי מיזוג — עדכון PROJECT_STATE ל-main.

@@ -37,3 +37,8 @@
 - **בחירה:** (1) `remove_silence` עם EDL קיים → within כברירת מחדל (רק `replace_all` מחליף); (2) `scriptToClips` סדרתי/forward בלי קפיצה גלובלית; (3) runtime חוסם לופי delete_clip/edit_subtitle ומפנה לכלים המוניים.
 - **סיבה:** כשלים מצ'אט אמיתי — החלפת EDL מלאה, קפיצות ל־117s, עשרות מחיקות בודדות.
 - **השלכה:** pipeline מומלץ: transcribe → keep_by_script → remove_silence(within) → transcribe_timeline → generate_subtitles(script).
+
+## D-008 — רצועות וידאו מרובות + סוכן דרך EditorApi
+- **בחירה:** (1) `clip.trackId` + N רצועות `type:"video"` (schema v5); (2) קומפוזיציה = cutaway (`flattenVideoTracks`, order גבוה מנצח) לנגן ולייצוא; (3) סוכן משנה פרויקט דרך `EditorApi`/`runCommand` עם `_editorDirty` (בלי History כפול), וכלים משני-state בסדר.
+- **סיבה:** בקשת משתמש לרענון מיידי בעורך + מונטאז'/רצועות; AG-2 parity.
+- **השלכה:** אודיו בזמן חפיפה מגיע מהרצועה המנצחת (לא A-roll שמור); PiP/שקיפות = החלטה נפרדת בעתיד.

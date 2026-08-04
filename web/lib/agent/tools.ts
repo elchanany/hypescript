@@ -26,6 +26,9 @@ import {
   formatTranscriptLines,
 } from "@/lib/editor/assembleTranscript";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
+import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
+import { TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
+import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 
 export interface AgentContext {
@@ -42,8 +45,13 @@ export interface AgentContext {
   clips: Clip[] | null;
   subs: Sub[] | null;
   overlays: Overlay[];
+  tracks: TrackMeta[];
   canvas: CanvasSize;
   lastRender: Blob | null;
+  /** גשר ל-CommandBus/useEditor — עדכון מיידי בעורך + Undo */
+  editorApi?: EditorApi | null;
+  /** מוטציה כבר נכנסה דרך EditorApi — Chat לא יבצע setProject כפול */
+  _editorDirty?: boolean;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
   onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image" | "audio") => void;
@@ -206,10 +214,53 @@ function findRanges(words: Word[], query: string, max = 6) {
 const requireClips = (ctx: AgentContext) => (ctx.clips && ctx.clips.length ? null : "שגיאה: אין קליפים. צור חיתוך קודם (keep_by_script / remove_segments).");
 const clipsSummary = (clips: Clip[]) => `${clips.length} קליפים, משך סופי ${fmt(totalDur(clips))}.`;
 
-/** כל שינוי ב-EDL מבטל תמלול-ציר שמור — צריך מיפוי/תמלול מחדש. */
+function syncFromEditor(ctx: AgentContext) {
+  const api = ctx.editorApi;
+  if (!api) return;
+  ctx.clips = api.getClips();
+  ctx.subs = api.getSubs();
+  ctx.overlays = api.getOverlays();
+  ctx.tracks = api.getTracks();
+}
+
+/** כל שינוי ב-EDL מבטל תמלול-ציר שמור — ונדחף מיד לעורך דרך EditorApi כשקיים. */
 function setClips(ctx: AgentContext, clips: Clip[] | null) {
-  ctx.clips = clips;
   ctx.assembledWords = null;
+  const primary = primaryVideoTrackId(ctx.tracks || []);
+  const tagged = clips?.map((c) => (c.trackId ? c : { ...c, trackId: primary })) ?? null;
+  if (ctx.editorApi) {
+    ctx.editorApi.setClips(tagged);
+    syncFromEditor(ctx);
+    ctx._editorDirty = true;
+  } else {
+    ctx.clips = tagged;
+  }
+}
+
+function setTracks(ctx: AgentContext, tracks: TrackMeta[]) {
+  if (ctx.editorApi) {
+    ctx.editorApi.setTracks(tracks);
+    syncFromEditor(ctx);
+    ctx._editorDirty = true;
+  } else {
+    ctx.tracks = tracks;
+  }
+}
+
+/** מריץ פקודת CommandBus ומסנכרן את ה-ctx. מחזיר הודעת שגיאה או null בהצלחה. */
+function dispatch(ctx: AgentContext, id: CommandId, args?: Record<string, unknown>): string | null {
+  if (!ctx.editorApi) return "NO_API";
+  const r = runCommand(id, ctx.editorApi, args);
+  if (!r.ok) return r.error;
+  syncFromEditor(ctx);
+  ctx._editorDirty = true;
+  ctx.assembledWords = null;
+  return null;
+}
+
+function ensureTrackId(ctx: AgentContext, clip: Clip): Clip {
+  const primary = primaryVideoTrackId(ctx.tracks || []);
+  return clip.trackId ? clip : { ...clip, trackId: primary };
 }
 
 export const TOOLS: ToolMeta[] = [
@@ -652,30 +703,139 @@ export const TOOLS: ToolMeta[] = [
     name: "add_clip", label: "הוספת קליפ", color: "#10b981", icon: "➕",
     schema: {
       name: "add_clip",
-      description: "מוסיף קליפ מכל מקור-מדיה (לפי שם או אינדקס) לסוף הרצף — כך מרכיבים סרטון מכמה סרטונים.",
-      parameters: { type: "object", properties: { source: { type: "string", description: "שם המקור או אינדקס (1-based)" }, start: { type: "number" }, end: { type: "number" }, at_index: { type: "number", description: "מיקום להוספה (1-based, אופציונלי)" } }, required: ["source"] },
+      description: "מוסיף קליפ מכל מקור-מדיה (לפי שם או אינדקס) לרצועת וידאו. track=שם/מזהה רצועה (אופציונלי, ברירת מחדל=ראשי).",
+      parameters: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "שם המקור או אינדקס (1-based)" },
+          start: { type: "number" },
+          end: { type: "number" },
+          at_index: { type: "number", description: "מיקום ברצועה (1-based, אופציונלי)" },
+          track: { type: "string", description: "שם או id של רצועת וידאו" },
+        },
+        required: ["source"],
+      },
     },
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, a.source);
       if (!asset) return `לא נמצא מקור "${a.source}". השתמש ב-list_media.`;
+      const primary = primaryVideoTrackId(ctx.tracks || []);
+      let trackId = primary;
+      if (a.track != null && String(a.track).trim()) {
+        const ref = String(a.track).trim();
+        const t = videoTracks(ctx.tracks || []).find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
+        if (!t) return `רצועה "${ref}" לא נמצאה. השתמש ב-list_tracks.`;
+        trackId = t.id;
+      }
       const start = a.start != null ? Math.max(0, +a.start) : 0;
       const end = a.end != null ? Math.min(asset.duration, +a.end) : asset.duration;
-      const clip: Clip = { id: uid(), sourceId: asset.id, start, end: Math.max(start + 0.1, end) };
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "clip.add", {
+          sourceId: asset.id,
+          start,
+          end: Math.max(start + 0.1, end),
+          trackId,
+          at_index: a.at_index != null ? (a.at_index | 0) - 1 : undefined,
+        });
+        if (e && e !== "NO_API") return e;
+        if (!e) return `נוסף קליפ מ-"${asset.name}" לרצועה. ${clipsSummary(ctx.clips!)}`;
+      }
+      const clip: Clip = ensureTrackId(ctx, { id: uid(), sourceId: asset.id, start, end: Math.max(start + 0.1, end), trackId });
       setClips(ctx, addClip(ctx.clips || [], clip, a.at_index != null ? (a.at_index | 0) - 1 : undefined));
       return `נוסף קליפ מ-"${asset.name}". ${clipsSummary(ctx.clips!)}`;
     },
   },
   {
     name: "list_clips", label: "רשימת קליפים", color: "#64748b", icon: "📋",
-    schema: { name: "list_clips", description: "מחזיר את רשימת הקליפים הנוכחית (אינדקס 1-based, טווח מקור, משך). רווחים מסומנים כ-[רווח].", parameters: { type: "object", properties: {} } },
+    schema: { name: "list_clips", description: "מחזיר את רשימת הקליפים (אינדקס 1-based גלובלי, רצועה, טווח מקור, משך). רווחים מסומנים כ-[רווח].", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
+      const primary = primaryVideoTrackId(ctx.tracks || []);
+      const tName = (id: string) => ctx.tracks?.find((t) => t.id === id)?.name || id;
       return ctx.clips!.map((c, i) => {
+        const tid = clipTrackId(c, primary);
         const en = c.enabled === false ? " (מושבת)" : "";
-        if (isGapClip(c)) return `${i + 1}. [רווח] ${clipDur(c).toFixed(2)}s`;
+        if (isGapClip(c)) return `${i + 1}. [${tName(tid)}] [רווח] ${clipDur(c).toFixed(2)}s`;
         const name = mediaById(ctx.media, c.sourceId)?.name || c.sourceId;
-        return `${i + 1}. ${name} ${c.start.toFixed(2)}–${c.end.toFixed(2)}s (${clipDur(c).toFixed(2)}s)${en}`;
+        return `${i + 1}. [${tName(tid)}] ${name} ${c.start.toFixed(2)}–${c.end.toFixed(2)}s (${clipDur(c).toFixed(2)}s)${en}`;
       }).join("\n");
+    },
+  },
+  {
+    name: "list_tracks", label: "רשימת רצועות", color: "#64748b", icon: "🎚️",
+    schema: { name: "list_tracks", description: "מחזיר רצועות וידאו/אודיו/כתוביות (id, שם, סוג, כמה קליפים).", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => {
+      const tracks = ctx.tracks?.length ? ctx.tracks : [];
+      if (!tracks.length) return "אין רצועות.";
+      const primary = primaryVideoTrackId(tracks);
+      return tracks.map((t, i) => {
+        const n = t.type === "video" ? clipsOnTrack(ctx.clips || [], t.id, primary).length : t.type === "caption" ? (ctx.subs?.length || 0) : "מקושר";
+        return `${i + 1}. ${t.name} (${t.type}, id=${t.id}) · ${n}${t.locked ? " 🔒" : ""}`;
+      }).join("\n");
+    },
+  },
+  {
+    name: "add_video_track", label: "הוספת רצועת וידאו", color: "#10b981", icon: "➕",
+    schema: {
+      name: "add_video_track",
+      description: "מוסיף רצועת וידאו חדשה למונטאז' (מעל הקיימות). אופציונלי: name.",
+      parameters: { type: "object", properties: { name: { type: "string" } } },
+    },
+    run: async (a, ctx) => {
+      const before = new Set(videoTracks(ctx.tracks || []).map((t) => t.id));
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "track.addVideo", { name: a.name });
+        if (e && e !== "NO_API") return e;
+      } else {
+        const { createVideoTrack } = await import("@/lib/editor/project");
+        const { tracks } = createVideoTrack(ctx.tracks || [], a.name != null ? String(a.name) : undefined);
+        setTracks(ctx, tracks);
+      }
+      const created = videoTracks(ctx.tracks || []).find((t) => !before.has(t.id));
+      return created
+        ? `נוספה רצועת וידאו "${created.name}" (id=${created.id}). השתמש ב-add_clip/move_clip_to_track.`
+        : "נוספה רצועת וידאו.";
+    },
+  },
+  {
+    name: "remove_video_track", label: "מחיקת רצועת וידאו", color: "#ef4444", icon: "🗑️",
+    schema: {
+      name: "remove_video_track",
+      description: "מוחק רצועת וידאו (לא את האחרונה). קליפים עוברים לרצועה הראשית. track=שם או id.",
+      parameters: { type: "object", properties: { track: { type: "string" } }, required: ["track"] },
+    },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const t = videoTracks(ctx.tracks || []).find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
+      if (!t) return `רצועה "${ref}" לא נמצאה.`;
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "track.removeVideo", { trackId: t.id });
+        if (e) return e;
+        return `נמחקה רצועה "${t.name}". ${clipsSummary(ctx.clips || [])}`;
+      }
+      return "שגיאה: אין חיבור לעורך.";
+    },
+  },
+  {
+    name: "move_clip_to_track", label: "העברת קליפ לרצועה", color: "#0ea5e9", icon: "🔀",
+    schema: {
+      name: "move_clip_to_track",
+      description: "מעביר קליפ לרצועת וידאו אחרת (מונטאז'/B-roll). index=1-based ב-list_clips, track=שם או id.",
+      parameters: { type: "object", properties: { index: { type: "number" }, track: { type: "string" } }, required: ["index", "track"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
+      const ref = String(a.track || "").trim();
+      const t = videoTracks(ctx.tracks || []).find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
+      if (!t) return `רצועה "${ref}" לא נמצאה.`;
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "clip.moveToTrack", { id: c.id, trackId: t.id });
+        if (e) return e;
+        return `קליפ ${a.index | 0} הועבר ל-"${t.name}".`;
+      }
+      setClips(ctx, ctx.clips!.map((x) => (x.id === c.id ? { ...x, trackId: t.id } : x)));
+      return `קליפ ${a.index | 0} הועבר ל-"${t.name}".`;
     },
   },
   {
@@ -684,6 +844,11 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "clip.split", { id: c.id, at_source: +a.at_source });
+        if (e) return e;
+        return `פוצל. ${clipsSummary(ctx.clips!)}`;
+      }
       setClips(ctx, splitClip(ctx.clips!, c.id, +a.at_source));
       return `פוצל. ${clipsSummary(ctx.clips!)}`;
     },
@@ -692,17 +857,24 @@ export const TOOLS: ToolMeta[] = [
     name: "trim_clip", label: "טרים קליפ", color: "#0ea5e9", icon: "↔️",
     schema: {
       name: "trim_clip",
-      description: "משנה את גבולות המקור של קליפ (start ו/או end בשניות במקור). אפשר להעביר רק end או רק start.",
+      description: "משנה את גבולות המקור של קליפ (start ו/או end בשניות במקור). אפשר להעביר רק end או רק start — כך משנים כמה זמן הקטע יופיע.",
       parameters: { type: "object", properties: { index: { type: "number" }, start: { type: "number" }, end: { type: "number" } }, required: ["index"] },
     },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      const asset = mediaById(ctx.media, c.sourceId);
-      const maxDur = asset?.duration || ctx.duration || c.end;
       const start = a.start != null && a.start !== "" ? +a.start : c.start;
       const end = a.end != null && a.end !== "" ? +a.end : c.end;
       if (!Number.isFinite(start) || !Number.isFinite(end)) return "שגיאה: start/end לא תקינים.";
+      if (ctx.editorApi) {
+        const e = dispatch(ctx, "clip.trim", { id: c.id, start, end });
+        if (e) return e;
+        const after = ctx.clips!.find((x) => x.id === c.id);
+        if (!after) return "שגיאה: הטרים נכשל.";
+        return `טורם קליפ ${a.index | 0} ל-${after.start.toFixed(2)}–${after.end.toFixed(2)}s. ${clipsSummary(ctx.clips!)}`;
+      }
+      const asset = mediaById(ctx.media, c.sourceId);
+      const maxDur = asset?.duration || ctx.duration || c.end;
       setClips(ctx, trimClip(ctx.clips!, c.id, start, end, maxDur));
       const after = ctx.clips!.find((x) => x.id === c.id);
       if (!after || !Number.isFinite(after.start) || !Number.isFinite(after.end)) return "שגיאה: הטרים נכשל (גבולות לא תקינים).";
@@ -711,10 +883,20 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "move_clip", label: "הזזת קליפ", color: "#0ea5e9", icon: "↕️",
-    schema: { name: "move_clip", description: "מזיז קליפ למיקום אחר ברצף (משנה את הסדר).", parameters: { type: "object", properties: { index: { type: "number" }, to_index: { type: "number", description: "מיקום יעד (1-based)" } }, required: ["index", "to_index"] } },
+    schema: { name: "move_clip", description: "מזיז קליפ למיקום אחר *בתוך אותה רצועה* (משנה סדר). להעברה בין רצועות — move_clip_to_track.", parameters: { type: "object", properties: { index: { type: "number" }, to_index: { type: "number", description: "מיקום יעד ברצועה (1-based)" } }, required: ["index", "to_index"] } },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
+      if (ctx.editorApi) {
+        const primary = primaryVideoTrackId(ctx.tracks || []);
+        const tid = clipTrackId(c, primary);
+        const onTrack = clipsOnTrack(ctx.clips!, tid, primary);
+        const localIdx = onTrack.findIndex((x) => x.id === c.id);
+        // to_index is 1-based within track for agent UX — convert via local list length
+        const e = dispatch(ctx, "clip.move", { id: c.id, to_index: (a.to_index | 0) - 1 });
+        if (e) return e;
+        return `הוזז (ברצועה, היה ${localIdx + 1}). ${clipsSummary(ctx.clips!)}`;
+      }
       setClips(ctx, moveClip(ctx.clips!, c.id, (a.to_index | 0) - 1));
       return `הוזז. ${clipsSummary(ctx.clips!)}`;
     },
@@ -915,10 +1097,11 @@ export const TOOLS: ToolMeta[] = [
       let renderEDL: typeof import("@/lib/ffmpeg").renderEDL;
       try { ({ renderEDL } = await import("@/lib/ffmpeg")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
-      const secs = ctx.clips!.reduce((s, c) => s + (c.end - c.start), 0);
+      const edl = flattenVideoTracks(ctx.clips!, ctx.tracks || []);
+      const secs = edl.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
       const blob = await renderEDL(
-        ctx.media, ctx.clips!,
+        ctx.media, edl,
         (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`),
         undefined,
         { overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
@@ -1178,9 +1361,9 @@ export const TOOL_BY_NAME: Record<string, ToolMeta> = Object.fromEntries(TOOLS.m
 
 export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית של hypescript. אתה עורך שיעורים: חותך, מסדר ומייצא לפי הוראות המשתמש.
 
-מודל: הסרטון הסופי הוא רשימת "קליפים" מסודרת (EDL). כל קליפ מצביע על טווח במקור. הסדר ברשימה = הסדר בסרטון הסופי.
+מודל: קליפים על רצועות וידאו (מונטאז'). כל קליפ = טווח במקור + trackId. ברצועה הסדר = סדר הניגון; רצועה עליונה מכסה תחתונה (cutaway) בזמן חופף. שינויים שלך מתעדכנים מיד בעורך.
 
-מדיה: יכולים להיות כמה סרטונים (list_media). להרכבה מכמה מקורות — תמלל כל אחד (transcribe_video+source), ואז keep_by_script עם append=true או add_clip.
+מדיה: יכולים להיות כמה סרטונים (list_media). להרכבה מכמה מקורות — תמלל כל אחד (transcribe_video+source), ואז keep_by_script עם append=true או add_clip. למונטאז'/B-roll: add_video_track → add_clip(track=...) או move_clip_to_track.
 
 ═══ תמלול וקריינות (ElevenLabs / Groq) ═══
 - ספקי תמלול: elevenlabs (Scribe — מומלץ לדיוק בעברית, חותמות-מילה, צחוק/אירועי שמע, הפרדת דוברים) או groq (Whisper).
@@ -1219,7 +1402,9 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - remove_silence: נשימות/שתיקות לפי עוצמה. within_existing כשיש כבר EDL.
 - keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
 - delete_clips / clear_clips: מחיקות המוניות.
-- trim_clip: אפשר רק start או רק end.
+- trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.
+- add_video_track / list_tracks / move_clip_to_track / remove_video_track: רצועות וידאו למונטאז'.
+- move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).

@@ -1,12 +1,14 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, totalDur } from "@/lib/editor/model";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
+import { TrackMeta } from "@/lib/editor/project";
+import { flattenVideoTracks } from "@/lib/editor/tracks";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import PreviewOverlays from "@/components/PreviewOverlays";
@@ -16,6 +18,8 @@ export interface PreviewHandle { seek: (assembled: number) => void; toggle: () =
 interface Props {
   media: MediaAsset[];
   clips: Clip[] | null;
+  /** כשיש כמה רצועות וידאו — הנגן משטח ל-EDL cutaway */
+  tracks?: TrackMeta[];
   subs?: Sub[] | null;
   onTime: (assembled: number) => void;
   onCopyPosition?: (assembled: number) => void;
@@ -42,7 +46,7 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle }, ref) {
+const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ media, clips, tracks, subs, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
@@ -58,7 +62,11 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const [inGap, setInGap] = useState(false);
   const gapRaf = useRef<number | null>(null);
 
-  const edl = clips && clips.length ? clips : null;
+  const flat = useMemo(
+    () => (clips?.length && tracks?.length ? flattenVideoTracks(clips, tracks) : clips),
+    [clips, tracks],
+  );
+  const edl = flat && flat.length ? flat : null;
   const byId = (id: string) => media.find((m) => m.id === id);
   const firstVid = media.find((m) => m.kind === "video");
   const playable = (c: Clip) => !isGapClip(c) && byId(c.sourceId)?.kind === "video" && clipEnabled(c);

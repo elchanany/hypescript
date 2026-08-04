@@ -55,7 +55,8 @@
 | Tool activity rows | PARTIAL | provider label + Retry prompt + "בטל" קיימים; cost/checkpoints/retry מלא חסרים |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | MISSING | — |
-| CommandBus + Query API | PARTIAL | registry + builtins + queryProject; לא כל ה-UI עובר דרכו עדיין |
+| CommandBus + Query API | PARTIAL | agent split/trim/move/add + track ops דרך CommandBus+EditorApi (רענון מיידי); לא כל ה-UI |
+| רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
 ## 6. Project / Auth / Dashboard
@@ -88,7 +89,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: להעביר יותר פעולות UI דרך CommandBus + parity tests
+- **AG-2**: PARTIAL — clip split/trim/move/add + video tracks דרך CommandBus מהסוכן; עוד פעולות UI לאיחוד
 - **AG-4**: PARTIAL — Tool activity בסיסי (provider label, Retry prompt, "בטל"); cost/checkpoints/retry מלא חסרים
 - **PR-1**: PARTIAL — Provider Registry בסיסי וכנה; policies/health-check/Zero-cost חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
