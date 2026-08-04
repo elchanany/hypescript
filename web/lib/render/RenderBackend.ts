@@ -5,6 +5,8 @@
 import { Clip, MediaAsset } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
+import { Sub } from "@/lib/editor/subtitlesEdl";
+import { CaptionStyle } from "@/lib/editor/captionStyle";
 import { RenderTarget } from "@/lib/render/graph";
 
 export type ExecutionMode = "local-browser" | "local-native" | "cloud";
@@ -24,6 +26,9 @@ export interface RenderRequest {
   audioMuted?: boolean;
   overlays?: Overlay[];
   canvas?: CanvasSize;
+  subs?: Sub[] | null;
+  captionStyle?: CaptionStyle | null;
+  burnCaptions?: boolean;
 }
 
 export interface RenderBackend {
@@ -51,7 +56,13 @@ class BrowserRenderBackend implements RenderBackend {
   async renderProject(req: RenderRequest, onProgress?: (r: number) => void, signal?: AbortSignal): Promise<Blob> {
     const { renderEDL } = await import("@/lib/ffmpeg");
     return renderEDL(req.media, req.clips, onProgress, req.target, {
-      audioMuted: req.audioMuted, signal, overlays: req.overlays, canvas: req.canvas,
+      audioMuted: req.audioMuted,
+      signal,
+      overlays: req.overlays,
+      canvas: req.canvas,
+      subs: req.subs,
+      captionStyle: req.captionStyle,
+      burnCaptions: req.burnCaptions,
     });
   }
 }

@@ -142,11 +142,23 @@ export default function EditorPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projDlg, setProjDlg] = useState<"none" | "create" | "rename" | "delete">("none");
+  const [burnCaptions, setBurnCaptions] = useState(true);
   const [nameDlg, setNameDlg] = useState<
     | { kind: "none" }
     | { kind: "track"; id: string; name: string }
     | { kind: "overlayText"; id: string; text: string }
   >({ kind: "none" });
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("hs_burnCaptions");
+      if (v === "0") setBurnCaptions(false);
+      if (v === "1") setBurnCaptions(true);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem("hs_burnCaptions", burnCaptions ? "1" : "0"); } catch { /* ignore */ }
+  }, [burnCaptions]);
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
@@ -381,11 +393,15 @@ export default function EditorPage() {
       const backend = getRenderBackend();
       setPhase("מרנדר בדפדפן…");
       const blob = await backend.renderProject(
-        { media, clips, audioMuted: audioMuted(tracks), overlays, canvas },
+        {
+          media, clips, audioMuted: audioMuted(tracks), overlays, canvas,
+          subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
+        },
         (r) => setProgress(Math.min(1, r)),
       );
       download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
       setPhase("הרינדור הושלם");
+      toast.success("הייצוא הושלם", burnCaptions && subs?.length ? "כולל כתוביות צרובות" : undefined);
     } catch (e: any) { setError(e?.message || String(e)); }
     finally { setRendering(false); setProgress(0); }
   };
@@ -559,6 +575,8 @@ export default function EditorPage() {
               hasMain={!!main} hasWords={!!words} subs={subs}
               onGenerate={generateSubs} onImportSrt={importSrt} onExportSrt={exportSrt} onEditSub={editSub} onDelSub={delSub}
               captionStyle={captionStyle}
+              burnCaptions={burnCaptions}
+              onBurnCaptions={setBurnCaptions}
               onCaptionStyle={(patch) => {
                 if (!editorApiRef.current) { setCaptionStyle((s) => ({ ...s, ...patch })); return; }
                 const res = runCommand("caption.setStyle", editorApiRef.current, patch);

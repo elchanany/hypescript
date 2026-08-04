@@ -1,20 +1,17 @@
 # HANDOFF
 
 ## Goal
-עורך CapCut-class לפי GAP_MAP — אחרי Dashboard / Caption style / Roll-Slip.
+המשך GAP / ROADMAP: caption burn-in בייצוא (TX-1) ואז chunking לתמלול ארוך.
 
 ## Current State (verified)
-- `main` מעודכן אחרי מיזוגים:
-  - #14 Dashboard polish (thumbnails, modals, toasts)
-  - #15 Caption style + CommandBus + Supabase URL normalize
-  - #16 Roll/Slip + #17 test parity
-- Auth Google עובד אצל המשתמש (אחרי תיקון Project URL).
+- ענף: `cursor/caption-burnin-505e`
+- צריבת כתוביות בייצוא דרך PNG + overlayBurn, מתג «צריבה» בפאנל כתוביות
+- `npm test` + `npm run build` עברו
 
 ## Exact Next Steps
-1. Redeploy ב-Vercel מ-`main` (כדי לקבל Dashboard + סגנון כתוביות + Roll/Slip).
-2. לסגור ידנית PR #13 אם עדיין פתוח (הוחלף ע״י #15).
-3. הבא לפי GAP P2: AG-4 (tool activity), caption burn-in בייצוא, או v0.2.0 chunking.
+1. למזג PR burn-in (Vercel Deploy אוטומטי).
+2. חבילה הבאה: chunking אודיו ארוך ב-web (ROADMAP v0.2.0).
 
 ## Risks
-- סגנון כתוביות עדיין preview בלבד (לא burn-in בייצוא).
-- Roll/Slip עדיין בלי גרירת ידית על גבול הקליפ.
+- יותר מ-80 כתוביות — נחתכות בצריבה (מגבלת filter graph).
+- צריבה מאריכה את זמן הייצוא ב-ffmpeg.wasm.

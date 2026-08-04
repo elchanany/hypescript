@@ -1,5 +1,4 @@
-// Project-level caption look (preview). Export burn-in of styled captions is
-// follow-up; style is persisted so preview + UI stay consistent.
+// Project-level caption look — preview + optional burn-in on export.
 
 import type { CSSProperties } from "react";
 

@@ -11,6 +11,9 @@ import { CanvasSize } from "./editor/canvasCoords";
 import { buildConcatGraph, RenderTarget, DEFAULT_TARGET, toExecArgs } from "./render/graph";
 import { appendOverlayBurns } from "./render/overlayBurn";
 import { materializeOverlays } from "./render/materializeOverlays";
+import { materializeCaptions } from "./render/captionBurn";
+import { Sub } from "./editor/subtitlesEdl";
+import { CaptionStyle } from "./editor/captionStyle";
 
 export type { RenderTarget } from "./render/graph";
 
@@ -107,6 +110,10 @@ export interface RenderOpts {
   signal?: AbortSignal;
   overlays?: Overlay[];
   canvas?: CanvasSize;
+  /** When set with canvas, burn styled captions into the export. */
+  subs?: Sub[] | null;
+  captionStyle?: CaptionStyle | null;
+  burnCaptions?: boolean;
 }
 
 export async function renderEDL(
@@ -124,9 +131,13 @@ export async function renderEDL(
     const mats = (opts.overlays?.length && opts.canvas)
       ? await materializeOverlays(opts.overlays, media, opts.canvas, target)
       : [];
+    const capMats = (opts.burnCaptions !== false && opts.subs?.length && opts.canvas)
+      ? await materializeCaptions(opts.subs, opts.captionStyle, opts.canvas, target)
+      : [];
+    const allMats = [...mats, ...capMats];
     const totalDur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
-    const graph = appendOverlayBurns(base, mats.map((m) => m.spec), totalDur);
-    const matByFile = new Map(mats.map((m) => [m.spec.filename, m]));
+    const graph = appendOverlayBurns(base, allMats.map((m) => m.spec), totalDur);
+    const matByFile = new Map(allMats.map((m) => [m.spec.filename, m]));
 
     // כותבים כל קובץ-מקור / שכבה בשימוש ל-FS של ffmpeg.
     for (const wsr of graph.writes) {
