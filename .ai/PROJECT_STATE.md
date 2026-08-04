@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — מצב יציב של hypescript
 
-עודכן לאחרונה: 2026-08-04 (PR #32 טיוטה — CommandBus agent + multi video tracks; עדיין לא ב-`main`).
+עודכן לאחרונה: 2026-08-04 (מיזוג PR #32 ל־`main` — CommandBus agent + multi video tracks).
 
 ## מה המוצר
 
@@ -19,16 +19,15 @@
 
 - **ליבה משותפת (מסונכרנת):** יישור-סקריפט, keep intervals + הסרת מהססים, SRT/RTL — ב-`web/lib` וב-`local/hypescript`.
 - **web:** Next.js על Vercel; ffmpeg.wasm מקומי; תמלול דרך proxy (`/api/transcribe` → Groq); מפתחות ב-`localStorage`/env; `npm run build` עובר.
-- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים דרך proxy, צ'אט עם כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, אנטי-לופ, scriptToClips סדרתי, snapSpeechToWords, כתוביות + תמלול ציר. **על PR #32 (לא main):** מוטציות EDL/רצועות דרך EditorApi/CommandBus עם רענון מיידי.
-- **עורך (פאזה 1+):** shell, preview, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום. **על PR #32:** כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
+- **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים, צ'אט/כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, אנטי-לופ, scriptToClips, כתוביות + תמלול ציר; מוטציות EDL/רצועות דרך EditorApi/CommandBus עם רענון מיידי.
+- **עורך (פאזה 1+):** shell, preview, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום; כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
-- **בדיקות web:** על ענף PR #32 — vitest 151; ממוקד tracks/commands/migrate/model 24/24 + tsc עבר.
+- **בדיקות web:** vitest ~151 על ענף המיזוג; tracks/commands/migrate ממוקדים עברו + tsc.
 
 ## מגבלות ידועות
 
-- Roll/Slip חלקיים; transitions חסרים; לא כל UI דרך CommandBus (AG-2 חלקי גם אחרי PR #32).
+- Roll/Slip חלקיים; transitions חסרים; לא כל UI דרך CommandBus (AG-2 חלקי).
 - Multi-track cutaway מחליף גם אודיו מהרצועה המנצחת (אין A-roll audio שמור עדיין).
-- יכולות PR #32 אינן ב-`main` עד מיזוג.
 - Auth/Dashboard/Supabase — דורשים אישור מפורש (RULES §7); קוד חלקי קיים.
 - Provider policies / health-check / Zero-cost — חלקיים.
 - intro/outro + preview לפני הורדה ב-web — מתוכננים ל-v0.2.0.

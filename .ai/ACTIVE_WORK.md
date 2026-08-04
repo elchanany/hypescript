@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-סוכן דרך CommandBus + רצועות וידאו מרובות (רענון מיידי בעורך)
+אין משימה פתוחה — PR #32 ממוזג ל־`main`.
 
 ## Branch
-`cursor/agent-commandbus-multitrack-7940`
+`main`
 
 ## Latest commit
-`169d1ab` — continuity maintenance (PR #32)
+`65a2528` — Merge PR #32: סוכן דרך CommandBus + רצועות וידאו מרובות
 
 ## Status
-הושלם בקוד על הענף · PR #32 טיוטה OPEN · ממתין לאימות ידני / מיזוג
+הושלם · ב־`main`
 
 ## Exact continuation point
-אימות ידני ב-UI (Act → רצועה/טרים). אין פיצ'ר חדש עד בקשת משתמש. אחרי מיזוג — עדכון PROJECT_STATE ל-main.
+אימות ידני אופציונלי; GAP_MAP: AG-2 המשך / intro-outro / preview. בלי Auth/Supabase בלי אישור.
