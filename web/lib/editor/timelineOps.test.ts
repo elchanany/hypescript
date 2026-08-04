@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Clip, clipDur, totalDur } from "./model";
 import {
-  closeGap, isGapClip, makeGap, removeClipLeaveGap, removeClipRipple,
+  closeGap, isGapClip, makeGap, mergeAdjacentGaps, moveClipToTime, removeClipLeaveGap, removeClipRipple,
   rollAtBoundary, slipClip,
 } from "./timelineOps";
 
@@ -68,5 +68,15 @@ describe("timelineOps — roll / slip", () => {
     const next = slipClip(clips, "a", -5, 10);
     expect(next[0].start).toBe(0);
     expect(next[0].end).toBe(2);
+  });
+});
+
+describe("timelineOps — free drop moveClipToTime", () => {
+  it("places clip at exact timeline time leaving gap behind", () => {
+    const clips = [c("a", 0, 2), c("b", 0, 2), c("c", 0, 2)];
+    const next = moveClipToTime(clips, "b", 5);
+    expect(next.find((x) => x.id === "b")).toBeTruthy();
+    expect(next.some((x) => isGapClip(x))).toBe(true);
+    expect(totalDur(next)).toBeGreaterThanOrEqual(7 - 1e-6);
   });
 });

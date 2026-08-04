@@ -37,7 +37,12 @@ interface Props {
   onTrim: (id: string, start: number, end: number) => void;
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
+  /** Free-drop move — place clip so timeline start equals `time` (gaps allowed). */
+  onMoveToTime?: (id: string, time: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
+  /** Detached audio EDL; when null/undefined audio track mirrors clips (linked). */
+  audioClips?: Clip[] | null;
+  avLinked?: boolean;
   onOverlayTrimBegin?: () => void;
   onOverlayTrim?: (id: string, start: number, end: number) => void;
   onOverlayTrimEnd?: () => void;
@@ -56,6 +61,7 @@ const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const
 
 export default function Timeline(p: Props) {
   const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, selectedSubId, zoom, snap } = p;
+  const audioLaneClips = p.audioClips ?? clips;
   const scrollRef = useRef<HTMLDivElement>(null);
   const laneRef = useRef<HTMLDivElement>(null);
   const overlayLaneRef = useRef<HTMLDivElement>(null);
@@ -65,7 +71,9 @@ export default function Timeline(p: Props) {
   const pendingScroll = useRef<number | null>(null);
   const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
-  const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
+  const [dragLabel, setDragLabel] = useState<{
+    name: string; dur: number; time?: number; track?: string; mode?: string; thumb?: string;
+  } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredSubId, setHoveredSubId] = useState<string | null>(null);
   const drag = useRef<{
@@ -217,6 +225,13 @@ export default function Timeline(p: Props) {
     return { index, boundary: assembledStart(clips, index) };
   };
 
+  // Free-drop time under pointer (assembled seconds), optionally snapped.
+  const timeAtPointer = (clientX: number): number => {
+    const rect = laneRef.current?.getBoundingClientRect();
+    if (!rect || rect.width < 1) return 0;
+    return Math.max(0, ((clientX - rect.left) / rect.width) * total);
+  };
+
   const selectClip = (id: string, track: "video" | "audio" = "video") => {
     p.onSelectSub?.(null);
     p.onSelect(id, track);
@@ -233,7 +248,17 @@ export default function Timeline(p: Props) {
       s0: clip.start, e0: clip.end, moved: false, px: e.clientX, assembled0,
     };
     selectClip(clip.id, track);
-    if (mode === "move") { const a = mediaById(media, clip.sourceId); setDragLabel({ name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע", dur: clipDur(clip) }); }
+    if (mode === "move") {
+      const a = mediaById(media, clip.sourceId);
+      setDragLabel({
+        name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע",
+        dur: clipDur(clip),
+        time: assembled0,
+        track: track === "audio" ? "אודיו" : "וידאו",
+        mode: "Move",
+        thumb: a?.kind === "image" || a?.kind === "video" ? a.url : undefined,
+      });
+    }
     if (mode === "l" || mode === "r") p.onTrimBegin();
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -312,17 +337,21 @@ export default function Timeline(p: Props) {
         p.onTrim(d.id, d.s0, d.s0 + newDur);
       }
     } else if (d.mode === "move" && d.moved) {
-      // ghost + drop indicator; also snap drop boundary to nearby edges
+      // ghost + drop indicator; free-drop time under cursor (magnetic snap)
+      const rawT = timeAtPointer(e.clientX);
+      const { time, snapped, target } = applySnap(rawT);
       const g = ghostRef.current;
       if (g) { g.style.display = "flex"; g.style.left = `${e.clientX + 12}px`; g.style.top = `${e.clientY + 14}px`; }
+      setDragLabel((prev) => prev ? {
+        ...prev,
+        time,
+        mode: e.altKey ? "Overwrite" : "Move",
+      } : prev);
       const drop = dropRef.current;
       if (drop && laneRef.current) {
-        const { boundary } = dropTarget(e.clientX);
-        const { time, snapped, target } = applySnap(boundary);
-        const line = snapped && target != null ? target : boundary;
         drop.style.display = "block";
-        drop.style.left = `${pct(line)}%`;
-        showSnapGuide(snapped ? target : null);
+        drop.style.left = `${pct(time)}%`;
+        showSnapGuide(snapped ? target : time);
       }
     }
   };
@@ -330,24 +359,29 @@ export default function Timeline(p: Props) {
     if (ghostRef.current) ghostRef.current.style.display = "none";
     if (dropRef.current) dropRef.current.style.display = "none";
     showSnapGuide(null);
+    setDragLabel(null);
   };
   const onUp = () => {
     const d = drag.current;
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
+    const px = d?.px ?? 0;
     endDragVisuals();
     if (!d) { drag.current = null; return; }
     if (d.kind === "overlay") p.onOverlayTrimEnd?.();
     else if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
     else if (d.mode === "move") {
       if (!d.moved) { /* already selected on mousedown */ }
-      else {
-        // Snap reorder index: if drop boundary snapped, use that boundary's index
-        let { index, boundary } = dropTarget(d.px);
+      else if (p.onMoveToTime) {
+        const rawT = timeAtPointer(px);
+        const { time } = applySnap(rawT);
+        p.onMoveToTime(d.id, time);
+      } else {
+        // Fallback: classic index reorder
+        let { index, boundary } = dropTarget(px);
         if (snap) {
           const { snapped, target } = applySnap(boundary);
           if (snapped && target != null) {
-            // find index whose assembledStart matches target
             for (let i = 0; i <= clips.length; i++) {
               if (Math.abs(assembledStart(clips, i) - target) < 1e-4) { index = i; break; }
             }
@@ -374,8 +408,18 @@ export default function Timeline(p: Props) {
   return (
     <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
       <div className="tl-ghost" ref={ghostRef}>
-        <span className="g-name">{dragLabel?.name}</span>
-        <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+        {dragLabel?.mode && <span className={`g-mode ${dragLabel.mode === "Reject" ? "reject" : ""}`}>{dragLabel.mode}</span>}
+        <div className="g-row">
+          {dragLabel?.thumb && <img className="g-thumb" src={dragLabel.thumb} alt="" />}
+          <span className="g-name">{dragLabel?.name}</span>
+          <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+        </div>
+        {dragLabel && (
+          <div className="g-meta">
+            <span>{dragLabel.track || "וידאו"}</span>
+            <span>@{typeof dragLabel.time === "number" ? dragLabel.time.toFixed(2) : "—"}s</span>
+          </div>
+        )}
       </div>
       <div
         className="tl-inner"
@@ -478,20 +522,21 @@ export default function Timeline(p: Props) {
                 <div className={`tl-lane2 ${track.muted ? "muted" : ""}`}
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
-                  {clips.map((c, i) => {
+                  {audioLaneClips.map((c, i) => {
                     const gap = isGapClip(c);
                     const asset = mediaById(media, c.sourceId);
+                    const linkedNote = p.avLinked === false ? "" : " · מקושר";
                     return (
                       <div
                         key={c.id}
                         className={`clip-audio ${gap ? "gap" : ""} ${linkedSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !linkedSel(c.id) ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
-                        style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
+                        style={{ left: `${pct(assembledStart(audioLaneClips, i))}%`, width: `${pct(clipDur(c))}%` }}
                         onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio"); }}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
                         onContextMenu={(e) => { e.preventDefault(); if (!gap) { selectClip(c.id, "audio"); p.onClipMenu(c.id, e.clientX, e.clientY); } }}
-                        title={gap ? "רווח" : `${(asset?.name || "").replace(/\.[^.]+$/, "")} · ${clipDur(c).toFixed(1)}s`}
+                        title={gap ? "רווח" : `${(asset?.name || "").replace(/\.[^.]+$/, "")} · ${clipDur(c).toFixed(1)}s${linkedNote}`}
                       >
                         {!gap && asset && (asset.kind === "video" || asset.kind === "audio") && (
                           <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />

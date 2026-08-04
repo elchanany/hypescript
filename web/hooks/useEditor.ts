@@ -1,9 +1,8 @@
 "use client";
 
-// מקור אמת מרכזי לעריכה: clips (רצף וידאו), subs (כתוביות), tracks (מטא-רצועות),
-// overlays (שכבות ויזואליות). כל שינוי דרך ה-setters נרשם ל-History. גרירה/טרים/
-// מניפולציית-overlay משתמשים ב-transaction כדי שכל מחווה תיצור פעולת Undo *אחת*.
-// canvas (מידות הפרויקט) הוא מצב נפרד שאינו נרשם ל-History.
+// מקור אמת מרכזי לעריכה: clips (רצף וידאו), audioClips (אודיו מנותק או null=מקושר),
+// subs, tracks, overlays, videoTransform. כל שינוי דרך ה-setters נרשם ל-History.
+// גרירה/טרים/מניפולציה משתמשים ב-transaction כדי שכל מחווה תיצור Undo *אחת*.
 
 import { useCallback, useRef, useState } from "react";
 import { Clip } from "@/lib/editor/model";
@@ -13,27 +12,53 @@ import { createHistory } from "@/lib/editor/history";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { defaultTracks, DEFAULT_CANVAS, TrackMeta } from "@/lib/editor/project";
 import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "@/lib/editor/captionStyle";
+import { VideoTransform, defaultVideoTransformFor, normalizeVideoTransform } from "@/lib/editor/videoTransform";
 
-export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; tracks: TrackMeta[]; overlays: Overlay[]; }
+export interface EditorSnapshot {
+  clips: Clip[] | null;
+  audioClips: Clip[] | null;
+  subs: Sub[] | null;
+  tracks: TrackMeta[];
+  overlays: Overlay[];
+  videoTransform: VideoTransform;
+}
 type Updater<T> = T | ((prev: T) => T);
 
 export function useEditor() {
   const [clips, setClipsRaw] = useState<Clip[] | null>(null);
+  const [audioClips, setAudioClipsRaw] = useState<Clip[] | null>(null);
   const [subs, setSubsRaw] = useState<Sub[] | null>(null);
   const [tracks, setTracksRaw] = useState<TrackMeta[]>(defaultTracks());
   const [overlays, setOverlaysRaw] = useState<Overlay[]>([]);
   const [canvas, setCanvasState] = useState<CanvasSize>({ ...DEFAULT_CANVAS });
+  const [videoTransform, setVideoTransformRaw] = useState<VideoTransform>(() => defaultVideoTransformFor(DEFAULT_CANVAS));
   const clipsRef = useRef(clips); clipsRef.current = clips;
+  const audioClipsRef = useRef(audioClips); audioClipsRef.current = audioClips;
   const subsRef = useRef(subs); subsRef.current = subs;
   const tracksRef = useRef(tracks); tracksRef.current = tracks;
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
+  const videoTransformRef = useRef(videoTransform); videoTransformRef.current = videoTransform;
   const hist = useRef(createHistory<EditorSnapshot>());
   const pending = useRef<EditorSnapshot | null>(null);
   const [, force] = useState(0);
   const touch = useCallback(() => force((v) => v + 1), []);
 
-  const now = (): EditorSnapshot => ({ clips: clipsRef.current, subs: subsRef.current, tracks: tracksRef.current, overlays: overlaysRef.current });
-  const apply = (s: EditorSnapshot) => { setClipsRaw(s.clips); setSubsRaw(s.subs); setTracksRaw(s.tracks); setOverlaysRaw(s.overlays || []); };
+  const now = (): EditorSnapshot => ({
+    clips: clipsRef.current,
+    audioClips: audioClipsRef.current,
+    subs: subsRef.current,
+    tracks: tracksRef.current,
+    overlays: overlaysRef.current,
+    videoTransform: videoTransformRef.current,
+  });
+  const apply = (s: EditorSnapshot) => {
+    setClipsRaw(s.clips);
+    setAudioClipsRaw(s.audioClips ?? null);
+    setSubsRaw(s.subs);
+    setTracksRaw(s.tracks);
+    setOverlaysRaw(s.overlays || []);
+    setVideoTransformRaw(s.videoTransform || defaultVideoTransformFor(DEFAULT_CANVAS));
+  };
 
   const commit = useCallback((next: EditorSnapshot) => {
     hist.current.push(now());
@@ -44,6 +69,11 @@ export function useEditor() {
   const setClips = useCallback((u: Updater<Clip[] | null>) => {
     const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
     commit({ ...now(), clips: next });
+  }, [commit]);
+
+  const setAudioClips = useCallback((u: Updater<Clip[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(audioClipsRef.current) : u;
+    commit({ ...now(), audioClips: next });
   }, [commit]);
 
   const setSubs = useCallback((u: Updater<Sub[] | null>) => {
@@ -61,7 +91,12 @@ export function useEditor() {
     commit({ ...now(), clips: cur.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
   }, [commit]);
 
-  // --- overlays (כל שינוי = commit יחיד, ניתן ל-Undo) ---
+  const updateAudioClip = useCallback((id: string, patch: Partial<Clip>) => {
+    const cur = audioClipsRef.current;
+    if (!cur) return;
+    commit({ ...now(), audioClips: cur.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+  }, [commit]);
+
   const setOverlays = useCallback((u: Updater<Overlay[]>) => {
     const next = typeof u === "function" ? (u as any)(overlaysRef.current) : u;
     commit({ ...now(), overlays: next });
@@ -71,13 +106,20 @@ export function useEditor() {
     commit({ ...now(), overlays: overlaysRef.current.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
   }, [commit]);
   const removeOverlay = useCallback((id: string) => { commit({ ...now(), overlays: overlaysRef.current.filter((o) => o.id !== id) }); }, [commit]);
-  // עדכון חי בזמן גרירה/שינוי-גודל (ללא History; commitTransaction סוגר ל-Undo אחד)
   const setOverlaysLive = useCallback((u: Updater<Overlay[]>) => {
     const next = typeof u === "function" ? (u as any)(overlaysRef.current) : u;
     setOverlaysRaw(next);
   }, []);
 
-  // --- רצועות ---
+  const setVideoTransform = useCallback((u: Updater<VideoTransform>) => {
+    const next = typeof u === "function" ? (u as (p: VideoTransform) => VideoTransform)(videoTransformRef.current) : u;
+    commit({ ...now(), videoTransform: next });
+  }, [commit]);
+  const setVideoTransformLive = useCallback((u: Updater<VideoTransform>) => {
+    const next = typeof u === "function" ? (u as (p: VideoTransform) => VideoTransform)(videoTransformRef.current) : u;
+    setVideoTransformRaw(next);
+  }, []);
+
   const patchTrack = useCallback((id: string, patch: Partial<TrackMeta>) => {
     commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
   }, [commit]);
@@ -94,16 +136,25 @@ export function useEditor() {
     commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === a.id ? { ...t, order: b.order } : t.id === b.id ? { ...t, order: a.order } : t)) });
   }, [commit]);
 
-  // --- transaction לגרירה/מניפולציה (Undo אחד לכל המחווה) ---
   const beginTransaction = useCallback(() => { if (!pending.current) pending.current = now(); }, []);
   const setClipsLive = useCallback((u: Updater<Clip[] | null>) => {
     const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
     setClipsRaw(next);
   }, []);
+  const setAudioClipsLive = useCallback((u: Updater<Clip[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(audioClipsRef.current) : u;
+    setAudioClipsRaw(next);
+  }, []);
+  const setSubsLive = useCallback((u: Updater<Sub[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(subsRef.current) : u;
+    setSubsRaw(next);
+  }, []);
   const commitTransaction = useCallback(() => {
     if (pending.current) { hist.current.push(pending.current); pending.current = null; touch(); }
   }, [touch]);
-  const cancelTransaction = useCallback(() => { pending.current = null; }, []);
+  const cancelTransaction = useCallback(() => {
+    if (pending.current) { apply(pending.current); pending.current = null; touch(); }
+  }, [touch]);
 
   const setCanvas = useCallback((c: CanvasSize) => { setCanvasState(c); }, []);
   const [captionStyle, setCaptionStyleState] = useState<CaptionStyle>({ ...DEFAULT_CAPTION_STYLE });
@@ -111,9 +162,18 @@ export function useEditor() {
     setCaptionStyleState((prev) => typeof u === "function" ? (u as (p: CaptionStyle) => CaptionStyle)(prev) : u);
   }, []);
 
-  const reset = useCallback((s: EditorSnapshot & { canvas?: CanvasSize; captionStyle?: CaptionStyle }) => {
+  const reset = useCallback((s: Partial<EditorSnapshot> & { canvas?: CanvasSize; captionStyle?: CaptionStyle }) => {
     hist.current.reset(); pending.current = null;
-    apply({ clips: s.clips, subs: s.subs, tracks: s.tracks?.length ? s.tracks : defaultTracks(), overlays: s.overlays || [] });
+    apply({
+      clips: s.clips ?? null,
+      audioClips: s.audioClips ?? null,
+      subs: s.subs ?? null,
+      tracks: s.tracks?.length ? s.tracks : defaultTracks(),
+      overlays: s.overlays || [],
+      videoTransform: s.videoTransform
+        ? normalizeVideoTransform(s.videoTransform, s.canvas || DEFAULT_CANVAS)
+        : defaultVideoTransformFor(s.canvas || DEFAULT_CANVAS),
+    });
     if (s.canvas) setCanvasState(s.canvas);
     setCaptionStyleState(normalizeCaptionStyle(s.captionStyle));
     touch();
@@ -123,11 +183,12 @@ export function useEditor() {
   const redo = useCallback(() => { const n = hist.current.redo(now()); if (n) { apply(n); touch(); } }, [touch]);
 
   return {
-    clips, subs, tracks, overlays, canvas, captionStyle,
-    setClips, setSubs, setProject, updateClip,
+    clips, audioClips, subs, tracks, overlays, canvas, captionStyle, videoTransform,
+    setClips, setAudioClips, setSubs, setProject, updateClip, updateAudioClip,
     setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
+    setVideoTransform, setVideoTransformLive,
     renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack,
-    beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
+    beginTransaction, setClipsLive, setAudioClipsLive, setSubsLive, commitTransaction, cancelTransaction,
     reset, undo, redo,
     canUndo: hist.current.canUndo(), canRedo: hist.current.canRedo(),
   };

@@ -1,19 +1,28 @@
 # HANDOFF
 
 ## Goal
-PR #23 ממוזג ל־`main` (כתוביות/תמלול ציר + תיקוני סוכן) מעל טיימליין CapCut (PR #24).
+מודל אינטראקציה מקצועי של Canvas / Timeline / Inspector (לא Complete עד שכל האינטראקציות המרכזיות עובדות).
 
 ## Current State (verified)
-- `main` @ `79d844e` — כולל PR #23 + PR #24.
-- כתוביות progressive, `transcribe_timeline`, אנטי-לופ סוכן, `scriptToClips` סדרתי, `snapSpeechToWords`, within-silence כברירת מחדל עם EDL.
-- D-007 ב-DECISIONS.
-- אימות במיזוג: 19 בדיקות ממוקדות + tsc + graphify.
+- Branch: `cursor/pro-interaction-model-505e`
+- Selection model: `web/lib/editor/selection.ts` (hover ≠ active; Inspector לפי סוג)
+- VideoTransform schema v5: Fit/Fill/Original/Custom + Canvas DM (`PreviewMainVideo`)
+- Captions כ-visual element: `PreviewCaptions` + layout על `Sub`
+- Linked A/V: `audioClips: null` = מקושר; `av.detachAudio` / `av.relink`
+- Free drop: `moveClipToTime` + Ghost עם mode/time/thumb
+- Magnetic snap: קו צהוב + סף בפיקסלים
+- Delete ripple vs leave-gap: כפתורים נפרדים + CommandBus
+- Commands חדשים: moveToTime, splitLinked, detach/relink, video.setTransform/FitMode, caption.update*, select.entity
+- Agent tools: `move_clip_to_time`, `split_linked_av`
+- Tests: 79 editor tests ירוקים; `tsc` + `next build` עוברים
 
 ## Exact Next Steps
-1. אימות בפריסת Vercel מ־`main`.
-2. הבא לפי GAP_MAP: AG-4 / intro-outro / preview.
-3. אופציונלי: Alt לביטול snap; Cache-Control ל-chunks אם חוזר Loading chunk failed.
+1. חיבור videoTransform לייצוא (ffmpeg pad/scale) כדי ש-Export = Canvas.
+2. Viewer Zoom נפרד מ-Element Scale.
+3. השלמת context menus + Alt+Click layers.
+4. בדיקת דפדפן עם קובץ וידאו אמיתי מול 45 סעיפי הקבלה.
 
 ## Risks
-- אנטי-לופ חוסם מעל ~3 `delete_clip` — `delete_clips` / `keep_source_range`.
-- snap למילים תלוי בתמלול; סף snap טיימליין ~10px לפי זום.
+- `moveClipToTime` overwrite עלול להפתיע — צריך מצבי Insert מפורשים ב-UI.
+- Detached audio trim/move עדיין מוגבל יחסית ל-linked.
+- Export עדיין לא משקף Element Scale.

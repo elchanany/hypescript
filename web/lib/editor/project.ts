@@ -8,9 +8,10 @@ import { Sub } from "./subtitlesEdl";
 import { Overlay } from "./overlay";
 import { CanvasSize } from "./canvasCoords";
 import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "./captionStyle";
+import { VideoTransform, defaultVideoTransformFor, normalizeVideoTransform } from "./videoTransform";
 
-// v3: canvas + overlays. v4: captionStyle (project-level look for preview).
-export const SCHEMA_VERSION = 4;
+// v3: canvas + overlays. v4: captionStyle. v5: videoTransform + optional detached audio EDL.
+export const SCHEMA_VERSION = 5;
 
 export const DEFAULT_CANVAS: CanvasSize = { width: 1920, height: 1080 };
 export function normalizeCanvas(input: any): CanvasSize {
@@ -34,15 +35,32 @@ export interface TrackMeta {
 export interface ProjectState {
   schemaVersion: number;
   clips: Clip[] | null; // רצף רצועת הווידאו (EDL)
+  /**
+   * Detached audio EDL. `null` = Linked A/V (audio track mirrors `clips`).
+   * When set, audio is independent — split/trim/delete on video do not touch it.
+   */
+  audioClips: Clip[] | null;
   subs: Sub[] | null; // רצועת הכתוביות
   tracks: TrackMeta[];
   overlays: Overlay[]; // שכבות ויזואליות (תמונה/לוגו/טקסט) מעל הווידאו
   canvas: CanvasSize; // מידות הפרויקט (קואורדינטות פרויקט, בלתי תלויות במסך)
   captionStyle: CaptionStyle;
+  /** Main video element transform on the project canvas (Element Scale). */
+  videoTransform: VideoTransform;
 }
 
-export { DEFAULT_CAPTION_STYLE, normalizeCaptionStyle };
-export type { CaptionStyle };
+export { DEFAULT_CAPTION_STYLE, normalizeCaptionStyle, normalizeVideoTransform, defaultVideoTransformFor };
+export type { CaptionStyle, VideoTransform };
+
+/** Effective audio EDL: detached copy or linked mirror of video clips. */
+export function effectiveAudioClips(state: Pick<ProjectState, "clips" | "audioClips">): Clip[] | null {
+  if (state.audioClips) return state.audioClips;
+  return state.clips;
+}
+
+export function isAvLinked(state: Pick<ProjectState, "audioClips">): boolean {
+  return state.audioClips == null;
+}
 
 export function defaultTracks(): TrackMeta[] {
   return [

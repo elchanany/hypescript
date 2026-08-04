@@ -22,7 +22,7 @@ export default function TimelineToolbar({
   return (
     <div className="tl-toolbar" dir="ltr">
       <IconButton icon={Scissors} tip="פצל בראש-הנגן (S)" tipPos="up" disabled={!canSplit} onClick={onSplit} />
-      <IconButton icon={Trash2} tip="מחק קטע (Delete)" tipPos="up" danger disabled={!canDelete} onClick={() => onDelete()} />
+      <IconButton icon={Trash2} tip="מחק ריפל — סוגר רווח (Delete)" tipPos="up" danger disabled={!canDelete} onClick={() => onDelete()} />
       <IconButton icon={SquareDashed} tip="מחק והשאר רווח (Shift+Delete)" tipPos="up" disabled={!canLeaveGap} onClick={() => onDeleteLeaveGap?.()} />
       <div className="vdivider" />
       <IconButton icon={ArrowLeftRight} tip="Roll — הזז חיתוך בין שני קטעים (Alt+←/→)" tipPos="up"

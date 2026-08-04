@@ -39,11 +39,13 @@ describe("project migration", () => {
     expect(p.tracks.find((t) => t.type === "caption")).toBeTruthy();
   });
 
-  it("v2 -> v3 defaults empty overlays and 1920×1080 canvas", () => {
+  it("v2 -> current schema defaults empty overlays and 1920×1080 canvas", () => {
     const p = migrateState({ schemaVersion: 2, clips: null, subs: null, tracks: [] });
-    expect(p.schemaVersion).toBe(3);
+    expect(p.schemaVersion).toBe(SCHEMA_VERSION);
     expect(p.overlays).toEqual([]);
     expect(p.canvas).toEqual({ width: 1920, height: 1080 });
+    expect(p.audioClips).toBeNull();
+    expect(p.videoTransform.fitMode).toBe("fit");
   });
 
   it("preserves overlays and canvas from v3 state", () => {

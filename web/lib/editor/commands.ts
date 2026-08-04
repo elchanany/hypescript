@@ -6,11 +6,14 @@ import { Clip, MediaAsset } from "./model";
 import { Overlay } from "./overlay";
 import { Sub } from "./subtitlesEdl";
 import { CanvasSize } from "./canvasCoords";
+import { VideoTransform } from "./videoTransform";
 
 export type CommandId =
   | "clip.delete.ripple"
   | "clip.delete.leaveGap"
   | "clip.splitAtPlayhead"
+  | "clip.splitLinked"
+  | "clip.moveToTime"
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
@@ -18,12 +21,22 @@ export type CommandId =
   | "clip.setVolume"
   | "clip.duplicate"
   | "caption.setStyle"
+  | "caption.updateText"
+  | "caption.updateTiming"
+  | "caption.updateLayout"
   | "clip.roll"
-  | "clip.slip";
+  | "clip.slip"
+  | "av.detachAudio"
+  | "av.relink"
+  | "video.setTransform"
+  | "video.setFitMode"
+  | "select.entity";
 
 export interface EditorApi {
   getClips(): Clip[] | null;
   setClips(clips: Clip[] | null): void;
+  getAudioClips(): Clip[] | null;
+  setAudioClips(clips: Clip[] | null): void;
   getOverlays(): Overlay[];
   setOverlays(overlays: Overlay[]): void;
   updateOverlay(id: string, patch: Partial<Overlay>): void;
@@ -32,15 +45,21 @@ export interface EditorApi {
   updateClip(id: string, patch: Partial<Clip>): void;
   getMedia(): MediaAsset[];
   getSubs(): Sub[] | null;
+  setSubs(subs: Sub[] | null): void;
+  updateSub(id: string, patch: Partial<Sub>): void;
   getCanvas(): CanvasSize;
-  selectClip(id: string | null): void;
+  getVideoTransform(): VideoTransform;
+  setVideoTransform(vt: VideoTransform): void;
+  selectClip(id: string | null, track?: "video" | "audio"): void;
   selectOverlay(id: string | null): void;
+  selectCaption(id: string | null): void;
   seek(t: number): void;
   getPlayhead(): number;
   getCaptionStyle?: () => import("./captionStyle").CaptionStyle;
   setCaptionStyle?: (style: import("./captionStyle").CaptionStyle) => void;
   /** Source media duration for roll/slip clamping */
   getMediaDuration?: (sourceId: string) => number;
+  getSourceSize?: () => { w: number; h: number };
 }
 
 export interface CommandDef {
@@ -85,17 +104,21 @@ export interface ProjectQuery {
   playhead: number;
   selectedClipId: string | null;
   selectedOverlayId: string | null;
+  selectedCaptionId: string | null;
   mediaNames: string[];
+  avLinked: boolean;
+  fitMode: string;
 }
 
 export function queryProject(
   api: EditorApi,
-  sel: { clipId: string | null; overlayId: string | null },
+  sel: { clipId: string | null; overlayId: string | null; captionId?: string | null },
 ): ProjectQuery {
   const clips = api.getClips() || [];
   const overlays = api.getOverlays();
   const subs = api.getSubs() || [];
   const dur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
+  const vt = api.getVideoTransform();
   return {
     clipCount: clips.length,
     overlayCount: overlays.length,
@@ -104,6 +127,9 @@ export function queryProject(
     playhead: api.getPlayhead(),
     selectedClipId: sel.clipId,
     selectedOverlayId: sel.overlayId,
+    selectedCaptionId: sel.captionId ?? null,
     mediaNames: api.getMedia().map((m) => m.name),
+    avLinked: api.getAudioClips() == null,
+    fitMode: vt.fitMode,
   };
 }
