@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FolderOpen, Plus, LogIn, LogOut, Settings, Film,
-  Pencil, Trash2, MoreHorizontal, UserRound,
+  Pencil, Trash2, MoreHorizontal, Clapperboard,
+  Clock3, ShieldCheck,
 } from "lucide-react";
 import {
   deleteProject, listProjects, ProjectMeta,
@@ -15,7 +16,9 @@ import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import BrandLogo from "@/components/BrandLogo";
 import NewProjectWizard from "@/components/NewProjectWizard";
 import { toast } from "@/lib/ui/toast";
-import { getProjectCoverUrl } from "@/lib/projects/preview";
+import {
+  formatDurationHe, getProjectCardInfo, type ProjectCardInfo,
+} from "@/lib/projects/preview";
 import { createProjectWithPolicy } from "@/lib/projects/create";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
@@ -24,6 +27,19 @@ function fmtDate(ms: number) {
   try {
     return new Date(ms).toLocaleString("he-IL", { dateStyle: "medium", timeStyle: "short" });
   } catch { return ""; }
+}
+
+function fmtRelativeHe(ms: number): string {
+  const diff = Date.now() - ms;
+  if (!Number.isFinite(diff) || diff < 0) return fmtDate(ms);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "עכשיו";
+  if (min < 60) return `לפני ${min} דק׳`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `לפני ${hr} שע׳`;
+  const days = Math.floor(hr / 24);
+  if (days < 7) return `לפני ${days} ימים`;
+  return fmtDate(ms);
 }
 
 function userLabel(user: { email?: string | null; user_metadata?: Record<string, unknown> } | null) {
@@ -40,82 +56,137 @@ function userAvatarUrl(user: { user_metadata?: Record<string, unknown> } | null)
 }
 
 function ProjectCard({
-  project, onOpen, onRename, onDelete,
+  project, ownerLabel, ownerAvatar, onOpen, onRename, onDelete,
 }: {
   project: ProjectMeta;
+  ownerLabel: string;
+  ownerAvatar: string | null;
   onOpen: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
-  const [cover, setCover] = useState<string | null>(null);
+  const [info, setInfo] = useState<ProjectCardInfo | null>(null);
   const [menu, setMenu] = useState(false);
   const menuRef = useOutside<HTMLDivElement>(() => setMenu(false));
+  const coverRef = useRef<string | null>(null);
+  const meta = project as ProjectMetaV2;
 
   useEffect(() => {
     let alive = true;
-    let objectUrl: string | null = null;
     (async () => {
-      const url = await getProjectCoverUrl(project.id);
+      const next = await getProjectCardInfo(project.id);
       if (!alive) {
-        if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
+        if (next.coverUrl?.startsWith("blob:")) URL.revokeObjectURL(next.coverUrl);
         return;
       }
-      if (url?.startsWith("blob:")) objectUrl = url;
-      setCover(url);
+      if (coverRef.current?.startsWith("blob:")) URL.revokeObjectURL(coverRef.current);
+      coverRef.current = next.coverUrl;
+      setInfo(next);
     })();
     return () => {
       alive = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (coverRef.current?.startsWith("blob:")) {
+        URL.revokeObjectURL(coverRef.current);
+        coverRef.current = null;
+      }
     };
   }, [project.id, project.updatedAt]);
 
+  const dur = info ? formatDurationHe(info.editedDurationSec) : "";
+  const stats: string[] = [];
+  if (info?.videoCount) stats.push(`${info.videoCount} וידאו`);
+  else if (info?.mediaCount) stats.push(`${info.mediaCount} מדיה`);
+  if (info?.clipCount) stats.push(`${info.clipCount} קליפים`);
+  if (info?.subtitleCount) stats.push(`${info.subtitleCount} כתוביות`);
+  if (dur) stats.push(dur);
+
   return (
-    <article className="dash-card">
-      <button type="button" className="dash-card-cover" onClick={onOpen} aria-label={`פתח ${project.name}`}>
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={cover} alt="" />
-        ) : (
-          <span className="dash-card-ph"><FolderOpen size={28} strokeWidth={1.4} /></span>
-        )}
-      </button>
-      <div className="dash-card-body">
-        <button type="button" className="dash-card-title" onClick={onOpen}>{project.name}</button>
-        <div className="dash-card-badges">
-          <span className={`dash-badge mode-${(project as ProjectMetaV2).dataMode || "local"}`}>
-            {(project as ProjectMetaV2).dataMode || "local"}
-          </span>
-          {(project as ProjectMetaV2).aspectRatio && (
-            <span className="dash-badge">{(project as ProjectMetaV2).aspectRatio}</span>
+    <article className={`dash-card ${menu ? "menu-open" : ""}`}>
+      <div className="dash-card-cover-wrap">
+        <button type="button" className="dash-card-cover" onClick={onOpen} aria-label={`פתח ${project.name}`}>
+          {info?.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={info.coverUrl} alt="" />
+          ) : (
+            <span className="dash-card-ph"><FolderOpen size={28} strokeWidth={1.4} /></span>
+          )}
+          <span className="dash-card-cover-shade" aria-hidden />
+        </button>
+
+        <div className="dash-card-cover-actions" ref={menuRef}>
+          <button
+            type="button"
+            className="dash-icon-btn on-cover"
+            aria-label="פעולות פרויקט"
+            aria-expanded={menu}
+            aria-haspopup="menu"
+            onClick={(e) => { e.stopPropagation(); setMenu((v) => !v); }}
+          >
+            <MoreHorizontal size={16} />
+          </button>
+          {menu && (
+            <div className="dash-menu dash-menu-up" role="menu">
+              <button type="button" role="menuitem" onClick={() => { setMenu(false); onOpen(); }}>
+                <Film size={14} />פתח בעורך
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setMenu(false); onRename(); }}>
+                <Pencil size={14} />שנה שם
+              </button>
+              <button type="button" role="menuitem" className="danger" onClick={() => { setMenu(false); onDelete(); }}>
+                <Trash2 size={14} />מחק
+              </button>
+            </div>
           )}
         </div>
-        <div className="dash-card-row">
-          <span className="dash-card-meta">{fmtDate(project.updatedAt)}</span>
-          <div className="dash-card-actions" ref={menuRef}>
-            <button
-              type="button"
-              className="dash-icon-btn"
-              aria-label="פעולות"
-              aria-expanded={menu}
-              onClick={(e) => { e.stopPropagation(); setMenu((v) => !v); }}
-            >
-              <MoreHorizontal size={16} />
-            </button>
-            {menu && (
-              <div className="dash-menu" role="menu">
-                <button type="button" role="menuitem" onClick={() => { setMenu(false); onOpen(); }}>
-                  <Film size={14} />פתח בעורך
-                </button>
-                <button type="button" role="menuitem" onClick={() => { setMenu(false); onRename(); }}>
-                  <Pencil size={14} />שנה שם
-                </button>
-                <button type="button" role="menuitem" className="danger" onClick={() => { setMenu(false); onDelete(); }}>
-                  <Trash2 size={14} />מחק
-                </button>
-              </div>
-            )}
-          </div>
+      </div>
+
+      <div className="dash-card-body">
+        <button type="button" className="dash-card-title" onClick={onOpen}>{project.name}</button>
+
+        <div className="dash-card-badges">
+          <span className={`dash-badge mode-${meta.dataMode || "local"}`}>
+            {meta.dataMode || "local"}
+          </span>
+          {meta.aspectRatio && (
+            <span className="dash-badge">{meta.aspectRatio}</span>
+          )}
         </div>
+
+        <div className="dash-card-meta-block">
+          <span className="dash-card-meta" title={fmtDate(project.updatedAt)}>
+            <Clock3 size={12} strokeWidth={2} />
+            עודכן {fmtRelativeHe(project.updatedAt)}
+          </span>
+          {stats.length > 0 && (
+            <span className="dash-card-stats" title={stats.join(" · ")}>
+              {info?.clipCount ? <Clapperboard size={12} strokeWidth={2} /> : <Film size={12} strokeWidth={2} />}
+              {stats.slice(0, 3).join(" · ")}
+            </span>
+          )}
+        </div>
+
+        {ownerLabel ? (
+          <div className="dash-card-owner" title={ownerLabel}>
+            {ownerAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ownerAvatar} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="dash-avatar sm">{ownerLabel[0]?.toUpperCase() || "?"}</span>
+            )}
+            <span className="dash-card-owner-txt">
+              <span className="k">בעלים</span>
+              <span className="v">{ownerLabel}</span>
+            </span>
+          </div>
+        ) : (
+          <div className="dash-card-owner local">
+            <span className="dash-avatar sm">מ</span>
+            <span className="dash-card-owner-txt">
+              <span className="k">שמירה</span>
+              <span className="v">מקומית במחשב זה</span>
+            </span>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -227,6 +298,7 @@ export default function DashboardPage() {
                   type="button"
                   className="dash-user"
                   aria-expanded={userOpen}
+                  aria-haspopup="menu"
                   onClick={() => setUserOpen((v) => !v)}
                 >
                   {avatar ? (
@@ -240,10 +312,16 @@ export default function DashboardPage() {
                 {userOpen && (
                   <div className="dash-menu dash-user-menu" role="menu">
                     <div className="dash-user-meta">
-                      <UserRound size={14} />
+                      {avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className="dash-avatar-img lg" src={avatar} alt="" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="dash-avatar lg">{label[0]?.toUpperCase() || "?"}</span>
+                      )}
                       <div>
                         <div className="dash-user-name">{label}</div>
                         {user.email && <div className="dash-user-mail">{user.email}</div>}
+                        <div className="dash-user-status"><ShieldCheck size={12} />מחובר</div>
                       </div>
                     </div>
                     <Link href="/settings" role="menuitem" onClick={() => setUserOpen(false)}>
@@ -273,6 +351,32 @@ export default function DashboardPage() {
       </header>
 
       <main className="dash-main">
+        {user && !loading && (
+          <section className="dash-identity" aria-label="חשבון מחובר">
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="dash-identity-av" src={avatar} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="dash-avatar xl">{label[0]?.toUpperCase() || "?"}</span>
+            )}
+            <div className="dash-identity-body">
+              <div className="dash-identity-name">{label}</div>
+              <div className="dash-identity-sub">
+                {user.email && <span className="dash-identity-mail">{user.email}</span>}
+                <span className="dash-pill ok"><ShieldCheck size={12} />מחובר</span>
+                <span className="dash-pill">{projects.length} פרויקטים במחשב זה</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn ghost tall"
+              onClick={async () => { await signOut(); toast.info("התנתקת"); }}
+            >
+              <LogOut size={15} />התנתק
+            </button>
+          </section>
+        )}
+
         <div className="dash-head">
           <div>
             <h1>הפרויקטים שלי</h1>
@@ -313,6 +417,8 @@ export default function DashboardPage() {
               <ProjectCard
                 key={p.id}
                 project={p}
+                ownerLabel={user ? label : ""}
+                ownerAvatar={user ? avatar : null}
                 onOpen={() => openProject(p.id)}
                 onRename={() => setDlg({ kind: "rename", id: p.id, name: p.name })}
                 onDelete={() => setDlg({ kind: "delete", id: p.id, name: p.name })}
