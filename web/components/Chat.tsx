@@ -133,7 +133,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     return out;
   }, [media, clips, subs, selectionLabel, playhead]);
 
-  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt" | "image") =>
+  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt" | "image" | "audio") =>
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
@@ -469,14 +469,25 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             );
           }
           if (it.kind === "output") {
+            const label =
+              it.mkind === "video" ? "סרטון מוכן"
+                : it.mkind === "image" ? "פריים"
+                  : it.mkind === "audio" ? "קריינות"
+                    : "כתוביות SRT";
+            const Icon =
+              it.mkind === "video" ? Film
+                : it.mkind === "image" ? ImageIcon
+                  : it.mkind === "audio" ? Music
+                    : Captions;
             return (
               <div key={i} className="out2">
                 <div className="oh">
-                  {it.mkind === "video" ? <Film size={14} /> : it.mkind === "image" ? <ImageIcon size={14} /> : <Captions size={14} />}
-                  {it.mkind === "video" ? "סרטון מוכן" : it.mkind === "image" ? "פריים" : "כתוביות SRT"}
+                  <Icon size={14} />
+                  {label}
                 </div>
                 {it.mkind === "video" && <video src={it.url} controls />}
                 {it.mkind === "image" && <img src={it.url} alt="frame" />}
+                {it.mkind === "audio" && <audio src={it.url} controls />}
                 <a className="btn primary sm" href={it.url} download={it.name}><Download size={14} strokeWidth={2} />הורד {it.name}</a>
               </div>
             );

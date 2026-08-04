@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -18,6 +18,20 @@ class Word:
     text: str
     start: float
     end: float
+    # שדות אופציונליים מ-ElevenLabs Scribe (חסרים = מילה רגילה)
+    type: Optional[str] = None  # word | spacing | audio_event
+    speaker_id: Optional[str] = None
+
+
+def is_speech_word(w: Word) -> bool:
+    """מילת דיבור בלבד — ללא רווחים/אירועי שמע."""
+    if w.type and w.type != "word":
+        return False
+    return bool((w.text or "").strip())
+
+
+def speech_words(words: List[Word]) -> List[Word]:
+    return [w for w in words if is_speech_word(w)]
 
 
 @dataclass

@@ -7,9 +7,12 @@ export interface ApiConfigShape {
 }
 
 export function flattenApiConfig(config: ApiConfigShape): Record<string, boolean> {
+  const eleven = !!config.transcription?.elevenlabs;
   return {
     ...(config.providers || {}),
     "groq-transcribe": !!config.transcription?.groq,
+    "elevenlabs-transcribe": eleven,
+    "elevenlabs-voice": eleven,
   };
 }
 

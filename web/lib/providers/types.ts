@@ -1,4 +1,4 @@
-export type ProviderKind = "llm" | "transcribe";
+export type ProviderKind = "llm" | "transcribe" | "voice";
 
 export type ProviderStatus = "ready" | "missing_key" | "unavailable";
 
@@ -7,7 +7,9 @@ export type ProviderId =
   | "openai"
   | "anthropic"
   | "gemini"
-  | "groq-transcribe";
+  | "groq-transcribe"
+  | "elevenlabs-transcribe"
+  | "elevenlabs-voice";
 
 export interface ProviderDefinition {
   id: ProviderId;
