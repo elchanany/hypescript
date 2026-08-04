@@ -270,11 +270,14 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tb-save.saving .dot { background: var(--warning); }
 
 /* Body: toolrail | left panel | center(preview + timeline) | inspector, chat overlay */
-.shell-body { flex: 1; display: flex; direction: ltr; min-height: 0; min-width: 0; overflow: hidden; position: relative; }
+.shell-body {
+  flex: 1; display: flex; flex-direction: row; align-items: stretch;
+  direction: ltr; min-height: 0; min-width: 0; overflow: hidden; position: relative;
+}
 
 /* Tool rail */
 .toolrail {
-  width: 52px; flex: none; direction: ltr;
+  width: 52px; flex: none; align-self: stretch; direction: ltr;
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
   border-inline-end: 1px solid var(--border); background: var(--panel);
 }
@@ -288,7 +291,11 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .toolrail .rail-grow { flex: 1; }
 
 /* Left panel (media / captions) */
-.leftpanel { width: 264px; flex: none; direction: rtl; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); background: var(--panel); }
+.leftpanel {
+  width: 264px; flex: none; align-self: stretch; direction: rtl;
+  display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--border); background: var(--panel);
+}
 .leftpanel .panel-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 
 /* main area (everything right of the tool rail) = upper row + full-width timeline */
