@@ -1,5 +1,6 @@
 # HANDOFF
 
+<<<<<<< HEAD
 ## Goal
 זום טיימליין חלק לטווח רחב — הקטנה מתחת ל-fit והגדלה קיצונית.
 
@@ -18,3 +19,16 @@
 ## Risks
 - בזום גבוה מאוד (×400) גלילה כבדה בפרויקטים ארוכים
 - `graphify` לא ב-PATH בענן
+=======
+## main (after merge)
+Fix PKCE with `@supabase/ssr` + server `/auth/callback` route.
+
+## Auth
+- Browser: `createBrowserClient` (cookie PKCE verifier)
+- Callback: Route Handler exchanges code server-side
+- Continue page confirms session then routes to onboarding/dashboard
+- Middleware refreshes cookies
+
+## Next
+Package C — Usage foundation.
+>>>>>>> origin/main

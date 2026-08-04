@@ -99,8 +99,13 @@
    - או בינתיים `http://localhost:3000`
 3. **Redirect URLs** — הוסף בשורות נפרדות:
    - `http://localhost:3000/auth/callback`
+   - `http://localhost:3000/auth/callback**`
    - `https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback`
+   - `https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback**`
 4. Save
+
+> האפליקציה משתמשת ב־`@supabase/ssr` (cookies) + Route Handler ב־`/auth/callback`  
+> כדי למנוע את השגיאה `PKCE code verifier not found in storage`.
 
 ---
 
@@ -114,7 +119,12 @@
 אם משהו נכשל:
 - «התחברות לא מוגדרת» → המשתנים לא ב־Vercel או לא עשית Redeploy
 - שגיאת redirect_uri_mismatch → ה־Callback URL ב־Google לא זהה לזה של Supabase
-- חוזר ל־login → בדוק Redirect URLs ב־Supabase כוללים `/auth/callback`
+- `PKCE code verifier not found` / חוזר ל־login →
+  1. ודא ש־Deploy כולל את `@supabase/ssr` (גרסה אחרי התיקון הזה)
+  2. Redirect URLs: `https://YOUR-DOMAIN/auth/callback` וגם `.../auth/callback**`
+  3. Site URL = אותו דומיין שבו אתה גולש עכשיו
+  4. התחל את Google login מחדש מאותו דפדפן (אל תפתח את קישור ה-callback בלשונית אחרת)
+  5. Redeploy אחרי שינוי env
 
 ---
 
@@ -145,14 +155,41 @@ npm run dev
 
 ---
 
+## Package A — משתני שרת נוספים
+
+| משתנה | איפה | תפקיד |
+|---|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | Server / Vercel בלבד | Bootstrap System Owner + פעולות admin עתידיות |
+| `BOOTSTRAP_SUPER_ADMIN_EMAIL` | Server בלבד | אימייל הבעלים הראשון (למשל `eyceyceyc139@gmail.com`) |
+| `ALLOW_GUEST_EDITOR` | Server | `true` = אפשר לפתוח עורך בלי login גם כש-Auth מוגדר |
+| `NEXT_PUBLIC_SITE_URL` | Public | בסיס ל-Open Graph / קישורים |
+
+אחרי יצירת המשתמש הראשון עם האימייל של ה-Bootstrap, ה-API `/api/auth/bootstrap` קושר `system_owner` לפי UUID — לא לפי השוואת אימייל בכל request.
+
+### Migration
+
+הרץ (Staging/local בלבד — לא Production בלי אישור):
+
+```bash
+# דרך Supabase CLI או SQL Editor
+supabase db push
+# או העתק את:
+# supabase/migrations/20260804170000_pkg_a_foundation.sql
+```
+
+המיגרציה יוצרת: `profiles`, `user_settings`, `roles`/`permissions`/`user_roles`, `audit_logs`, `login_events`, `credit_accounts` (stub), `system_settings`, triggers להגנת System Owner, ו-RLS.
+
+---
+
 ## מה קורה במוצר אחרי זה
 
 | דף | מה עושה |
 |---|---|
 | `/dashboard` | רשימת הפרויקטים המקומיים שלך + התחברות |
-| `/login` | כפתור Google |
-| `/` | העורך (כמו תמיד) |
-| `/settings` | מפתחות AI |
+| `/login` | Google + אימייל/סיסמה + magic link + איפוס |
+| `/onboarding` | שם תצוגה, theme, מצב פרויקט, הסכמה |
+| `/` | העורך (דורש login אם Auth מוגדר ו-`ALLOW_GUEST_EDITOR` כבוי) |
+| `/settings` | מפתחות AI + מראה + אודות |
 
 **זכור:** הפרויקטים והווידאו נשארים במחשב (IndexedDB). ההתחברות = מי אתה, לא איפה הסרטון.
 

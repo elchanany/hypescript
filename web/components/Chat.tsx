@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
+import { EditorApi } from "@/lib/editor/commands";
+import { TrackMeta, defaultTracks } from "@/lib/editor/project";
 import { AgentMode, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
 import { getProviderStatus } from "@/lib/providers/health";
@@ -91,7 +93,17 @@ interface ChatProps {
   overlays?: Overlay[];
   canvas?: CanvasSize;
   projectId: string | null;
-  onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null; overlays?: Overlay[] }) => void;
+  onProject: (p: {
+    words: Word[] | null;
+    clips: Clip[] | null;
+    subs: Sub[] | null;
+    overlays?: Overlay[];
+    tracks?: TrackMeta[];
+    viaEditor?: boolean;
+  }) => void;
+  /** גשר CommandBus — עדכון מיידי בעורך בזמן כלי-סוכן */
+  editorApi?: EditorApi | null;
+  tracks?: TrackMeta[];
   // הקשר עריכה חי (context chips + mention resolution)
   playhead?: number;
   selectionLabel?: string | null;
@@ -110,7 +122,7 @@ const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -175,7 +187,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   const ctxRef = useRef<AgentContext>({
     media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null,
-    overlays: [], canvas: defaultCanvasFor(), lastRender: null,
+    overlays: [], tracks: defaultTracks(), canvas: defaultCanvasFor(), lastRender: null,
+    editorApi: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     onOutput: addOutput,
     pendingImages: [],
@@ -246,10 +259,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   useEffect(() => {
     const c = ctxRef.current;
-    c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
-    c.overlays = overlays; c.canvas = canvas || defaultCanvasFor();
+    c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words;
+    // בזמן כלי שכבר דחף ל-EditorApi — לא לדרוס את ctx מ-props ישנים באמצע הריצה
+    if (!c._editorDirty) {
+      c.clips = clips; c.subs = subs;
+      c.overlays = overlays; c.tracks = tracks?.length ? tracks : defaultTracks();
+    }
+    c.canvas = canvas || defaultCanvasFor();
+    c.editorApi = editorApi || null;
     if (script.trim()) c.script = script.trim();
-  }, [media, words, clips, subs, overlays, canvas, script]);
+  }, [media, words, clips, subs, overlays, tracks, canvas, script, editorApi]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -310,7 +329,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onToolEnd: (id, ok, summary) => {
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
           const c = ctxRef.current;
-          onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays });
+          const viaEditor = !!c._editorDirty;
+          c._editorDirty = false;
+          onProjectRef.current({
+            words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays, tracks: c.tracks, viaEditor,
+          });
         },
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),

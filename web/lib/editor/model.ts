@@ -18,6 +18,8 @@ export interface Clip {
   sourceId: string; // מזהה MediaAsset
   start: number; // in-point במקור (שניות)
   end: number; // out-point במקור
+  /** רצועת וידאו (ברירת מחדל: הרצועה הראשית). אודיו מקושר לראשי. */
+  trackId?: string;
   volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
   enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
   opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
@@ -97,10 +99,12 @@ export function splitClip(clips: Clip[], id: string, atSource: number): Clip[] {
   const c = clips[i];
   if (atSource <= c.start + 0.05 || atSource >= c.end - 0.05) return clips;
   const arr = [...clips];
-  // Second half inherits linked A/V props (volume/enabled) — CapCut-style linked cut.
+  // Second half inherits linked A/V props (volume/enabled/trackId) — CapCut-style linked cut.
   const right: Clip = { id: uid(), sourceId: c.sourceId, start: atSource, end: c.end };
+  if (c.trackId != null) right.trackId = c.trackId;
   if (c.volume != null) right.volume = c.volume;
   if (c.enabled != null) right.enabled = c.enabled;
+  if (c.opacity != null) right.opacity = c.opacity;
   arr.splice(i, 1, { ...c, end: atSource }, right);
   return arr;
 }

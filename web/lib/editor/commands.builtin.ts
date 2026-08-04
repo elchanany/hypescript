@@ -1,8 +1,10 @@
 // Register built-in editor commands used by UI + Agent.
-import { assembledToSource, clipDur, splitClip, uid } from "./model";
+import { addClip, assembledToSource, clipDur, splitClip, trimClip, uid } from "./model";
 import { makeTextOverlay } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
+import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
+import { clipTrackId, clipsOnTrack, moveClipOnTrack, replaceTrackClips } from "./tracks";
 import { registerCommand } from "./commands";
 
 let registered = false;
@@ -182,6 +184,150 @@ export function ensureBuiltinCommands() {
       if (isGapClip(c)) throw new Error("לא ניתן להחליק רווח");
       const max = api.getMediaDuration?.(c.sourceId) ?? c.end;
       api.setClips(slipClip(clips, id, delta, max));
+    },
+  });
+
+  registerCommand({
+    id: "clip.split",
+    label: "Split clip at source time",
+    labelHe: "פצל קליפ",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const at = Number(args?.at_source);
+      const clips = api.getClips();
+      if (!clips || !id) throw new Error("אין קטע");
+      if (!Number.isFinite(at)) throw new Error("חסר at_source");
+      const c = clips.find((x) => x.id === id);
+      if (!c) throw new Error("קטע לא נמצא");
+      if (isGapClip(c)) throw new Error("לא ניתן לפצל רווח");
+      api.setClips(splitClip(clips, id, at));
+    },
+  });
+
+  registerCommand({
+    id: "clip.trim",
+    label: "Trim clip",
+    labelHe: "טרים קליפ",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clips = api.getClips();
+      if (!clips || !id) throw new Error("אין קטע");
+      const c = clips.find((x) => x.id === id);
+      if (!c) throw new Error("קטע לא נמצא");
+      const start = args?.start != null && args.start !== "" ? Number(args.start) : c.start;
+      const end = args?.end != null && args.end !== "" ? Number(args.end) : c.end;
+      const max = api.getMediaDuration?.(c.sourceId) ?? c.end;
+      api.setClips(trimClip(clips, id, start, end, max));
+    },
+  });
+
+  registerCommand({
+    id: "clip.move",
+    label: "Move clip in track sequence",
+    labelHe: "הזז קליפ",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const toIndex = Number(args?.to_index);
+      const clips = api.getClips();
+      if (!clips || !id) throw new Error("אין קטע");
+      if (!Number.isFinite(toIndex)) throw new Error("חסר to_index");
+      const primary = primaryVideoTrackId(api.getTracks());
+      const c = clips.find((x) => x.id === id);
+      if (!c) throw new Error("קטע לא נמצא");
+      // to_index is 0-based within the clip's track
+      api.setClips(moveClipOnTrack(clips, id, toIndex, primary));
+    },
+  });
+
+  registerCommand({
+    id: "clip.add",
+    label: "Add clip",
+    labelHe: "הוסף קליפ",
+    run: (api, args) => {
+      const sourceId = String(args?.sourceId || "");
+      if (!sourceId) throw new Error("חסר sourceId");
+      const media = api.getMedia().find((m) => m.id === sourceId);
+      if (!media) throw new Error("מקור לא נמצא");
+      const tracks = api.getTracks();
+      const primary = primaryVideoTrackId(tracks);
+      const trackId = String(args?.trackId || primary);
+      if (!tracks.some((t) => t.id === trackId && t.type === "video")) {
+        throw new Error("רצועת וידאו לא נמצאה");
+      }
+      const start = args?.start != null ? Math.max(0, Number(args.start)) : 0;
+      const end = args?.end != null ? Math.min(media.duration, Number(args.end)) : media.duration;
+      const clip = {
+        id: uid(),
+        sourceId,
+        start,
+        end: Math.max(start + 0.1, end),
+        trackId,
+      };
+      const clips = api.getClips() || [];
+      const at = args?.at_index != null ? Number(args.at_index) : undefined;
+      if (at != null && Number.isFinite(at)) {
+        const onTrack = clipsOnTrack(clips, trackId, primary);
+        const inserted = addClip(onTrack, clip, Math.max(0, at));
+        api.setClips(replaceTrackClips(clips, trackId, inserted, primary));
+      } else {
+        api.setClips(addClip(clips, clip));
+      }
+    },
+  });
+
+  registerCommand({
+    id: "clip.moveToTrack",
+    label: "Move clip to video track",
+    labelHe: "העבר קליפ לרצועה",
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const trackId = String(args?.trackId || "");
+      const clips = api.getClips();
+      const tracks = api.getTracks();
+      if (!clips || !id) throw new Error("אין קטע");
+      if (!trackId || !tracks.some((t) => t.id === trackId && t.type === "video")) {
+        throw new Error("רצועת יעד לא נמצאה");
+      }
+      const primary = primaryVideoTrackId(tracks);
+      const c = clips.find((x) => x.id === id);
+      if (!c) throw new Error("קטע לא נמצא");
+      const fromId = clipTrackId(c, primary);
+      if (fromId === trackId) return;
+      const fromList = clipsOnTrack(clips, fromId, primary).filter((x) => x.id !== id);
+      const toList = [...clipsOnTrack(clips, trackId, primary), { ...c, trackId }];
+      let next = replaceTrackClips(clips, fromId, fromList, primary);
+      next = replaceTrackClips(next, trackId, toList, primary);
+      api.setClips(next);
+    },
+  });
+
+  registerCommand({
+    id: "track.addVideo",
+    label: "Add video track",
+    labelHe: "הוסף רצועת וידאו",
+    run: (api, args) => {
+      const name = args?.name != null ? String(args.name) : undefined;
+      const { tracks } = createVideoTrack(api.getTracks(), name);
+      api.setTracks(tracks);
+    },
+  });
+
+  registerCommand({
+    id: "track.removeVideo",
+    label: "Remove video track",
+    labelHe: "מחק רצועת וידאו",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      if (!trackId) throw new Error("חסר trackId");
+      const next = removeVideoTrackMeta(api.getTracks(), trackId);
+      if (!next) throw new Error("לא ניתן למחוק את רצועת הווידאו האחרונה");
+      const primary = primaryVideoTrackId(next);
+      const clips = api.getClips();
+      if (clips?.length) {
+        // העבר קליפים מהרצועה שנמחקה לראשי
+        api.setClips(clips.map((c) => (clipTrackId(c, trackId) === trackId ? { ...c, trackId: primary } : c)));
+      }
+      api.setTracks(next);
     },
   });
 

@@ -7,13 +7,17 @@ import {
   Pencil, Trash2, MoreHorizontal, UserRound,
 } from "lucide-react";
 import {
-  createProject, deleteProject, listProjects, ProjectMeta,
+  deleteProject, listProjects, ProjectMeta,
   renameProject, setCurrentProject,
 } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
+import BrandLogo from "@/components/BrandLogo";
+import NewProjectWizard from "@/components/NewProjectWizard";
 import { toast } from "@/lib/ui/toast";
 import { getProjectCoverUrl } from "@/lib/projects/preview";
+import { createProjectWithPolicy } from "@/lib/projects/create";
+import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
 
 function fmtDate(ms: number) {
@@ -77,6 +81,14 @@ function ProjectCard({
       </button>
       <div className="dash-card-body">
         <button type="button" className="dash-card-title" onClick={onOpen}>{project.name}</button>
+        <div className="dash-card-badges">
+          <span className={`dash-badge mode-${(project as ProjectMetaV2).dataMode || "local"}`}>
+            {(project as ProjectMetaV2).dataMode || "local"}
+          </span>
+          {(project as ProjectMetaV2).aspectRatio && (
+            <span className="dash-badge">{(project as ProjectMetaV2).aspectRatio}</span>
+          )}
+        </div>
         <div className="dash-card-row">
           <span className="dash-card-meta">{fmtDate(project.updatedAt)}</span>
           <div className="dash-card-actions" ref={menuRef}>
@@ -156,16 +168,18 @@ export default function DashboardPage() {
     window.location.href = "/";
   };
 
-  const onCreate = async (name: string) => {
-    setDlg({ kind: "none" });
+  const onCreateWizard = async (result: { name: string; policy: import("@/lib/projects/types").ProjectExecutionPolicy }) => {
     setBusy(true);
     try {
-      const id = await createProject(name || "פרויקט");
-      toast.success("הפרויקט נוצר", name);
+      const id = await createProjectWithPolicy(result);
+      setDlg({ kind: "none" });
+      toast.success("הפרויקט נוצר", `${result.name} · ${result.policy.dataMode}`);
       await openProject(id);
     } catch (e) {
       toast.error("יצירת הפרויקט נכשלה", e instanceof Error ? e.message : undefined);
-    } finally { setBusy(false); }
+      setBusy(false);
+      throw e;
+    }
   };
 
   const onRename = async (name: string) => {
@@ -200,7 +214,9 @@ export default function DashboardPage() {
   return (
     <div className="dash-root">
       <header className="dash-top">
-        <Link href="/dashboard" className="dash-brand"><span className="tb-logo">hs</span> hypescript</Link>
+        <Link href="/dashboard" className="dash-brand dash-brand-link" aria-label="Hypescript">
+          <BrandLogo variant="horizontal" size="sm" theme="auto" priority decorative />
+        </Link>
         <nav className="dash-nav">
           <Link href="/" className="dash-link"><Film size={16} />עורך</Link>
           <Link href="/settings" className="dash-link"><Settings size={16} />הגדרות</Link>
@@ -306,14 +322,11 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <NameDialog
+      <NewProjectWizard
         open={dlg.kind === "create"}
-        title="פרויקט חדש"
-        label="שם הפרויקט"
-        initial={`פרויקט ${projects.length + 1}`}
-        confirmLabel="צור ופתח"
+        initialName={`פרויקט ${projects.length + 1}`}
         onClose={() => setDlg({ kind: "none" })}
-        onSubmit={onCreate}
+        onCreate={onCreateWizard}
       />
       <NameDialog
         open={dlg.kind === "rename"}

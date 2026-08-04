@@ -90,8 +90,15 @@ export function useEditor() {
     const i = list.findIndex((t) => t.id === id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
+    // רק החלפת סדר בין אותו סוג (וידאו↔וידאו) — אחרת שומרים על מבנה audio/caption
+    if (list[i].type !== list[j].type) return;
     const a = list[i], b = list[j];
     commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === a.id ? { ...t, order: b.order } : t.id === b.id ? { ...t, order: a.order } : t)) });
+  }, [commit]);
+
+  const setTracks = useCallback((u: Updater<TrackMeta[]>) => {
+    const next = typeof u === "function" ? (u as (p: TrackMeta[]) => TrackMeta[])(tracksRef.current) : u;
+    commit({ ...now(), tracks: next });
   }, [commit]);
 
   // --- transaction לגרירה/מניפולציה (Undo אחד לכל המחווה) ---
@@ -126,7 +133,7 @@ export function useEditor() {
     clips, subs, tracks, overlays, canvas, captionStyle,
     setClips, setSubs, setProject, updateClip,
     setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
-    renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack,
+    renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack, setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     reset, undo, redo,
     canUndo: hist.current.canUndo(), canRedo: hist.current.canRedo(),

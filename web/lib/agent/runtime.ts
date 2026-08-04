@@ -201,39 +201,52 @@ export class AgentRunner {
 
         this.history.push({ role: "assistant", content: content ?? null, tool_calls: toolCalls });
 
-        // ביצוע קריאות הכלים במקביל
-        const results = await Promise.all(
-          toolCalls.map(async (tc) => {
-            const meta = TOOL_BY_NAME[tc.name];
-            this.events.onToolStart(tc, this.provider);
-            if (!meta) {
-              this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
-              return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };
-            }
-            const blocked = this.guardLoop(tc.name);
-            if (blocked) {
-              this.noteTool(tc.name);
-              this.events.onToolEnd(tc.id, false, blocked);
-              return { tool_call_id: tc.id, name: tc.name, content: blocked };
-            }
+        // כלים שמשנים state — בסדר סידרתי (מונע race על clips/tracks).
+        // כלים לקריאה בלבד יכולים לרוץ במקביל.
+        const MUTATING = new Set([
+          "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
+          "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
+          "set_clip_enabled", "set_clip_volume", "add_video_track", "remove_video_track",
+          "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
+          "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
+          "delete_overlay", "generate_narration",
+        ]);
+        const runOne = async (tc: ToolCall) => {
+          const meta = TOOL_BY_NAME[tc.name];
+          this.events.onToolStart(tc, this.provider);
+          if (!meta) {
+            this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
+            return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };
+          }
+          const blocked = this.guardLoop(tc.name);
+          if (blocked) {
             this.noteTool(tc.name);
-            try {
-              const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
-              // גם תוצאות שמכילות chunk error (כשהכלי תופס ומחזיר מחרוזת)
-              if (isChunkLoadError(out)) {
-                const formatted = formatToolError(out);
-                this.events.onToolEnd(tc.id, false, formatted);
-                return { tool_call_id: tc.id, name: tc.name, content: formatted };
-              }
-              this.events.onToolEnd(tc.id, true, out);
-              return { tool_call_id: tc.id, name: tc.name, content: out };
-            } catch (e: any) {
-              const msg = formatToolError(e?.message || String(e));
-              this.events.onToolEnd(tc.id, false, msg);
-              return { tool_call_id: tc.id, name: tc.name, content: msg };
+            this.events.onToolEnd(tc.id, false, blocked);
+            return { tool_call_id: tc.id, name: tc.name, content: blocked };
+          }
+          this.noteTool(tc.name);
+          try {
+            const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
+            if (isChunkLoadError(out)) {
+              const formatted = formatToolError(out);
+              this.events.onToolEnd(tc.id, false, formatted);
+              return { tool_call_id: tc.id, name: tc.name, content: formatted };
             }
-          }),
-        );
+            this.events.onToolEnd(tc.id, true, out);
+            return { tool_call_id: tc.id, name: tc.name, content: out };
+          } catch (e: any) {
+            const msg = formatToolError(e?.message || String(e));
+            this.events.onToolEnd(tc.id, false, msg);
+            return { tool_call_id: tc.id, name: tc.name, content: msg };
+          }
+        };
+        const results = toolCalls.some((tc) => MUTATING.has(tc.name))
+          ? await (async () => {
+              const out = [];
+              for (const tc of toolCalls) out.push(await runOne(tc));
+              return out;
+            })()
+          : await Promise.all(toolCalls.map(runOne));
         for (const r of results) {
           this.history.push({ role: "tool", tool_call_id: r.tool_call_id, name: r.name, content: r.content });
         }

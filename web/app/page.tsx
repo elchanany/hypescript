@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, addClip, clipEnabled, firstVideo, mediaById, moveClip, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, addClip, clipEnabled, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { audioMuted, SCHEMA_VERSION, videoLocked, videoTrack } from "@/lib/editor/project";
+import {
+  audioMuted, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
+} from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, edlToSubsWithScript, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
@@ -15,6 +17,7 @@ import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
+import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed } from "lucide-react";
@@ -57,7 +60,7 @@ export default function EditorPage() {
   const {
     clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, updateClip,
     addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
-    renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack,
+    renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack, setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
     captionStyle, setCaptionStyle,
@@ -103,6 +106,7 @@ export default function EditorPage() {
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
   const mediaRef = useRef(media); mediaRef.current = media;
   const subsRef = useRef(subs); subsRef.current = subs;
+  const tracksRef = useRef(tracks); tracksRef.current = tracks;
   const canvasRef = useRef(canvas); canvasRef.current = canvas;
   const captionStyleRef = useRef(captionStyle); captionStyleRef.current = captionStyle;
   const curRef = useRef(cur); curRef.current = cur;
@@ -119,6 +123,9 @@ export default function EditorPage() {
       updateClip,
       getMedia: () => mediaRef.current,
       getSubs: () => subsRef.current,
+      setSubs: (next) => setSubs(next),
+      getTracks: () => tracksRef.current,
+      setTracks: (next) => setTracks(next),
       getCanvas: () => canvasRef.current,
       selectClip: (id) => {
         setSelectedId(id);
@@ -316,7 +323,7 @@ export default function EditorPage() {
   };
 
   useEffect(() => {
-    if (main && !clips) setClips([{ id: uid(), sourceId: main.id, start: 0, end: main.duration }]);
+    if (main && !clips) setClips([{ id: uid(), sourceId: main.id, start: 0, end: main.duration, trackId: primaryVideoTrackId(tracks) }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [main]);
 
@@ -353,17 +360,29 @@ export default function EditorPage() {
       img.src = asset.url;
       return;
     }
-    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration };
+    const trackId = primaryVideoTrackId(tracks);
+    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration, trackId };
     setClips((cs) => addClip(cs || [], clip, atIndex));
     setSelectedId(clip.id);
     setSelectedOverlayId(null);
     setSelectedSubId(null);
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
   };
-  const dropMediaOnTimeline = (assetId: string, atIndex: number) => {
+  const dropMediaOnTimeline = (assetId: string, atIndex: number, trackId?: string) => {
     const asset = mediaById(media, assetId);
     if (!asset) return;
-    addMediaClip(asset, atIndex);
+    if (asset.kind === "image") { addMediaClip(asset, atIndex); return; }
+    const tid = trackId || primaryVideoTrackId(tracks);
+    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration, trackId: tid };
+    setClips((cs) => addClip(cs || [], clip, atIndex));
+    setSelectedId(clip.id);
+    setSelectedOverlayId(null);
+    setSelectedSubId(null);
+    setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
+  };
+  const addVideoTrack = () => {
+    const { tracks: next } = createVideoTrack(tracks);
+    setTracks(next);
   };
   const addTextOverlay = () => {
     const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
@@ -428,8 +447,11 @@ export default function EditorPage() {
         });
         setWords(ws);
       }
-      const built = script.trim() ? scriptToClips(ws!, script, main.id) : [{ id: uid(), sourceId: main.id, start: 0, end: duration }];
-      setClips(built.length ? built : [{ id: uid(), sourceId: main.id, start: 0, end: duration }]);
+      const tid = primaryVideoTrackId(tracks);
+      const built = script.trim() ? scriptToClips(ws!, script, main.id) : [{ id: uid(), sourceId: main.id, start: 0, end: duration, trackId: tid }];
+      const tagged = (built.length ? built : [{ id: uid(), sourceId: main.id, start: 0, end: duration, trackId: tid }])
+        .map((c) => (c.trackId ? c : { ...c, trackId: tid }));
+      setClips(tagged);
       setPhase("מוכן");
     } catch (e: any) { setError(e?.message || String(e)); setPhase(""); }
     finally { setBusy(false); setProgress(0); }
@@ -442,9 +464,10 @@ export default function EditorPage() {
       const { getRenderBackend } = await import("@/lib/render/RenderBackend");
       const backend = getRenderBackend();
       setPhase("מרנדר בדפדפן…");
+      const edl = flattenVideoTracks(clips, tracks);
       const blob = await backend.renderProject(
         {
-          media, clips, audioMuted: audioMuted(tracks), overlays, canvas,
+          media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas,
           subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
         },
         (r) => setProgress(Math.min(1, r)),
@@ -571,8 +594,8 @@ export default function EditorPage() {
   });
 
   const working = busy || rendering;
-  const totalEdited = clips ? totalDur(clips) : duration;
-  const timelineDuration = Math.max(duration, clips ? totalDur(clips) : 0, ...overlays.map((o) => o.end), 0.001);
+  const totalEdited = clips ? projectDuration(clips, tracks) : duration;
+  const timelineDuration = Math.max(duration, clips ? projectDuration(clips, tracks) : 0, ...overlays.map((o) => o.end), 0.001);
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay
@@ -605,9 +628,13 @@ export default function EditorPage() {
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           script={script} overlays={overlays} canvas={canvas} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
-            setWords(w); setProject(c, s);
+          editorApi={editorApiRef.current} tracks={tracks}
+          onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
+            setWords(w);
+            if (viaEditor) return; // כבר נדחף דרך EditorApi/CommandBus
+            setProject(c, s);
             if (ovs) setOverlays(ovs);
+            if (tr?.length) setTracks(tr);
           }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
           quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef} />
@@ -670,7 +697,7 @@ export default function EditorPage() {
         <div className="main-area">
           <div className="upper">
             <div className="center-col">
-              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur}
+              <VideoPreview ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
                 onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
                 canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
@@ -740,9 +767,10 @@ export default function EditorPage() {
                   return clip && isGapClip(clip) ? trimGap(c, id, e - s) : trimClip(c, id, s, e, duration);
                 })}
                 onTrimEnd={commitTransaction}
-                onReorder={(id, to) => setClips((c) => (c ? moveClip(c, id, to) : c))}
+                onReorder={(id, to) => setClips((c) => (c ? moveClipOnTrack(c, id, to, primaryVideoTrackId(tracks)) : c))}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
                 onDropMedia={dropMediaOnTimeline}
+                onAddVideoTrack={addVideoTrack}
                 onOverlayTrimBegin={beginTransaction}
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}

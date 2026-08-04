@@ -7,6 +7,11 @@ function fakeApi(clips: Clip[]): EditorApi & { clips: Clip[] } {
   const api: any = {
     clips: [...clips],
     overlays: [] as any[],
+    tracks: [
+      { id: "trk_video", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
+      { id: "trk_audio", name: "אודיו", type: "audio", order: 1, height: 56, locked: false, muted: false },
+      { id: "trk_caption", name: "כתוביות", type: "caption", order: 2, height: 48, locked: false, muted: false },
+    ],
     getClips: () => api.clips,
     setClips: (c: Clip[] | null) => { api.clips = c || []; },
     getOverlays: () => api.overlays,
@@ -17,8 +22,11 @@ function fakeApi(clips: Clip[]): EditorApi & { clips: Clip[] } {
     updateClip: (id: string, patch: Partial<Clip>) => {
       api.clips = api.clips.map((c: Clip) => (c.id === id ? { ...c, ...patch } : c));
     },
-    getMedia: () => [],
+    getMedia: () => [{ id: "m", name: "a.mp4", kind: "video", file: null, duration: 100, url: "" }],
     getSubs: () => null,
+    setSubs: () => {},
+    getTracks: () => api.tracks,
+    setTracks: (t: any[]) => { api.tracks = t; },
     getCanvas: () => ({ width: 1920, height: 1080 }),
     selectClip: () => {},
     selectOverlay: () => {},
@@ -91,5 +99,29 @@ describe("CommandBus builtins", () => {
     expect(api.clips[0].end).toBeCloseTo(2.5, 5);
     expect(runCommand("clip.slip", api, { id: "b", delta: 1 }).ok).toBe(true);
     expect(api.clips[1].start).toBeCloseTo(3.5, 5);
+  });
+
+  it("split/trim/move go through CommandBus", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 10, trackId: "trk_video" }]) as any;
+    api.getMediaDuration = () => 100;
+    expect(runCommand("clip.split", api, { id: "a", at_source: 4 }).ok).toBe(true);
+    expect(api.clips).toHaveLength(2);
+    expect(runCommand("clip.trim", api, { id: "a", end: 3 }).ok).toBe(true);
+    expect(api.clips[0].end).toBeCloseTo(3, 5);
+    expect(runCommand("clip.move", api, { id: api.clips[1].id, to_index: 0 }).ok).toBe(true);
+    expect(api.clips[0].id).not.toBe("a");
+  });
+
+  it("add and remove video tracks via CommandBus", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2, trackId: "trk_video" }]);
+    expect(runCommand("track.addVideo", api, { name: "B-roll" }).ok).toBe(true);
+    const vids = api.getTracks().filter((t) => t.type === "video");
+    expect(vids.length).toBe(2);
+    const extra = vids.find((t) => t.id !== "trk_video")!;
+    expect(runCommand("clip.moveToTrack", api, { id: "a", trackId: extra.id }).ok).toBe(true);
+    expect(api.clips[0].trackId).toBe(extra.id);
+    expect(runCommand("track.removeVideo", api, { trackId: extra.id }).ok).toBe(true);
+    expect(api.getTracks().filter((t) => t.type === "video")).toHaveLength(1);
+    expect(api.clips[0].trackId).toBe("trk_video");
   });
 });
