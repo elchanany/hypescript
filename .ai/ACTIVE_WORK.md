@@ -7,7 +7,7 @@
 `main`
 
 ## Latest commit
-`13a35f7` — docs after merge to main (טיימליין CapCut)
+טיפ `main` אחרי מיזוג טיימליין CapCut (inspector/snap/linked A/V) + continuity
 
 ## Status
 idle — מוכן לעבודת מוצר הבאה

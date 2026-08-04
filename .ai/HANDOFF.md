@@ -4,7 +4,7 @@
 טיימליין CapCut (בחירה→אינספקטור, snap, יישור אודיו, linked A/V) — מוזג ל־`main`.
 
 ## Current State (verified)
-- `main` @ `ec42a83` — fast-forward מ־`cursor/timeline-inspector-snap-328b`.
+- `main` — טיימליין CapCut מוזג (fast-forward מ־`cursor/timeline-inspector-snap-328b`); PR #24 MERGED.
 - לחיצה על וידאו/אודיו/כתובית/שכבה פותחת מאפיינים בפאנל הימני.
 - Hover; בחירה מקושרת; snap guide (Magnet); headers ברשת 5 משבצות; Split חותך גם אודיו.
 - אימות קודם: vitest time+model, tsc, build, בדיקה ידנית.
