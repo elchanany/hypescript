@@ -11,7 +11,7 @@ export interface AuthState {
   session: Session | null;
   user: User | null;
   error: string | null;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (nextPath?: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<boolean>;
   signUpWithPassword: (email: string, password: string) => Promise<boolean>;
   signInWithMagicLink: (email: string) => Promise<boolean>;
@@ -60,15 +60,25 @@ export function useAuth(): AuthState {
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, [configured]);
 
-  const redirectTo = () => `${window.location.origin}/auth/callback`;
+  const redirectTo = (nextPath?: string) => {
+    const origin = window.location.origin;
+    const next = (nextPath || "").trim();
+    if (next.startsWith("/") && !next.startsWith("//")) {
+      return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    }
+    return `${origin}/auth/callback`;
+  };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (nextPath?: string) => {
     setError(null);
     const sb = getSupabaseBrowser();
     if (!sb) { setError("התחברות לא מוגדרת (חסרים מפתחות Supabase)."); return; }
     const { error: err } = await sb.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: redirectTo() },
+      options: {
+        redirectTo: redirectTo(nextPath),
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (err) setError(humanAuthError(err.message));
   };

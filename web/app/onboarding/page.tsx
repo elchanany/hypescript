@@ -21,7 +21,9 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && configured && !user) router.replace("/login?next=/onboarding");
+    // Only bounce after auth finished loading — never during the brief session hydrate.
+    if (loading) return;
+    if (configured && !user) router.replace("/login?next=/onboarding");
   }, [loading, configured, user, router]);
 
   useEffect(() => {

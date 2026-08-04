@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
+import { postLoginPath } from "@/lib/auth/session";
 
 type Tab = "login" | "signup" | "magic" | "reset";
 
@@ -12,6 +13,8 @@ function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
+  const urlError = params.get("error");
+  const urlMsg = params.get("msg");
   const {
     configured, loading, user, error, clearError,
     signInWithGoogle, signInWithPassword, signUpWithPassword, signInWithMagicLink, resetPassword,
@@ -22,20 +25,30 @@ function LoginInner() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (urlError) {
+      setLocalError(urlMsg ? decodeURIComponent(urlMsg) : "ההתחברות נכשלה. נסה שוב.");
+    }
+  }, [urlError, urlMsg]);
 
   useEffect(() => {
     if (!loading && user) {
-      const done = typeof window !== "undefined" && localStorage.getItem("hs_onboarding_done") === "1";
-      router.replace(done ? next : "/onboarding");
+      router.replace(postLoginPath(next));
     }
   }, [loading, user, router, next]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    clearError(); setInfo(null); setBusy(true);
+    clearError(); setInfo(null); setLocalError(null); setBusy(true);
     try {
       if (tab === "login") {
-        await signInWithPassword(email, password);
+        const ok = await signInWithPassword(email, password);
+        if (ok) {
+          // Don't wait only on useEffect — navigate once session exists
+          router.replace(postLoginPath(next));
+        }
       } else if (tab === "signup") {
         const ok = await signUpWithPassword(email, password);
         if (ok) setInfo("נשלח אימייל אימות (אם נדרש). אפשר גם להתחבר עם Google.");
@@ -50,6 +63,8 @@ function LoginInner() {
       setBusy(false);
     }
   };
+
+  const displayError = localError || error;
 
   return (
     <div className="auth-shell">
@@ -72,7 +87,11 @@ function LoginInner() {
           </div>
         ) : (
           <>
-            <button className="btn primary tall auth-google" onClick={() => signInWithGoogle()} disabled={loading || busy}>
+            <button
+              className="btn primary tall auth-google"
+              onClick={() => signInWithGoogle(next)}
+              disabled={loading || busy}
+            >
               המשך עם Google
             </button>
 
@@ -91,7 +110,7 @@ function LoginInner() {
                   role="tab"
                   aria-selected={tab === id}
                   className={`auth-tab ${tab === id ? "on" : ""}`}
-                  onClick={() => { setTab(id); clearError(); setInfo(null); }}
+                  onClick={() => { setTab(id); clearError(); setInfo(null); setLocalError(null); }}
                 >
                   {label}
                 </button>
@@ -130,7 +149,7 @@ function LoginInner() {
               </button>
             </form>
 
-            {error && <div className="auth-error" role="alert">{error}</div>}
+            {displayError && <div className="auth-error" role="alert">{displayError}</div>}
             {info && <div className="auth-info" role="status">{info}</div>}
 
             <p className="auth-legal">

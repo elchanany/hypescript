@@ -114,7 +114,11 @@
 אם משהו נכשל:
 - «התחברות לא מוגדרת» → המשתנים לא ב־Vercel או לא עשית Redeploy
 - שגיאת redirect_uri_mismatch → ה־Callback URL ב־Google לא זהה לזה של Supabase
-- חוזר ל־login → בדוק Redirect URLs ב־Supabase כוללים `/auth/callback`
+- רואה «משלים התחברות» וחוזר ל־login →
+  1. Redirect URLs ב־Supabase חייבים לכלול בדיוק: `https://YOUR-DOMAIN/auth/callback` (וגם עם `?next=*` אם אתה מוסיף wildcards: `https://YOUR-DOMAIN/auth/callback**`)
+  2. Site URL חייב להיות אותו דומיין שבו אתה נמצא עכשיו
+  3. אחרי שינוי env — Redeploy
+  4. בהודעת השגיאה ב־`/login` יופיע עכשיו פירוט (`?msg=`)
 
 ---
 
