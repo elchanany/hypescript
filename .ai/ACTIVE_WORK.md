@@ -7,11 +7,11 @@
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-`9dbb48f` — docs: hash אחרון ב-ACTIVE_WORK  
-(תיקון קוד: `38196d2` — אנטי-לופ / scriptClips / snap)
+`e25e934` — docs: continuity אחרי אימות תיקוני סוכן  
+(תיקון קוד: `38196d2`)
 
 ## Status
-הושלם ונדחף · PR #23 · אימות: 22 tests + tsc עברו · working tree נקי אחרי continuity
+הושלם ונדחף · PR #23 · אימות: 22 tests + tsc · working tree נקי
 
 ## Exact continuation point
-למזג PR #23; אחרי מיזוג — לעדכן PROJECT_STATE אם צריך. אין עבודת פיצ'ר פתוחה בענף זה.
+למזג PR #23. אין עבודת פיצ'ר פתוחה בענף זה.

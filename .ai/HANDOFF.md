@@ -4,7 +4,7 @@
 תיקוני סוכן/מבנה מצ'אט DeepSeek + כתוביות/תמלול ציר (PR #23).
 
 ## Current State (verified 2026-08-04)
-- ענף: `cursor/fix-captions-speech-sync-c816` · PR #23 · HEAD `9dbb48f` (synced with origin)
+- ענף: `cursor/fix-captions-speech-sync-c816` · PR #23 · HEAD `e25e934` (synced with origin)
 - אימות עכשיו: 22 בדיקות (scriptClips/clipFilter/loopGuard/model/normalize) עברו; `tsc --noEmit` עבר; `graphify update .` רץ.
 - `scriptToClips`: חיפוש סדרתי + העדפת forward; בלי קפיצה לזמנים רחוקים; סינון קליפים זעירים.
 - `remove_silence`: עם EDL → within כברירת מחדל; `snapSpeechToWords` + ריפוד ~0.12.
