@@ -1,11 +1,13 @@
 # HANDOFF
 
-## main tip
-`162847e` — fix OAuth login bounce
+## main (after merge)
+Fix PKCE with `@supabase/ssr` + server `/auth/callback` route.
 
-## Auth fix
-Callback no longer redirects without a real session. PKCE exchange + waitForSession.
-If still fails in production: Supabase Redirect URLs must include `/auth/callback` for the live domain + Redeploy.
+## Auth
+- Browser: `createBrowserClient` (cookie PKCE verifier)
+- Callback: Route Handler exchanges code server-side
+- Continue page confirms session then routes to onboarding/dashboard
+- Middleware refreshes cookies
 
 ## Next
-Package C — Usage foundation (rate cards, credit ledger, trial grant, reservations).
+Package C — Usage foundation.

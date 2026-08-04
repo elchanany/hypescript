@@ -154,6 +154,9 @@ export function useAuth(): AuthState {
 
 function humanAuthError(msg: string): string {
   const m = (msg || "").toLowerCase();
+  if (/pkce code verifier not found/i.test(m)) {
+    return "ההתחברות נקטעה (PKCE). סגור את הלשונית, פתח מחדש את האתר, ולחץ שוב על «המשך עם Google» מאותו דפדפן.";
+  }
   if (/invalid login|invalid credentials|wrong password/i.test(m)) return "אימייל או סיסמה שגויים.";
   if (/email not confirmed/i.test(m)) return "יש לאמת את האימייל לפני ההתחברות (בדוק את תיבת הדואר).";
   if (/user already registered|already been registered/i.test(m)) return "המשתמש כבר רשום — נסה להתחבר.";

@@ -99,8 +99,13 @@
    - או בינתיים `http://localhost:3000`
 3. **Redirect URLs** — הוסף בשורות נפרדות:
    - `http://localhost:3000/auth/callback`
+   - `http://localhost:3000/auth/callback**`
    - `https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback`
+   - `https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback**`
 4. Save
+
+> האפליקציה משתמשת ב־`@supabase/ssr` (cookies) + Route Handler ב־`/auth/callback`  
+> כדי למנוע את השגיאה `PKCE code verifier not found in storage`.
 
 ---
 
@@ -114,11 +119,12 @@
 אם משהו נכשל:
 - «התחברות לא מוגדרת» → המשתנים לא ב־Vercel או לא עשית Redeploy
 - שגיאת redirect_uri_mismatch → ה־Callback URL ב־Google לא זהה לזה של Supabase
-- רואה «משלים התחברות» וחוזר ל־login →
-  1. Redirect URLs ב־Supabase חייבים לכלול בדיוק: `https://YOUR-DOMAIN/auth/callback` (וגם עם `?next=*` אם אתה מוסיף wildcards: `https://YOUR-DOMAIN/auth/callback**`)
-  2. Site URL חייב להיות אותו דומיין שבו אתה נמצא עכשיו
-  3. אחרי שינוי env — Redeploy
-  4. בהודעת השגיאה ב־`/login` יופיע עכשיו פירוט (`?msg=`)
+- `PKCE code verifier not found` / חוזר ל־login →
+  1. ודא ש־Deploy כולל את `@supabase/ssr` (גרסה אחרי התיקון הזה)
+  2. Redirect URLs: `https://YOUR-DOMAIN/auth/callback` וגם `.../auth/callback**`
+  3. Site URL = אותו דומיין שבו אתה גולש עכשיו
+  4. התחל את Google login מחדש מאותו דפדפן (אל תפתח את קישור ה-callback בלשונית אחרת)
+  5. Redeploy אחרי שינוי env
 
 ---
 

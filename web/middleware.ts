@@ -1,29 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { normalizeSupabaseUrl } from "@/lib/auth/config";
 
 /**
- * Soft gate: when Auth is configured and guest editor is disabled,
- * unauthenticated visitors hitting / (editor) are sent to /login.
- * Full session verification happens client-side + server APIs (RLS).
- * This middleware only checks for the presence of the Supabase auth cookie.
+ * 1) Refresh Supabase auth cookies (PKCE / session) on navigations.
+ * 2) Soft-gate the editor (/) when Auth is configured and guest mode is off.
  */
-export function middleware(req: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+export async function middleware(req: NextRequest) {
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
   const guest = (process.env.ALLOW_GUEST_EDITOR || "").toLowerCase();
-  const authConfigured = !!(url.trim() && anon.trim());
+  const authConfigured = !!(url && anon);
   const allowGuest = !authConfigured || guest === "1" || guest === "true" || guest === "yes";
 
-  if (allowGuest) return NextResponse.next();
+  let response = NextResponse.next({
+    request: { headers: req.headers },
+  });
+
+  if (authConfigured) {
+    const supabase = createServerClient(url, anon, {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            req.cookies.set(name, value);
+          });
+          response = NextResponse.next({
+            request: { headers: req.headers },
+          });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    });
+
+    // Touches/refreshes session cookies when needed.
+    await supabase.auth.getUser();
+  }
+
+  if (allowGuest) return response;
 
   const { pathname } = req.nextUrl;
-  const isEditor = pathname === "/";
-  if (!isEditor) return NextResponse.next();
+  if (pathname !== "/") return response;
 
-  // Supabase SSR cookie names vary; look for any sb-*-auth-token
-  const hasSession = req.cookies.getAll().some((c) =>
-    c.name.includes("-auth-token") || c.name.startsWith("sb-"),
+  const hasSession = req.cookies.getAll().some(
+    (c) => c.name.includes("-auth-token") || c.name.startsWith("sb-"),
   );
-  if (hasSession) return NextResponse.next();
+  if (hasSession) return response;
 
   const login = req.nextUrl.clone();
   login.pathname = "/login";
@@ -32,5 +58,10 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: [
+    /*
+     * Refresh session on app navigations; skip static assets.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|brand/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };
