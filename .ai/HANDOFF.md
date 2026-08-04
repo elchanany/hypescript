@@ -1,21 +1,17 @@
-# HANDOFF — Package A + Branding
+# HANDOFF — Branding fix from user sources + Package A
 
 ## Branch
-`cursor/saas-pkg-a-branding-505e` (base: `main`)
+`cursor/saas-pkg-a-branding-505e` → merging to `main` per user request.
 
-## Verified state
-- Brand assets under `web/public/brand/` (sources + derivatives + favicon/PWA/OG)
-- `BrandLogo` + `web/lib/brand/assets.ts` as single source of truth
-- Theme: System/Dark/Light via `ThemeProvider` + no-flash script in layout
-- Package A migration: `supabase/migrations/20260804170000_pkg_a_foundation.sql`
-- Auth UI: login (Google/password/magic/reset), onboarding, legal stubs, bootstrap API
-- Middleware soft-gates editor when Auth configured and guest disabled
-- Docs: `docs/BRAND_GUIDELINES.md`, SETUP_AUTH + SECURITY_MODEL updated
+## Branding
+- Official sources (user files, bit-exact icon):
+  - `web/public/brand/sources/original-icon-navy.png` → `hypescript-icon.png` (exact copy)
+  - `web/public/brand/sources/original-wordmark.png` → horizontal (black bg removed, RGBA)
+  - `web/public/brand/sources/original-icon-black.png` → additional/reference only
+- Derivatives regenerated from those sources only (no AI-redesigned logo).
 
-## Not done (by design for Package A stop)
-- MFA, session revoke UI, Admin dashboard, Ledger/Trial grants, Billing, BYOK
-- Migration not applied to live Supabase from this environment (no production push)
-- Do **not** merge to `main` without explicit approval
+## Package A
+Still on branch; merge includes Auth foundation migration + UI.
 
-## Exact next step
-After Package A approval: execute Package B (Dashboard projects wizard Local/Cloud/Hybrid).
+## Next after merge
+Package B (Dashboard wizard Local/Cloud/Hybrid) — only if approved / requested.

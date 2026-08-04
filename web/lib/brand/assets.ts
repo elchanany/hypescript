@@ -43,12 +43,13 @@ export const BRAND_SIZE_PX: Record<BrandVariant, Record<BrandSize, { w: number; 
     lg: { w: 40, h: 40 },
     xl: { w: 64, h: 64 },
   },
+  // Source crop is ~1383×385 (≈3.59:1) — keep aspect to avoid stretch.
   horizontal: {
-    xs: { w: 96, h: 28 },
-    sm: { w: 128, h: 36 },
-    md: { w: 168, h: 48 },
-    lg: { w: 220, h: 64 },
-    xl: { w: 280, h: 80 },
+    xs: { w: 100, h: 28 },
+    sm: { w: 140, h: 39 },
+    md: { w: 200, h: 56 },
+    lg: { w: 260, h: 72 },
+    xl: { w: 320, h: 89 },
   },
 };
 

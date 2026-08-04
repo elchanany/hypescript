@@ -1050,8 +1050,10 @@ button.quote-chip:hover svg { color: var(--accent); }
 .legal-brand { display: flex; justify-content: center; margin-bottom: 16px; }
 .brand-about { display: flex; align-items: center; gap: 12px; }
 .brand-about p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
-.dash-brand-link { text-decoration: none; }
-.dash-brand-link .brand-logo-horizontal { height: 36px; width: auto; }
+.dash-brand-link { text-decoration: none; display: inline-flex; align-items: center; }
+.dash-brand-link .brand-logo-horizontal { height: 36px; width: auto; max-width: 200px; object-fit: contain; }
+.brand-logo { object-fit: contain; display: block; }
+.brand-logo-horizontal { height: auto; max-width: 100%; }
 
 .dash-root { min-height: 100vh; direction: rtl; background: var(--bg); }
 .dash-top {

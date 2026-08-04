@@ -6,13 +6,16 @@
 
 | תפקיד | קובץ מקור | נתיב מוצר |
 |---|---|---|
-| App icon (HS מרובע, רקע navy) | `web/public/brand/sources/original-icon-navy.png` | `/brand/hypescript-icon.png` |
-| Horizontal lockup (אייקון + Hypescript) | `web/public/brand/sources/original-wordmark.png` | `/brand/hypescript-logo-horizontal.png` |
-| Additional / reference (אייקון על רקע שחור) | `web/public/brand/sources/original-additional.png` | מקור בלבד — לא לשימוש אקראי ב-UI |
+| App icon (HS מרובע, רקע navy) | `web/public/brand/sources/original-icon-navy.png` | `/brand/hypescript-icon.png` (**עותק ביטים זהה** למקור) |
+| Horizontal lockup (אייקון + Hypescript) | `web/public/brand/sources/original-wordmark.png` | `/brand/hypescript-logo-horizontal.png` (רקע שחור הוסר → RGBA + crop) |
+| Additional / reference (אייקון על שחור) | `web/public/brand/sources/original-additional.png` (= `original-icon-black.png`) | מקור בלבד — לא לשימוש אקראי ב-UI |
 
 ### תפקיד הקובץ השלישי
-`original-additional.png` הוא וריאציית אייקון על רקע שחור (רפרנס / מקור איכות).  
-אין להשתמש בו כ-favicon או כלוגו אופקי. שמור ב-`sources/` בלבד.
+`original-icon-black.png` / `original-additional.png` — וריאציית אייקון על רקע שחור (רפרנס).  
+אין להשתמש בו כ-favicon או כלוגו אופקי.
+
+### כלל מקור
+הנכסים הרשמיים מגיעים **רק** משלושת קבצי המשתמש. אין לייצר לוגו מחדש ב-AI.
 
 ## נגזרות
 
