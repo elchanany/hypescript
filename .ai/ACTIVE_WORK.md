@@ -1,17 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-טיימליין CapCut-like — סיום משימה, ממתין למיזוג PR #24
+אין משימה פתוחה — טיימליין CapCut מוזג ל־`main`.
 
 ## Branch
-`cursor/timeline-inspector-snap-328b`
+`main`
 
 ## Latest commit
-`0022f1d` — fix(web): keep clip selection when clicking timeline clips  
-(docs sync commits אחריו על אותו ענף)
+`ec42a83` — docs: stabilize continuity on feature tip 0022f1d (כולל פיצ׳ר הטיימליין)
 
 ## Status
-verified — PR #24 OPEN, ready for review (לא על `main`)
+idle — מוכן לעבודת מוצר הבאה
 
 ## Exact continuation point
-מיזוג PR #24 אחרי review. אין עבודת פיצ׳ר פתוחה על הענף.
+GAP_MAP: AG-4 / intro-outro / preview; בלי Auth/Supabase בלי אישור.
