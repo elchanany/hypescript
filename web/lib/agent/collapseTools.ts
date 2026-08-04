@@ -42,6 +42,7 @@ export function collapseConsecutiveTools<T extends { kind: string }>(
       prev.state = mergeToolState(prev.state, tool.state);
       prev.status = tool.status;
       if (tool.summary) prev.summary = tool.summary;
+      if (tool.providerLabel) prev.providerLabel = tool.providerLabel;
       prev.time = tool.time;
       continue;
     }

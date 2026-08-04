@@ -78,7 +78,11 @@ export async function extractAudio(file: File, onProgress?: (r: number) => void)
     const out = `au_${uid()}.mp3`;
     await ff.writeFile(input, await fetchFile(file));
     if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
-    await ff.exec(["-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out]);
+    await withTimeout(
+      ff.exec(["-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out]),
+      120000,
+      "חילוץ אודיו",
+    );
     const data = (await ff.readFile(out)) as Uint8Array;
     await ff.deleteFile(out).catch(() => {});
     await ff.deleteFile(input).catch(() => {});
@@ -101,10 +105,14 @@ export async function extractAudioSegment(
     if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
     const ss = Math.max(0, startSec);
     const t = Math.max(0.1, durationSec);
-    await ff.exec([
-      "-ss", ss.toFixed(3), "-t", t.toFixed(3),
-      "-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out,
-    ]);
+    await withTimeout(
+      ff.exec([
+        "-ss", ss.toFixed(3), "-t", t.toFixed(3),
+        "-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out,
+      ]),
+      120000,
+      "חילוץ מקטע אודיו",
+    );
     const data = (await ff.readFile(out)) as Uint8Array;
     await ff.deleteFile(out).catch(() => {});
     await ff.deleteFile(input).catch(() => {});

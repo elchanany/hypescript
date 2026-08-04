@@ -25,8 +25,15 @@ import {
   assembledDuration,
   formatTranscriptLines,
 } from "@/lib/editor/assembleTranscript";
+import {
+  VideoTransform,
+  applyFitMode,
+  normalizeVideoTransform,
+  FitMode,
+} from "@/lib/editor/videoTransform";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { ToolSchema } from "./types";
+import { serviceLabelFor } from "./timeout";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -43,6 +50,10 @@ export interface AgentContext {
   subs: Sub[] | null;
   overlays: Overlay[];
   canvas: CanvasSize;
+  /** Element Scale של הווידאו הראשי על הקנבס */
+  videoTransform?: VideoTransform;
+  /** גודל מקור לווידאו הראשי (Fit/Fill) */
+  sourceSize?: { w: number; h: number };
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
@@ -77,15 +88,18 @@ function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | und
   return ctx.media.find((m) => m.name.toLowerCase().includes(low));
 }
 
-export type Reporter = (status: string) => void;
+/** status לעדכון UI; serviceLabel = ספק השירות בפועל (STT/TTS וכו') — לא ספק ה-LLM */
+export type Reporter = (status: string, serviceLabel?: string) => void;
 
 export interface ToolMeta {
   name: string;
   label: string;
   color: string;
   icon: string;
+  /** תווית ספק שירות קבועה (למשל ElevenLabs) כשהכלי תמיד משתמש באותו ספק */
+  defaultService?: string;
   schema: ToolSchema;
-  run: (args: any, ctx: AgentContext, report: Reporter) => Promise<string>;
+  run: (args: any, ctx: AgentContext, report: Reporter, signal?: AbortSignal) => Promise<string>;
 }
 
 const fmt = (s: number) => {
@@ -244,11 +258,13 @@ export const TOOLS: ToolMeta[] = [
         },
       },
     },
-    run: async (a, ctx, report) => {
+    run: async (a, ctx, report, signal) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
+      const service = serviceLabelFor(provider, model);
+      report(`נבחר ספק: ${service}`, service);
       const explicitProvider = String(a.provider || "").toLowerCase();
       const wantsSpecific = explicitProvider === "elevenlabs" || explicitProvider === "groq";
 
@@ -270,13 +286,14 @@ export const TOOLS: ToolMeta[] = [
           if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
           ctx.transcriptMeta[asset.id] = { provider: cached.provider, model: cached.model };
           if (isMain) { ctx.words = cached.words; if (!ctx.duration) ctx.duration = asset.duration; }
+          report(`נטען מטמון`, serviceLabelFor(cached.provider, cached.model));
           return `נטען תמלול שמור ל-"${asset.name}" (${cached.provider}/${cached.model || "?"}, ${cached.words.filter(isSpeechWord).length} מילים).`;
         }
       }
       try { await import("@/lib/ffmpeg"); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
 
-      report(`מתמלל ${asset.name} ב-${provider} / ${model}…`);
+      report(`מתמלל ${asset.name}…`, service);
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
       try { ({ transcribeMediaFile } = await import("@/lib/transcribe/client")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב."); }
@@ -294,7 +311,8 @@ export const TOOLS: ToolMeta[] = [
         provider,
         model,
         formExtras,
-        onPhase: (msg) => report(msg),
+        signal,
+        onPhase: (msg) => report(msg, service),
       });
       ctx.transcripts[asset.id] = words;
       if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
@@ -420,13 +438,13 @@ export const TOOLS: ToolMeta[] = [
         },
       },
     },
-    run: async (a, ctx, report) => {
+    run: async (a, ctx, report, signal) => {
       if (!ctx.clips?.length) return "שגיאה: אין קליפים. חתוך/בנה ציר קודם.";
       const mode = String(a.mode || "remap").toLowerCase() === "retranscribe" ? "retranscribe" : "remap";
       const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null);
 
       if (mode === "remap") {
-        report("ממפה תמלול לציר הערוך…");
+        report("ממפה תמלול לציר הערוך…", "מקומי");
         const words = assembleTranscript(ctx.clips, getWords);
         if (!words.length) {
           return "אין תמלול מקורות למיפוי. תמלל קודם (transcribe_video) או השתמש ב-mode=retranscribe.";
@@ -442,7 +460,8 @@ export const TOOLS: ToolMeta[] = [
       catch { throw new Error("נפרסה גרסה חדשה — רענן את הדף (Ctrl+Shift+R) ואז נסה שוב."); }
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
-      report(`בונה אודיו זמני מהעריכה…`);
+      const service = serviceLabelFor(provider, model);
+      report(`בונה אודיו זמני מהעריכה…`, service);
       let extractAssembledAudio: typeof import("@/lib/ffmpeg").extractAssembledAudio;
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
       try {
@@ -454,16 +473,16 @@ export const TOOLS: ToolMeta[] = [
 
       const { blob, durationSec } = await extractAssembledAudio(ctx.media, ctx.clips, () => {});
       const file = new File([blob], "edited_timeline.mp3", { type: "audio/mpeg" });
-      report(`מתמלל את האודיו הערוך ב-${provider}/${model}…`);
+      report(`מתמלל את האודיו הערוך…`, service);
       const words = await transcribeMediaFile({
         file,
         durationSec,
         provider,
         model,
-        onPhase: (msg) => report(msg),
+        signal,
+        onPhase: (msg) => report(msg, service),
       });
       ctx.assembledWords = words;
-      // אופציונלי: להציע הורדת האודיו הזמני
       ctx.onOutput?.(blob, "edited_timeline.mp3", "audio");
       const n = words.filter(isSpeechWord).length;
       return `תומלל הציר הערוך מחדש ב-${provider}/${model}: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`;
@@ -1063,6 +1082,7 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "list_voices", label: "קולות קריינות", color: "#a855f7", icon: "🎙️",
+    defaultService: "ElevenLabs",
     schema: {
       name: "list_voices",
       description: "מציג קולות ElevenLabs זמינים (שם, voice_id, קטגוריה, תיאור) כדי שהמשתמש/הסוכן יבחרו קול לקריינות. דורש ELEVENLABS_API_KEY.",
@@ -1094,6 +1114,7 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "generate_narration", label: "יצירת קריינות", color: "#a855f7", icon: "🗣️",
+    defaultService: "ElevenLabs",
     schema: {
       name: "generate_narration",
       description:
@@ -1114,15 +1135,16 @@ export const TOOLS: ToolMeta[] = [
         required: ["text", "voice_id"],
       },
     },
-    run: async (a, ctx, report) => {
+    run: async (a, ctx, report, signal) => {
       const text = String(a.text || "").trim();
       const voiceId = String(a.voice_id || "").trim();
       if (!text) return "שגיאה: חסר טקסט.";
       if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices ובחר קול.";
-      report("יוצר קריינות ב-ElevenLabs…");
+      report("יוצר קריינות…", "ElevenLabs");
       const resp = await fetch("/api/elevenlabs/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal,
         body: JSON.stringify({
           text,
           voice_id: voiceId,
@@ -1166,6 +1188,66 @@ export const TOOLS: ToolMeta[] = [
       ctx.onOutput?.(blob, name, "audio");
       download(blob, name);
       return `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`;
+    },
+  },
+  {
+    name: "set_video_transform", label: "גודל/מיקום וידאו", color: "#0ea5e9", icon: "📐",
+    schema: {
+      name: "set_video_transform",
+      description:
+        "משנה את Element Scale של הווידאו הראשי על הקנבס (גובה/רוחב/מיקום/Fit). " +
+        "לא Viewer Zoom — זה גודל האלמנט בייצוא. " +
+        "fit_mode: fit|fill|original|custom. לשינוי גודל ידני העבר width+height (או scale 0–1) עם fit_mode=custom.",
+      parameters: {
+        type: "object",
+        properties: {
+          fit_mode: { type: "string", description: "fit | fill | original | custom" },
+          width: { type: "number", description: "רוחב בפיקסלים של הקנבס (custom)" },
+          height: { type: "number", description: "גובה בפיקסלים של הקנבס (custom)" },
+          scale: { type: "number", description: "יחס גודל 0.05–1 ביחס לקנבס (custom, שומר פרופורציות)" },
+          x: { type: "number", description: "מרכז X בפיקסלי קנבס" },
+          y: { type: "number", description: "מרכז Y בפיקסלי קנבס" },
+          rotation: { type: "number", description: "סיבוב במעלות" },
+          opacity: { type: "number", description: "שקיפות 0–1" },
+        },
+      },
+    },
+    run: async (a, ctx, report) => {
+      const canvas = ctx.canvas || defaultCanvasFor();
+      const src = ctx.sourceSize || { w: canvas.width, h: canvas.height };
+      let vt = normalizeVideoTransform(ctx.videoTransform, canvas);
+      const modeRaw = String(a.fit_mode || "").toLowerCase();
+      const mode = (["fit", "fill", "original", "custom"].includes(modeRaw) ? modeRaw : "") as FitMode | "";
+
+      if (mode && mode !== "custom" && a.width == null && a.height == null && a.scale == null) {
+        vt = applyFitMode(vt, mode, canvas, src.w, src.h);
+      } else {
+        const scale = a.scale != null ? Math.max(0.05, Math.min(1, +a.scale)) : null;
+        let w = a.width != null ? +a.width : vt.w;
+        let h = a.height != null ? +a.height : vt.h;
+        if (scale != null) {
+          w = Math.round(canvas.width * scale);
+          h = Math.round(canvas.height * scale);
+          if (vt.uniformScale && src.w > 0 && src.h > 0) {
+            const ar = src.w / src.h;
+            if (w / h > ar) w = Math.round(h * ar);
+            else h = Math.round(w / ar);
+          }
+        }
+        vt = normalizeVideoTransform({
+          ...vt,
+          fitMode: "custom",
+          w: Math.max(8, w),
+          h: Math.max(8, h),
+          x: a.x != null ? +a.x : vt.x,
+          y: a.y != null ? +a.y : vt.y,
+          rotation: a.rotation != null ? +a.rotation : vt.rotation,
+          opacity: a.opacity != null ? +a.opacity : vt.opacity,
+        }, canvas);
+      }
+      ctx.videoTransform = vt;
+      report(`וידאו ${Math.round(vt.w)}×${Math.round(vt.h)} · ${vt.fitMode}`, "מקומי");
+      return `עודכן Element Scale: מצב=${vt.fitMode}, גודל=${Math.round(vt.w)}×${Math.round(vt.h)}, מרכז=(${Math.round(vt.x)},${Math.round(vt.y)}), סיבוב=${vt.rotation}°. מופיע בקנבס ובייצוא.`;
     },
   },
   {
@@ -1221,6 +1303,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
+- set_video_transform: גודל/מיקום/Fit של הווידאו על הקנבס (Element Scale — מופיע בייצוא).
 - render_video רק בסוף / כשמבקשים.
 
 זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → transcribe_timeline → generate_subtitles(script) → render.`;

@@ -740,8 +740,14 @@ button.quote-chip:hover svg { color: var(--accent); }
 .msg2 { display: flex; flex-direction: column; gap: 2px; max-width: 90%; }
 .msg2.user { align-self: flex-start; }
 .msg2.assistant { align-self: flex-end; }
+.msg2 .msg-who {
+  font-size: 11px; font-weight: 600; padding: 0 4px; letter-spacing: 0.01em;
+}
+.msg2.user .msg-who { color: var(--accent); }
+.msg2.assistant .msg-who { color: var(--text-2); }
+.msg2.error .msg-who { color: var(--danger); }
 .msg2 .b { padding: 8px 11px; border-radius: var(--r-lg); font-size: var(--fs); line-height: 1.55; white-space: pre-wrap; word-break: break-word; position: relative; }
-.msg2.user .b { background: var(--accent-tint); border: 1px solid var(--border); border-end-start-radius: var(--r-sm); }
+.msg2.user .b { background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); border-end-start-radius: var(--r-sm); }
 .msg2.assistant .b { background: var(--panel-2); border: 1px solid var(--border); border-end-end-radius: var(--r-sm); }
 .msg2.error .b { background: var(--danger-tint); border-color: var(--danger); color: var(--text); }
 .msg2 .t { font-size: 10px; color: var(--text-3); padding: 0 4px; }
@@ -750,10 +756,14 @@ button.quote-chip:hover svg { color: var(--accent); }
 .msg2 .cp:hover { background: var(--hover); }
 
 .tool2 { display: flex; align-items: center; gap: 9px; align-self: stretch; padding: 7px 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.tool2.running { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.tool2.err { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
 .tool2 .ic { width: 26px; height: 26px; border-radius: var(--r-md); display: grid; place-items: center; flex: none; }
 .tool2 .tx { flex: 1; min-width: 0; }
 .tool2 .tx .nm { font-size: var(--fs-2); font-weight: 500; }
 .tool2 .tx .st { font-size: 11px; color: var(--text-2); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool2 .tx .svc { color: var(--accent); font-weight: 600; }
+.tool2 .tx .svc-sep { color: var(--text-3); }
 .tool2 .stt { flex: none; }
 .tool2 .tool-actions { display: flex; align-items: center; gap: 6px; }
 .tool2 .stt.ok { color: var(--success); }

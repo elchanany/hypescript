@@ -681,10 +681,12 @@ export default function EditorPage() {
       {dockSide === "right" && dockHandle}
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
-          script={script} overlays={overlays} canvas={canvas} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
+          script={script} overlays={overlays} canvas={canvas} videoTransform={videoTransform} sourceSize={sourceSize}
+          projectId={projectId}
+          onProject={({ words: w, clips: c, subs: s, overlays: ovs, videoTransform: vt }) => {
             setWords(w); setProject(c, s);
             if (ovs) setOverlays(ovs);
+            if (vt) setVideoTransform(vt);
           }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
           quoteSink={quoteSink} />

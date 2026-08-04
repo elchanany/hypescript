@@ -1,21 +1,26 @@
 // לולאת הסוכן (צד-לקוח): שולחת שיחה+כלים ל-/api/agent, מבצעת את קריאות הכלים
 // (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
+// כל כלי רץ עם timeout + AbortSignal — לא נתקע לנצח.
 
 import { AgentMode, ChatMessage, Provider, ToolCall } from "./types";
 import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
 import { repairToolMessages } from "./normalize";
+import {
+  LLM_CALL_TIMEOUT_MS,
+  toolTimeoutMs,
+  withTimeoutSignal,
+} from "./timeout";
 
 export interface AgentEvents {
   onAssistant: (text: string) => void;
-  onToolStart: (call: ToolCall, provider: Provider) => void;
-  onToolStatus: (id: string, status: string) => void;
+  onToolStart: (call: ToolCall, meta?: { serviceLabel?: string }) => void;
+  onToolStatus: (id: string, status: string, serviceLabel?: string) => void;
   onToolEnd: (id: string, ok: boolean, summary: string) => void;
   onError: (msg: string) => void;
   onDone: () => void;
 }
 
 const MAX_ITERS = 40;
-const CALL_TIMEOUT_MS = 120000;
 
 /** כלים שאסור להריץ בלולאה — אחרי N קריאות בחלון האחרון נחסמים עם רמז לכלי המוני. */
 const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
@@ -54,6 +59,9 @@ function formatToolError(msg: string): string {
   if (/Failed to fetch|NetworkError|network/i.test(msg)) {
     return `שגיאת רשת: ${msg}. אם זה חוזר — רענון דף או בדיקת חיבור.`;
   }
+  if (/נתקע|timeout|נעצר אחרי/i.test(msg)) {
+    return msg.startsWith("שגיאה:") ? msg : `שגיאה: ${msg}`;
+  }
   return `שגיאה: ${msg}`;
 }
 
@@ -75,6 +83,8 @@ export class AgentRunner {
   private stopped = false;
   private running = false;
   private currentAbort: AbortController | null = null;
+  /** Controllers for in-flight tools — stop() aborts them all. */
+  private toolAborts = new Set<AbortController>();
   private injected: string[] = [];
   /** היסטוריית שמות כלים אחרונים לאכיפת אנטי-לופ */
   private recentTools: string[] = [];
@@ -96,7 +106,9 @@ export class AgentRunner {
 
   stop() {
     this.stopped = true;
-    this.currentAbort?.abort(); // מבטל מיד את קריאת ה-LLM התלויה
+    this.currentAbort?.abort();
+    for (const c of this.toolAborts) c.abort();
+    this.toolAborts.clear();
   }
 
   private guardLoop(name: string): string | null {
@@ -104,7 +116,6 @@ export class AgentRunner {
     if (!guard) return null;
     const window = this.recentTools.slice(-WINDOW);
     const count = window.filter((n) => n === name).length;
-    // count כולל את הקריאה הנוכחית שעוד לא נדחפה — בודקים לפני דחיפה
     if (count + 1 > guard.limit) return guard.hint;
     return null;
   }
@@ -125,12 +136,9 @@ export class AgentRunner {
           this.events.onAssistant("⏹ המשימה נעצרה.");
           break;
         }
-        // הודעות שהמשתמש הזריק תוך כדי ריצה — נכנסות לשיחה לפני הפנייה הבאה.
         if (this.injected.length) {
           for (const m of this.injected.splice(0)) this.history.push({ role: "user", content: m });
         }
-        // תיקון היסטוריה (כולל שמורה/שנקטעה) לפני כל פנייה: כל tool_call חייב
-        // tool result תואם, אחרת הספק מחזיר 400. idempotent.
         this.history = repairToolMessages(this.history);
         const media = this.ctx.media || [];
         const mediaNote = media.length
@@ -138,8 +146,7 @@ export class AgentRunner {
           : "עדיין לא נטענה מדיה.";
         const ctrl = new AbortController();
         this.currentAbort = ctrl;
-        const to = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
-        // אכיפת מצב: ב-ask/plan לא מעבירים כלים כלל, לכן אין אפשרות לשנות את הפרויקט.
+        const to = setTimeout(() => ctrl.abort(), LLM_CALL_TIMEOUT_MS);
         const toolsForMode = this.mode === "act" ? TOOL_SCHEMAS : [];
         let data: any;
         try {
@@ -178,7 +185,9 @@ export class AgentRunner {
           if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
           const msg = e?.message || "שגיאת רשת.";
           if (e?.name === "AbortError") {
-            this.events.onError("הסוכן נתקע (timeout על קריאת ה-LLM). נסה שוב.");
+            this.events.onError(
+              `הסוכן נתקע (timeout ${LLM_CALL_TIMEOUT_MS / 1000}s על קריאת ה-LLM לספק). נסה שוב או החלף ספק.`,
+            );
           } else if (isChunkLoadError(msg)) {
             this.events.onError("שגיאת טעינה (chunk). רענן את הדף ב-Ctrl+Shift+R ואז שלח שוב.");
           } else if (/Failed to fetch/i.test(msg)) {
@@ -196,16 +205,15 @@ export class AgentRunner {
 
         if (!toolCalls.length) {
           this.history.push({ role: "assistant", content });
-          break; // אין קריאות כלים -> הסוכן סיים
+          break;
         }
 
         this.history.push({ role: "assistant", content: content ?? null, tool_calls: toolCalls });
 
-        // ביצוע קריאות הכלים במקביל
         const results = await Promise.all(
           toolCalls.map(async (tc) => {
             const meta = TOOL_BY_NAME[tc.name];
-            this.events.onToolStart(tc, this.provider);
+            this.events.onToolStart(tc, meta?.defaultService ? { serviceLabel: meta.defaultService } : undefined);
             if (!meta) {
               this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
               return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };
@@ -217,9 +225,24 @@ export class AgentRunner {
               return { tool_call_id: tc.id, name: tc.name, content: blocked };
             }
             this.noteTool(tc.name);
+
+            const toolCtrl = new AbortController();
+            this.toolAborts.add(toolCtrl);
+            let lastPhase = "התחלה";
+            const report = (status: string, serviceLabel?: string) => {
+              lastPhase = status;
+              this.events.onToolStatus(tc.id, status, serviceLabel);
+            };
+
+            const limit = toolTimeoutMs(tc.name);
             try {
-              const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
-              // גם תוצאות שמכילות chunk error (כשהכלי תופס ומחזיר מחרוזת)
+              const out = await withTimeoutSignal(
+                meta.run(tc.arguments, this.ctx, report, toolCtrl.signal),
+                limit,
+                meta.label || tc.name,
+                toolCtrl.signal,
+                () => lastPhase,
+              );
               if (isChunkLoadError(out)) {
                 const formatted = formatToolError(out);
                 this.events.onToolEnd(tc.id, false, formatted);
@@ -231,13 +254,14 @@ export class AgentRunner {
               const msg = formatToolError(e?.message || String(e));
               this.events.onToolEnd(tc.id, false, msg);
               return { tool_call_id: tc.id, name: tc.name, content: msg };
+            } finally {
+              this.toolAborts.delete(toolCtrl);
             }
           }),
         );
         for (const r of results) {
           this.history.push({ role: "tool", tool_call_id: r.tool_call_id, name: r.name, content: r.content });
         }
-        // פריימים שצולמו -> הודעת-תמונה לתור הבא (הסוכן "יראה" בספק תומך-ראייה).
         const imgs = this.ctx.pendingImages;
         if (imgs && imgs.length) {
           this.history.push({
@@ -252,6 +276,8 @@ export class AgentRunner {
       }
     } finally {
       this.running = false;
+      for (const c of this.toolAborts) c.abort();
+      this.toolAborts.clear();
       this.events.onDone();
     }
   }

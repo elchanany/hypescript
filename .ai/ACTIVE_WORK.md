@@ -1,7 +1,7 @@
 # ACTIVE_WORK
 
 ## Focus
-אין עבודה פעילה חוסמת על מודל האינטראקציה — הסבב הנוכחי נדחף ל-PR #25.
+תיקוני סוכן: timeouts, תוויות ספק/דובר, set_video_transform — ענף `cursor/agent-timeouts-chat-ux-505e`.
 
 ## Status
-קוד + unit + smoke דפדפן חלקי מאומתים. לא מסומן Complete מלא (Export wasm E2E + כיסוי 45 מלא).
+יישום + unit tests ירוקים; ממתין ל-push/PR ו-smoke קצר.

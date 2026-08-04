@@ -43,6 +43,7 @@ const TOOL_ICON: Record<string, LucideIcon> = {
   trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, delete_clips: Trash2, keep_source_range: Scissors,
   clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,
   list_overlays: Layers, add_text_overlay: Type, delete_overlay: Trash2, update_overlay: Pencil,
+  set_video_transform: Move,
   analyze_audio: AudioLines, remove_silence: AudioLines,
   capture_frame: Camera, generate_subtitles: Captions, list_subtitles: Captions, edit_subtitle: Pencil,
   retime_subtitles: Clock, delete_subtitle: Trash2, export_subtitles: FileDown, import_subtitles: FileUp,
@@ -88,8 +89,16 @@ interface ChatProps {
   script?: string;
   overlays?: Overlay[];
   canvas?: CanvasSize;
+  videoTransform?: import("@/lib/editor/videoTransform").VideoTransform;
+  sourceSize?: { w: number; h: number } | null;
   projectId: string | null;
-  onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null; overlays?: Overlay[] }) => void;
+  onProject: (p: {
+    words: Word[] | null;
+    clips: Clip[] | null;
+    subs: Sub[] | null;
+    overlays?: Overlay[];
+    videoTransform?: import("@/lib/editor/videoTransform").VideoTransform;
+  }) => void;
   // הקשר עריכה חי (context chips + mention resolution)
   playhead?: number;
   selectionLabel?: string | null;
@@ -102,7 +111,7 @@ interface ChatProps {
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, videoTransform, sourceSize, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -214,8 +223,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     const c = ctxRef.current;
     c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
     c.overlays = overlays; c.canvas = canvas || defaultCanvasFor();
+    c.videoTransform = videoTransform;
+    c.sourceSize = sourceSize || undefined;
     if (script.trim()) c.script = script.trim();
-  }, [media, words, clips, subs, overlays, canvas, script]);
+  }, [media, words, clips, subs, overlays, canvas, videoTransform, sourceSize, script]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -258,19 +269,41 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
       runnerRef.current = new AgentRunner(provider, ctxRef.current, {
-        onAssistant: (text) => setItems((p) => [...p, { kind: "assistant", text, time: now() }]),
-        onToolStart: (call, toolProvider) => {
+        onAssistant: (text) => setItems((p) => [...p, {
+          kind: "assistant", text, time: now(),
+          speakerLabel: `סוכן · ${PROVIDER_LABELS[provider]}`,
+        }]),
+        onToolStart: (call, meta) => {
           const m = TOOL_BY_NAME[call.name];
-          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider] }]);
+          setItems((p) => [...p, {
+            kind: "tool", id: call.id, name: call.name, label: m?.label || call.name,
+            color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "",
+            time: now(), providerLabel: meta?.serviceLabel || m?.defaultService,
+          }]);
         },
-        onToolStatus: (id, status) => setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, status } : it))),
+        onToolStatus: (id, status, serviceLabel) => setItems((p) => p.map((it) => (
+          it.kind === "tool" && it.id === id
+            ? { ...it, status, ...(serviceLabel ? { providerLabel: serviceLabel } : {}) }
+            : it
+        ))),
         onToolEnd: (id, ok, summary) => {
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
           const c = ctxRef.current;
-          onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays });
+          onProjectRef.current({
+            words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays,
+            videoTransform: c.videoTransform,
+          });
         },
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
-        onDone: () => setRunning(false),
+        onDone: () => {
+          // Mark any leftover "running" tools as cancelled (e.g. after stop mid-flight)
+          setItems((p) => p.map((it) => (
+            it.kind === "tool" && it.state === "running"
+              ? { ...it, state: "error", status: "שגיאה", summary: it.summary || "הפעולה הופסקה או נעצרה באמצע." }
+              : it
+          )));
+          setRunning(false);
+        },
       });
       if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }
@@ -293,7 +326,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       }
     }
     if (running) {
-      setItems((p) => [...p, { kind: "user", text, time: now() }]);
+      setItems((p) => [...p, { kind: "user", text, time: now(), speakerLabel: "אתה" }]);
       lastUserPromptRef.current = text;
       setInput("");
       runnerRef.current?.injectMessage(text);
@@ -302,7 +335,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     if (!configLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק עדיין את סטטוס המפתחות. נסה שוב בעוד רגע.", time: now() }]); return; }
     const status = getProviderStatus(provider, configured);
     if (status.status !== "ready") { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
-    setItems((p) => [...p, { kind: "user", text, time: now() }]);
+    setItems((p) => [...p, { kind: "user", text, time: now(), speakerLabel: "אתה" }]);
     lastUserPromptRef.current = text;
     setInput(""); setRunning(true);
     getRunner().send(text);
@@ -457,11 +490,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             const detail = toolGroupSummary(it.name, count, it.summary, it.status, it.state);
             const statusText = it.state === "running" ? (count > 1 ? `${it.status} (×${count})` : it.status) : detail;
             return (
-              <div key={it.id || i} className="tool2">
+              <div key={it.id || i} className={`tool2 ${it.state === "running" ? "running" : it.state === "error" ? "err" : "ok"}`}>
                 <span className="ic" style={{ background: it.color + "22", color: it.color }}><Icon size={15} strokeWidth={1.75} /></span>
                 <div className="tx">
                   <div className="nm" style={{ color: it.color }}>{title}</div>
-                  <div className="st">{it.providerLabel ? `דרך ${it.providerLabel} · ${statusText}` : statusText}</div>
+                  <div className="st">
+                    {it.providerLabel
+                      ? <><span className="svc">ספק: {it.providerLabel}</span><span className="svc-sep"> · </span></>
+                      : null}
+                    {statusText}
+                  </div>
                 </div>
                 <span className="stt tool-actions">
                   {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
@@ -498,6 +536,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           }
           return (
             <div key={i} className={`msg2 ${it.kind}`}>
+              <div className="msg-who">
+                {it.kind === "user" ? "אתה" : it.kind === "assistant" ? (("speakerLabel" in it && it.speakerLabel) || `סוכן · ${PROVIDER_LABELS[provider]}`) : "שגיאה"}
+              </div>
               <div className="b">
                 {it.kind === "error" && <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6, color: "var(--danger)" }} />}
                 {it.text}
