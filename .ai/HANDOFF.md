@@ -5,9 +5,10 @@
 עובדים לפי שני מסמכי המפרט (Package A / Packages 1–4): עורך חזותי, Agent dock מקצועי, Canvas direct manipulation, Timeline מקצועי, ומסמכי אודיט. Cloud Agent: commit/push לענף מבודד בלבד; **אין merge/deploy ללא "מאשר לדחוף"**.
 
 ## Current State (verified)
-ענף: `cursor/editor-shell-pkg1-505e` · PR טיוטה #1 (לא ממוזג).
+ענף: `cursor/chat-collapse-tools-thinking-e91a` (על בסיס main אחרי מיזוג shell).
 - **Package 1 (הושלם):** design system; פאנלים ניתנים לשינוי גודל; Media grid/list + thumbnails; טקסט כתוביות בציר; Ghost+Drop indicator.
 - **Agent dock (הושלם):** flex dock מעוגן; Ask/Plan/Act עם אכיפה אמיתית (`tools:[]`); `/` slash; `@mentions`; context chips.
+- **Chat UX (סבב זה):** קיבוץ כרטיסי-כלי זהים רצופים (`collapseTools.ts`) + אינדיקטור נקודות "חושב" בין פעולות.
 - **P0 DeepSeek (הושלם):** `web/lib/agent/normalize.ts` — תיקון היסטוריית tool_calls.
 - **Canvas Direct Manipulation + Export burn-in (סבב זה):**
   - מודל: `Overlay` + `VisualTransform` (center anchor, project px)

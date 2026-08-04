@@ -13,6 +13,7 @@ import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
+import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
 import {
   Bot, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
@@ -165,7 +166,13 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
     fetch("/api/config").then((r) => r.json()).then((d) => setConfigured(d.providers || {})).catch(() => {});
   }, []);
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [items, ask]);
+  const displayItems = useMemo(() => collapseConsecutiveTools(items), [items]);
+  // נקודות "חושב" בין פעולות — כשיש כלי רץ כבר יש ספינר על הכרטיס.
+  const showThinking = running && !ask && !items.some((it) => it.kind === "tool" && it.state === "running");
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [displayItems, ask, showThinking]);
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
@@ -303,15 +310,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             העלה קבצים ותאר מה לעשות — למשל: “השאר רק את הקטע על X”, “תמלל והכן כתוביות”, “הסר שתיקות ונשימות”.
           </div>
         )}
-        {items.map((it, i) => {
+        {displayItems.map((it, i) => {
           if (it.kind === "tool") {
             const Icon = toolIcon(it.name);
+            const count = it.count || 1;
+            const title = toolGroupTitle(it.label, count);
+            const detail = toolGroupSummary(it.name, count, it.summary, it.status, it.state);
             return (
-              <div key={i} className="tool2">
+              <div key={it.id || i} className="tool2">
                 <span className="ic" style={{ background: it.color + "22", color: it.color }}><Icon size={15} strokeWidth={1.75} /></span>
                 <div className="tx">
-                  <div className="nm" style={{ color: it.color }}>{it.label}</div>
-                  <div className="st">{it.state === "running" ? it.status : it.summary || it.status}</div>
+                  <div className="nm" style={{ color: it.color }}>{title}</div>
+                  <div className="st">{detail}</div>
                 </div>
                 <span className="stt">
                   {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
@@ -345,6 +355,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             </div>
           );
         })}
+        {showThinking && (
+          <div className="think2" aria-live="polite" aria-label="הסוכן חושב">
+            <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
+          </div>
+        )}
         {ask && (
           <div className="ask2">
             <div className="q">{ask.q}</div>
