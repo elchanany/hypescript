@@ -114,11 +114,17 @@
 
 ## הרצה מקומית (אופציונלי)
 
-בקובץ `web/.env.local` (צור אם אין):
+כבר יש לך תבנית מוכנה:
+
+1. פתח את הקובץ `web/.env.local` (נוצר מראש עם מקום לכל המפתחות)
+2. הדבק שם גם את שני משתני ה-Supabase (ואת שאר המפתחות אם צריך)
+3. שמור
+
+אם הקובץ חסר אצלך:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ....
+cd web
+cp .env.example .env.local
 ```
 
 ואז:
