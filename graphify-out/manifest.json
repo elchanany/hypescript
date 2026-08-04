@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1785838426.8566906,
-    "ast_hash": "5f0ef010877e12e7585a09c4dc06b990",
+    "mtime": 1785838740.27618,
+    "ast_hash": "f58cd1889baffc6797797f534e2b49b8",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": "a58ec63ef4d35135c13723029a94bae9"
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1785838418.7287986,
-    "ast_hash": "0bab84e8699a9818104c64af607ef29d",
+    "mtime": 1785838774.9518979,
+    "ast_hash": "6e51a49f1e4a7bb197259e2a558dc380",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -335,8 +335,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/subtitlesEdl.ts": {
-    "mtime": 1785838233.8366299,
-    "ast_hash": "709caee3bc494b414a315b0dc49255cc",
+    "mtime": 1785838751.9600894,
+    "ast_hash": "84bd88c3dd39dc0c5e3634fd64aa6666",
     "semantic_hash": ""
   },
   "web/lib/editor/time.test.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "web/lib/ffmpeg.ts": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "3e5e6d8b10536102d5dc06c253ff755b",
+    "mtime": 1785838634.5166993,
+    "ast_hash": "0b68081a96fdd96bbe686fb9e59e0276",
     "semantic_hash": ""
   },
   "web/lib/keys.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "a2fba03d63cc39c3b3e1520e582227c3",
+    "mtime": 1785838791.9397464,
+    "ast_hash": "ad6787bc7bbe9114a24f7404267bb94b",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1785838018.4739296,
-    "ast_hash": "1acf19182e2f654865f9508c1abf6fce",
+    "mtime": 1785838791.9517465,
+    "ast_hash": "d7ce0cac200f725c6305f802256adddd",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -912,6 +912,16 @@
   "docs/SETUP_AUTH.md": {
     "mtime": 1785838018.4739296,
     "ast_hash": "a34da131b4ca84edb3fe66c5afaa6323",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/assembleTranscript.test.ts": {
+    "mtime": 1785838583.2646441,
+    "ast_hash": "40274f121a68896ba5d5d5d43ee9fdac",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/assembleTranscript.ts": {
+    "mtime": 1785838583.2566442,
+    "ast_hash": "702af143a9d533fbe72735d8dcf1a929",
     "semantic_hash": ""
   }
 }

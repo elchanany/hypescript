@@ -20,6 +20,11 @@ import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange } from "@/lib/editor/clipFilter";
 import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import {
+  assembleTranscript,
+  assembledDuration,
+  formatTranscriptLines,
+} from "@/lib/editor/assembleTranscript";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { ToolSchema } from "./types";
 
@@ -30,6 +35,8 @@ export interface AgentContext {
   transcripts: Record<string, Word[]>; // תמלול לכל מקור לפי id (מולטי-וידאו)
   /** מטא-דאטה של תמלול שמור (ספק/מודל) — כדי לא לערבב Groq עם בקשת ElevenLabs */
   transcriptMeta?: Record<string, { provider: string; model: string }>;
+  /** תמלול על ציר ה-EDL הערוך (אחרי חיתוך) — ממיפוי או מתמלול מחדש */
+  assembledWords?: Word[] | null;
   /** סקריפט נקי מהפאנל / keep_by_script — מקור אמת לכתוביות */
   script?: string;
   clips: Clip[] | null;
@@ -199,6 +206,12 @@ function findRanges(words: Word[], query: string, max = 6) {
 const requireClips = (ctx: AgentContext) => (ctx.clips && ctx.clips.length ? null : "שגיאה: אין קליפים. צור חיתוך קודם (keep_by_script / remove_segments).");
 const clipsSummary = (clips: Clip[]) => `${clips.length} קליפים, משך סופי ${fmt(totalDur(clips))}.`;
 
+/** כל שינוי ב-EDL מבטל תמלול-ציר שמור — צריך מיפוי/תמלול מחדש. */
+function setClips(ctx: AgentContext, clips: Clip[] | null) {
+  ctx.clips = clips;
+  ctx.assembledWords = null;
+}
+
 export const TOOLS: ToolMeta[] = [
   {
     name: "get_video_info", label: "בדיקת אורך", color: "#3b82f6", icon: "⏱️",
@@ -300,35 +313,160 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "find_in_transcript", label: "איתור בתמלול", color: "#14b8a6", icon: "🔍",
-    schema: { name: "find_in_transcript", description: "מאתר היכן טקסט נאמר ומחזיר טווחי-זמן (שניות במקור).", parameters: { type: "object", properties: { query: { type: "string" }, source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי)" } }, required: ["query"] } },
+    schema: {
+      name: "find_in_transcript",
+      description:
+        "מאתר היכן טקסט נאמר. ברירת מחדל: זמנים במקור. עם timeline=true — על הציר הערוך (אחרי חיתוך).",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+          source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי; לא רלוונטי עם timeline)" },
+          timeline: { type: "boolean", description: "true=חיפוש על הציר הערוך (assembled)" },
+        },
+        required: ["query"],
+      },
+    },
     run: async (a, ctx) => {
+      const onTimeline = a.timeline === true || a.timeline === "true";
+      if (onTimeline) {
+        if (!ctx.clips?.length) return "אין ציר ערוך. חתוך קודם או השתמש בלי timeline.";
+        const words = ctx.assembledWords?.length
+          ? ctx.assembledWords
+          : assembleTranscript(ctx.clips, (sid) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null));
+        if (!words.length) return "אין תמלול למקורות שבציר. תמלל קודם (transcribe_video).";
+        const r = findRanges(words, String(a.query || ""));
+        return r.length
+          ? "נמצא על הציר הערוך:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n")
+          : `לא נמצא "${a.query}" על הציר הערוך.`;
+      }
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset) return "שגיאה: אין סרטון.";
       const words = transcriptOf(ctx, asset);
       if (!words) return `צריך לתמלל קודם את "${asset.name}".`;
       const r = findRanges(words, String(a.query || ""));
-      return r.length ? "נמצא:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n") : `לא נמצא "${a.query}".`;
+      return r.length ? "נמצא במקור:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n") : `לא נמצא "${a.query}".`;
     },
   },
   {
     name: "get_transcript", label: "קריאת תמלול", color: "#14b8a6", icon: "📄",
-    schema: { name: "get_transcript", description: "מחזיר את התמלול המלא עם חותמות זמן (בשניות) לכל שורה — כדי להבין תוכן ולדעת בדיוק מתי כל דבר נאמר, לצורך חיתוך מדויק. השתמש בזה כדי לקרוא מה נאמר ומתי.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
+    schema: {
+      name: "get_transcript",
+      description:
+        "מחזיר תמלול עם חותמות זמן. " +
+        "timeline=true (מומלץ אחרי חיתוך): זמנים על הציר הערוך — הסדר והזמנים כמו בנגן. " +
+        "בלי timeline: תמלול המקור הגולמי (לפני חיתוך).",
+      parameters: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "סרטון מקור (רק כשלא timeline)" },
+          timeline: { type: "boolean", description: "true=ציר ערוך אחרי חיתוך (ברירת מחדל true אם יש קליפים)" },
+        },
+      },
+    },
     run: async (a, ctx) => {
+      const hasClips = !!ctx.clips?.length;
+      const onTimeline = a.timeline === true || a.timeline === "true"
+        || (a.timeline == null && hasClips && !a.source);
+
+      if (onTimeline) {
+        if (!hasClips) return "אין ציר ערוך. תמלל מקור או בנה קליפים קודם.";
+        const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null);
+        const words = ctx.assembledWords?.length
+          ? ctx.assembledWords
+          : assembleTranscript(ctx.clips!, getWords);
+        if (!words.length) {
+          return "אין מילים על הציר הערוך — תמלל את המקורות (transcribe_video) ואז קרא שוב עם timeline=true, או הרץ transcribe_timeline.";
+        }
+        // שמירה לשימוש חוזר בלי לחשב שוב
+        if (!ctx.assembledWords?.length) ctx.assembledWords = words;
+        const events = words.filter((w) => w.type === "audio_event");
+        const speech = words.filter(isSpeechWord);
+        const lines = formatTranscriptLines(words);
+        const eventLines = events.slice(0, 40).map((e) => `• ${e.start.toFixed(1)}–${e.end.toFixed(1)}s ${e.text}`);
+        const dur = assembledDuration(ctx.clips!);
+        return `תמלול על הציר הערוך (${speech.length} מילים, משך ${dur.toFixed(1)}s) — זמנים כמו בנגן:\n${lines}` +
+          (eventLines.length ? `\n\nאירועי שמע:\n${eventLines.join("\n")}` : "") +
+          `\n\n(לרענון אחרי חיתוך נוסף: transcribe_timeline. לתמלול API מחדש על האודיו הערוך: mode=retranscribe)`;
+      }
+
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset) return "אין סרטון.";
       const words = transcriptOf(ctx, asset);
       if (!words) return `"${asset.name}" עדיין לא תומלל.`;
       const events = words.filter((w) => w.type === "audio_event");
       const speech = words.filter(isSpeechWord);
-      // מקבצים לשורות עם חותמת זמן [start–end], כך שהמודל רואה גם תוכן וגם תזמון מדויק.
-      const lines: string[] = [];
-      let cur: Word[] = [];
-      const flush = () => { if (cur.length) { lines.push(`[${cur[0].start.toFixed(1)}–${cur[cur.length - 1].end.toFixed(1)}s] ${cur.map((w) => w.text).join(" ")}`); cur = []; } };
-      for (const w of speech) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
-      flush();
+      const lines = formatTranscriptLines(words);
       const eventLines = events.slice(0, 40).map((e) => `• ${e.start.toFixed(1)}–${e.end.toFixed(1)}s ${e.text}${e.speakerId ? ` (${e.speakerId})` : ""}`);
-      return `תמלול "${asset.name}" (${speech.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}` +
-        (eventLines.length ? `\n\nאירועי שמע (${events.length}):\n${eventLines.join("\n")}` : "");
+      return `תמלול מקור "${asset.name}" (${speech.length} מילים, זמנים במקור):\n${lines}` +
+        (eventLines.length ? `\n\nאירועי שמע (${events.length}):\n${eventLines.join("\n")}` : "") +
+        (hasClips ? `\n\nטיפ: אחרי חיתוך השתמש ב-get_transcript(timeline=true) או transcribe_timeline לקבלת הסדר העדכני.` : "");
+    },
+  },
+  {
+    name: "transcribe_timeline", label: "תמלול הציר הערוך", color: "#8b5cf6", icon: "🗺️",
+    schema: {
+      name: "transcribe_timeline",
+      description:
+        "בונה תמלול על הציר הערוך אחרי חיתוך/סידור. " +
+        "mode=remap (ברירת מחדל, חינמי ומיידי): ממפה את תמלולי המקור לזמנים החדשים. " +
+        "mode=retranscribe: יוצר אודיו זמני מהעריכה ושולח ל-STT (ElevenLabs/Groq) — מדויק יותר אחרי הרכבה מורכבת, בתשלום.",
+      parameters: {
+        type: "object",
+        properties: {
+          mode: { type: "string", description: "remap | retranscribe" },
+          provider: { type: "string", description: "רק ל-retranscribe: elevenlabs | groq | auto" },
+          model: { type: "string", description: "רק ל-retranscribe: מודל STT" },
+        },
+      },
+    },
+    run: async (a, ctx, report) => {
+      if (!ctx.clips?.length) return "שגיאה: אין קליפים. חתוך/בנה ציר קודם.";
+      const mode = String(a.mode || "remap").toLowerCase() === "retranscribe" ? "retranscribe" : "remap";
+      const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null);
+
+      if (mode === "remap") {
+        report("ממפה תמלול לציר הערוך…");
+        const words = assembleTranscript(ctx.clips, getWords);
+        if (!words.length) {
+          return "אין תמלול מקורות למיפוי. תמלל קודם (transcribe_video) או השתמש ב-mode=retranscribe.";
+        }
+        ctx.assembledWords = words;
+        const n = words.filter(isSpeechWord).length;
+        const dur = assembledDuration(ctx.clips);
+        return `מופה תמלול לציר הערוך: ${n} מילים, משך ${dur.toFixed(1)}s (בלי תמלול API). קרא עם get_transcript(timeline=true).`;
+      }
+
+      // retranscribe: אודיו זמני מה-EDL → STT
+      try { await import("@/lib/ffmpeg"); }
+      catch { throw new Error("נפרסה גרסה חדשה — רענן את הדף (Ctrl+Shift+R) ואז נסה שוב."); }
+
+      const { provider, model } = await resolveSttChoice(a.provider, a.model);
+      report(`בונה אודיו זמני מהעריכה…`);
+      let extractAssembledAudio: typeof import("@/lib/ffmpeg").extractAssembledAudio;
+      let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
+      try {
+        ({ extractAssembledAudio } = await import("@/lib/ffmpeg"));
+        ({ transcribeMediaFile } = await import("@/lib/transcribe/client"));
+      } catch {
+        throw new Error("נפרסה גרסה חדשה — רענן את הדף (Ctrl+Shift+R) ואז נסה שוב.");
+      }
+
+      const { blob, durationSec } = await extractAssembledAudio(ctx.media, ctx.clips, () => {});
+      const file = new File([blob], "edited_timeline.mp3", { type: "audio/mpeg" });
+      report(`מתמלל את האודיו הערוך ב-${provider}/${model}…`);
+      const words = await transcribeMediaFile({
+        file,
+        durationSec,
+        provider,
+        model,
+        onPhase: (msg) => report(msg),
+      });
+      ctx.assembledWords = words;
+      // אופציונלי: להציע הורדת האודיו הזמני
+      ctx.onOutput?.(blob, "edited_timeline.mp3", "audio");
+      const n = words.filter(isSpeechWord).length;
+      return `תומלל הציר הערוך מחדש ב-${provider}/${model}: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`;
     },
   },
   {
@@ -398,11 +536,11 @@ export const TOOLS: ToolMeta[] = [
       if (within && hasEdl) {
         merged = intersectClipsWithSpeech(ctx.clips!, speech, asset.id);
         if (!merged.length) return "לא נשאר דיבור בתוך הקליפים הקיימים. בדוק טווחים או הרץ עם replace_all=true בזהירות.";
-        ctx.clips = merged;
+        setClips(ctx, merged);
         return `הוסרו שתיקות *בתוך הבחירה הקיימת* מ-"${asset.name}" (סף ${thr.toFixed(0)}dB). ${clipsSummary(merged)}`;
       }
       merged = speech;
-      ctx.clips = merged;
+      setClips(ctx, merged);
       const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
       return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s. ${clipsSummary(merged)}`;
     },
@@ -449,8 +587,8 @@ export const TOOLS: ToolMeta[] = [
       if (scriptText) ctx.script = scriptText;
       const clips = scriptToClips(words, scriptText, asset.id);
       if (!clips.length) return `לא נמצאו התאמות ב-"${asset.name}".`;
-      ctx.clips = a.append ? [...(ctx.clips || []), ...clips] : clips;
-      return `${a.append ? "נוספו" : "נבנו"} קליפים מ-"${asset.name}". ${clipsSummary(ctx.clips)}`;
+      setClips(ctx, a.append ? [...(ctx.clips || []), ...clips] : clips);
+      return `${a.append ? "נוספו" : "נבנו"} קליפים מ-"${asset.name}". ${clipsSummary(ctx.clips!)}`;
     },
   },
   {
@@ -465,7 +603,7 @@ export const TOOLS: ToolMeta[] = [
       for (const s of segs) { if (s.start - prev > 0.05) clips.push({ id: uid(), sourceId: m.id, start: prev, end: s.start }); prev = Math.max(prev, s.end); }
       if (dur - prev > 0.05) clips.push({ id: uid(), sourceId: m.id, start: prev, end: dur });
       if (!clips.length) return "לא נשאר תוכן.";
-      ctx.clips = clips;
+      setClips(ctx, clips);
       return `הוסרו ${segs.length} קטעים. ${clipsSummary(clips)}`;
     },
   },
@@ -482,8 +620,8 @@ export const TOOLS: ToolMeta[] = [
       const start = a.start != null ? Math.max(0, +a.start) : 0;
       const end = a.end != null ? Math.min(asset.duration, +a.end) : asset.duration;
       const clip: Clip = { id: uid(), sourceId: asset.id, start, end: Math.max(start + 0.1, end) };
-      ctx.clips = addClip(ctx.clips || [], clip, a.at_index != null ? (a.at_index | 0) - 1 : undefined);
-      return `נוסף קליפ מ-"${asset.name}". ${clipsSummary(ctx.clips)}`;
+      setClips(ctx, addClip(ctx.clips || [], clip, a.at_index != null ? (a.at_index | 0) - 1 : undefined));
+      return `נוסף קליפ מ-"${asset.name}". ${clipsSummary(ctx.clips!)}`;
     },
   },
   {
@@ -505,7 +643,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      ctx.clips = splitClip(ctx.clips!, c.id, +a.at_source);
+      setClips(ctx, splitClip(ctx.clips!, c.id, +a.at_source));
       return `פוצל. ${clipsSummary(ctx.clips!)}`;
     },
   },
@@ -524,7 +662,7 @@ export const TOOLS: ToolMeta[] = [
       const start = a.start != null && a.start !== "" ? +a.start : c.start;
       const end = a.end != null && a.end !== "" ? +a.end : c.end;
       if (!Number.isFinite(start) || !Number.isFinite(end)) return "שגיאה: start/end לא תקינים.";
-      ctx.clips = trimClip(ctx.clips!, c.id, start, end, maxDur);
+      setClips(ctx, trimClip(ctx.clips!, c.id, start, end, maxDur));
       const after = ctx.clips!.find((x) => x.id === c.id);
       if (!after || !Number.isFinite(after.start) || !Number.isFinite(after.end)) return "שגיאה: הטרים נכשל (גבולות לא תקינים).";
       return `טורם קליפ ${a.index | 0} ל-${after.start.toFixed(2)}–${after.end.toFixed(2)}s. ${clipsSummary(ctx.clips!)}`;
@@ -536,7 +674,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      ctx.clips = moveClip(ctx.clips!, c.id, (a.to_index | 0) - 1);
+      setClips(ctx, moveClip(ctx.clips!, c.id, (a.to_index | 0) - 1));
       return `הוזז. ${clipsSummary(ctx.clips!)}`;
     },
   },
@@ -550,9 +688,9 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      if (isGapClip(c)) ctx.clips = closeGap(ctx.clips!, c.id);
-      else if (a.leave_gap) ctx.clips = removeClipLeaveGap(ctx.clips!, c.id);
-      else ctx.clips = removeClipRipple(ctx.clips!, c.id);
+      if (isGapClip(c)) setClips(ctx, closeGap(ctx.clips!, c.id));
+      else if (a.leave_gap) setClips(ctx, removeClipLeaveGap(ctx.clips!, c.id));
+      else setClips(ctx, removeClipRipple(ctx.clips!, c.id));
       return `עודכן. ${ctx.clips!.length ? clipsSummary(ctx.clips!) : "אין קליפים."}`;
     },
   },
@@ -567,7 +705,7 @@ export const TOOLS: ToolMeta[] = [
       const err = requireClips(ctx); if (err) return err;
       const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
       if (isGapClip(c)) return "לא ניתן להשבית רווח — מחק/סגור אותו.";
-      ctx.clips = ctx.clips!.map((x, k) => (k === i ? { ...x, enabled: !!a.enabled } : x));
+      setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, enabled: !!a.enabled } : x)));
       return `קטע ${a.index}: ${a.enabled ? "פעיל" : "מושבת"}.`;
     },
   },
@@ -583,7 +721,7 @@ export const TOOLS: ToolMeta[] = [
       const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
       if (isGapClip(c)) return "לרווח אין עוצמה.";
       const volume = Math.max(0, Math.min(2, +a.volume));
-      ctx.clips = ctx.clips!.map((x, k) => (k === i ? { ...x, volume } : x));
+      setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, volume } : x)));
       return `עוצמת קטע ${a.index}: ${Math.round(volume * 100)}%.`;
     },
   },
@@ -682,9 +820,9 @@ export const TOOLS: ToolMeta[] = [
       const err = requireClips(ctx); if (err) return err;
       const before = ctx.clips!.length;
       if (Array.isArray(a.indices) && a.indices.length) {
-        ctx.clips = deleteClipsAt(ctx.clips!, a.indices.map((x: any) => +x));
+        setClips(ctx, deleteClipsAt(ctx.clips!, a.indices.map((x: any) => +x)));
       } else if (a.from_index != null && a.to_index != null) {
-        ctx.clips = deleteClipRange(ctx.clips!, +a.from_index, +a.to_index);
+        setClips(ctx, deleteClipRange(ctx.clips!, +a.from_index, +a.to_index));
       } else {
         return "שגיאה: העבר indices או from_index+to_index.";
       }
@@ -712,9 +850,9 @@ export const TOOLS: ToolMeta[] = [
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       const start = +a.start; const end = +a.end;
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return "שגיאה: טווח לא תקין.";
-      ctx.clips = keepSourceRange(ctx.clips!, start, end, asset?.id);
-      return ctx.clips.length
-        ? `נשמר טווח ${start.toFixed(1)}–${end.toFixed(1)}s. ${clipsSummary(ctx.clips)}`
+      setClips(ctx, keepSourceRange(ctx.clips!, start, end, asset?.id));
+      return ctx.clips!.length
+        ? `נשמר טווח ${start.toFixed(1)}–${end.toFixed(1)}s. ${clipsSummary(ctx.clips!)}`
         : "לא נשאר קליפ בטווח.";
     },
   },
@@ -723,7 +861,7 @@ export const TOOLS: ToolMeta[] = [
     schema: { name: "clear_clips", description: "מוחק את כל הקליפים בבת אחת (לאתחול EDL).", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
       const n = ctx.clips?.length || 0;
-      ctx.clips = [];
+      setClips(ctx, []);
       return `נוקו ${n} קליפים.`;
     },
   },
@@ -1006,7 +1144,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - אם המשתמש מבקש במפורש ElevenLabs / אליוון / Scribe — חובה transcribe_video עם provider="elevenlabs". אם כבר יש תמלול מספק אחר — force=true. אסור להסתפק במטמון Groq כשהמשתמש ביקש ElevenLabs.
 - list_stt_models: מה זמין ומה ברירת המחדל. אל תקבע מודל שלא קיים.
 - לתמלול תורני: אפשר keyterms עם שמות/מונחים. אל תפעיל no_verbatim כשרוצים לשמור צחוק/נשימות כאירועים.
-- get_transcript מציג גם אירועי שמע אם יש (מ-ElevenLabs).
+- get_transcript: אחרי חיתוך — timeline=true (או ברירת מחדל כשיש קליפים) מחזיר זמנים על הציר הערוך. בלי timeline = מקור גולמי.
+- אחרי עריכת הציר: חובה לרענן הבנה עם transcribe_timeline (mode=remap חינמי) או get_transcript(timeline=true). mode=retranscribe = אודיו זמני + STT מחדש (בתשלום).
 - קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
 
@@ -1014,7 +1153,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות.
 2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = אתה עושה את זה לא נכון.
 3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה.
-4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → generate_subtitles(script=אותו טקסט נקי) → list_subtitles ובדיקה → render בסוף.
+4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → transcribe_timeline (remap) או get_transcript(timeline=true) → generate_subtitles(script=אותו טקסט נקי) → list_subtitles ובדיקה → render בסוף.
 5. תמלול ASR משובש לעיתים (שמות, מילים נדירות). הטקסט שהמשתמש כתב הוא מקור האמת לכתוביות ולחיתוך. לעולם אל תשאיר בכתוביות מילים מוזרות/משובשות מה-ASR אם יש סקריפט נקי — העבר script ל-generate_subtitles.
 6. אחרי get_transcript / list_subtitles: אם אתה רואה שיבושי כתיב או מילים חסרות-היגיון מול הסקריפט — תקן (generate_subtitles עם script). אל תתעלם ואל תמציא כתוביות ידנית במקום generate_subtitles+script.
 7. שגיאת "Loading chunk … failed": בקש מהמשתמש לרענן את הדף (Ctrl+Shift+R). אל תנסה שוב ושוב בלי רענון.
@@ -1023,6 +1162,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 10. חסר נכס (תמונה/סאונד שהמשתמש אמר שיביא אחר כך) — ask_user או ציין שתחכה; אל תמציא ואל תיתקע.
 11. קריינות/תמלול בתשלום: אל תריץ generate_narration או תמלול חוזר מיותר בלי צורך. אם חסר מפתח — הסבר להגדיר ELEVENLABS_API_KEY בהגדרות/Vercel.
 12. כתוביות: generate_subtitles חושף מילים לפי קצב הדיבור. אל תערוך עשרות כתוביות ידנית לתזמון — הרץ מחדש עם script. אסור להשאיר מילים חתוכות/משובשות.
+13. אחרי חיתוך/סידור — אל תסתמך על זמני המקור. השתמש ב-transcribe_timeline או get_transcript(timeline=true). retranscribe רק כשremap לא מספיק (הרכבה מורכבת/בקשת משתמש).
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -1030,12 +1170,13 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
 - delete_clips / clear_clips: מחיקות המוניות.
 - trim_clip: אפשר רק start או רק end.
+- transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
 - render_video רק בסוף / כשמבקשים.
 
-זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → generate_subtitles(script) → render.`;
+זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → transcribe_timeline → generate_subtitles(script) → render.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.

@@ -4,10 +4,10 @@
 // ברירת מחדל: חשיפה מצטברת לפי קצב הדיבור (מילה נוספת כשהיא נאמרת),
 // עם שבירת ביטוי בפאוזה/פיסוק — לא בלוק אחד של כל המילים מראש.
 
-import { isSpeechWord, Word } from "@/lib/models";
 import { getOpcodes, normalizeHebrew } from "@/lib/align";
-import { Clip, assembledStart, clipDur, uid } from "./model";
+import { Clip, clipDur, uid } from "./model";
 import { buildSrt, Cue } from "@/lib/subtitles";
+import { assembleTranscript, type WordsBySource as AssembleWordsBySource } from "./assembleTranscript";
 
 const RLM = "‏";
 const PHRASE_END = /[.?!…׃:,،;]$/;
@@ -69,7 +69,7 @@ export function parseSrt(text: string): Sub[] {
 
 // מקבל טקסט לכל מקור בנפרד — קריטי לרצף רב-מקורי: כל קליפ מקבל כתוביות
 // מהתמלול של *המקור שלו*, לא מתמלול גלובלי אחד.
-export type WordsBySource = (sourceId: string) => Word[] | null | undefined;
+export type WordsBySource = AssembleWordsBySource;
 
 function endsPhrase(text: string | undefined): boolean {
   if (!text) return false;
@@ -78,26 +78,13 @@ function endsPhrase(text: string | undefined): boolean {
 
 type TimedTok = { text: string; start: number; end: number };
 
-function speechOnly(words: Word[]): Word[] {
-  return words.filter(isSpeechWord);
-}
-
 function assembledWords(clips: Clip[], getWords: WordsBySource): TimedTok[] {
-  const out: TimedTok[] = [];
-  clips.forEach((c, ci) => {
-    const base = assembledStart(clips, ci);
-    const ws = speechOnly(getWords(c.sourceId) || [])
-      .filter((w) => w.start >= c.start - 0.05 && w.end <= c.end + 0.05)
-      .sort((a, b) => a.start - b.start);
-    for (const w of ws) {
-      out.push({
-        text: w.text,
-        start: base + (w.start - c.start),
-        end: base + (w.end - c.start),
-      });
-    }
-  });
-  return out;
+  // משתמש באותו מיפוי כמו assembleTranscript (כולל gaps/disabled)
+  return assembleTranscript(clips, getWords).map((w) => ({
+    text: w.text,
+    start: w.start,
+    end: w.end,
+  }));
 }
 
 /** מפצל לביטויים לפי פאוזה / פיסוק / תקציב תווים. */

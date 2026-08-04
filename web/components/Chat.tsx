@@ -38,6 +38,7 @@ const now = () => { const d = new Date(); return `${String(d.getHours()).padStar
 // tool name -> icon (single consistent family; falls back to a generic wrench).
 const TOOL_ICON: Record<string, LucideIcon> = {
   get_video_info: Info, list_media: Layers, transcribe_video: Type, find_in_transcript: Search, get_transcript: Type,
+  transcribe_timeline: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
   trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, delete_clips: Trash2, keep_source_range: Scissors,
   clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,

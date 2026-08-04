@@ -5,7 +5,8 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import { Clip, MediaAsset, mediaById, uid } from "./editor/model";
+import { Clip, MediaAsset, clipDur, clipEnabled, mediaById, uid } from "./editor/model";
+import { isGapClip } from "./editor/timelineOps";
 import { Overlay } from "./editor/overlay";
 import { CanvasSize } from "./editor/canvasCoords";
 import { buildConcatGraph, RenderTarget, DEFAULT_TARGET, toExecArgs } from "./render/graph";
@@ -137,6 +138,88 @@ export async function extractAudioChunks(
     out.push({ blob, offset: start });
   }
   return out;
+}
+
+/**
+ * בונה אודיו זמני (mono 16kHz mp3) לפי ה-EDL הערוך — לתמלול מחדש על הציר הסופי.
+ * רווחים → שקט; קליפים מושבתים מדולגים.
+ */
+export async function extractAssembledAudio(
+  media: MediaAsset[],
+  clips: Clip[],
+  onProgress?: (r: number) => void,
+): Promise<{ blob: Blob; durationSec: number }> {
+  return runExclusive(async () => {
+    const active = clips.filter((c) => clipEnabled(c) && clipDur(c) > 0.05);
+    if (!active.length) throw new Error("אין קליפים פעילים לבניית אודיו ערוך.");
+
+    const ff = await getFFmpeg();
+    if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
+
+    const written = new Map<string, string>(); // assetId → filename
+    const inputIndex = new Map<string, number>(); // assetId → -i index
+    const inputArgs: string[] = [];
+    const filterParts: string[] = [];
+    const labels: string[] = [];
+    let nextInput = 0;
+    let lavfiIdx = -1;
+    let durationSec = 0;
+
+    const ensureAssetInput = async (asset: MediaAsset): Promise<number> => {
+      const existing = inputIndex.get(asset.id);
+      if (existing != null) return existing;
+      const fn = `asm_${written.size}.${extOf(asset.file.name)}`;
+      await ff.writeFile(fn, await fetchFile(asset.file));
+      const idx = nextInput++;
+      inputArgs.push("-i", fn);
+      written.set(asset.id, fn);
+      inputIndex.set(asset.id, idx);
+      return idx;
+    };
+
+    const ensureSilence = (): number => {
+      if (lavfiIdx >= 0) return lavfiIdx;
+      lavfiIdx = nextInput++;
+      inputArgs.push("-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono");
+      return lavfiIdx;
+    };
+
+    for (let i = 0; i < active.length; i++) {
+      const c = active[i];
+      const dur = clipDur(c);
+      durationSec += dur;
+      const lab = `a${i}`;
+      const asset = isGapClip(c) ? undefined : mediaById(media, c.sourceId);
+      const needsSilence = isGapClip(c) || !asset || (asset.kind !== "video" && asset.kind !== "audio");
+
+      if (needsSilence) {
+        const idx = ensureSilence();
+        filterParts.push(
+          `[${idx}:a]atrim=0:${dur.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=16000:channel_layouts=mono[${lab}]`,
+        );
+      } else {
+        const idx = await ensureAssetInput(asset!);
+        filterParts.push(
+          `[${idx}:a]atrim=${c.start.toFixed(3)}:${c.end.toFixed(3)},asetpts=PTS-STARTPTS,aformat=sample_rates=16000:channel_layouts=mono[${lab}]`,
+        );
+      }
+      labels.push(`[${lab}]`);
+    }
+
+    const out = `asm_out_${uid()}.mp3`;
+    const filter = `${filterParts.join(";")};${labels.join("")}concat=n=${active.length}:v=0:a=1[outa]`;
+    await ff.exec([
+      ...inputArgs,
+      "-filter_complex", filter,
+      "-map", "[outa]",
+      "-ac", "1", "-ar", "16000", "-b:a", "48k",
+      out,
+    ]);
+    const data = (await ff.readFile(out)) as Uint8Array;
+    await ff.deleteFile(out).catch(() => {});
+    for (const fn of written.values()) await ff.deleteFile(fn).catch(() => {});
+    return { blob: new Blob([data as unknown as BlobPart], { type: "audio/mpeg" }), durationSec };
+  });
 }
 
 // מחלץ פריים בודד בשנייה נתונה (seek מהיר). מחזיר PNG.

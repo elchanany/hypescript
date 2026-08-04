@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-תיקון כתוביות (progressive + script + ElevenLabs enforcement)
+כתוביות progressive + תמלול ציר ערוך אחרי חיתוך
 
 ## Branch
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-`79b324d` — docs: עדכון ACTIVE_WORK אחרי push
+(pending)
 
 ## Status
-PR #23 draft — מוכן ל-review/merge
+PR #23 — הרחבה: assembleTranscript + transcribe_timeline
 
 ## Exact continuation point
-Merge PR; verify on Vercel that ElevenLabs key is set; optional ASS burn for long lessons.
+Merge PR #23; verify remap/retranscribe in Act mode after cuts.
