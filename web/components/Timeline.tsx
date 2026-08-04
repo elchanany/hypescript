@@ -5,6 +5,7 @@ import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, tota
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
+import { isGapClip } from "@/lib/editor/timelineOps";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
@@ -30,6 +31,11 @@ interface Props {
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
+  onWheelZoom?: (deltaY: number, clientX: number, laneEl: HTMLElement) => void;
+  onOverlayTrimBegin?: () => void;
+  onOverlayTrim?: (id: string, start: number, end: number) => void;
+  onOverlayTrimEnd?: () => void;
+  onOverlayMove?: (id: string, start: number, end: number) => void;
   renameTrack: (id: string, name: string) => void;
   toggleLock: (id: string) => void;
   toggleMute: (id: string) => void;
@@ -44,10 +50,11 @@ const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const
 export default function Timeline(p: Props) {
   const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, zoom, snap } = p;
   const laneRef = useRef<HTMLDivElement>(null);
+  const overlayLaneRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
-  const drag = useRef<{ mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
+  const drag = useRef<{ kind: "clip" | "overlay"; mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
 
   const colorOf = (sourceId: string) => SOURCE_COLORS[Math.max(0, media.findIndex((m) => m.id === sourceId)) % SOURCE_COLORS.length];
   const total = Math.max(0.001, p.maxDuration || totalDur(clips));
@@ -94,9 +101,27 @@ export default function Timeline(p: Props) {
   const onDown = (e: React.MouseEvent, clip: Clip, mode: "move" | "l" | "r") => {
     if (vLocked) return;
     e.stopPropagation();
-    drag.current = { mode, id: clip.id, x0: e.clientX, laneW: laneRef.current?.clientWidth || 1, s0: clip.start, e0: clip.end, moved: false, px: e.clientX };
+    drag.current = { kind: "clip", mode, id: clip.id, x0: e.clientX, laneW: laneRef.current?.clientWidth || 1, s0: clip.start, e0: clip.end, moved: false, px: e.clientX };
     if (mode === "move") { const a = mediaById(media, clip.sourceId); setDragLabel({ name: (a?.name || "").replace(/\.[^.]+$/, "") || "קטע", dur: clipDur(clip) }); }
     if (mode === "l" || mode === "r") p.onTrimBegin();
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+  const onOverlayDown = (e: React.MouseEvent, overlay: Overlay, mode: "move" | "l" | "r") => {
+    e.stopPropagation();
+    p.onSelectOverlay?.(overlay.id);
+    p.onOverlayTrimBegin?.();
+    drag.current = {
+      kind: "overlay",
+      mode,
+      id: overlay.id,
+      x0: e.clientX,
+      laneW: overlayLaneRef.current?.clientWidth || 1,
+      s0: overlay.start,
+      e0: overlay.end,
+      moved: false,
+      px: e.clientX,
+    };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
@@ -105,6 +130,16 @@ export default function Timeline(p: Props) {
     const dx = e.clientX - d.x0; d.px = e.clientX;
     if (Math.abs(dx) > 3) d.moved = true;
     const dt = (dx / d.laneW) * total;
+    if (d.kind === "overlay") {
+      if (d.mode === "l") p.onOverlayTrim?.(d.id, d.s0 + dt, d.e0);
+      else if (d.mode === "r") p.onOverlayTrim?.(d.id, d.s0, d.e0 + dt);
+      else if (d.moved) {
+        const dur = d.e0 - d.s0;
+        const start = d.s0 + dt;
+        p.onOverlayMove?.(d.id, start, start + dur);
+      }
+      return;
+    }
     if (d.mode === "l") p.onTrim(d.id, d.s0 + dt, d.e0);
     else if (d.mode === "r") p.onTrim(d.id, d.s0, d.e0 + dt);
     else if (d.mode === "move" && d.moved) {
@@ -125,7 +160,8 @@ export default function Timeline(p: Props) {
     window.removeEventListener("mouseup", onUp);
     endDragVisuals();
     if (!d) { drag.current = null; return; }
-    if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
+    if (d.kind === "overlay") p.onOverlayTrimEnd?.();
+    else if (d.mode === "l" || d.mode === "r") p.onTrimEnd();
     else if (d.mode === "move") {
       if (!d.moved) p.onSelect(d.id);
       else p.onReorder(d.id, dropTarget(d.px).index);
@@ -137,12 +173,17 @@ export default function Timeline(p: Props) {
     const rect = el.getBoundingClientRect();
     p.onSeek(applySnap(Math.max(0, Math.min(total, ((e.clientX - rect.left) / rect.width) * total))));
   };
+  const wheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    p.onWheelZoom?.(e.deltaY, e.clientX, laneRef.current || e.currentTarget);
+  };
 
   const Playhead = () => <div className="playhead2" style={{ left: `${pct(currentAssembled)}%` }} />;
   const Grid = () => (<>{ticks.out.map((t) => <div key={t} className="tl-gridline" style={{ left: `${pct(t)}%` }} />)}</>);
 
   return (
-    <div className="tl-scroll">
+    <div className="tl-scroll" onWheel={wheelZoom}>
       <div className="tl-ghost" ref={ghostRef}>
         <span className="g-name">{dragLabel?.name}</span>
         <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
@@ -189,6 +230,21 @@ export default function Timeline(p: Props) {
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
                   {clips.map((c, i) => {
+                    const gap = isGapClip(c);
+                    if (gap) {
+                      return (
+                        <div key={c.id}
+                          className={`clip-gap ${c.id === selectedId ? "selected" : ""} ${vLocked ? "locked" : ""}`}
+                          style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
+                          onMouseDown={(e) => onDown(e, c, "move")}
+                          onContextMenu={(e) => { e.preventDefault(); p.onSelect(c.id); p.onClipMenu(c.id, e.clientX, e.clientY); }}
+                          title={`רווח · ${clipDur(c).toFixed(1)}s`}>
+                          {!vLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l")} />}
+                          <span className="clip-label"><span>רווח</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
+                          {!vLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r")} />}
+                        </div>
+                      );
+                    }
                     const asset = mediaById(media, c.sourceId);
                     const short = (asset?.name || "").replace(/\.[^.]+$/, "");
                     const thumbH = Math.max(28, track.height - 8);
@@ -218,10 +274,11 @@ export default function Timeline(p: Props) {
                 <div className={`tl-lane2 ${track.muted ? "muted" : ""}`} onClick={(e) => seekFromRow(e, e.currentTarget)}>
                   <Grid />
                   {clips.map((c, i) => {
+                    const gap = isGapClip(c);
                     const asset = mediaById(media, c.sourceId);
                     return (
-                      <div key={c.id} className="clip-audio" style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}>
-                        {asset && (asset.kind === "video" || asset.kind === "audio") && (
+                      <div key={c.id} className={`clip-audio ${gap ? "gap" : ""}`} style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}>
+                        {!gap && asset && (asset.kind === "video" || asset.kind === "audio") && (
                           <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />
                         )}
                       </div>
@@ -254,7 +311,7 @@ export default function Timeline(p: Props) {
               <span className="hd-name">שכבות</span>
             </div>
           </div>
-          <div className="tl-lane2" onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
+          <div className="tl-lane2" ref={overlayLaneRef} onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
             <Grid />
             {overlays.map((o) => {
               const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
@@ -265,8 +322,11 @@ export default function Timeline(p: Props) {
                   className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""}`}
                   style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%` }}
                   title={`${label} · ${dur.toFixed(1)}s`}
+                  onMouseDown={(e) => onOverlayDown(e, o, "move")}
                   onClick={(e) => { e.stopPropagation(); p.onSelectOverlay?.(o.id); }}>
+                  <span className="trim l" onMouseDown={(e) => onOverlayDown(e, o, "l")} />
                   <span className="clip-label"><span>{label}</span><span className="cl-dur">{dur.toFixed(1)}s</span></span>
+                  <span className="trim r" onMouseDown={(e) => onOverlayDown(e, o, "r")} />
                 </div>
               );
             })}

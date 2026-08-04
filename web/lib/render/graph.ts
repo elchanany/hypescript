@@ -7,6 +7,7 @@
 // and on native FFmpeg (LocalNativeRenderBackend) later — so the join fix is shared.
 
 import { Clip, MediaAsset, clipDur, clipEnabled, clipVolume, mediaById } from "@/lib/editor/model";
+import { isGapClip } from "@/lib/editor/timelineOps";
 
 export interface RenderTarget { w: number; h: number; fps: number; }
 export const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
@@ -38,9 +39,20 @@ function aChain(volume: number): string {
     + `aformat=sample_rates=${SR}:channel_layouts=stereo,volume=${volume.toFixed(3)},asettb=1/${SR}`;
 }
 
+/** Media/image clips only (excludes gaps & disabled). Kept for callers/tests. */
 export function usableClips(clips: Clip[], media: MediaAsset[]): Clip[] {
   return clips.filter((c) => {
+    if (!clipEnabled(c) || isGapClip(c)) return false;
+    const k = mediaById(media, c.sourceId)?.kind;
+    return k === "video" || k === "image";
+  });
+}
+
+/** Renderable timeline segments: media clips + explicit gaps (black/silence). */
+export function renderSegments(clips: Clip[], media: MediaAsset[]): Clip[] {
+  return clips.filter((c) => {
     if (!clipEnabled(c)) return false;
+    if (isGapClip(c)) return clipDur(c) > 0;
     const k = mediaById(media, c.sourceId)?.kind;
     return k === "video" || k === "image";
   });
@@ -52,7 +64,7 @@ export function buildConcatGraph(
   target: RenderTarget = DEFAULT_TARGET,
   opts: RenderGraphOpts = {},
 ): RenderGraph {
-  const usable = usableClips(clips, media);
+  const usable = renderSegments(clips, media);
   if (!usable.length) throw new Error("אין קליפי וידאו/תמונה לרינדור.");
 
   const { w, h, fps } = target;
@@ -72,12 +84,20 @@ export function buildConcatGraph(
   };
 
   usable.forEach((c, n) => {
-    const asset = mediaById(media, c.sourceId)!;
-    // Snap the trim window to a whole number of frames so each segment's video and
-    // audio are exactly the same length -> concat has nothing to pad (no duplicate
-    // frames / injected silence at joins). Measured: removes the ~0.2 frame/join drift.
     const frames = Math.max(1, Math.round((c.end - c.start) * fps));
-    const s = c.start.toFixed(3), e = (c.start + frames / fps).toFixed(3); // snap end to whole frames
+    const s = c.start.toFixed(3), e = (c.start + frames / fps).toFixed(3);
+
+    if (isGapClip(c)) {
+      // black video + silent audio for the gap duration (frame-quantized)
+      const dur = (frames / fps).toFixed(3);
+      const vin = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", `color=c=black:s=${w}x${h}:r=${fps}`);
+      const ain = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", `anullsrc=channel_layout=stereo:sample_rate=${SR}`);
+      parts.push(`[${vin}:v]${vChain(w, h, fps, frames)}[v${n}];[${ain}:a]${aChain(0)}[a${n}];`);
+      labels.push(`[v${n}][a${n}]`);
+      return;
+    }
+
+    const asset = mediaById(media, c.sourceId)!;
     if (asset.kind === "video") {
       let idx = videoInputIdx.get(asset.id);
       if (idx === undefined) { const fn = writeOnce(asset); idx = ic++; inputArgs.push("-i", fn); videoInputIdx.set(asset.id, idx); }

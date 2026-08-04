@@ -58,4 +58,15 @@ describe("export render graph — single continuous stream, no per-clip encode",
     const muted = buildConcatGraph([clip("a", 0, 1)], [vid("a")], { w: 640, h: 360, fps: 25 }, { audioMuted: true });
     expect(muted.filterComplex).toContain("volume=0.000");
   });
+
+  it("inserts black lavfi segments for gap clips without dropping neighbors", () => {
+    const withGap: Clip[] = [clip("a", 0, 1), { id: "g1", sourceId: "__gap__", start: 0, end: 0.5 }, clip("b", 0, 1)];
+    const g = buildConcatGraph(withGap, media, { w: 640, h: 360, fps: 30 });
+    expect(g.segmentCount).toBe(3);
+    expect(g.inputArgs.join(" ")).toContain("color=c=black");
+    expect(g.inputArgs.join(" ")).toContain("anullsrc=");
+    expect(g.filterComplex).toContain("concat=n=3:v=1:a=1[outv][outa]");
+    // still exactly one encode
+    expect(toExecArgs(g, "out.mp4").join(" ").match(/libx264/g)?.length).toBe(1);
+  });
 });

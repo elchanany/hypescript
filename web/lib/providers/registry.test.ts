@@ -1,0 +1,40 @@
+import { describe, expect, it } from "vitest";
+import { configuredProviders } from "@/lib/agent/providers";
+import { flattenApiConfig, getProviderStatus, getProviderStatuses } from "./health";
+import { PROVIDER_REGISTRY } from "./registry";
+
+describe("provider registry", () => {
+  it("contains only LLM providers exposed by the existing agent proxy", () => {
+    const registryLlmIds = PROVIDER_REGISTRY
+      .filter((provider) => provider.kind === "llm")
+      .map((provider) => provider.id)
+      .sort();
+
+    expect(registryLlmIds).toEqual(Object.keys(configuredProviders()).sort());
+  });
+
+  it("contains only the wired transcription provider", () => {
+    expect(PROVIDER_REGISTRY.filter((provider) => provider.kind === "transcribe").map((provider) => provider.id)).toEqual([
+      "groq-transcribe",
+    ]);
+  });
+
+  it("maps missing keys to missing_key status", () => {
+    const status = getProviderStatus("deepseek", { deepseek: false });
+
+    expect(status.status).toBe("missing_key");
+    expect(status.reasonHe).toContain("DEEPSEEK_API_KEY");
+  });
+
+  it("maps configured providers from /api/config response shape", () => {
+    const configured = flattenApiConfig({
+      providers: { deepseek: true, openai: false, anthropic: false, gemini: false },
+      transcription: { groq: true },
+    });
+    const statuses = getProviderStatuses(configured);
+
+    expect(statuses.find((provider) => provider.id === "deepseek")?.status).toBe("ready");
+    expect(statuses.find((provider) => provider.id === "openai")?.status).toBe("missing_key");
+    expect(statuses.find((provider) => provider.id === "groq-transcribe")?.status).toBe("ready");
+  });
+});

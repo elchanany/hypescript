@@ -7,7 +7,7 @@ import { repairToolMessages } from "./normalize";
 
 export interface AgentEvents {
   onAssistant: (text: string) => void;
-  onToolStart: (call: ToolCall) => void;
+  onToolStart: (call: ToolCall, provider: Provider) => void;
   onToolStatus: (id: string, status: string) => void;
   onToolEnd: (id: string, ok: boolean, summary: string) => void;
   onError: (msg: string) => void;
@@ -112,7 +112,7 @@ export class AgentRunner {
         const results = await Promise.all(
           toolCalls.map(async (tc) => {
             const meta = TOOL_BY_NAME[tc.name];
-            this.events.onToolStart(tc);
+            this.events.onToolStart(tc, this.provider);
             if (!meta) {
               this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
               return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };

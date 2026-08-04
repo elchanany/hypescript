@@ -1,22 +1,27 @@
 # PROVIDER_CAPABILITY_MATRIX
 
-> מצב אמיתי של ספקים. "מחובר" נקבע רק אחרי health-check; לעולם לא להציג "מחובר" בלי בדיקה.
-> Zero-cost mode פעיל כברירת מחדל: user-billed/unknown חסומים ללא אישור מפורש.
+> מצב אמיתי של ספקים. "מוכן" כרגע אומר שמפתח נדרש קיים לפי `/api/config`; זה **לא**
+> health-check מול הספק. לעולם לא להציג "מחובר" בלי בדיקה אמיתית.
+> אין עדיין Zero-cost policy מלא: user-billed/unknown אינם נחסמים בשכבת Policy מרכזית.
 
 ## ארכיטקטורה נוכחית (אמת)
-- אין עדיין Provider Registry רשמי עם `ProviderDefinition`/`ProviderConnection`/`ExecutionPolicy`. קיים:
+- קיים Provider Registry בסיסי וכנה (`web/lib/providers/`):
+  - `ProviderDefinition` סטטי לספקים שמחוברים בפועל בלבד.
+  - `getProviderStatuses` ממפה תשובת `/api/config` ל-`ready` / `missing_key` / `unavailable`.
+  - אין עדיין `ProviderConnection`, בדיקת upstream, `ExecutionPolicy` או ניהול עלויות מרכזי.
+- קיים בנוסף:
   - **LLM proxy** צד-שרת (`lib/agent/providers.ts`): DeepSeek, OpenAI, Anthropic, Gemini — מפתחות מ-env בלבד, לא מגיעים לדפדפן. `/api/config` מדווח אילו מוגדרים.
-  - **תמלול**: Groq Whisper דרך `/api/transcribe` (proxy). מפתח מהדפדפן, לא נשמר בשרת (ראה SECURITY_MODEL — פער ידוע לתיקון בחבילת ספקים).
+  - **תמלול**: Groq Whisper דרך `/api/transcribe` (proxy). מפתח מ-env קודם; קיים fallback ממפתח לקוח (ראה SECURITY_MODEL — פער ידוע לתיקון בחבילת ספקים).
   - **רינדור**: `RenderBackend` (ffmpeg.wasm בדפדפן; native נבדק בבדיקות integration).
 - כל השאר (image/video/voice/music/storage/search/fonts) — **לא ממומש**. חייב Registry לפני חשיפה.
 
 ## LLM (Agent)
 | ספק | mode | word-align | streaming | tools | סטטוס | עלות | הערות |
 |---|---|---|---|---|---|---|---|
-| DeepSeek | cloud | n/a | ✖ | ✔ | env-key | user-billed | ברירת-מחדל; לשמר `reasoning_content` (חבילת Agent) |
-| OpenAI | cloud | n/a | ✖ | ✔ | env-key | user-billed | תומך ראייה |
-| Anthropic | cloud | n/a | ✖ | ✔ | env-key | user-billed | תומך ראייה |
-| Gemini | cloud | n/a | ✖ | ✔ | env-key | free-tier/unknown | תומך ראייה |
+| DeepSeek | cloud | n/a | ✖ | ✔ | Registry + env-key | user-billed | ברירת-מחדל; לשמר `reasoning_content` (חבילת Agent) |
+| OpenAI | cloud | n/a | ✖ | ✔ | Registry + env-key | user-billed | תומך ראייה |
+| Anthropic | cloud | n/a | ✖ | ✔ | Registry + env-key | user-billed | תומך ראייה |
+| Gemini | cloud | n/a | ✖ | ✔ | Registry + env-key | free-tier/unknown | תומך ראייה |
 | Ollama/LM Studio/LocalAI/OpenRouter/... | local/cloud | — | — | — | **חסר** | — | דרך Registry |
 
 **אל תקבע model קשיח** — נדרש `listModels` דינמי (עתידי). כרגע model ברירת-מחדל מ-env (`*_MODEL`).
@@ -24,7 +29,7 @@
 ## תמלול
 | ספק | word ts | segment ts | diarization | עברית | סטטוס | עלות |
 |---|---|---|---|---|---|---|
-| Groq Whisper | ✔ | ✔ | ✖ | ✔ | קיים(proxy) | user-billed |
+| Groq Whisper | ✔ | ✔ | ✖ | ✔ | Registry + proxy | user-billed |
 | faster-whisper / WhisperX (local) | ✔ | ✔ | ✔(WhisperX) | ✔ | **חסר** | free-local |
 | Gemini (audio understanding) | ✖(לא לתזמון-מילה) | ✖ | — | ✔ | **חסר** | free-tier |
 | OpenAI/Google STT/Azure/Deepgram/AssemblyAI/REST | משתנה | משתנה | משתנה | משתנה | **חסר** | — |
@@ -43,4 +48,6 @@
 | Fonts/Icons/Templates | Google Fonts/Fontsource, Iconify (Lucide בשימוש), TemplatePackage | **חסר** |
 
 ## Missing-key policy
-בהיעדר מפתח/ספק: לעצור לפני upload, הודעה אנושית, הצעת חלופה (local/אחר), ואכיפת Zero-cost. הסוכן לא יטען שביצע פעולה שלא יכול לבצע.
+בהיעדר מפתח/ספק: Chat חוסם בחירת LLM לא מוגדר ומציג סיבה בעברית; `/api/transcribe`
+מחזיר שגיאה אם אין מפתח Groq. אין עדיין health-check upstream או אכיפת Zero-cost מרכזית.
+הסוכן לא יטען שביצע פעולה שלא יכול לבצע.

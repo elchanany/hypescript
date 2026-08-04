@@ -4,9 +4,10 @@
 import { Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import {
-  addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, removeClip, splitClip, totalDur, trimClip, uid,
+  addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { Overlay } from "@/lib/editor/overlay";
+import { Overlay, makeTextOverlay } from "@/lib/editor/overlay";
+import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
@@ -302,10 +303,15 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "list_clips", label: "רשימת קליפים", color: "#64748b", icon: "📋",
-    schema: { name: "list_clips", description: "מחזיר את רשימת הקליפים הנוכחית (אינדקס 1-based, טווח מקור, משך).", parameters: { type: "object", properties: {} } },
+    schema: { name: "list_clips", description: "מחזיר את רשימת הקליפים הנוכחית (אינדקס 1-based, טווח מקור, משך). רווחים מסומנים כ-[רווח].", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
-      return ctx.clips!.map((c, i) => `${i + 1}. ${c.start.toFixed(2)}–${c.end.toFixed(2)}s (${clipDur(c).toFixed(2)}s)`).join("\n");
+      return ctx.clips!.map((c, i) => {
+        const en = c.enabled === false ? " (מושבת)" : "";
+        if (isGapClip(c)) return `${i + 1}. [רווח] ${clipDur(c).toFixed(2)}s`;
+        const name = mediaById(ctx.media, c.sourceId)?.name || c.sourceId;
+        return `${i + 1}. ${name} ${c.start.toFixed(2)}–${c.end.toFixed(2)}s (${clipDur(c).toFixed(2)}s)${en}`;
+      }).join("\n");
     },
   },
   {
@@ -340,12 +346,126 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "delete_clip", label: "מחיקת קליפ", color: "#ef4444", icon: "🗑️",
-    schema: { name: "delete_clip", description: "מוחק קליפ מהרצף.", parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] } },
+    schema: {
+      name: "delete_clip",
+      description: "מוחק קליפ מהרצף. leave_gap=true משאיר רווח שחור/שקט באותו משך; על רווח — סוגר אותו.",
+      parameters: { type: "object", properties: { index: { type: "number" }, leave_gap: { type: "boolean", description: "השאר רווח במקום הקליפ" } }, required: ["index"] },
+    },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      ctx.clips = removeClip(ctx.clips!, c.id);
-      return `נמחק. ${ctx.clips!.length ? clipsSummary(ctx.clips!) : "אין קליפים."}`;
+      if (isGapClip(c)) ctx.clips = closeGap(ctx.clips!, c.id);
+      else if (a.leave_gap) ctx.clips = removeClipLeaveGap(ctx.clips!, c.id);
+      else ctx.clips = removeClipRipple(ctx.clips!, c.id);
+      return `עודכן. ${ctx.clips!.length ? clipsSummary(ctx.clips!) : "אין קליפים."}`;
+    },
+  },
+  {
+    name: "set_clip_enabled", label: "הפעל/השבת קטע", color: "#64748b", icon: "👁️",
+    schema: {
+      name: "set_clip_enabled",
+      description: "מפעיל או משבית קליפ (מושבת = לא נכלל בנגן ובייצוא).",
+      parameters: { type: "object", properties: { index: { type: "number" }, enabled: { type: "boolean" } }, required: ["index", "enabled"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
+      if (isGapClip(c)) return "לא ניתן להשבית רווח — מחק/סגור אותו.";
+      ctx.clips = ctx.clips!.map((x, k) => (k === i ? { ...x, enabled: !!a.enabled } : x));
+      return `קטע ${a.index}: ${a.enabled ? "פעיל" : "מושבת"}.`;
+    },
+  },
+  {
+    name: "set_clip_volume", label: "עוצמת קטע", color: "#64748b", icon: "🔊",
+    schema: {
+      name: "set_clip_volume",
+      description: "קובע עוצמת שמע לקליפ (0..2, ברירת מחדל 1).",
+      parameters: { type: "object", properties: { index: { type: "number" }, volume: { type: "number" } }, required: ["index", "volume"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
+      if (isGapClip(c)) return "לרווח אין עוצמה.";
+      const volume = Math.max(0, Math.min(2, +a.volume));
+      ctx.clips = ctx.clips!.map((x, k) => (k === i ? { ...x, volume } : x));
+      return `עוצמת קטע ${a.index}: ${Math.round(volume * 100)}%.`;
+    },
+  },
+  {
+    name: "list_overlays", label: "רשימת שכבות", color: "#64748b", icon: "🧩",
+    schema: { name: "list_overlays", description: "מחזיר את שכבות התמונה/טקסט על הקנבס.", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => {
+      const ovs = ctx.overlays || [];
+      if (!ovs.length) return "אין שכבות.";
+      return ovs.map((o, i) => {
+        const label = o.kind === "text" ? (o.text || "טקסט") : (mediaById(ctx.media, o.assetId || "")?.name || "תמונה");
+        return `${i + 1}. [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s @(${Math.round(o.transform.x)},${Math.round(o.transform.y)})`;
+      }).join("\n");
+    },
+  },
+  {
+    name: "add_text_overlay", label: "הוספת טקסט", color: "#f59e0b", icon: "Ｔ",
+    schema: {
+      name: "add_text_overlay",
+      description: "מוסיף שכבת טקסט על הקנבס בזמן ראש-הנגן (או start נתון).",
+      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" } } },
+    },
+    run: async (a, ctx) => {
+      const canvas = ctx.canvas || defaultCanvasFor();
+      const start = a.start != null ? +a.start : 0;
+      const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      const o = makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
+      ctx.overlays = [...(ctx.overlays || []), o];
+      return `נוספה שכבת טקסט (${o.id}). סה״כ ${ctx.overlays.length} שכבות.`;
+    },
+  },
+  {
+    name: "delete_overlay", label: "מחיקת שכבה", color: "#ef4444", icon: "🗑️",
+    schema: {
+      name: "delete_overlay",
+      description: "מוחק שכבה לפי אינדקס 1-based מ-list_overlays.",
+      parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] },
+    },
+    run: async (a, ctx) => {
+      const ovs = ctx.overlays || [];
+      const i = (a.index | 0) - 1;
+      if (!ovs[i]) return "אינדקס שכבה לא תקין.";
+      ctx.overlays = ovs.filter((_, k) => k !== i);
+      return `שכבה נמחקה. נותרו ${ctx.overlays.length}.`;
+    },
+  },
+  {
+    name: "update_overlay", label: "עדכון שכבה", color: "#f59e0b", icon: "✏️",
+    schema: {
+      name: "update_overlay",
+      description: "מעדכן שכבה (טקסט/זמן/מיקום/גודל/סיבוב/שקיפות).",
+      parameters: {
+        type: "object",
+        properties: {
+          index: { type: "number" }, text: { type: "string" }, start: { type: "number" }, end: { type: "number" },
+          x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
+          rotation: { type: "number" }, opacity: { type: "number" },
+        },
+        required: ["index"],
+      },
+    },
+    run: async (a, ctx) => {
+      const ovs = ctx.overlays || [];
+      const i = (a.index | 0) - 1;
+      const o = ovs[i]; if (!o) return "אינדקס שכבה לא תקין.";
+      const t = { ...o.transform };
+      if (a.x != null) t.x = +a.x;
+      if (a.y != null) t.y = +a.y;
+      if (a.w != null) t.w = Math.max(8, +a.w);
+      if (a.h != null) t.h = Math.max(8, +a.h);
+      if (a.rotation != null) t.rotation = +a.rotation;
+      if (a.opacity != null) t.opacity = Math.max(0, Math.min(1, +a.opacity));
+      const patch: Partial<Overlay> = { transform: t };
+      if (a.text != null) patch.text = String(a.text);
+      if (a.start != null) patch.start = Math.max(0, +a.start);
+      if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
+      ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
+      return `שכבה ${a.index} עודכנה.`;
     },
   },
   {
