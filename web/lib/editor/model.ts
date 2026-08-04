@@ -71,8 +71,17 @@ export function moveClip(clips: Clip[], id: string, toIndex: number): Clip[] {
 export function trimClip(clips: Clip[], id: string, start: number, end: number, maxDuration: number): Clip[] {
   return clips.map((c) => {
     if (c.id !== id) return c;
-    const s = Math.max(0, Math.min(start, end - 0.05));
-    const e = Math.min(maxDuration, Math.max(end, s + 0.05));
+    // ברירות מחדל מגבולות הקליפ — מונע NaN כשחסר start/end מהסוכן.
+    let s = Number.isFinite(start) ? start : c.start;
+    let e = Number.isFinite(end) ? end : c.end;
+    if (!Number.isFinite(s) || !Number.isFinite(e)) return c;
+    if (e < s) { const t = s; s = e; e = t; }
+    const max = Number.isFinite(maxDuration) && maxDuration > 0
+      ? maxDuration
+      : Math.max(c.end, e, 0.1);
+    s = Math.max(0, Math.min(s, e - 0.05));
+    e = Math.min(max, Math.max(e, s + 0.05));
+    if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) return c;
     return { ...c, start: s, end: e };
   });
 }

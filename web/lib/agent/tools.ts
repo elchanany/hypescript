@@ -9,7 +9,8 @@ import {
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
-import { edlToSubs, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange } from "@/lib/editor/clipFilter";
+import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { ToolSchema } from "./types";
 
@@ -67,7 +68,10 @@ export interface ToolMeta {
   run: (args: any, ctx: AgentContext, report: Reporter) => Promise<string>;
 }
 
-const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
+const fmt = (s: number) => {
+  if (!Number.isFinite(s) || s < 0) return "—";
+  return `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
+};
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -119,7 +123,9 @@ export const TOOLS: ToolMeta[] = [
       const isMain = asset.id === mainVideo(ctx)?.id;
       const key = txKey(asset.file); const cached = txRead(key);
       if (cached) { ctx.transcripts[asset.id] = cached; if (isMain) { ctx.words = cached; if (!ctx.duration) ctx.duration = asset.duration; } return `נטען תמלול שמור ל-"${asset.name}" (${cached.length} מילים).`; }
-      const { extractAudio } = await import("@/lib/ffmpeg");
+      let extractAudio: typeof import("@/lib/ffmpeg").extractAudio;
+      try { ({ extractAudio } = await import("@/lib/ffmpeg")); }
+      catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
       report(`מחלץ אודיו מ-${asset.name}…`);
       const audio = await extractAudio(asset.file);
       report("שולח לתמלול (Groq)…");
@@ -196,7 +202,21 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "remove_silence", label: "הסרת שתיקות (עוצמה)", color: "#f59e0b", icon: "🤫",
-    schema: { name: "remove_silence", description: "מסיר נשימות ושתיקות לפי *עוצמת הסאונד* בפועל (מדויק יותר מרווחי-מילים), ובונה EDL עם קטעי הדיבור בלבד. זו הדרך לחתוך נשימות/שתיקות.", parameters: { type: "object", properties: { source: { type: "string" }, threshold_db: { type: "number", description: "סף עוצמה (dB). ברירת מחדל: רצפת-רעש+8" }, min_silence: { type: "number", description: "אורך שקט מינימלי לחיתוך (שנ'), ברירת מחדל 0.35" }, padding: { type: "number", description: "ריפוד בכל צד (שנ'), ברירת מחדל 0.08" } } } },
+    schema: {
+      name: "remove_silence",
+      description: "מסיר נשימות/שתיקות לפי עוצמת סאונד. חשוב: אם כבר יש קליפים מ-keep_by_script — ברירת המחדל היא within_existing=true (חותך שתיקות *בתוך* הבחירה בלבד, לא מחליף את כל ה-EDL בסרטון המלא). replace_all=true מחליף את כל הציר.",
+      parameters: {
+        type: "object",
+        properties: {
+          source: { type: "string" },
+          threshold_db: { type: "number", description: "סף עוצמה (dB). ברירת מחדל: רצפת-רעש+8" },
+          min_silence: { type: "number", description: "אורך שקט מינימלי לחיתוך (שנ'), ברירת מחדל 0.35" },
+          padding: { type: "number", description: "ריפוד בכל צד (שנ'), ברירת מחדל 0.08" },
+          within_existing: { type: "boolean", description: "true=חתוך רק בתוך הקליפים הקיימים (מומלץ אחרי keep_by_script)" },
+          replace_all: { type: "boolean", description: "true=החלף את כל ה-EDL בקטעי דיבור מכל הסרטון (זהיר — מוחק בחירה קודמת)" },
+        },
+      },
+    },
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "אין סרטון.";
@@ -212,12 +232,23 @@ export const TOOLS: ToolMeta[] = [
       if (dur - prev > 0.05) raw.push([prev, dur]);
       if (!raw.length) return "לא זוהו קטעי דיבור מעל הסף.";
       const padded = raw.map(([s, e]) => ({ start: Math.max(0, s - padding), end: Math.min(dur, e + padding) }));
-      const merged: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
+      const speech: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
       for (const k of padded.slice(1)) {
-        const last = merged[merged.length - 1];
+        const last = speech[speech.length - 1];
         if (k.start <= last.end + 1e-3) last.end = Math.max(last.end, k.end);
-        else merged.push({ id: uid(), sourceId: asset.id, start: k.start, end: k.end });
+        else speech.push({ id: uid(), sourceId: asset.id, start: k.start, end: k.end });
       }
+      const hasEdl = !!(ctx.clips && ctx.clips.length);
+      const replaceAll = a.replace_all === true;
+      const within = a.within_existing === true || (!replaceAll && hasEdl && a.within_existing !== false);
+      let merged: Clip[];
+      if (within && hasEdl) {
+        merged = intersectClipsWithSpeech(ctx.clips!, speech, asset.id);
+        if (!merged.length) return "לא נשאר דיבור בתוך הקליפים הקיימים. בדוק טווחים או הרץ עם replace_all=true בזהירות.";
+        ctx.clips = merged;
+        return `הוסרו שתיקות *בתוך הבחירה הקיימת* מ-"${asset.name}" (סף ${thr.toFixed(0)}dB). ${clipsSummary(merged)}`;
+      }
+      merged = speech;
       ctx.clips = merged;
       const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
       return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s. ${clipsSummary(merged)}`;
@@ -320,12 +351,23 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "trim_clip", label: "טרים קליפ", color: "#0ea5e9", icon: "↔️",
-    schema: { name: "trim_clip", description: "משנה את גבולות המקור של קליפ (start/end בשניות).", parameters: { type: "object", properties: { index: { type: "number" }, start: { type: "number" }, end: { type: "number" } }, required: ["index", "start", "end"] } },
+    schema: {
+      name: "trim_clip",
+      description: "משנה את גבולות המקור של קליפ (start ו/או end בשניות במקור). אפשר להעביר רק end או רק start.",
+      parameters: { type: "object", properties: { index: { type: "number" }, start: { type: "number" }, end: { type: "number" } }, required: ["index"] },
+    },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
-      ctx.clips = trimClip(ctx.clips!, c.id, +a.start, +a.end, ctx.duration);
-      return `טורם. ${clipsSummary(ctx.clips!)}`;
+      const asset = mediaById(ctx.media, c.sourceId);
+      const maxDur = asset?.duration || ctx.duration || c.end;
+      const start = a.start != null && a.start !== "" ? +a.start : c.start;
+      const end = a.end != null && a.end !== "" ? +a.end : c.end;
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return "שגיאה: start/end לא תקינים.";
+      ctx.clips = trimClip(ctx.clips!, c.id, start, end, maxDur);
+      const after = ctx.clips!.find((x) => x.id === c.id);
+      if (!after || !Number.isFinite(after.start) || !Number.isFinite(after.end)) return "שגיאה: הטרים נכשל (גבולות לא תקינים).";
+      return `טורם קליפ ${a.index | 0} ל-${after.start.toFixed(2)}–${after.end.toFixed(2)}s. ${clipsSummary(ctx.clips!)}`;
     },
   },
   {
@@ -340,12 +382,75 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "delete_clip", label: "מחיקת קליפ", color: "#ef4444", icon: "🗑️",
-    schema: { name: "delete_clip", description: "מוחק קליפ מהרצף.", parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] } },
+    schema: { name: "delete_clip", description: "מוחק קליפ בודד. למחיקת רבים — השתמש ב-delete_clips או keep_source_range (לעולם אל תמחק עשרות אחד-אחד).", parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] } },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
       ctx.clips = removeClip(ctx.clips!, c.id);
       return `נמחק. ${ctx.clips!.length ? clipsSummary(ctx.clips!) : "אין קליפים."}`;
+    },
+  },
+  {
+    name: "delete_clips", label: "מחיקת קליפים", color: "#ef4444", icon: "🗑️",
+    schema: {
+      name: "delete_clips",
+      description: "מוחק כמה קליפים בבת אחת. העבר indices=[16,17,18] או from_index+to_index (כולל). חובה במקום לולאת delete_clip.",
+      parameters: {
+        type: "object",
+        properties: {
+          indices: { type: "array", items: { type: "number" }, description: "אינדקסים 1-based למחיקה" },
+          from_index: { type: "number", description: "תחילת טווח (1-based, כולל)" },
+          to_index: { type: "number", description: "סוף טווח (1-based, כולל)" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const before = ctx.clips!.length;
+      if (Array.isArray(a.indices) && a.indices.length) {
+        ctx.clips = deleteClipsAt(ctx.clips!, a.indices.map((x: any) => +x));
+      } else if (a.from_index != null && a.to_index != null) {
+        ctx.clips = deleteClipRange(ctx.clips!, +a.from_index, +a.to_index);
+      } else {
+        return "שגיאה: העבר indices או from_index+to_index.";
+      }
+      const n = before - ctx.clips!.length;
+      return n ? `נמחקו ${n} קליפים. ${ctx.clips!.length ? clipsSummary(ctx.clips!) : "אין קליפים."}` : "לא נמחק כלום (אינדקסים לא תקינים?).";
+    },
+  },
+  {
+    name: "keep_source_range", label: "שמירת טווח מקור", color: "#f59e0b", icon: "🎯",
+    schema: {
+      name: "keep_source_range",
+      description: "משאיר רק קליפים שחופפים לטווח זמן במקור [start,end] ומקצץ גבולות. שימושי אחרי remove_silence על כל הסרטון — במקום למחוק עשרות קליפים.",
+      parameters: {
+        type: "object",
+        properties: {
+          start: { type: "number", description: "התחלה בשניות במקור" },
+          end: { type: "number", description: "סוף בשניות במקור" },
+          source: { type: "string", description: "מקור (ברירת מחדל הראשי)" },
+        },
+        required: ["start", "end"],
+      },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      const start = +a.start; const end = +a.end;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return "שגיאה: טווח לא תקין.";
+      ctx.clips = keepSourceRange(ctx.clips!, start, end, asset?.id);
+      return ctx.clips.length
+        ? `נשמר טווח ${start.toFixed(1)}–${end.toFixed(1)}s. ${clipsSummary(ctx.clips)}`
+        : "לא נשאר קליפ בטווח.";
+    },
+  },
+  {
+    name: "clear_clips", label: "ניקוי כל הקליפים", color: "#ef4444", icon: "🧹",
+    schema: { name: "clear_clips", description: "מוחק את כל הקליפים בבת אחת (לאתחול EDL).", parameters: { type: "object", properties: {} } },
+    run: async (_a, ctx) => {
+      const n = ctx.clips?.length || 0;
+      ctx.clips = [];
+      return `נוקו ${n} קליפים.`;
     },
   },
   {
@@ -373,15 +478,31 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "generate_subtitles", label: "יצירת כתוביות", color: "#8b5cf6", icon: "💬",
-    schema: { name: "generate_subtitles", description: "מייצר כתוביות ניתנות-לעריכה מהתמלול והקליפים, ומציג אותן על הציר. אחר כך אפשר לערוך/לקצר/למחוק כתובית ולייצא SRT.", parameters: { type: "object", properties: { max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" } } } },
+    schema: {
+      name: "generate_subtitles",
+      description: "מייצר כתוביות על הציר. אם המשתמש נתן טקסט נקי — חובה להעביר אותו ב-script כדי לתקן שיבושי ASR (לא להשאיר מילים משובשות כמו 'טיפרת'/'קשר'). בלי script משתמש בתמלול הגולמי.",
+      parameters: {
+        type: "object",
+        properties: {
+          max_chars: { type: "number", description: "מקס תווים בשורה (ברירת מחדל 42)" },
+          script: { type: "string", description: "טקסט נקי מהמשתמש — מומלץ מאוד; מתקן כתיב ומחליף זבל ASR" },
+        },
+      },
+    },
     run: async (a, ctx) => {
-      if (!ctx.words) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
+      if (!ctx.words && !Object.keys(ctx.transcripts || {}).length) return "שגיאה: צריך לתמלל קודם (transcribe_video).";
       const main = mainVideo(ctx);
       const clips = ctx.clips?.length ? ctx.clips : main ? [{ id: uid(), sourceId: main.id, start: 0, end: ctx.duration || main.duration }] : [];
       if (!clips.length) return "אין תוכן ליצירת כתוביות.";
       const getWords = (sid: string) => ctx.transcripts[sid] ?? (sid === main?.id ? ctx.words : null);
-      ctx.subs = edlToSubs(clips, getWords, (a.max_chars | 0) || 42);
-      return `נוצרו ${ctx.subs.length} כתוביות מכל המקורות (מוצגות על הציר). אפשר edit_subtitle / clear_subtitles / export_srt.`;
+      const max = (a.max_chars | 0) || 42;
+      const script = String(a.script || "").trim();
+      ctx.subs = script
+        ? edlToSubsWithScript(clips, getWords, script, max)
+        : edlToSubs(clips, getWords, max);
+      return script
+        ? `נוצרו ${ctx.subs.length} כתוביות לפי הסקריפט הנקי (תזמון מהתמלול, טקסט מתוקן). בדוק list_subtitles ותקן אם צריך.`
+        : `נוצרו ${ctx.subs.length} כתוביות מהתמלול הגולמי. אם יש טקסט נקי מהמשתמש — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
     },
   },
   {
@@ -456,33 +577,33 @@ export const TOOL_BY_NAME: Record<string, ToolMeta> = Object.fromEntries(TOOLS.m
 
 export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית של hypescript. אתה עורך שיעורים: חותך, מסדר ומייצא לפי הוראות המשתמש.
 
-מודל: הסרטון הסופי הוא רשימת "קליפים" מסודרת (EDL). כל קליפ מצביע על טווח במקור. הסדר ברשימה = הסדר בסרטון הסופי. אפשר לסדר-מחדש ולחזור על קטע.
+מודל: הסרטון הסופי הוא רשימת "קליפים" מסודרת (EDL). כל קליפ מצביע על טווח במקור. הסדר ברשימה = הסדר בסרטון הסופי.
 
-מדיה: יכולים להיות כמה סרטונים (list_media). אם המשתמש רוצה להרכיב מכמה סרטונים — אל תיתקע על "הראשי". תמלל כל סרטון רלוונטי (transcribe_video עם source לכל אחד), ואז הרכב רצף אחד: קרא keep_by_script לכל סרטון עם source ו-append=true, או השתמש ב-add_clip לפי שם/@שם. הקליפים מצטרפים בסדר שבו אתה מוסיף אותם.
+מדיה: יכולים להיות כמה סרטונים (list_media). להרכבה מכמה מקורות — תמלל כל אחד (transcribe_video+source), ואז keep_by_script עם append=true או add_clip.
 
-היה החלטי ויעיל — זה קריטי:
-- תכנן פעם אחת ובצע. אל תתלבט אינסוף ואל תחזור על אותה בדיקה: אל תקרא את אותו תמלול פעמיים, אל תריץ list_clips אחרי כל פעולה קטנה.
-- אחרי שקראת את התמלולים — קבל החלטה סבירה על הסדר והחיתוכים ובצע ברצף, בלי לנתח מחדש כל שלב.
-- אם פרט אינו קריטי (למשל בדיוק איפה קטע הומוריסטי משתלב) — קבל החלטה סבירה והתקדם, אל תיתקע עליו.
-- שמור על מספר מצומצם של פעולות. עדיף keep_by_script/remove_segments גדולים על פני עשרות split/delete קטנים.
+═══ חוקי ברזל (אל תשבור) ═══
+1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות.
+2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = אתה עושה את זה לא נכון.
+3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה.
+4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → generate_subtitles(script=אותו טקסט נקי) → list_subtitles ובדיקה → render בסוף.
+5. תמלול ASR משובש לעיתים (שמות, מילים נדירות). הטקסט שהמשתמש כתב הוא מקור האמת לכתוביות ולחיתוך. לעולם אל תשאיר בכתוביות מילים מוזרות/משובשות מה-ASR אם יש סקריפט נקי — העבר script ל-generate_subtitles.
+6. אחרי get_transcript / list_subtitles: אם אתה רואה שיבושי כתיב או מילים חסרות-היגיון מול הסקריפט — תקן (generate_subtitles עם script, או edit_subtitle). אל תתעלם.
+7. שגיאת "Loading chunk … failed": בקש מהמשתמש לרענן את הדף (Ctrl+Shift+R). אל תנסה שוב ושוב בלי רענון.
+8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה. תכנן פעם אחת ובצע.
+9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק/לא רלוונטי — תקן עם keep_source_range או trim_clip / delete_clips, לא עם עשרות מחיקות.
+10. חסר נכס (תמונה/סאונד שהמשתמש אמר שיביא אחר כך) — ask_user או ציין שתחכה; אל תמציא ואל תיתקע.
 
-עקרונות:
-- ענה תמיד בעברית, קצר. אל תכתוב פסקאות ארוכות של התלבטות — משפט או שניים ואז פעולה.
-- העדף כלים קיימים: אם המשתמש נותן טקסט שאמור להישאר — השתמש ב-keep_by_script. הוא בונה את הקליפים *בדיוק בסדר של הטקסט*, כולל חזרות. אם המשתמש נתן טקסט ואז הוסיף עוד טקסט (גם אם מההתחלה) — הרץ keep_by_script שוב עם כל הטקסט המעודכן בסדר הנכון.
-- חובה transcribe_video פעם אחת לפני פעולות מבוססות-טקסט (נשמר, לא מתמללים שוב).
-- לחיתוך נשימות/שתיקות — remove_silence (לפי עוצמת הסאונד בפועל, מדויק). כדי להבין מה יש בין המילים (שקט מול שיעול/כסא/רקע) — analyze_audio.
-- כדי לבדוק איך נראה הווידאו בנקודה מסוימת — capture_frame (בשנייה במקור, או timeline=true על הציר הערוך). בספק תומך-ראייה (Gemini/OpenAI/Anthropic) תוכל לנתח את הפריים; DeepSeek לא רואה תמונות, אז שם זה רק להצגה למשתמש.
-- כדי להבין מה נאמר בסרטון — get_transcript (קורא את כל הטקסט). find_in_transcript הוא רק לאיתור מיקום של ביטוי ספציפי, לא לקריאת תוכן.
-- הפניה לקטע לפי תוכן → find_in_transcript ואז remove_segments או trim/split.
-- עריכות עדינות: split_clip / trim_clip / move_clip / delete_clip / list_clips.
-- render_video רק בסוף / כשמבקשים. התוצר מופיע בצ'אט כקישור+תצוגה מקדימה.
-- כתוביות: generate_subtitles יוצר כתוביות ניתנות-לעריכה על הציר. ערוך תוכן עם edit_subtitle (למשל "בכתובית 3 תשאיר רק X"), תזמן עם retime_subtitle, מחק כתובית בודדת עם delete_subtitle, ולמחיקת הכל השתמש ב-clear_subtitles (לעולם אל תמחק אחת-אחת בלולאה). ייצא ל-SRT לא-צרוב עם export_srt, ייבא עם import_srt. קבל חופש לסדר/לקצר כתוביות בהיגיון לפי בקשת המשתמש.
-- הבן מהשפה הטבעית איך הסרטון הסופי צריך להיראות, ותכנן בעצמך את סדר הכלים.
-- אם חסר קובץ/מידע (התבקשת להוסיף תמונה/שמע שלא סופק) — בקש ב-ask_user, אל תמציא.
-- יעילות: אל תבזבז קריאות מיותרות. אם יש לך תמלול — פעל, אל תחזור על find_in_transcript שוב ושוב. add_clip מקבל אינדקס (מספר) או שם.
-- דוגמה — "סדר כרונולוגית כמה סרטונים": transcribe_video לכל אחד (source), החלט על הסדר, ואז keep_by_script לכל אחד עם source ו-append=true (לחיתוך לפי תוכן) או add_clip לכל אחד (לסרטון שלם), ואז render_video.
+כלים חשובים:
+- keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
+- remove_silence: נשימות/שתיקות לפי עוצמה. within_existing כשיש כבר EDL.
+- keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
+- delete_clips / clear_clips: מחיקות המוניות.
+- trim_clip: אפשר רק start או רק end.
+- generate_subtitles עם script=טקסט נקי מהמשתמש.
+- clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
+- render_video רק בסוף / כשמבקשים.
 
-זרימה טיפוסית: transcribe_video → keep_by_script (או find→remove) → עריכות עדינות → render_video.`;
+זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → generate_subtitles(script) → render.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
