@@ -155,3 +155,19 @@ npm run dev
 | `/settings` | מפתחות AI |
 
 **זכור:** הפרויקטים והווידאו נשארים במחשב (IndexedDB). ההתחברות = מי אתה, לא איפה הסרטון.
+
+---
+
+## פתרון תקלות
+
+### `No API key found in request` / כתובת עם `/rest/v1/auth/...`
+
+הסיבה כמעט תמיד: ב־Vercel (או ב־`.env.local`) הערך של `NEXT_PUBLIC_SUPABASE_URL` כולל `/rest/v1` בסוף.
+
+1. Vercel → Settings → Environment Variables → ערוך `NEXT_PUBLIC_SUPABASE_URL`
+2. שים **רק**: `https://YOUR_REF.supabase.co` (בלי שום נתיב אחרי)
+3. Save → Deployments → **Redeploy**
+4. נסה שוב `/login`
+
+(בקוד יש גם נרמול אוטומטי שמסיר `/rest/v1` — אבל חייבים Redeploy אחרי עדכון הקוד/המשתנים.)
+
