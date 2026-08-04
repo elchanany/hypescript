@@ -5,9 +5,15 @@
 עובדים לפי שני מסמכי המפרט (Package A / Packages 1–4): עורך חזותי, Agent dock מקצועי, Canvas direct manipulation, Timeline מקצועי, ומסמכי אודיט. Cloud Agent: commit/push לענף מבודד בלבד; **אין merge/deploy ללא "מאשר לדחוף"**.
 
 ## Current State (verified)
-ענף: `cursor/editor-shell-pkg1-505e` · PR טיוטה #1 (לא ממוזג).
-- **Package 1 (הושלם):** design system; פאנלים ניתנים לשינוי גודל; Media grid/list + thumbnails; טקסט כתוביות בציר; Ghost+Drop indicator.
-- **Agent dock (הושלם):** flex dock מעוגן; Ask/Plan/Act עם אכיפה אמיתית (`tools:[]`); `/` slash; `@mentions`; context chips.
+ענף: `cursor/agent-workflow-chats-e91a` (על main).
+- **Package 1 (הושלם):** design system; פאנלים; Media; Agent dock Ask/Plan/Act.
+- **Agent workflow (סבב זה):** תיקון התנהגות סוכן אחרי תקיעה בשיחת לקוח:
+  - `remove_silence` ברירת-מחדל `within_existing` (לא מוחק EDL אחרי keep_by_script)
+  - כלים: `delete_clips`, `keep_source_range`, `clear_clips`; תיקון `trim_clip` מ-NaN
+  - `generate_subtitles(script=…)` מתקן ASR מול טקסט נקי
+  - SYSTEM_PROMPT עם חוקי ברזל (בלי לולאות מחיקה, כתוביות מטקסט נקי)
+  - שיחות מרובות בפרויקט (`chatStore` v2 + UI `/new`)
+  - runtime: פרסור JSON בטוח לתשובות שבורות
 - **P0 DeepSeek (הושלם):** `web/lib/agent/normalize.ts` — תיקון היסטוריית tool_calls.
 - **Canvas Direct Manipulation + Export burn-in (סבב זה):**
   - מודל: `Overlay` + `VisualTransform` (center anchor, project px)
