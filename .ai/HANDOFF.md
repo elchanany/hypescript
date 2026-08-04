@@ -1,17 +1,20 @@
 # HANDOFF
 
 ## Goal
-עורך CapCut-class + סוכן AI + ElevenLabs + Auth אופציונלי.
+זום טיימליין חלק לטווח רחב — הקטנה מתחת ל-fit והגדלה קיצונית.
 
 ## Current State (verified)
-ענף: `cursor/timeline-media-drag-ghost-e91a`
-- גרירת קליפים/שכבות בטיימליין עם **כרטיס תצוגה מקדימה** (תמונה/פעימות) ליד העכבר
-- גרירה מספריית מדיה לציר עם drag-image ויזואלי + קו drop
-- `onDropMedia` מכניס קליפ באינדקס היעד (תמונה → overlay)
+ענף: `cursor/timeline-zoom-range-e91a`
+- תוקן נעילת זום-אאוט: הוסר `Math.max(portW, …)` ו-`min-width:100%` שחסמו הקטנה מתחת ל-100%
+- `timelineContentWidth` — רוחב = `portW * zoom` (עם רצפת gutter+48)
+- טווח: `ZOOM_MIN=0.05` … `ZOOM_MAX=400`
+- `nextZoom(..., portWidth)` מכבד מינימום אפקטיבי לפי viewport
+- בדיקות `zoom.test.ts` עוברות
 
 ## Exact Next Steps
-1. למזג ולרענן פריסה — לאמת גרירה מהמדיה + ghost בקליפ
-2. EDL אודיו נפרד / רצועות וידאו מרובות — בהמשך
+1. למזג ל-`main` ולרענן פריסה
+2. לאמת pinch/גלגלת: הקטנה עד ~5% (תוכן צר מהמסגרת), הגדלה עד מאות אחוזים עם גלילה
 
 ## Risks
-- `setDragImage` דורש thumb מסונכרן; thumbs נטענים מראש לרשת
+- בזום גבוה מאוד (×400) גלילה כבדה בפרויקטים ארוכים
+- `graphify` לא ב-PATH בענן
