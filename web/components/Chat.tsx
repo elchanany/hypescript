@@ -15,18 +15,22 @@ import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
+import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
+import {
+  activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore,
+  switchConversation, upsertActive,
+} from "@/lib/agent/chatStore";
+import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   Bot, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Wand2, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import type { MutableRefObject } from "react";
 
-type Item =
-  | { kind: "user" | "assistant" | "error"; text: string; time: string }
-  | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string; providerLabel?: string }
-  | { kind: "output"; name: string; url: string; mkind: "video" | "srt" | "image"; time: string };
+type Item = ChatItem;
 type ToolItem = Extract<Item, { kind: "tool" }>;
 
 const now = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
@@ -35,7 +39,8 @@ const now = () => { const d = new Date(); return `${String(d.getHours()).padStar
 const TOOL_ICON: Record<string, LucideIcon> = {
   get_video_info: Info, list_media: Layers, transcribe_video: Type, find_in_transcript: Search, get_transcript: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
-  trim_clip: Scissors, move_clip: Move,   delete_clip: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,
+  trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, delete_clips: Trash2, keep_source_range: Scissors,
+  clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines,
   list_overlays: Layers, add_text_overlay: Type, delete_overlay: Trash2, update_overlay: Pencil,
   analyze_audio: AudioLines, remove_silence: AudioLines,
   capture_frame: Camera, generate_subtitles: Captions, list_subtitles: Captions, edit_subtitle: Pencil,
@@ -59,7 +64,8 @@ const SLASH: SlashCmd[] = [
   { cmd: "/plan", label: "מצב תכנון", icon: ClipboardList, enabled: true, kind: "mode", mode: "plan" },
   { cmd: "/act", label: "מצב ביצוע", icon: Wand2, enabled: true, kind: "mode", mode: "act" },
   { cmd: "/transcribe", label: "תמלל את הסרטון", icon: Type, enabled: true, kind: "prompt", template: "תמלל את הסרטון הראשי." },
-  { cmd: "/captions", label: "צור כתוביות", icon: Captions, enabled: true, kind: "prompt", template: "צור כתוביות מהתמלול על הציר." },
+  { cmd: "/captions", label: "צור כתוביות", icon: Captions, enabled: true, kind: "prompt", template: "צור כתוביות יפות לפי הטקסט הנקי שנתתי (generate_subtitles עם script)." },
+  { cmd: "/new", label: "שיחה חדשה", icon: MessageSquarePlus, enabled: true, kind: "prompt", template: "" },
   { cmd: "/clean", label: "נקה שתיקות ונשימות", icon: AudioLines, enabled: true, kind: "prompt", template: "הסר שתיקות ונשימות מהסרטון." },
   { cmd: "/edit", label: "ערוך לפי סקריפט", icon: Scissors, enabled: true, kind: "prompt", template: "השאר רק את החלקים הבאים לפי הסקריפט: " },
   { cmd: "/export", label: "רנדר וייצא", icon: Film, enabled: true, kind: "prompt", template: "רנדר וייצא את הווידאו הערוך." },
@@ -87,11 +93,14 @@ interface ChatProps {
   // עגינה
   dockSide?: "left" | "right";
   onToggleDock?: () => void;
+  /** רישום פונקציה להכנסת ציטוט-מקום מצפייה/כפתור */
+  quoteSink?: MutableRefObject<((seconds: number) => void) | null>;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
+  const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
@@ -105,6 +114,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   // popup לפקודות/אזכורים בזמן הקלדה ב-Composer
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   useEffect(() => { const m = localStorage.getItem("hs_agentmode"); if (m === "ask" || m === "plan" || m === "act") setMode(m); }, []);
   const changeMode = (m: AgentMode) => { setMode(m); localStorage.setItem("hs_agentmode", m); if (runnerRef.current) runnerRef.current.mode = m; };
@@ -122,7 +133,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     return out;
   }, [media, clips, subs, selectionLabel, playhead]);
 
-  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt" | "image") =>
+  const addOutput = (blob: Blob, name: string, mkind: "video" | "srt" | "image" | "audio") =>
     setItems((p) => [...p, { kind: "output", name, url: URL.createObjectURL(blob), mkind, time: now() }]);
 
   const ctxRef = useRef<AgentContext>({
@@ -141,14 +152,41 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   const lastUserPromptRef = useRef("");
   const [restoredChat, setRestoredChat] = useState(false);
 
+  const loadConversation = (next: ChatStoreV2) => {
+    const active = activeConversation(next);
+    runnerRef.current = null;
+    savedHistory.current = active.history || [];
+    setStore(next);
+    setItems((active.items || []).filter((it) => it.kind !== "output"));
+    setAsk(null);
+  };
+
+  const startNewChat = () => {
+    if (running) { runnerRef.current?.stop(); setRunning(false); }
+    // שמירת השיחה הנוכחית לפני פתיחת חדשה
+    const cur = upsertActive(storeRef.current, {
+      items: items.filter((it) => it.kind !== "output"),
+      history: runnerRef.current?.history || savedHistory.current,
+    });
+    loadConversation(addConversation(cur));
+  };
+
+  const selectChat = (id: string) => {
+    if (id === store.activeId) return;
+    if (running) { runnerRef.current?.stop(); setRunning(false); }
+    const cur = upsertActive(storeRef.current, {
+      items: items.filter((it) => it.kind !== "output"),
+      history: runnerRef.current?.history || savedHistory.current,
+    });
+    loadConversation(switchConversation(cur, id));
+  };
+
   useEffect(() => {
     if (!projectId) return;
     setRestoredChat(false);
     (async () => {
-      const c = await kvGet<{ items: Item[]; history: ChatMessage[] }>(pk(projectId, "chat"));
-      runnerRef.current = null;
-      savedHistory.current = c?.history || [];
-      setItems((c?.items || []).filter((it) => it.kind !== "output"));
+      const raw = await kvGet<unknown>(pk(projectId, "chat"));
+      loadConversation(migrateChatStore(raw));
       setRestoredChat(true);
     })();
   }, [projectId]);
@@ -157,7 +195,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
     if (!restoredChat || !projectId) return;
     const t = setTimeout(() => {
       const history = runnerRef.current?.history || savedHistory.current;
-      kvSet(pk(projectId, "chat"), { items: items.filter((it) => it.kind !== "output"), history });
+      const next = upsertActive(storeRef.current, {
+        items: items.filter((it) => it.kind !== "output"),
+        history,
+      });
+      storeRef.current = next;
+      // מעדכן כותרת ברשימת השיחות בלי לולאת רינדור מיותרת
+      setStore((prev) => (prev.activeId === next.activeId ? next : prev));
+      kvSet(pk(projectId, "chat"), next);
     }, 700);
     return () => clearTimeout(t);
   }, [items, restoredChat, projectId]);
@@ -176,7 +221,35 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
       .catch(() => {})
       .finally(() => setConfigLoaded(true));
   }, []);
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [items, ask]);
+  const displayItems = useMemo(() => collapseConsecutiveTools(items), [items]);
+  // נקודות "חושב" בין פעולות — כשיש כלי רץ כבר יש ספינר על הכרטיס.
+  const showThinking = running && !ask && !items.some((it) => it.kind === "tool" && it.state === "running");
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [displayItems, ask, showThinking]);
+
+  // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
+  const insertQuote = (seconds: number) => {
+    const snippet = quotePlaceText(seconds);
+    setInput((v) => {
+      const pad = v && !/\s$/.test(v) ? " " : "";
+      return v + pad + snippet + " ";
+    });
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      const end = ta.value.length;
+      ta.selectionStart = ta.selectionEnd = end;
+    });
+  };
+
+  useEffect(() => {
+    if (!quoteSink) return;
+    quoteSink.current = insertQuote;
+    return () => { if (quoteSink.current === insertQuote) quoteSink.current = null; };
+  });
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
@@ -210,6 +283,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
       const c = SLASH.find((s) => s.cmd === text.toLowerCase());
       if (c) {
         if (!c.enabled) { setItems((p) => [...p, { kind: "error", text: `הפקודה ${c.cmd} אינה זמינה: ${c.reason}`, time: now() }]); setInput(""); return; }
+        if (c.cmd === "/new") { setInput(""); startNewChat(); return; }
         if (c.kind === "mode" && c.mode) { changeMode(c.mode); setInput(""); return; }
         text = c.template || text;
       }
@@ -263,6 +337,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   const applySlash = (c: SlashCmd) => {
     if (!c.enabled) return;
     setPop(null);
+    if (c.cmd === "/new") { setInput(""); startNewChat(); return; }
     if (c.kind === "mode" && c.mode) { changeMode(c.mode); setInput(""); taRef.current?.focus(); return; }
     const t = c.template || "";
     setInput(t);
@@ -313,6 +388,23 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
         </div>
       </div>
 
+      <div className="chat-threads" aria-label="שיחות בפרויקט">
+        <select
+          value={store.activeId}
+          onChange={(e) => selectChat(e.target.value)}
+          data-tip="בחר שיחה"
+          data-tippos="down"
+          aria-label="שיחה פעילה"
+        >
+          {store.conversations.map((c) => (
+            <option key={c.id} value={c.id}>{c.title || "שיחה"}</option>
+          ))}
+        </select>
+        <button className="iconbtn" data-tip="שיחה חדשה" data-tippos="down" onClick={startNewChat} aria-label="שיחה חדשה" disabled={false}>
+          <MessageSquarePlus size={16} strokeWidth={1.75} />
+        </button>
+      </div>
+
       <div className="agent-modes" role="tablist" aria-label="מצב סוכן">
         {MODES.map((m) => (
           <button key={m.id} role="tab" aria-selected={mode === m.id} className={`mode-tab ${mode === m.id ? "on" : ""}`}
@@ -323,7 +415,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
       </div>
 
       <div className="agent-ctx" aria-label="הקשר נוכחי">
-        <span className="ctx-chip"><MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}</span>
+        <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
+          data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
+          <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
+        </button>
         {selectionLabel
           ? <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 18 ? selectionLabel.slice(0, 17) + "…" : selectionLabel}</span>
           : <span className="ctx-chip muted"><SquareDashedMousePointer size={11} strokeWidth={2} />אין בחירה</span>}
@@ -337,15 +432,31 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             העלה קבצים ותאר מה לעשות — למשל: “השאר רק את הקטע על X”, “תמלל והכן כתוביות”, “הסר שתיקות ונשימות”.
           </div>
         )}
-        {items.map((it, i) => {
+        {displayItems.map((it, i) => {
+          if (it.kind === "quote") {
+            return (
+              <div key={i} className="msg2 quote" role="note" aria-label="ציטוט מקום">
+                <div className="b">
+                  <div className="quote-head"><Quote size={13} strokeWidth={2} />ציטוט מקום</div>
+                  <div className="quote-tc">{formatQuoteTime(it.seconds)}</div>
+                  <div className="quote-sec">{it.seconds.toFixed(2)}s על הציר</div>
+                  <button className="cp" onClick={() => copy(it.text, i)} aria-label="העתק">{copied === i ? <Check size={13} /> : <Copy size={13} />}</button>
+                </div>
+                <span className="t">{it.time}</span>
+              </div>
+            );
+          }
           if (it.kind === "tool") {
             const Icon = toolIcon(it.name);
-            const statusText = it.state === "running" ? it.status : it.summary || it.status;
+            const count = it.count || 1;
+            const title = toolGroupTitle(it.label, count);
+            const detail = toolGroupSummary(it.name, count, it.summary, it.status, it.state);
+            const statusText = it.state === "running" ? (count > 1 ? `${it.status} (×${count})` : it.status) : detail;
             return (
-              <div key={i} className="tool2">
+              <div key={it.id || i} className="tool2">
                 <span className="ic" style={{ background: it.color + "22", color: it.color }}><Icon size={15} strokeWidth={1.75} /></span>
                 <div className="tx">
-                  <div className="nm" style={{ color: it.color }}>{it.label}</div>
+                  <div className="nm" style={{ color: it.color }}>{title}</div>
                   <div className="st">{it.providerLabel ? `דרך ${it.providerLabel} · ${statusText}` : statusText}</div>
                 </div>
                 <span className="stt tool-actions">
@@ -358,14 +469,25 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             );
           }
           if (it.kind === "output") {
+            const label =
+              it.mkind === "video" ? "סרטון מוכן"
+                : it.mkind === "image" ? "פריים"
+                  : it.mkind === "audio" ? "קריינות"
+                    : "כתוביות SRT";
+            const Icon =
+              it.mkind === "video" ? Film
+                : it.mkind === "image" ? ImageIcon
+                  : it.mkind === "audio" ? Music
+                    : Captions;
             return (
               <div key={i} className="out2">
                 <div className="oh">
-                  {it.mkind === "video" ? <Film size={14} /> : it.mkind === "image" ? <ImageIcon size={14} /> : <Captions size={14} />}
-                  {it.mkind === "video" ? "סרטון מוכן" : it.mkind === "image" ? "פריים" : "כתוביות SRT"}
+                  <Icon size={14} />
+                  {label}
                 </div>
                 {it.mkind === "video" && <video src={it.url} controls />}
                 {it.mkind === "image" && <img src={it.url} alt="frame" />}
+                {it.mkind === "audio" && <audio src={it.url} controls />}
                 <a className="btn primary sm" href={it.url} download={it.name}><Download size={14} strokeWidth={2} />הורד {it.name}</a>
               </div>
             );
@@ -381,6 +503,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
             </div>
           );
         })}
+        {showThinking && (
+          <div className="think2" aria-live="polite" aria-label="הסוכן חושב">
+            <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
+          </div>
+        )}
         {ask && (
           <div className="ask2">
             <div className="q">{ask.q}</div>

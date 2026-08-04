@@ -88,8 +88,16 @@ export class AgentRunner {
               tools: toolsForMode,
             }),
           });
-          data = await resp.json();
-          if (!resp.ok) { this.events.onError(data.error || "שגיאת סוכן."); break; }
+          const raw = await resp.text();
+          try { data = JSON.parse(raw); }
+          catch {
+            const hint = raw.slice(0, 160).replace(/\s+/g, " ");
+            this.events.onError(resp.ok
+              ? `תשובת הסוכן אינה JSON תקין: ${hint || "(ריק)"}`
+              : `שגיאת סוכן (HTTP ${resp.status}): ${hint || "ללא פירוט"}`);
+            break;
+          }
+          if (!resp.ok) { this.events.onError(data.error || data.message || "שגיאת סוכן."); break; }
         } catch (e: any) {
           if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
           this.events.onError(e?.name === "AbortError" ? "הסוכן נתקע (timeout על קריאת ה-LLM). נסה שוב." : (e?.message || "שגיאת רשת."));

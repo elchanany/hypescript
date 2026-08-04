@@ -22,8 +22,11 @@ web/.env.*.local
 !web/.env.example
 !local/.env.example
 
-# graphify build output (regenerable)
-graphify-out/
+# Local env / secrets (never commit)
+.env.*
+!.env.example
+*.pem
+*.key
 
 # OS
 .DS_Store
@@ -31,3 +34,27 @@ Thumbs.db
 
 # local screenshots / scratch artifacts (not part of the product)
 .artifacts/
+
+# Cursor / agent runtime state (keep shared rules/hooks/commands tracked)
+.cursor/hooks/state/*
+!.cursor/hooks/state/.gitkeep
+.cursor/*.log
+
+# Graphify — share graph artifacts; ignore runtime/cache/cost/temp
+graphify-out/**
+!graphify-out/graph.json
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/graph.html
+!graphify-out/manifest.json
+!graphify-out/GRAPH_TREE.html
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/memory/
+graphify-out/reflections/
+graphify-out/.graphify*
+graphify-out/needs_update
+graphify-out/.needs_update
+
+# Installer backups / local-only noise
+*.graphify-bak
+.graphify/

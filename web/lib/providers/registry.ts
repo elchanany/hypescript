@@ -37,6 +37,20 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     envKeys: ["GROQ_API_KEY"],
     configuredKeys: ["groq-transcribe"],
   },
+  {
+    id: "elevenlabs-transcribe",
+    labelHe: "ElevenLabs Scribe",
+    kind: "transcribe",
+    envKeys: ["ELEVENLABS_API_KEY"],
+    configuredKeys: ["elevenlabs-transcribe"],
+  },
+  {
+    id: "elevenlabs-voice",
+    labelHe: "ElevenLabs קריינות",
+    kind: "voice",
+    envKeys: ["ELEVENLABS_API_KEY"],
+    configuredKeys: ["elevenlabs-voice"],
+  },
 ] as const;
 
 export const LLM_PROVIDERS = PROVIDER_REGISTRY.filter((provider) => provider.kind === "llm") as readonly (ProviderDefinition & { id: Provider })[];

@@ -2,6 +2,7 @@
 
 import { Scissors, Trash2, Magnet, ZoomIn, ZoomOut, Maximize2, SquareDashed } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "@/lib/editor/time";
 
 export default function TimelineToolbar({
   selInfo, canSplit, canDelete, onSplit, onDelete, onDeleteLeaveGap, canLeaveGap, snap, onSnap, zoom, onZoom, onFit,
@@ -11,6 +12,10 @@ export default function TimelineToolbar({
   snap: boolean; onSnap: (v: boolean) => void;
   zoom: number; onZoom: (v: number) => void; onFit: () => void;
 }) {
+  // סליידר לוגריתמי — נוח מ-0.15 עד 128
+  const toSlider = (z: number) => Math.log(Math.max(ZOOM_MIN, z) / ZOOM_MIN) / Math.log(ZOOM_MAX / ZOOM_MIN);
+  const fromSlider = (t: number) => clampZoom(ZOOM_MIN * Math.pow(ZOOM_MAX / ZOOM_MIN, t));
+
   return (
     <div className="tl-toolbar" dir="ltr">
       <IconButton icon={Scissors} tip="פצל בראש-הנגן (S)" tipPos="up" disabled={!canSplit} onClick={onSplit} />
@@ -21,9 +26,14 @@ export default function TimelineToolbar({
       {selInfo && <span className="tl-selinfo">{selInfo}</span>}
       <div className="grow" />
       <div className="tl-zoom">
-        <IconButton icon={ZoomOut} tip="הקטן תצוגה" tipPos="up" disabled={zoom <= 1} onClick={() => onZoom(Math.max(1, zoom - 1))} />
-        <input type="range" min={1} max={12} step={0.5} value={zoom} onChange={(e) => onZoom(+e.target.value)} />
-        <IconButton icon={ZoomIn} tip="הגדל תצוגה" tipPos="up" disabled={zoom >= 12} onClick={() => onZoom(Math.min(12, zoom + 1))} />
+        <IconButton icon={ZoomOut} tip="הקטן תצוגה" tipPos="up" disabled={zoom <= ZOOM_MIN + 1e-6}
+          onClick={() => onZoom(clampZoom(zoom / 1.25))} />
+        <input type="range" min={0} max={1} step={0.001} value={toSlider(zoom)}
+          onChange={(e) => onZoom(fromSlider(+e.target.value))}
+          aria-label="זום ציר זמן" />
+        <IconButton icon={ZoomIn} tip="הגדל תצוגה" tipPos="up" disabled={zoom >= ZOOM_MAX - 1e-6}
+          onClick={() => onZoom(clampZoom(zoom * 1.25))} />
+        <span className="tl-zoom-pct" title="Pinch או Ctrl+גלגלת לזום · שתי אצבעות לצד לגלילה">{Math.round(zoom * 100)}%</span>
         <IconButton icon={Maximize2} tip="התאם לרוחב" tipPos="up" onClick={onFit} />
       </div>
     </div>

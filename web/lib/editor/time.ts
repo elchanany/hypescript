@@ -28,6 +28,25 @@ export function formatTimecode(s: number, fps = 30): string {
   return (h > 0 ? `${p(h)}:` : "") + `${p(m)}:${p(sec)};${p(f)}`;
 }
 
+/** תצוגה קריאה לציטוט מקום בצ'אט: M:SS.d */
+export function formatQuoteTime(s: number): string {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
+}
+
+/** טקסט קצר להדבקה בתיבת ההודעה של הצ'אט. */
+export function quotePlaceText(s: number): string {
+  const t = roundToMs(s);
+  return `📍 ${formatQuoteTime(t)}`;
+}
+
+/** גבולות זום טיימליין — כמעט ללא מגבלה מעשית. */
+export const ZOOM_MIN = 0.15;
+export const ZOOM_MAX = 128;
+export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
 /** מגנטיות: אם s קרוב לאחד ה-targets בטולרנס — מחזיר את היעד (מעוגל ל-ms). */
 export function snapTime(s: number, targets: number[], toleranceSec: number): number {
   let best = s;

@@ -2,24 +2,41 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PROVIDER_PREF } from "@/lib/keys";
+import { PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
 import { Provider } from "@/lib/agent/types";
 import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
 import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
 import type { ProviderStatusInfo } from "@/lib/providers/types";
+import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
 
 export default function SettingsPage() {
   const [provider, setProvider] = useState<Provider>("deepseek");
+  const [transcribePref, setTranscribePref] = useState<TranscribeProviderPref>("auto");
+  const [transcribeModel, setTranscribeModel] = useState("");
   const [cfg, setCfg] = useState<ApiConfigShape>({});
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
+    const tp = localStorage.getItem(TRANSCRIBE_PREF) as TranscribeProviderPref | null;
+    if (tp === "auto" || tp === "elevenlabs" || tp === "groq") setTranscribePref(tp);
+    setTranscribeModel(localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "");
     fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
   }, []);
 
   const save = (p: Provider) => {
     setProvider(p);
     localStorage.setItem(PROVIDER_PREF, p);
+  };
+
+  const saveTranscribePref = (p: TranscribeProviderPref) => {
+    setTranscribePref(p);
+    localStorage.setItem(TRANSCRIBE_PREF, p);
+  };
+
+  const saveTranscribeModel = (m: string) => {
+    setTranscribeModel(m);
+    if (m.trim()) localStorage.setItem(TRANSCRIBE_MODEL_PREF, m.trim());
+    else localStorage.removeItem(TRANSCRIBE_MODEL_PREF);
   };
 
   const statuses = getProviderStatuses(flattenApiConfig(cfg));
@@ -62,7 +79,56 @@ export default function SettingsPage() {
             </div>
           );
         })}
-        <div className="hint">מפתח חינם: console.groq.com/keys</div>
+        <div className="hint" style={{ marginTop: 10 }}>
+          Groq חינם: console.groq.com/keys · ElevenLabs (בתשלום, מדויק יותר): elevenlabs.io/app/developers/api-keys
+        </div>
+
+        <h3 style={{ marginTop: 18, marginBottom: 8 }}>ספק תמלול ברירת מחדל</h3>
+        <div className="controls">
+          {([
+            ["auto", "אוטומטי (ElevenLabs אם קיים, אחרת Groq)"],
+            ["elevenlabs", "ElevenLabs Scribe"],
+            ["groq", "Groq Whisper"],
+          ] as const).map(([id, label]) => (
+            <label key={id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: transcribePref === id ? "var(--card-2)" : "transparent" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="radio" name="tx" checked={transcribePref === id} onChange={() => saveTranscribePref(id)} />
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <label style={{ display: "block", marginTop: 14, color: "var(--muted)" }}>
+          מודל תמלול ספציפי (אופציונלי)
+          <input
+            type="text"
+            value={transcribeModel}
+            onChange={(e) => saveTranscribeModel(e.target.value)}
+            placeholder="למשל scribe_v2 או whisper-large-v3 — ריק = ברירת מחדל"
+            style={{ display: "block", width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--card-2)", color: "inherit" }}
+          />
+        </label>
+        <div className="hint" style={{ marginTop: 8 }}>
+          הסוכן יכול גם לקבל מודל/ספק בכל קריאה ל-<code>transcribe_video</code>. מודלים מומלצים: <code>scribe_v2</code> (ElevenLabs), <code>whisper-large-v3</code> (Groq).
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>קריינות (ElevenLabs)</h2>
+        {PROVIDER_REGISTRY.filter((p) => p.kind === "voice").map((p) => {
+          const status = statusById[p.id];
+          return (
+            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
+              <span>{p.labelHe} · אותו משתנה <code>{p.envKeys.join(" / ")}</code></span>
+              <Status status={status} />
+            </div>
+          );
+        })}
+        <div className="hint" style={{ marginTop: 10 }}>
+          אותו מפתח מאפשר גם קריינות (TTS), רשימת קולות ומודלים. הרשאות מומלצות במפתח: Speech to Text, Text to Speech, Voices Read, Models Access.
+          פירוט מלא: <code>docs/ElevenLabs_API_HypeScript_2026-08-04.md</code>.
+        </div>
       </div>
 
       <div className="card">
@@ -90,9 +156,10 @@ export default function SettingsPage() {
         <h2>איך מגדירים מפתח</h2>
         <ol style={{ color: "var(--muted)", lineHeight: 1.9, margin: 0, paddingInlineStart: 20 }}>
           <li>Vercel → הפרויקט → Settings → Environment Variables.</li>
-          <li>הוסף את שם המשתנה (למשל <code>DEEPSEEK_API_KEY</code>) ואת הערך, ושמור.</li>
+          <li>הוסף את שם המשתנה (למשל <code>ELEVENLABS_API_KEY</code> או <code>DEEPSEEK_API_KEY</code>) ואת הערך, ושמור.</li>
           <li>Redeploy כדי שהמפתח ייכנס לתוקף.</li>
           <li>הרצה מקומית: הוסף אותם ל-<code>web/.env.local</code>.</li>
+          <li>ל-ElevenLabs: צור מפתח מוגבל (<code>hypescript-runtime</code>) עם הרשאות מינימליות בלבד — ראה המפרט ב-<code>docs/</code>.</li>
         </ol>
       </div>
       </div>

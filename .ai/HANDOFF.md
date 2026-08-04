@@ -1,21 +1,22 @@
 # HANDOFF
 
 ## Goal
-CapCut-class editor + AI agent. Auth/Dashboard אופציונלי דרך Supabase.
+עורך CapCut-class + סוכן AI + ElevenLabs + Auth/Dashboard אופציונלי (Supabase).
 
-## Current State
-- `main` כולל Package A + Timeline gaps/CommandBus/Providers (PR #1 + #3 ממוזגים).
-- ענף נוכחי: `cursor/auth-dashboard-505e`
+## Current State (verified)
+- `main` כולל ElevenLabs, תיקוני ציטוט/זום/פאן, Package A / timeline / providers.
+- ענף Auth: `cursor/auth-dashboard-505e` (PR #7)
   - `/login`, `/dashboard`, `/auth/callback`
-  - Supabase client אופציונלי — **בלי env האפליקציה לא קורסת**
+  - Supabase אופציונלי (Publishable key) — בלי env לא קורס
   - מדריך: `docs/SETUP_AUTH.md`
-  - TopBar → קישור ללוח פרויקטים + אינדיקציית משתמש
+- `ELEVENLABS_API_KEY` בשרת בלבד; סטטוס בהגדרות
 
-## Exact Next Steps (למשתמש)
-1. למזג PR Auth אחרי בדיקה.
-2. לעקוב אחרי `docs/SETUP_AUTH.md` (Supabase + Google + Vercel env + Redeploy).
+## Exact Next Steps
+1. למזג PR #7 ל-main + Redeploy ב-Vercel (המפתחות כבר שם).
+2. להפעיל Google ב-Supabase Auth + OAuth ב-Google Cloud (ראה SETUP_AUTH).
 3. לבדוק `/login` → Google → `/dashboard`.
 
 ## Risks
-- בלי Redeploy אחרי הוספת env ב-Vercel — Auth יישאר "לא מוגדר".
-- service_role אסור בצד לקוח (לא נגענו).
+- בלי מיזוג #7 — `/login` לא קיים בפרודקשן גם אם המפתחות ב-Vercel.
+- Secret/service_role אסור בצד לקוח.
+- Forced Alignment של ElevenLabs לא מומלץ לעברית — Scribe word timestamps.

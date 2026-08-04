@@ -266,7 +266,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tb-save.saving .dot { background: var(--warning); }
 
 /* Body: toolrail | left panel | center(preview + timeline) | inspector, chat overlay */
-.shell-body { flex: 1; display: flex; direction: ltr; min-height: 0; position: relative; }
+.shell-body { flex: 1; display: flex; direction: ltr; min-height: 0; min-width: 0; overflow: hidden; position: relative; }
 
 /* Tool rail */
 .toolrail {
@@ -289,7 +289,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 
 /* main area (everything right of the tool rail) = upper row + full-width timeline */
 .main-area { flex: 1; min-width: 0; direction: ltr; display: flex; flex-direction: column; min-height: 0; }
-.upper { flex: 1; min-height: 0; display: flex; direction: ltr; }
+.upper { flex: 1; min-height: 0; min-width: 0; display: flex; direction: ltr; overflow: hidden; }
 
 /* Center column */
 .center-col { flex: 1; min-width: 0; direction: ltr; display: flex; flex-direction: column; min-height: 0; }
@@ -427,7 +427,12 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 /* ===================================================================
    TIMELINE — full width, LTR internal.
    =================================================================== */
-.timeline-region { flex: none; direction: ltr; display: flex; flex-direction: column; border-top: 1px solid var(--border); background: var(--panel); }
+.timeline-region {
+  flex: none; direction: ltr; display: flex; flex-direction: column;
+  border-top: 1px solid var(--border); background: var(--panel);
+  /* מונע מהציר המוגדל לדחוף את הפריסה / להיכנס מתחת לפאנלים */
+  min-width: 0; max-width: 100%; overflow: hidden;
+}
 .tl-resize { height: 6px; margin-top: -3px; cursor: row-resize; background: transparent; position: relative; z-index: 6; }
 .tl-resize:hover { background: var(--accent); }
 
@@ -436,11 +441,23 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-toolbar .grow { flex: 1; }
 .tl-zoom { display: flex; align-items: center; gap: 6px; }
 .tl-zoom input[type="range"] { width: 104px; }
+.tl-zoom-pct {
+  min-width: 40px; text-align: center; font-size: 11px; color: var(--text-3);
+  font-variant-numeric: tabular-nums; direction: ltr;
+}
 .tl-selinfo { font-size: var(--fs-2); color: var(--text-2); font-family: var(--mono); direction: ltr; padding: 0 6px; }
 
 /* scroll area */
-.tl-scroll { flex: 1; min-height: 0; overflow: auto; background: var(--inset); }
-.tl-inner { position: relative; min-width: 100%; }
+.tl-scroll {
+  flex: 1; min-height: 0; min-width: 0; max-width: 100%;
+  overflow-x: auto; overflow-y: auto; background: var(--inset);
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+.tl-inner {
+  position: relative; min-width: 100%; height: 100%; box-sizing: border-box;
+  max-width: none; /* רוחב נשלט ב-inline לפי zoom — לא דוחף את הפריסה */
+}
 
 .tl-rowline { display: flex; align-items: stretch; }
 .tl-rowline + .tl-rowline { border-top: 1px solid var(--border); }
@@ -547,6 +564,15 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 }
 
 /* mode selector: Ask / Plan / Act */
+.chat-threads {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  border-bottom: 1px solid var(--border); direction: rtl;
+}
+.chat-threads select {
+  flex: 1; min-width: 0; height: 28px; padding: 0 8px; font-size: 12px;
+}
+.chat-threads .iconbtn { flex: none; }
+
 .agent-modes { display: flex; gap: 3px; padding: 6px 8px; border-bottom: 1px solid var(--border); direction: rtl; }
 .mode-tab { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text-2); border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
 .mode-tab:hover { color: var(--text); border-color: var(--border-strong); }
@@ -559,6 +585,30 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .ctx-chip.on { color: var(--text); border-color: var(--border-strong); }
 .ctx-chip.on svg { color: var(--accent); }
 .ctx-chip.muted { color: var(--text-3); }
+button.ctx-chip { cursor: pointer; font: inherit; }
+button.ctx-chip:hover { border-color: var(--accent); color: var(--text); }
+button.quote-chip:hover svg { color: var(--accent); }
+
+.msg2.quote { align-self: flex-start; max-width: 85%; }
+.msg2.quote .b {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.msg2.quote .quote-head {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-2); font-weight: 500;
+}
+.msg2.quote .quote-head svg { color: var(--accent); }
+.msg2.quote .quote-tc {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 18px; font-weight: 600; color: var(--text);
+  direction: ltr; unicode-bidi: isolate; letter-spacing: 0.02em;
+}
+.msg2.quote .quote-sec { font-size: 11px; color: var(--text-3); direction: rtl; }
 
 /* composer popups (/ commands and @ mentions) */
 .composer { position: relative; flex: none; }
@@ -625,6 +675,21 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .dots2 i:nth-child(2) { animation-delay: .15s; }
 .dots2 i:nth-child(3) { animation-delay: .3s; }
 @keyframes bounce { 0%,100% { transform: translateY(0); opacity: .4; } 50% { transform: translateY(-3px); opacity: 1; } }
+
+/* אינדיקטור "הסוכן חושב" בין קריאות כלים / בזמן המתנה ל-LLM */
+.think2 {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-lg);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  min-height: 32px;
+}
+.think2 .dots2 i { width: 5px; height: 5px; background: var(--text-2); }
 
 /* status strip (analyze/render progress) */
 .status-strip { height: 30px; flex: none; direction: rtl; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--panel-2); font-size: var(--fs-2); }

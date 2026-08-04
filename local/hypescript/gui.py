@@ -89,9 +89,11 @@ class HypescriptGUI:
         self._build_footer()
 
         # טען מפתח מהסביבה אם קיים
-        for name in ("GROQ_API_KEY", "HYPESCRIPT_API_KEY"):
+        for name in ("ELEVENLABS_API_KEY", "GROQ_API_KEY", "HYPESCRIPT_API_KEY"):
             if os.environ.get(name):
                 self.api_key.set(os.environ[name])
+                if name == "ELEVENLABS_API_KEY":
+                    self.provider.set("elevenlabs")
                 break
 
         self._toggle_engine()
@@ -164,22 +166,39 @@ class HypescriptGUI:
         self.engine = tk.StringVar(value="cloud")
         row = tk.Frame(c, bg=CARD)
         row.pack(fill="x", anchor="e")
-        ttk.Radiobutton(row, text="ענן (Groq — מהיר ומדויק)", value="cloud",
+        ttk.Radiobutton(row, text="ענן (Groq / ElevenLabs)", value="cloud",
                         variable=self.engine, command=self._toggle_engine).pack(side="right", padx=(12, 0))
         ttk.Radiobutton(row, text="מקומי (פרטי, על המחשב)", value="local",
                         variable=self.engine, command=self._toggle_engine).pack(side="right")
 
         self.cloud_frame = tk.Frame(c, bg=CARD)
         self.cloud_frame.pack(fill="x", pady=(10, 0))
+        prow = tk.Frame(self.cloud_frame, bg=CARD)
+        prow.pack(fill="x", anchor="e", pady=4)
+        self.provider = tk.StringVar(value="groq")
+        ttk.Combobox(
+            prow,
+            textvariable=self.provider,
+            width=18,
+            state="readonly",
+            values=["groq", "elevenlabs", "openai"],
+        ).pack(side="right", padx=(8, 0))
+        ttk.Label(prow, text="ספק ענן", width=18, anchor="e").pack(side="right")
         self.api_key = tk.StringVar()
         krow = tk.Frame(self.cloud_frame, bg=CARD)
         krow.pack(fill="x", anchor="e", pady=4)
         self.key_entry = ttk.Entry(krow, textvariable=self.api_key, show="•")
         self.key_entry.pack(side="right", fill="x", expand=True, padx=(8, 0))
-        ttk.Label(krow, text="מפתח Groq", width=18, anchor="e").pack(side="right")
+        self.key_label = ttk.Label(krow, text="מפתח API", width=18, anchor="e")
+        self.key_label.pack(side="right")
         self.show_key = tk.BooleanVar(value=False)
         ttk.Checkbutton(self.cloud_frame, text="הצג מפתח", variable=self.show_key,
                         command=self._toggle_key).pack(anchor="e")
+        ttk.Label(
+            self.cloud_frame,
+            text="ElevenLabs: ELEVENLABS_API_KEY · מודל scribe_v2 · Groq: GROQ_API_KEY",
+            foreground=MUTED,
+        ).pack(anchor="e", pady=(4, 0))
 
         self.local_frame = tk.Frame(c, bg=CARD)
         mrow = tk.Frame(self.local_frame, bg=CARD)
@@ -294,14 +313,17 @@ class HypescriptGUI:
             messagebox.showwarning("חסר קלט", "בחר לפחות קובץ וידאו אחד.")
             return None
         if self.engine.get() == "cloud" and not self.api_key.get().strip():
-            messagebox.showwarning("חסר מפתח", "מצב ענן דורש מפתח Groq. הזן מפתח או עבור למצב מקומי.")
+            messagebox.showwarning(
+                "חסר מפתח",
+                "מצב ענן דורש מפתח API (Groq / ElevenLabs / OpenAI). הזן מפתח או עבור למצב מקומי.",
+            )
             return None
         return {
             "inputs": self.inputs,
             "script": self.script.get().strip() or None,
             "output": self.output.get().strip() or None,
             "engine": self.engine.get(),
-            "provider": "groq",
+            "provider": self.provider.get() if self.engine.get() == "cloud" else "groq",
             "model": self.model.get() if self.engine.get() == "local" else None,
             "remove_fillers": self.remove_fillers.get(),
             "burn_subs": self.burn_subs.get(),
