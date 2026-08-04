@@ -22,6 +22,11 @@
 3. השלמת context menus + Alt+Click layers.
 4. בדיקת דפדפן עם קובץ וידאו אמיתי מול 45 סעיפי הקבלה.
 
+## Smoke (dev server)
+- `next build` + 79 editor tests ירוקים.
+- דפדפן: עורך נטען, Inspector מציג הגדרות פרויקט בלי בחירה, אין שגיאות בקומפוננטות החדשות (ללא מדיה מלאה).
+
+
 ## Risks
 - `moveClipToTime` overwrite עלול להפתיע — צריך מצבי Insert מפורשים ב-UI.
 - Detached audio trim/move עדיין מוגבל יחסית ל-linked.
