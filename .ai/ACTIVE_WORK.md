@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-Bootstrap מערכת continuity משותפת בין-סוכנים — validated על ענף העבודה.
+אין משימת bootstrap פתוחה — המערכת המשותפת זמינה על `main`.
 
 ## Branch
-`cursor/cross-agent-continuity-3c12`
+`main`
 
 ## Latest commit
-טיפ הענף הנוכחי (`git rev-parse HEAD` על `cursor/cross-agent-continuity-3c12`)
+טיפ `main` אחרי merge של PR #9 (cross-agent continuity bootstrap)
 
 ## Status
-ready_to_sync — commit bootstrap מוכן ל-push ולזמינות על `main`
+idle — מוכן לעבודת מוצר הבאה
 
 ## Exact continuation point
-אחרי הגעה ל-`main`: חזרה לעבודת מוצר לפי HANDOFF — Vercel verify, GAP_MAP/CommandBus, בלי Auth/Supabase בלי אישור.
+אימות בפריסת Vercel מ-`main`; הרחבת CommandBus/AG-4 לפי `docs/GAP_MAP.md`; בלי Auth/Supabase בלי אישור.
