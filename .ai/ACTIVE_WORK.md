@@ -1,13 +1,14 @@
 # ACTIVE_WORK.md
 
 ## Current task
-טיימליין CapCut-like: inspector / hover / snap / יישור אודיו / linked split — סיום משימה, ממתין למיזוג
+טיימליין CapCut-like — סיום משימה, ממתין למיזוג PR #24
 
 ## Branch
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-`9b03306` — docs: finalize HANDOFF/ACTIVE_WORK for timeline PR #24
+`0022f1d` — fix(web): keep clip selection when clicking timeline clips  
+(docs sync commits אחריו על אותו ענף)
 
 ## Status
 verified — PR #24 OPEN, ready for review (לא על `main`)
