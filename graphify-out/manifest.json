@@ -145,8 +145,8 @@
     "semantic_hash": "8b1f2546094b353c1892f08bae6bae70"
   },
   "web/components/Timeline.tsx": {
-    "mtime": 1785838580.9703872,
-    "ast_hash": "22c539acae467dfe8c89d4d4ba503f71",
+    "mtime": 1785839279.1788325,
+    "ast_hash": "eabb2a7556f855934417acd7a5e404d6",
     "semantic_hash": ""
   },
   "web/components/TimelineToolbar.tsx": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1785838034.0,
-    "ast_hash": "a2fba03d63cc39c3b3e1520e582227c3",
+    "mtime": 1785840285.7242181,
+    "ast_hash": "aafc1831fb78e995aaf7b0f5a5ab8911",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1785838034.0,
-    "ast_hash": "1acf19182e2f654865f9508c1abf6fce",
+    "mtime": 1785840285.7842176,
+    "ast_hash": "20d9e8d69cc7c31ad99013ae4a883501",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {

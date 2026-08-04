@@ -10367,7 +10367,7 @@
       "label": "Exact Next Steps",
       "file_type": "document",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L13",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "ai_handoff_exact_next_steps",
       "community": 34,
@@ -10378,7 +10378,7 @@
       "label": "Risks",
       "file_type": "document",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L17",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "ai_handoff_risks",
       "community": 34,
@@ -23866,7 +23866,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "web/components/Timeline.tsx",
-      "source_location": "L453",
+      "source_location": "L454",
       "weight": 1.0,
       "_origin": "ast",
       "source": "web_components_timeline_timeline",
@@ -40137,7 +40137,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L13",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ai_handoff_handoff",
@@ -40159,7 +40159,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".ai/HANDOFF.md",
-      "source_location": "L17",
+      "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ai_handoff_handoff",
@@ -43886,5 +43886,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "69fbc204779809b1ae420a807a52ade9ddfdd62b"
+  "built_at_commit": "09ed32ed5d4a42b67827f779126b3e75e2b145d2"
 }

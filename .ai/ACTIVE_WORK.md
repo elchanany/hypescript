@@ -7,10 +7,10 @@
 `cursor/timeline-inspector-snap-328b`
 
 ## Latest commit
-`fa2b733` — feat(web): CapCut-like timeline selection, snap guides, linked A/V
+(יועדכן אחרי commit של תיקון stopPropagation)
 
 ## Status
-implementation complete — awaiting manual verify + PR merge
+verified manually — ready for review (PR #24)
 
 ## Exact continuation point
-בדיקת UI: לחיצה על וידאו/אודיו/כתובית → פאנל מאפיינים; גרירת קצה עם Magnet; Split (S) מראה חיתוך גם ברצועת האודיו.
+מיזוג PR #24 אחרי review; אין באגים פתוחים ידועים בבחירת קליפ.

@@ -435,6 +435,7 @@ export default function Timeline(p: Props) {
                           className={`clip-gap ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
                           style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
                           onMouseDown={(e) => onDown(e, c, "move", "video")}
+                          onClick={(e) => e.stopPropagation()}
                           onMouseEnter={() => setHoveredId(c.id)}
                           onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
                           onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
@@ -453,6 +454,7 @@ export default function Timeline(p: Props) {
                         className={`clip2 ${linkedSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${vLocked ? "locked" : ""}`}
                         style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
                         onMouseDown={(e) => onDown(e, c, "move", "video")}
+                        onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
                         onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
@@ -485,6 +487,7 @@ export default function Timeline(p: Props) {
                         className={`clip-audio ${gap ? "gap" : ""} ${linkedSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !linkedSel(c.id) ? "hovered" : ""} ${vLocked ? "locked" : ""}`}
                         style={{ left: `${pct(assembledStart(clips, i))}%`, width: `${pct(clipDur(c))}%` }}
                         onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio"); }}
+                        onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
                         onContextMenu={(e) => { e.preventDefault(); if (!gap) { selectClip(c.id, "audio"); p.onClipMenu(c.id, e.clientX, e.clientY); } }}
