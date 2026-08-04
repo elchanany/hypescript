@@ -19,34 +19,24 @@ describe("timeline zoom", () => {
     expect(z).toBe(ZOOM_MIN);
   });
 
-  it("keeps the lane point under the pointer stable (accounts for gutter)", () => {
+  it("keeps scroll at 0 when zooming from the start — start stays at start", () => {
+    const next = scrollLeftAfterZoom({
+      oldZoom: 1, newZoom: 4, scrollLeft: 0, portWidth: 800, gutter: TIMELINE_GUTTER,
+    });
+    expect(next).toBe(0);
+  });
+
+  it("scales scroll by lane growth when already panned (left-edge time stays)", () => {
     const portWidth = 1000;
     const gutter = TIMELINE_GUTTER;
     const oldZoom = 1;
     const newZoom = 2;
-    const scrollLeft = 0;
-    // pointer over lane, 200px into the lane area
-    const pointerInPort = gutter + 200;
-    const next = scrollLeftAfterZoom({
-      oldZoom, newZoom, scrollLeft,
-      clientX: pointerInPort, containerLeft: 0, portWidth, gutter,
-    });
+    const scrollLeft = 200;
     const oldLaneW = portWidth * oldZoom - gutter;
     const newLaneW = portWidth * newZoom - gutter;
-    const frac = 200 / oldLaneW;
-    const expected = gutter + frac * newLaneW - pointerInPort;
-    expect(next).toBeCloseTo(expected, 5);
-  });
-
-  it("does not push playhead-at-zero under the gutter when zooming in at lane start", () => {
-    const portWidth = 800;
-    const gutter = TIMELINE_GUTTER;
-    // pointer just at the lane start (right edge of headers)
     const next = scrollLeftAfterZoom({
-      oldZoom: 1, newZoom: 4, scrollLeft: 0,
-      clientX: gutter, containerLeft: 0, portWidth, gutter,
+      oldZoom, newZoom, scrollLeft, portWidth, gutter,
     });
-    // playhead at t=0 sits at contentX=gutter; with this scroll it stays at viewport=gutter
-    expect(next).toBe(0);
+    expect(next).toBeCloseTo((scrollLeft / oldLaneW) * newLaneW, 5);
   });
 });

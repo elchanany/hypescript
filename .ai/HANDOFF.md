@@ -4,17 +4,17 @@
 עורך CapCut-class + סוכן AI + ElevenLabs + Auth/Dashboard אופציונלי (Supabase).
 
 ## Current State (verified)
-- `main` כולל ElevenLabs, ציטוט ל-composer, Auth אופציונלי, ותיקון זום/playhead.
-- **זום טיימליין:** scroll לפי lane אחרי gutter 136px; כותרות מעל playhead; pinch ב-rAF
-- Auth: `/login`, `/dashboard`, `/auth/callback` — Supabase אופציונלי; מדריך `docs/SETUP_AUTH.md`
-- `ELEVENLABS_API_KEY` בשרת בלבד
+ענף: `cursor/timeline-zoom-left-anchor-e91a`
+- זום מעגן **לשמאל** (קצה ה-lane ליד הכותרות) — לא למיקום העכבר
+- כש-scrollLeft≈0 נשאר 0: קו ההתחלה לא נדחף שמאלה אחרי הגדלה
+- `vitest zoom.test.ts` + `tsc` עוברים
 
 ## Exact Next Steps
-1. לרענן פריסה — לאמת pinch זום בלי playhead מעל הנעילה
-2. להפעיל Google ב-Supabase Auth לפי SETUP_AUTH (אם רוצים Auth פעיל)
+1. למזג ולרענן פריסה — לאמת שבהגדלה ההתחלה נשארת בהתחלה
+2. Auth/ElevenLabs לפי הצורך
 3. סוכן AI אוטונומי מחוץ לטווח עד אישור
 
 ## Risks
 - Secret/service_role אסור בצד לקוח
-- Forced Alignment של ElevenLabs לא מומלץ לעברית — Scribe word timestamps
+- Forced Alignment של ElevenLabs לא מומלץ לעברית
 - Roll/Slip/transitions חסרים (GAP_MAP)
