@@ -74,9 +74,19 @@ export function useEditor() {
   // עדכון חי בזמן גרירה/שינוי-גודל (ללא History; commitTransaction סוגר ל-Undo אחד)
   const setOverlaysLive = useCallback((u: Updater<Overlay[]>) => {
     const next = typeof u === "function" ? (u as any)(overlaysRef.current) : u;
+    overlaysRef.current = next;
     setOverlaysRaw(next);
   }, []);
-
+  const setSubsLive = useCallback((u: Updater<Sub[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(subsRef.current) : u;
+    subsRef.current = next;
+    setSubsRaw(next);
+  }, []);
+  const setClipsLive = useCallback((u: Updater<Clip[] | null>) => {
+    const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
+    clipsRef.current = next;
+    setClipsRaw(next);
+  }, []);
   // --- רצועות ---
   const patchTrack = useCallback((id: string, patch: Partial<TrackMeta>) => {
     commit({ ...now(), tracks: tracksRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
@@ -96,10 +106,6 @@ export function useEditor() {
 
   // --- transaction לגרירה/מניפולציה (Undo אחד לכל המחווה) ---
   const beginTransaction = useCallback(() => { if (!pending.current) pending.current = now(); }, []);
-  const setClipsLive = useCallback((u: Updater<Clip[] | null>) => {
-    const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
-    setClipsRaw(next);
-  }, []);
   const commitTransaction = useCallback(() => {
     if (pending.current) { hist.current.push(pending.current); pending.current = null; touch(); }
   }, [touch]);
@@ -125,7 +131,7 @@ export function useEditor() {
   return {
     clips, subs, tracks, overlays, canvas, captionStyle,
     setClips, setSubs, setProject, updateClip,
-    setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
+    setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setSubsLive, setCanvas, setCaptionStyle,
     renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     reset, undo, redo,
