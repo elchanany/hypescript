@@ -85,6 +85,18 @@ export default function EditorPage() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  const quoteSink = useRef<((seconds: number) => void) | null>(null);
+
+  const quotePlace = (seconds: number) => {
+    setChatOpen(true);
+    localStorage.setItem("hs_chatOpen", "1");
+    // אם הצ'אט כבר מורכב — מיד; אחרת ממתינים ל-mount
+    const tryInsert = (n = 0) => {
+      if (quoteSink.current) { quoteSink.current(seconds); return; }
+      if (n < 20) requestAnimationFrame(() => tryInsert(n + 1));
+    };
+    tryInsert();
+  };
 
   const main = useMemo(() => firstVideo(media), [media]);
   const duration = main?.duration || 0;
@@ -400,7 +412,8 @@ export default function EditorPage() {
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           overlays={overlays} canvas={canvas} projectId={projectId}
           onProject={({ words: w, clips: c, subs: s }) => { setWords(w); setProject(c, s); }}
-          playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide} />
+          playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
+          quoteSink={quoteSink} />
       </aside>
       {dockSide === "left" && dockHandle}
     </>
@@ -449,7 +462,8 @@ export default function EditorPage() {
         <div className="main-area">
           <div className="upper">
             <div className="center-col">
-              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)}
+              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur}
+                onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
                 canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
                 onBeginOverlay={beginTransaction}
@@ -497,7 +511,7 @@ export default function EditorPage() {
                 media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={Math.max(duration, clips ? totalDur(clips) : 0, ...overlays.map((o) => o.end), 0.001)}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
-                zoom={zoom} snap={snap}
+                zoom={zoom} onZoom={setZoom} snap={snap}
                 onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => (c ? trimClip(c, id, s, e, duration) : c))}

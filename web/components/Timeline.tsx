@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
+import { ZOOM_MIN } from "@/lib/editor/time";
+import { nextZoom, scrollLeftAfterZoom } from "@/lib/editor/zoom";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
@@ -21,6 +23,7 @@ interface Props {
   selectedId: string | null;
   selectedOverlayId?: string | null;
   zoom: number;
+  onZoom: (z: number) => void;
   snap: boolean;
   onSeek: (assembled: number) => void;
   onSelect: (id: string | null) => void;
@@ -43,11 +46,53 @@ const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const
 
 export default function Timeline(p: Props) {
   const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, zoom, snap } = p;
+  const scrollRef = useRef<HTMLDivElement>(null);
   const laneRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const pendingScroll = useRef<number | null>(null);
   const [dragLabel, setDragLabel] = useState<{ name: string; dur: number } | null>(null);
   const drag = useRef<{ mode: "move" | "l" | "r"; id: string; x0: number; laneW: number; s0: number; e0: number; moved: boolean; px: number } | null>(null);
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const onZoomRef = useRef(p.onZoom);
+  onZoomRef.current = p.onZoom;
+
+  useEffect(() => {
+    if (pendingScroll.current == null || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = pendingScroll.current;
+    pendingScroll.current = null;
+  }, [zoom]);
+
+  // native wheel (passive:false) — כדי ש-preventDefault יעבוד בדפדפן
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.shiftKey) {
+        el.scrollLeft += e.deltaY;
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      const z = zoomRef.current;
+      const next = nextZoom(z, e.deltaY);
+      if (Math.abs(next - z) < 1e-4) return;
+      const rect = el.getBoundingClientRect();
+      pendingScroll.current = scrollLeftAfterZoom({
+        oldZoom: z,
+        newZoom: next,
+        scrollLeft: el.scrollLeft,
+        clientX: e.clientX,
+        containerLeft: rect.left,
+        scrollWidth: el.scrollWidth,
+      });
+      onZoomRef.current(next);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   const colorOf = (sourceId: string) => SOURCE_COLORS[Math.max(0, media.findIndex((m) => m.id === sourceId)) % SOURCE_COLORS.length];
   const total = Math.max(0.001, p.maxDuration || totalDur(clips));
@@ -72,15 +117,18 @@ export default function Timeline(p: Props) {
   };
 
   const ticks = useMemo(() => {
-    const target = 6 + zoom * 3;
+    const target = 6 + Math.min(48, Math.max(2, zoom * 3));
     const raw = total / target;
-    const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
-    const step = steps.find((s) => s >= raw) || 600;
+    const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 3600];
+    const step = steps.find((s) => s >= raw) || steps[steps.length - 1];
     const out: number[] = [];
-    for (let t = 0; t <= total + 0.001; t += step) out.push(t);
+    for (let t = 0; t <= total + 0.001; t += step) out.push(Number(t.toFixed(3)));
     return { out, step };
   }, [total, zoom]);
-  const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  const fmt = (t: number) => {
+    if (ticks.step < 1) return `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, "0")}`;
+    return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  };
 
   // target insertion index for a pointer x (px, client coords) over the video lane
   const dropTarget = (clientX: number): { index: number; boundary: number } => {
@@ -142,12 +190,12 @@ export default function Timeline(p: Props) {
   const Grid = () => (<>{ticks.out.map((t) => <div key={t} className="tl-gridline" style={{ left: `${pct(t)}%` }} />)}</>);
 
   return (
-    <div className="tl-scroll">
+    <div className="tl-scroll" ref={scrollRef} title="גלגלת להגדלה/הקטנה · Shift+גלגלת לגלילה אופקית">
       <div className="tl-ghost" ref={ghostRef}>
         <span className="g-name">{dragLabel?.name}</span>
         <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
       </div>
-      <div className="tl-inner" style={{ width: `${Math.max(1, zoom) * 100}%` }}>
+      <div className="tl-inner" style={{ width: `${Math.max(ZOOM_MIN, zoom) * 100}%` }}>
         {/* ruler */}
         <div className="tl-rowline tl-rulerline">
           <div className="tl-corner2" />

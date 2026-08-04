@@ -431,6 +431,10 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tl-toolbar .grow { flex: 1; }
 .tl-zoom { display: flex; align-items: center; gap: 6px; }
 .tl-zoom input[type="range"] { width: 104px; }
+.tl-zoom-pct {
+  min-width: 40px; text-align: center; font-size: 11px; color: var(--text-3);
+  font-variant-numeric: tabular-nums; direction: ltr;
+}
 .tl-selinfo { font-size: var(--fs-2); color: var(--text-2); font-family: var(--mono); direction: ltr; padding: 0 6px; }
 
 /* scroll area */
@@ -540,6 +544,30 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .ctx-chip.on { color: var(--text); border-color: var(--border-strong); }
 .ctx-chip.on svg { color: var(--accent); }
 .ctx-chip.muted { color: var(--text-3); }
+button.ctx-chip { cursor: pointer; font: inherit; }
+button.ctx-chip:hover { border-color: var(--accent); color: var(--text); }
+button.quote-chip:hover svg { color: var(--accent); }
+
+.msg2.quote { align-self: flex-start; max-width: 85%; }
+.msg2.quote .b {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.msg2.quote .quote-head {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-2); font-weight: 500;
+}
+.msg2.quote .quote-head svg { color: var(--accent); }
+.msg2.quote .quote-tc {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 18px; font-weight: 600; color: var(--text);
+  direction: ltr; unicode-bidi: isolate; letter-spacing: 0.02em;
+}
+.msg2.quote .quote-sec { font-size: 11px; color: var(--text-3); direction: rtl; }
 
 /* composer popups (/ commands and @ mentions) */
 .composer { position: relative; flex: none; }
