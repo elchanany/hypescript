@@ -80,8 +80,8 @@ export default function EditorPage() {
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatWidth, setChatWidth] = useState(380);
-  const chatWidthRef = useRef(380); chatWidthRef.current = chatWidth;
+  const [chatWidth, setChatWidth] = useState(460);
+  const chatWidthRef = useRef(460); chatWidthRef.current = chatWidth;
   const [dockSide, setDockSide] = useState<"left" | "right">("right");
   const dockSideRef = useRef<"left" | "right">("right"); dockSideRef.current = dockSide;
   const [tlHeight, setTlHeight] = useState(300);
@@ -98,6 +98,7 @@ export default function EditorPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
   const quoteSink = useRef<((seconds: number) => void) | null>(null);
+  const pendingQuoteRef = useRef<number | null>(null);
   const clipsRef = useRef<Clip[] | null>(clips); clipsRef.current = clips;
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
   const mediaRef = useRef(media); mediaRef.current = media;
@@ -139,9 +140,20 @@ export default function EditorPage() {
   const quotePlace = (seconds: number) => {
     setChatOpen(true);
     localStorage.setItem("hs_chatOpen", "1");
+    // אם הצ'אט כבר פתוח — מדביקים מיד; אחרת שומרים לתור עד ש-Chat נטען
+    if (quoteSink.current) {
+      quoteSink.current(seconds);
+      return;
+    }
+    pendingQuoteRef.current = seconds;
     const tryInsert = (n = 0) => {
-      if (quoteSink.current) { quoteSink.current(seconds); return; }
-      if (n < 20) requestAnimationFrame(() => tryInsert(n + 1));
+      if (quoteSink.current) {
+        const s = pendingQuoteRef.current;
+        pendingQuoteRef.current = null;
+        if (s != null) quoteSink.current(s);
+        return;
+      }
+      if (n < 60) requestAnimationFrame(() => tryInsert(n + 1));
     };
     tryInsert();
   };
@@ -174,7 +186,7 @@ export default function EditorPage() {
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
-    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(640, w));
+    const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
     const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
     const lw = parseInt(localStorage.getItem("hs_leftw") || "0", 10); if (lw >= 220) setLeftW(Math.min(440, lw));
@@ -186,13 +198,13 @@ export default function EditorPage() {
     const startX = e.clientX; const startW = chatWidthRef.current;
     const onMove = (ev: MouseEvent) => {
       const delta = dockSideRef.current === "right" ? (startX - ev.clientX) : (ev.clientX - startX);
-      setChatWidth(Math.max(320, Math.min(640, startW + delta)));
+      setChatWidth(Math.max(360, Math.min(720, startW + delta)));
     };
     const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
-  const resetChatWidth = () => { setChatWidth(380); localStorage.setItem("hs_chatw", "380"); };
+  const resetChatWidth = () => { setChatWidth(460); localStorage.setItem("hs_chatw", "460"); };
   const toggleDockSide = () => setDockSide((s) => { const n = s === "right" ? "left" : "right"; localStorage.setItem("hs_dockside", n); return n; });
   const startResizeTL = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -598,7 +610,7 @@ export default function EditorPage() {
             if (ovs) setOverlays(ovs);
           }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
-          quoteSink={quoteSink} />
+          quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef} />
       </aside>
       {dockSide === "left" && dockHandle}
     </>

@@ -39,7 +39,7 @@ export function formatQuoteTime(s: number): string {
 /** טקסט קצר להדבקה בתיבת ההודעה של הצ'אט. */
 export function quotePlaceText(s: number): string {
   const t = roundToMs(s);
-  return `📍 ${formatQuoteTime(t)}`;
+  return `[ציטוט ${formatQuoteTime(t)}]`;
 }
 
 /** גבולות זום טיימליין — כמעט ללא מגבלה מעשית. */
