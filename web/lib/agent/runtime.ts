@@ -1,5 +1,5 @@
 // לולאת הסוכן (צד-לקוח): שולחת שיחה+כלים ל-/api/agent, מבצעת את קריאות הכלים
-// (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
+// ברצף (סנכרון חי לטיימליין + בלי מרוצי EDL), ומחזירה תוצאות ל-LLM עד שסיים.
 
 import { AgentMode, ChatMessage, Provider, ToolCall } from "./types";
 import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
@@ -201,39 +201,42 @@ export class AgentRunner {
 
         this.history.push({ role: "assistant", content: content ?? null, tool_calls: toolCalls });
 
-        // ביצוע קריאות הכלים במקביל
-        const results = await Promise.all(
-          toolCalls.map(async (tc) => {
-            const meta = TOOL_BY_NAME[tc.name];
-            this.events.onToolStart(tc, this.provider);
-            if (!meta) {
-              this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
-              return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };
-            }
-            const blocked = this.guardLoop(tc.name);
-            if (blocked) {
-              this.noteTool(tc.name);
-              this.events.onToolEnd(tc.id, false, blocked);
-              return { tool_call_id: tc.id, name: tc.name, content: blocked };
-            }
+        // ביצוע קריאות הכלים ברצף — כדי ששינויי EDL יופיעו מיד ובסדר על הטיימליין
+        // (מקביליות שוברת סנכרון חי ויוצרת מרוצי כתיבה על ctx)
+        const results: { tool_call_id: string; name: string; content: string }[] = [];
+        for (const tc of toolCalls) {
+          const meta = TOOL_BY_NAME[tc.name];
+          this.events.onToolStart(tc, this.provider);
+          if (!meta) {
+            this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
+            results.push({ tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` });
+            continue;
+          }
+          const blocked = this.guardLoop(tc.name);
+          if (blocked) {
             this.noteTool(tc.name);
-            try {
-              const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
-              // גם תוצאות שמכילות chunk error (כשהכלי תופס ומחזיר מחרוזת)
-              if (isChunkLoadError(out)) {
-                const formatted = formatToolError(out);
-                this.events.onToolEnd(tc.id, false, formatted);
-                return { tool_call_id: tc.id, name: tc.name, content: formatted };
-              }
+            this.events.onToolEnd(tc.id, false, blocked);
+            results.push({ tool_call_id: tc.id, name: tc.name, content: blocked });
+            continue;
+          }
+          this.noteTool(tc.name);
+          try {
+            const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
+            if (isChunkLoadError(out)) {
+              const formatted = formatToolError(out);
+              this.events.onToolEnd(tc.id, false, formatted);
+              results.push({ tool_call_id: tc.id, name: tc.name, content: formatted });
+            } else {
               this.events.onToolEnd(tc.id, true, out);
-              return { tool_call_id: tc.id, name: tc.name, content: out };
-            } catch (e: any) {
-              const msg = formatToolError(e?.message || String(e));
-              this.events.onToolEnd(tc.id, false, msg);
-              return { tool_call_id: tc.id, name: tc.name, content: msg };
+              results.push({ tool_call_id: tc.id, name: tc.name, content: out });
             }
-          }),
-        );
+          } catch (e: any) {
+            const msg = formatToolError(e?.message || String(e));
+            this.events.onToolEnd(tc.id, false, msg);
+            results.push({ tool_call_id: tc.id, name: tc.name, content: msg });
+          }
+          if (this.stopped) break;
+        }
         for (const r of results) {
           this.history.push({ role: "tool", tool_call_id: r.tool_call_id, name: r.name, content: r.content });
         }

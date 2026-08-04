@@ -56,7 +56,7 @@ export default function EditorPage() {
   const [words, setWords] = useState<Word[] | null>(null);
   const {
     clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, updateClip,
-    addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
+    addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setSubsLive, setCanvas,
     renameTrack, toggleLock, toggleMute, setTrackHeight, reorderTrack,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
@@ -605,10 +605,23 @@ export default function EditorPage() {
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           script={script} overlays={overlays} canvas={canvas} projectId={projectId}
-          onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
-            setWords(w); setProject(c, s);
-            if (ovs) setOverlays(ovs);
+          onProjectLive={({ words: w, clips: c, subs: s, overlays: ovs }) => {
+            setWords(w);
+            beginTransaction();
+            setClipsLive(c);
+            setSubsLive(s);
+            if (ovs) setOverlaysLive(ovs);
           }}
+          onProject={({ words: w, clips: c, subs: s, overlays: ovs }) => {
+            setWords(w);
+            // סוגר Undo אחד לכל כלי: שומר snapshot לפני השינוי החי, משאיר את המצב החי
+            beginTransaction();
+            setClipsLive(c);
+            setSubsLive(s);
+            if (ovs) setOverlaysLive(ovs);
+            commitTransaction();
+          }}
+          onMediaChange={(next) => setMedia(next)}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
           quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef} />
       </aside>

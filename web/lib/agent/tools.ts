@@ -49,6 +49,18 @@ export interface AgentContext {
   onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image" | "audio") => void;
   // תמונות שהסוכן צילם — יצורפו להודעה הבאה כדי שיוכל "לראות" אותן (בספק תומך-ראייה).
   pendingImages?: string[];
+  /** נקרא אחרי כל שינוי ב-EDL/כתוביות/שכבות/מילים — לסנכרון חי לטיימליין */
+  onProjectChange?: () => void;
+  /** נקרא אחרי שינוי בספריית המדיה (שם/הוספה) */
+  onMediaChange?: () => void;
+}
+
+function notifyProject(ctx: AgentContext) {
+  ctx.onProjectChange?.();
+}
+
+function notifyMedia(ctx: AgentContext) {
+  ctx.onMediaChange?.();
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -210,6 +222,27 @@ const clipsSummary = (clips: Clip[]) => `${clips.length} קליפים, משך ס
 function setClips(ctx: AgentContext, clips: Clip[] | null) {
   ctx.clips = clips;
   ctx.assembledWords = null;
+  notifyProject(ctx);
+}
+
+function setSubs(ctx: AgentContext, subs: Sub[] | null) {
+  ctx.subs = subs;
+  notifyProject(ctx);
+}
+
+function setOverlays(ctx: AgentContext, overlays: Overlay[]) {
+  ctx.overlays = overlays;
+  notifyProject(ctx);
+}
+
+function setWords(ctx: AgentContext, words: Word[] | null) {
+  ctx.words = words;
+  notifyProject(ctx);
+}
+
+function setMediaList(ctx: AgentContext, media: MediaAsset[]) {
+  ctx.media = media;
+  notifyMedia(ctx);
 }
 
 export const TOOLS: ToolMeta[] = [
@@ -248,7 +281,7 @@ export const TOOLS: ToolMeta[] = [
         const ext = old.includes(".") ? old.slice(old.lastIndexOf(".")) : "";
         name += ext;
       }
-      ctx.media[idx] = { ...ctx.media[idx], name };
+      setMediaList(ctx, ctx.media.map((m, i) => (i === idx ? { ...m, name } : m)));
       return `שם המדיה עודכן ל-"${name}".`;
     },
   },
@@ -298,7 +331,7 @@ export const TOOLS: ToolMeta[] = [
           ctx.transcripts[asset.id] = cached.words;
           if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
           ctx.transcriptMeta[asset.id] = { provider: cached.provider, model: cached.model };
-          if (isMain) { ctx.words = cached.words; if (!ctx.duration) ctx.duration = asset.duration; }
+          if (isMain) { setWords(ctx, cached.words); if (!ctx.duration) ctx.duration = asset.duration; }
           return `נטען תמלול שמור ל-"${asset.name}" (${cached.provider}/${cached.model || "?"}, ${cached.words.filter(isSpeechWord).length} מילים).`;
         }
       }
@@ -328,7 +361,7 @@ export const TOOLS: ToolMeta[] = [
       ctx.transcripts[asset.id] = words;
       if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
       ctx.transcriptMeta[asset.id] = { provider, model };
-      if (isMain) { ctx.words = words; if (!ctx.duration) ctx.duration = asset.duration; }
+      if (isMain) { setWords(ctx, words); if (!ctx.duration) ctx.duration = asset.duration; }
       txWrite(key, words, provider, model);
       const speech = words.filter(isSpeechWord).length;
       const events = words.filter((w) => w.type === "audio_event").length;
@@ -790,7 +823,7 @@ export const TOOLS: ToolMeta[] = [
       const start = a.start != null ? +a.start : 0;
       const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       const o = makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
-      ctx.overlays = [...(ctx.overlays || []), o];
+      setOverlays(ctx, [...(ctx.overlays || []), o]);
       return `נוספה שכבת טקסט (${o.id}). סה״כ ${ctx.overlays.length} שכבות.`;
     },
   },
@@ -805,7 +838,7 @@ export const TOOLS: ToolMeta[] = [
       const ovs = ctx.overlays || [];
       const i = (a.index | 0) - 1;
       if (!ovs[i]) return "אינדקס שכבה לא תקין.";
-      ctx.overlays = ovs.filter((_, k) => k !== i);
+      setOverlays(ctx, ovs.filter((_, k) => k !== i));
       return `שכבה נמחקה. נותרו ${ctx.overlays.length}.`;
     },
   },
@@ -839,7 +872,7 @@ export const TOOLS: ToolMeta[] = [
       if (a.text != null) patch.text = String(a.text);
       if (a.start != null) patch.start = Math.max(0, +a.start);
       if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
-      ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
+      setOverlays(ctx, ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x)));
       return `שכבה ${a.index} עודכנה.`;
     },
   },
@@ -957,12 +990,12 @@ export const TOOLS: ToolMeta[] = [
       if (script) ctx.script = script;
       const modeRaw = String(a.mode || "progressive").toLowerCase();
       const mode = modeRaw === "phrase" ? "phrase" as const : "progressive" as const;
-      ctx.subs = script
+      setSubs(ctx, script
         ? edlToSubsWithScript(clips, getWords, script, max, { mode })
-        : edlToSubs(clips, getWords, max, { mode });
+        : edlToSubs(clips, getWords, max, { mode }));
       return script
-        ? `נוצרו ${ctx.subs.length} כתוביות (${mode}) לפי הסקריפט הנקי — תזמון מהתמלול, טקסט מתוקן, חשיפה לפי קצב דיבור. בדוק list_subtitles.`
-        : `נוצרו ${ctx.subs.length} כתוביות (${mode}) מהתמלול הגולמי. אם יש טקסט נקי — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
+        ? `נוצרו ${ctx.subs!.length} כתוביות (${mode}) לפי הסקריפט הנקי — תזמון מהתמלול, טקסט מתוקן, חשיפה לפי קצב דיבור. בדוק list_subtitles.`
+        : `נוצרו ${ctx.subs!.length} כתוביות (${mode}) מהתמלול הגולמי. אם יש טקסט נקי — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
     },
   },
   {
@@ -976,7 +1009,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, text: String(a.text) } : s));
+      setSubs(ctx, ctx.subs.map((s, k) => (k === i ? { ...s, text: String(a.text) } : s)));
       return `כתובית ${i + 1} עודכנה: "${a.text}"`;
     },
   },
@@ -986,7 +1019,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, start: +a.start, end: Math.max(+a.start + 0.2, +a.end) } : s));
+      setSubs(ctx, ctx.subs.map((s, k) => (k === i ? { ...s, start: +a.start, end: Math.max(+a.start + 0.2, +a.end) } : s)));
       return `תוזמנה כתובית ${i + 1}.`;
     },
   },
@@ -996,14 +1029,14 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.filter((_, k) => k !== i);
-      return `נמחקה כתובית ${i + 1}. נשארו ${ctx.subs.length}.`;
+      setSubs(ctx, ctx.subs.filter((_, k) => k !== i));
+      return `נמחקה כתובית ${i + 1}. נשארו ${ctx.subs!.length}.`;
     },
   },
   {
     name: "clear_subtitles", label: "מחיקת כל הכתוביות", color: "#ef4444", icon: "🧹",
     schema: { name: "clear_subtitles", description: "מוחק את כל הכתוביות בבת אחת (השתמש בזה במקום למחוק אחת-אחת).", parameters: { type: "object", properties: {} } },
-    run: async (_a, ctx) => { const n = ctx.subs?.length || 0; ctx.subs = []; return `נמחקו כל ${n} הכתוביות.`; },
+    run: async (_a, ctx) => { const n = ctx.subs?.length || 0; setSubs(ctx, []); return `נמחקו כל ${n} הכתוביות.`; },
   },
   {
     name: "export_srt", label: "ייצוא SRT", color: "#8b5cf6", icon: "⬇️",
@@ -1023,7 +1056,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const subs = parseSrt(String(a.content || ""));
       if (!subs.length) return "לא זוהו כתוביות בתוכן.";
-      ctx.subs = subs;
+      setSubs(ctx, subs);
       return `יובאו ${subs.length} כתוביות. אפשר לערוך/לייצא.`;
     },
   },
@@ -1160,7 +1193,7 @@ export const TOOLS: ToolMeta[] = [
         duration: duration || Math.max(1, text.length / 12),
         url,
       };
-      ctx.media.push(asset);
+      setMediaList(ctx, [...ctx.media, asset]);
       ctx.onOutput?.(blob, name, "audio");
       download(blob, name);
       return `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`;

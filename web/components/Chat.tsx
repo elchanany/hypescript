@@ -92,6 +92,10 @@ interface ChatProps {
   canvas?: CanvasSize;
   projectId: string | null;
   onProject: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null; overlays?: Overlay[] }) => void;
+  /** עדכון חי לטיימליין בזמן כלי (ללא History) — אם חסר, נופל ל-onProject */
+  onProjectLive?: (p: { words: Word[] | null; clips: Clip[] | null; subs: Sub[] | null; overlays?: Overlay[] }) => void;
+  /** ספריית מדיה אחרי שינוי מהסוכן */
+  onMediaChange?: (media: MediaAsset[]) => void;
   // הקשר עריכה חי (context chips + mention resolution)
   playhead?: number;
   selectionLabel?: string | null;
@@ -110,7 +114,7 @@ const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, onProjectLive, onMediaChange, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -184,7 +188,25 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const scrollRef = useRef<HTMLDivElement>(null);
   const onProjectRef = useRef(onProject);
   onProjectRef.current = onProject;
+  const onProjectLiveRef = useRef(onProjectLive);
+  onProjectLiveRef.current = onProjectLive;
+  const onMediaChangeRef = useRef(onMediaChange);
+  onMediaChangeRef.current = onMediaChange;
   ctxRef.current.onOutput = addOutput;
+
+  const pushProjectLive = useCallback(() => {
+    const c = ctxRef.current;
+    const payload = { words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays };
+    (onProjectLiveRef.current || onProjectRef.current)?.(payload);
+  }, []);
+
+  const pushMedia = useCallback(() => {
+    onMediaChangeRef.current?.(ctxRef.current.media);
+  }, []);
+
+  ctxRef.current.onProjectChange = pushProjectLive;
+  ctxRef.current.onMediaChange = pushMedia;
+
   const savedHistory = useRef<ChatMessage[]>([]);
   const lastUserPromptRef = useRef("");
   const [restoredChat, setRestoredChat] = useState(false);
@@ -246,10 +268,17 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   useEffect(() => {
     const c = ctxRef.current;
-    c.media = media; c.duration = firstVideo(media)?.duration || 0; c.words = words; c.clips = clips; c.subs = subs;
-    c.overlays = overlays; c.canvas = canvas || defaultCanvasFor();
+    c.canvas = canvas || defaultCanvasFor();
     if (script.trim()) c.script = script.trim();
-  }, [media, words, clips, subs, overlays, canvas, script]);
+    // בזמן ריצת סוכן — אל תדרוס מדיה/EDL מ-props (רינדור הצ'אט אחרי live-push עלול להחזיר מצב ישן)
+    if (running) return;
+    c.media = media;
+    c.duration = firstVideo(media)?.duration || 0;
+    c.words = words;
+    c.clips = clips;
+    c.subs = subs;
+    c.overlays = overlays;
+  }, [media, words, clips, subs, overlays, canvas, script, running]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -310,7 +339,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onToolEnd: (id, ok, summary) => {
           setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
           const c = ctxRef.current;
+          // Commit ל-History בסוף הכלי (העדכונים החיים כבר רצו דרך onProjectChange)
           onProjectRef.current({ words: c.words, clips: c.clips, subs: c.subs, overlays: c.overlays });
+          onMediaChangeRef.current?.(c.media);
         },
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),
