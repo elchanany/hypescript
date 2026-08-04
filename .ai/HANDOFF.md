@@ -1,17 +1,11 @@
-# HANDOFF — Package B started + branding on main
+# HANDOFF
 
-## On main
-- Official branding from user PNGs (exact icon)
-- Package A Auth foundation
+## main tip
+`162847e` — fix OAuth login bounce
 
-## Branch
-`cursor/saas-pkg-b-projects-505e`
-
-## Package B done so far
-- New Project Wizard (6 steps): details, data mode, storage, preset, providers, review
-- `ProjectExecutionPolicy` persisted in IndexedDB (`p:<id>:policy`)
-- Project cards show Local/Cloud/Hybrid badge
-- Cloud storage providers NOT marked connected without health-check
+## Auth fix
+Callback no longer redirects without a real session. PKCE exchange + waitForSession.
+If still fails in production: Supabase Redirect URLs must include `/auth/callback` for the live domain + Redeploy.
 
 ## Next
-Package B remainder (archive/trash, duplicate, relink local source) then C–G.
+Package C — Usage foundation (rate cards, credit ledger, trial grant, reservations).
