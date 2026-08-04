@@ -1,20 +1,23 @@
 # HANDOFF
 
 ## Goal
-עורך CapCut-class + סוכן AI מעל אותו מנוע.
+שילוב ElevenLabs כספק תמלול/קריינות + שליטת הסוכן במודלים/קולות.
 
 ## Current State (verified)
-ענף: `main` — ממוזגים PR #4 + #5 + #6 (2026-08-04).
-- קיבוץ כרטיסי-כלי + נקודות "חושב"
-- Agent workflow: within_existing silence, delete_clips/keep_source_range, כתוביות עם script, שיחות מרובות
-- ציטוט מקום בצ'אט + זום טיימליין בגלגלת (~0.15×–128×)
-- על בסיס CommandBus / gaps / Provider Registry שכבר היו ב-main
+ענף: `cursor/elevenlabs-transcription-1547`
+- `ELEVENLABS_API_KEY` בשרת בלבד; סטטוס בהגדרות + בחירת ספק/מודל תמלול
+- `/api/transcribe` תומך ב-elevenlabs (Scribe v2 + אירועי שמע/diarize)
+- `/api/elevenlabs/{voices,models,tts}` לקריינות ובחירת קול/מודל
+- כלי סוכן: `transcribe_video(provider,model)`, `list_stt_models`, `list_voices`, `generate_narration`
+- local CLI/GUI: `--cloud-provider elevenlabs`
+- מפרט: `docs/ElevenLabs_API_HypeScript_2026-08-04.md`
+- `npm test` + `tsc --noEmit` עוברים
 
 ## Exact Next Steps
-1. לאמת בפריסת Vercel אחרי deploy מ-main
-2. להרחיב CommandBus / AG-4 לפי GAP_MAP
+1. להגדיר `ELEVENLABS_API_KEY` ב-Vercel / `.env.local` ולבדוק תמלול אמיתי
+2. (אופציונלי) Audio Isolation / Pronunciation Dictionaries לפי המפרט
 3. **לא** Supabase/Auth בלי אישור
 
 ## Risks
-- Roll/Slip/transitions חסרים
-- Graphify לא מותקן בסביבה
+- Forced Alignment של ElevenLabs לא מומלץ לעברית — משתמשים ב-word timestamps מ-Scribe
+- TTS/STT בתשלום — להימנע מקריאות כפולות מיותרות

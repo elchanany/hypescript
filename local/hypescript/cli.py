@@ -102,7 +102,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="מקומי בלבד: כבה סינון VAD (לא מומלץ — VAD מונע מילות רפאים)")
 
     c = p.add_argument_group("מצב ענן")
-    c.add_argument("--cloud-provider", choices=["groq", "openai", "custom"], default="groq")
+    c.add_argument(
+        "--cloud-provider",
+        choices=["groq", "openai", "custom", "elevenlabs"],
+        default="groq",
+        help="ספק תמלול ענן. elevenlabs דורש ELEVENLABS_API_KEY (מודל ברירת מחדל: scribe_v2)",
+    )
     c.add_argument("--cloud-base-url", help="עקיפת כתובת ה-API (ל-custom)")
     c.add_argument("--api-key", help="מפתח API (או משתנה סביבה, ראה README)")
     c.add_argument("--cloud-chunk-sec", type=float, default=1200.0,

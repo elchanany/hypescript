@@ -1,8 +1,16 @@
 // כלי הסוכן (צד-לקוח). מודל EDL: הסוכן והמשתמש עורכים את אותה רשימת קליפים.
 // כל פעולת עריכה = כלי, כך שהמשתמש רואה כל שינוי חי על הציר.
 
-import { Word } from "@/lib/models";
+import { isSpeechWord, Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
+import { TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
+import {
+  defaultModelFor,
+  resolveTranscribeProvider,
+  type TranscribeProviderId,
+  type TranscribeProviderPref,
+} from "@/lib/elevenlabs/prefs";
+import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
   addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
@@ -27,7 +35,7 @@ export interface AgentContext {
   lastRender: Blob | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
-  onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image") => void;
+  onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image" | "audio") => void;
   // תמונות שהסוכן צילם — יצורפו להודעה הבאה כדי שיוכל "לראות" אותן (בספק תומך-ראייה).
   pendingImages?: string[];
 }
@@ -86,6 +94,52 @@ function txKey(f: File) { return `hs_tx_${f.name}_${f.size}_${(f as any).lastMod
 function txRead(k: string): Word[] | null { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } }
 function txWrite(k: string, w: Word[]) { try { localStorage.setItem(k, JSON.stringify(w)); } catch { /* quota */ } }
 
+async function fetchTranscribeConfigured(): Promise<{ elevenlabs: boolean; groq: boolean }> {
+  try {
+    const cfg = await fetch("/api/config").then((r) => r.json());
+    return {
+      elevenlabs: !!cfg?.transcription?.elevenlabs,
+      groq: !!cfg?.transcription?.groq,
+    };
+  } catch {
+    return { elevenlabs: false, groq: false };
+  }
+}
+
+function readTranscribePref(): TranscribeProviderPref {
+  try {
+    const v = localStorage.getItem(TRANSCRIBE_PREF) as TranscribeProviderPref | null;
+    if (v === "elevenlabs" || v === "groq" || v === "auto") return v;
+  } catch { /* ignore */ }
+  return "auto";
+}
+
+function readTranscribeModelPref(): string {
+  try { return (localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "").trim(); } catch { return ""; }
+}
+
+async function resolveSttChoice(
+  providerArg?: string,
+  modelArg?: string,
+): Promise<{ provider: TranscribeProviderId; model: string }> {
+  const configured = await fetchTranscribeConfigured();
+  const prefRaw = String(providerArg || readTranscribePref() || "auto").toLowerCase();
+  const pref: TranscribeProviderPref =
+    prefRaw === "elevenlabs" || prefRaw === "groq" || prefRaw === "auto" ? prefRaw : "auto";
+  const provider = resolveTranscribeProvider(pref, configured);
+  if (!provider) {
+    throw new Error(
+      "אין ספק תמלול מוגדר. הוסף ELEVENLABS_API_KEY ו/או GROQ_API_KEY ב-Vercel או ב-web/.env.local.",
+    );
+  }
+  const model =
+    String(modelArg || "").trim() ||
+    readTranscribeModelPref() ||
+    defaultModelFor(provider) ||
+    (provider === "elevenlabs" ? DEFAULT_STT_MODEL : "whisper-large-v3");
+  return { provider, model };
+}
+
 function findRanges(words: Word[], query: string, max = 6) {
   const q = query.split(/\s+/).map(normalizeHebrew).filter(Boolean);
   if (!q.length) return [];
@@ -116,22 +170,61 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "transcribe_video", label: "תמלול הסרטון", color: "#8b5cf6", icon: "📝",
-    schema: { name: "transcribe_video", description: "מתמלל סרטון ובונה מפת נקודות-ציון. אם יש כמה סרטונים — תמלל כל אחד (עם source) לפני שמרכיבים מהם.", parameters: { type: "object", properties: { source: { type: "string", description: "שם/אינדקס הסרטון לתמלול (ברירת מחדל: הראשי)" } } } },
+    schema: {
+      name: "transcribe_video",
+      description:
+        "מתמלל סרטון ובונה מפת נקודות-ציון (מילים+זמנים). ספקים: elevenlabs (Scribe — מומלץ, בתשלום; אירועי שמע/צחוק/דוברים) או groq (Whisper). " +
+        "אפשר לבחור model במפורש (למשל scribe_v2 / whisper-large-v3). אם יש כמה סרטונים — תמלל כל אחד (עם source).",
+      parameters: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "שם/אינדקס הסרטון לתמלול (ברירת מחדל: הראשי)" },
+          provider: { type: "string", description: "elevenlabs | groq | auto (ברירת מחדל לפי הגדרות)" },
+          model: { type: "string", description: "מודל תמלול (למשל scribe_v2 / scribe_v1 / whisper-large-v3)" },
+          force: { type: "boolean", description: "true=התעלם מתמלול שמור ותמלל מחדש" },
+          tag_audio_events: { type: "boolean", description: "ElevenLabs: סמן צחוק/מוזיקה וכו' (ברירת מחדל true)" },
+          diarize: { type: "boolean", description: "ElevenLabs: הפרדת דוברים (ברירת מחדל true)" },
+          num_speakers: { type: "number", description: "ElevenLabs: מספר דוברים ידוע (משפר הפרדה)" },
+          keyterms: { type: "string", description: "ElevenLabs: מונחים חשובים מופרדים בפסיק (שמות/מונחים תורניים)" },
+        },
+      },
+    },
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
-      if (ctx.transcripts[asset.id]) return `"${asset.name}" כבר תומלל (${ctx.transcripts[asset.id].length} מילים).`;
+      if (!a.force && ctx.transcripts[asset.id]) {
+        const n = ctx.transcripts[asset.id].filter(isSpeechWord).length;
+        return `"${asset.name}" כבר תומלל (${n} מילים). להחלפה: force=true.`;
+      }
       const isMain = asset.id === mainVideo(ctx)?.id;
-      const key = txKey(asset.file); const cached = txRead(key);
-      if (cached) { ctx.transcripts[asset.id] = cached; if (isMain) { ctx.words = cached; if (!ctx.duration) ctx.duration = asset.duration; } return `נטען תמלול שמור ל-"${asset.name}" (${cached.length} מילים).`; }
+      const key = txKey(asset.file);
+      if (!a.force) {
+        const cached = txRead(key);
+        if (cached) {
+          ctx.transcripts[asset.id] = cached;
+          if (isMain) { ctx.words = cached; if (!ctx.duration) ctx.duration = asset.duration; }
+          return `נטען תמלול שמור ל-"${asset.name}" (${cached.filter(isSpeechWord).length} מילים).`;
+        }
+      }
       let extractAudio: typeof import("@/lib/ffmpeg").extractAudio;
       try { ({ extractAudio } = await import("@/lib/ffmpeg")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
+
+      const { provider, model } = await resolveSttChoice(a.provider, a.model);
       report(`מחלץ אודיו מ-${asset.name}…`);
       const audio = await extractAudio(asset.file);
-      report("שולח לתמלול (Groq)…");
+      report(`שולח לתמלול (${provider} / ${model})…`);
       const fd = new FormData();
-      fd.append("file", audio, "audio.mp3"); fd.append("provider", "groq"); fd.append("model", "whisper-large-v3"); fd.append("language", "he");
+      fd.append("file", audio, "audio.mp3");
+      fd.append("provider", provider);
+      fd.append("model", model);
+      fd.append("language", "he");
+      if (provider === "elevenlabs") {
+        if (a.tag_audio_events === false) fd.append("tag_audio_events", "false");
+        if (a.diarize === false) fd.append("diarize", "false");
+        if (a.num_speakers != null) fd.append("num_speakers", String(a.num_speakers));
+        if (a.keyterms) fd.append("keyterms", String(a.keyterms));
+      }
       const ctrl = new AbortController();
       const to = setTimeout(() => ctrl.abort(), 180000);
       let data: any;
@@ -142,12 +235,29 @@ export const TOOLS: ToolMeta[] = [
       } catch (e: any) {
         throw new Error(e?.name === "AbortError" ? "התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר." : (e?.message || "התמלול נכשל."));
       } finally { clearTimeout(to); }
-      const words: Word[] = (data.words || []).filter((w: any) => w.start != null && w.end != null && (w.word || w.text)).map((w: any) => ({ text: String(w.word || w.text).trim(), start: +w.start, end: +w.end }));
+      const words: Word[] = (data.words || [])
+        .filter((w: any) => w.start != null && w.end != null && (w.word || w.text))
+        .map((w: any) => {
+          const text = String(w.word || w.text).trim();
+          const out: Word = { text, start: +w.start, end: +w.end };
+          const type = w.type as Word["type"] | undefined;
+          if (type === "word" || type === "spacing" || type === "audio_event") out.type = type;
+          else if (/^\[[^\]]+\]$/.test(text)) out.type = "audio_event";
+          if (w.speaker_id) out.speakerId = String(w.speaker_id);
+          return out;
+        });
       if (!words.length) throw new Error("התמלול לא החזיר מילים.");
       ctx.transcripts[asset.id] = words;
       if (isMain) { ctx.words = words; if (!ctx.duration) ctx.duration = asset.duration; }
       txWrite(key, words);
-      return `תומלל "${asset.name}": ${words.length} מילים (נשמר).`;
+      const speech = words.filter(isSpeechWord).length;
+      const events = words.filter((w) => w.type === "audio_event").length;
+      const speakers = new Set(words.map((w) => w.speakerId).filter(Boolean));
+      const extras = [
+        events ? `${events} אירועי-שמע` : "",
+        speakers.size ? `${speakers.size} דוברים` : "",
+      ].filter(Boolean).join(", ");
+      return `תומלל "${asset.name}" ב-${provider}/${model}: ${speech} מילים${extras ? ` (+ ${extras})` : ""} (נשמר).`;
     },
   },
   {
@@ -170,13 +280,17 @@ export const TOOLS: ToolMeta[] = [
       if (!asset) return "אין סרטון.";
       const words = transcriptOf(ctx, asset);
       if (!words) return `"${asset.name}" עדיין לא תומלל.`;
+      const events = words.filter((w) => w.type === "audio_event");
+      const speech = words.filter(isSpeechWord);
       // מקבצים לשורות עם חותמת זמן [start–end], כך שהמודל רואה גם תוכן וגם תזמון מדויק.
       const lines: string[] = [];
       let cur: Word[] = [];
       const flush = () => { if (cur.length) { lines.push(`[${cur[0].start.toFixed(1)}–${cur[cur.length - 1].end.toFixed(1)}s] ${cur.map((w) => w.text).join(" ")}`); cur = []; } };
-      for (const w of words) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
+      for (const w of speech) { if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= 12)) flush(); cur.push(w); }
       flush();
-      return `תמלול "${asset.name}" (${words.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}`;
+      const eventLines = events.slice(0, 40).map((e) => `• ${e.start.toFixed(1)}–${e.end.toFixed(1)}s ${e.text}${e.speakerId ? ` (${e.speakerId})` : ""}`);
+      return `תמלול "${asset.name}" (${speech.length} מילים, עם חותמות זמן בשניות):\n${lines.join("\n")}` +
+        (eventLines.length ? `\n\nאירועי שמע (${events.length}):\n${eventLines.join("\n")}` : "");
     },
   },
   {
@@ -686,6 +800,144 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "list_stt_models", label: "מודלי תמלול", color: "#8b5cf6", icon: "🧬",
+    schema: {
+      name: "list_stt_models",
+      description: "מציג מודלי תמלול זמינים (ElevenLabs Scribe וכו') ואת ברירת המחדל הנוכחית. השתמש כשהמשתמש מבקש מודל אחר או לשאול מה אפשרי.",
+      parameters: { type: "object", properties: {} },
+    },
+    run: async () => {
+      const configured = await fetchTranscribeConfigured();
+      const pref = readTranscribePref();
+      const resolved = resolveTranscribeProvider(pref, configured);
+      const modelPref = readTranscribeModelPref();
+      let stt: Array<{ id: string; name: string; descriptionHe?: string; description?: string }> = [];
+      try {
+        const data = await fetch("/api/elevenlabs/models").then((r) => r.json());
+        stt = data.stt || [];
+      } catch { /* ignore */ }
+      const lines = stt.map((m) => `• ${m.id} — ${m.name}${m.descriptionHe || m.description ? `: ${m.descriptionHe || m.description}` : ""}`);
+      return [
+        `העדפת תמלול: ${pref}${resolved ? ` → בפועל ${resolved}` : " (אין מפתח)"}`,
+        `מודל מועדף: ${modelPref || "(ברירת מחדל לספק)"}`,
+        `Groq: ${configured.groq ? "מוכן" : "חסר מפתח"} · ElevenLabs: ${configured.elevenlabs ? "מוכן" : "חסר מפתח"}`,
+        "",
+        "מודלי STT (ElevenLabs):",
+        lines.length ? lines.join("\n") : "• scribe_v2 (ברירת מחדל)\n• scribe_v1",
+        "",
+        "Groq: whisper-large-v3",
+        "לבחירה: transcribe_video(provider=..., model=...) או שנה בהגדרות.",
+      ].join("\n");
+    },
+  },
+  {
+    name: "list_voices", label: "קולות קריינות", color: "#a855f7", icon: "🎙️",
+    schema: {
+      name: "list_voices",
+      description: "מציג קולות ElevenLabs זמינים (שם, voice_id, קטגוריה, תיאור) כדי שהמשתמש/הסוכן יבחרו קול לקריינות. דורש ELEVENLABS_API_KEY.",
+      parameters: {
+        type: "object",
+        properties: {
+          search: { type: "string", description: "סינון לפי שם/תיאור" },
+          limit: { type: "number", description: "כמה קולות להציג (ברירת מחדל 20)" },
+        },
+      },
+    },
+    run: async (a) => {
+      const qs = new URLSearchParams({ page_size: String(Math.min(50, Math.max(1, +(a.limit || 20)))) });
+      if (a.search) qs.set("search", String(a.search));
+      const resp = await fetch(`/api/elevenlabs/voices?${qs}`);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "נכשל בטעינת קולות.");
+      const voices = data.voices || [];
+      if (!voices.length) return "לא נמצאו קולות. ודא שיש ELEVENLABS_API_KEY ושהמפתח כולל Voices: Read.";
+      return `קולות ElevenLabs (${voices.length}${data.has_more ? "+" : ""}):\n` +
+        voices.map((v: any, i: number) => {
+          const labels = v.labels && typeof v.labels === "object"
+            ? Object.entries(v.labels).map(([k, val]) => `${k}=${val}`).join(", ")
+            : "";
+          return `${i + 1}. ${v.name} · id=${v.voice_id}${v.category ? ` · ${v.category}` : ""}${labels ? ` · ${labels}` : ""}${v.description ? `\n   ${String(v.description).slice(0, 120)}` : ""}`;
+        }).join("\n") +
+        "\n\nלקריינות: generate_narration(text=..., voice_id=...).";
+    },
+  },
+  {
+    name: "generate_narration", label: "יצירת קריינות", color: "#a855f7", icon: "🗣️",
+    schema: {
+      name: "generate_narration",
+      description:
+        "יוצר קריינות מדויקת בעברית מטקסט דרך ElevenLabs TTS. " +
+        "אם אין voice_id — קרא קודם list_voices והצג למשתמש אפשרויות (ask_user), או בחר קול מתאים. " +
+        "מודלים: eleven_v3 (רגשי, תגיות [laughs]/[whispers]), eleven_multilingual_v2 (ארוך/יציב), eleven_flash_v2_5 (מהיר).",
+      parameters: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "הטקסט לקריינות" },
+          voice_id: { type: "string", description: "מזהה הקול מ-list_voices" },
+          model_id: { type: "string", description: "מודל TTS (ברירת מחדל eleven_v3)" },
+          language_code: { type: "string", description: "קוד שפה (ברירת מחדל he)" },
+          stability: { type: "number" },
+          similarity_boost: { type: "number" },
+          style: { type: "number" },
+        },
+        required: ["text", "voice_id"],
+      },
+    },
+    run: async (a, ctx, report) => {
+      const text = String(a.text || "").trim();
+      const voiceId = String(a.voice_id || "").trim();
+      if (!text) return "שגיאה: חסר טקסט.";
+      if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices ובחר קול.";
+      report("יוצר קריינות ב-ElevenLabs…");
+      const resp = await fetch("/api/elevenlabs/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          voice_id: voiceId,
+          model_id: a.model_id || DEFAULT_TTS_MODEL,
+          language_code: a.language_code || "he",
+          stability: a.stability,
+          similarity_boost: a.similarity_boost,
+          style: a.style,
+        }),
+      });
+      if (!resp.ok) {
+        let err = "יצירת הקריינות נכשלה.";
+        try { err = (await resp.json()).error || err; } catch { /* ignore */ }
+        throw new Error(err);
+      }
+      const blob = await resp.blob();
+      const modelId = resp.headers.get("X-Model-Id") || a.model_id || DEFAULT_TTS_MODEL;
+      const name = `narration_${voiceId.slice(0, 8)}.mp3`;
+      const file = new File([blob], name, { type: blob.type || "audio/mpeg" });
+      const url = URL.createObjectURL(file);
+      // משך משוער — נטען אסינכרונית אם אפשר
+      let duration = 0;
+      try {
+        duration = await new Promise<number>((resolve, reject) => {
+          const audio = new Audio();
+          audio.preload = "metadata";
+          audio.onloadedmetadata = () => resolve(Number.isFinite(audio.duration) ? audio.duration : 0);
+          audio.onerror = () => reject(new Error("meta"));
+          audio.src = url;
+        });
+      } catch { /* ignore */ }
+      const asset = {
+        id: uid("a"),
+        name,
+        kind: "audio" as const,
+        file,
+        duration: duration || Math.max(1, text.length / 12),
+        url,
+      };
+      ctx.media.push(asset);
+      ctx.onOutput?.(blob, name, "audio");
+      download(blob, name);
+      return `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`;
+    },
+  },
+  {
     name: "ask_user", label: "שאלה למשתמש", color: "#eab308", icon: "❓",
     schema: { name: "ask_user", description: "שואל את המשתמש שאלה עם אפשרויות, או מבקש קובץ/מידע חסר.", parameters: { type: "object", properties: { question: { type: "string" }, options: { type: "array", items: { type: "string" } } }, required: ["question", "options"] } },
     run: async (a, ctx) => `המשתמש בחר: ${await ctx.askUser(String(a.question || ""), a.options || [])}`,
@@ -701,6 +953,15 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 
 מדיה: יכולים להיות כמה סרטונים (list_media). להרכבה מכמה מקורות — תמלל כל אחד (transcribe_video+source), ואז keep_by_script עם append=true או add_clip.
 
+═══ תמלול וקריינות (ElevenLabs / Groq) ═══
+- ספקי תמלול: elevenlabs (Scribe — מומלץ לדיוק בעברית, חותמות-מילה, צחוק/אירועי שמע, הפרדת דוברים) או groq (Whisper).
+- ברירת מחדל: לפי הגדרות (auto מעדיף ElevenLabs אם המפתח קיים). המשתמש יכול לבקש מודל ספציפי — העבר model= (למשל scribe_v2 / scribe_v1 / whisper-large-v3) או provider=.
+- list_stt_models: מה זמין ומה ברירת המחדל. אל תקבע מודל שלא קיים.
+- לתמלול תורני: אפשר keyterms עם שמות/מונחים. אל תפעיל no_verbatim כשרוצים לשמור צחוק/נשימות כאירועים.
+- get_transcript מציג גם אירועי שמע אם יש (מ-ElevenLabs).
+- קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
+- המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
+
 ═══ חוקי ברזל (אל תשבור) ═══
 1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות.
 2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = אתה עושה את זה לא נכון.
@@ -712,6 +973,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה. תכנן פעם אחת ובצע.
 9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק/לא רלוונטי — תקן עם keep_source_range או trim_clip / delete_clips, לא עם עשרות מחיקות.
 10. חסר נכס (תמונה/סאונד שהמשתמש אמר שיביא אחר כך) — ask_user או ציין שתחכה; אל תמציא ואל תיתקע.
+11. קריינות/תמלול בתשלום: אל תריץ generate_narration או תמלול חוזר מיותר בלי צורך. אם חסר מפתח — הסבר להגדיר ELEVENLABS_API_KEY בהגדרות/Vercel.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -721,6 +983,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - trim_clip: אפשר רק start או רק end.
 - generate_subtitles עם script=טקסט נקי מהמשתמש.
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
+- list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
 - render_video רק בסוף / כשמבקשים.
 
 זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → generate_subtitles(script) → render.`;

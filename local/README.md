@@ -110,7 +110,8 @@ $env:GROQ_API_KEY = "gsk_xxxxxxxxxxxxxxxxxxxx"
 הכלי טוען אותו אוטומטית מהתיקייה הנוכחית.)
 
 Groq מריץ `whisper-large-v3` — הכי מדויק לעברית — והוא מהיר מאוד. אפשר גם OpenAI עם
-`--cloud-provider openai` ו-`OPENAI_API_KEY`.
+`--cloud-provider openai` ו-`OPENAI_API_KEY`, או `--cloud-provider elevenlabs`
+ו-`ELEVENLABS_API_KEY` (מודל ברירת מחדל: `scribe_v2`).
 
 ### 2. הרצה — התרחיש המרכזי
 
@@ -197,7 +198,7 @@ python -m hypescript שיעור.mp4 --script טקסט.txt --silence-threshold 0.
 ### ענן
 | פרמטר | ברירת מחדל | הסבר |
 |---|---|---|
-| `--cloud-provider` | `groq` | `groq`/`openai`/`custom` |
+| `--cloud-provider` | `groq` | `groq`/`openai`/`custom`/`elevenlabs` |
 | `--cloud-base-url` | — | עקיפת כתובת ה-API (ל-`custom`) |
 | `--api-key` | — | מפתח (או משתנה סביבה `GROQ_API_KEY`/`OPENAI_API_KEY`/`HYPESCRIPT_API_KEY`) |
 | `--cloud-chunk-sec` | `1200` | פיצול אוטומטי של אודיו ארוך מזה (שנ') לפני העלאה, כדי לא לחרוג ממגבלת הגודל |
