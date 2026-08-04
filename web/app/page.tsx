@@ -90,6 +90,7 @@ export default function EditorPage() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  const quoteSink = useRef<((seconds: number) => void) | null>(null);
   const clipsRef = useRef<Clip[] | null>(clips); clipsRef.current = clips;
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
   const mediaRef = useRef(media); mediaRef.current = media;
@@ -116,6 +117,16 @@ export default function EditorPage() {
       getPlayhead: () => curRef.current,
     };
   }
+
+  const quotePlace = (seconds: number) => {
+    setChatOpen(true);
+    localStorage.setItem("hs_chatOpen", "1");
+    const tryInsert = (n = 0) => {
+      if (quoteSink.current) { quoteSink.current(seconds); return; }
+      if (n < 20) requestAnimationFrame(() => tryInsert(n + 1));
+    };
+    tryInsert();
+  };
 
   const main = useMemo(() => firstVideo(media), [media]);
   const duration = main?.duration || 0;
@@ -478,7 +489,8 @@ export default function EditorPage() {
             setWords(w); setProject(c, s);
             if (ovs) setOverlays(ovs);
           }}
-          playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide} />
+          playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
+          quoteSink={quoteSink} />
       </aside>
       {dockSide === "left" && dockHandle}
     </>
@@ -530,7 +542,8 @@ export default function EditorPage() {
         <div className="main-area">
           <div className="upper">
             <div className="center-col">
-              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur} audioMuted={audioMuted(tracks)}
+              <VideoPreview ref={previewRef} media={media} clips={clips} subs={subs} onTime={setCur}
+                onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
                 canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
                 onBeginOverlay={beginTransaction}
@@ -579,7 +592,7 @@ export default function EditorPage() {
                 media={media} clips={clips} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={timelineDuration}
                 currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
-                zoom={zoom} snap={snap}
+                zoom={zoom} onZoom={setZoom} snap={snap}
                 onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => {

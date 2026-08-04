@@ -20,13 +20,15 @@ import {
   activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore,
   switchConversation, upsertActive,
 } from "@/lib/agent/chatStore";
+import { formatQuoteTime, quotePlaceText, roundToMs } from "@/lib/editor/time";
 import {
   Bot, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Wand2, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import type { MutableRefObject } from "react";
 
 type Item = ChatItem;
 type ToolItem = Extract<Item, { kind: "tool" }>;
@@ -91,11 +93,13 @@ interface ChatProps {
   // עגינה
   dockSide?: "left" | "right";
   onToggleDock?: () => void;
+  /** רישום פונקציה להכנסת ציטוט-מקום מצפייה/כפתור */
+  quoteSink?: MutableRefObject<((seconds: number) => void) | null>;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, overlays = [], canvas, projectId, onProject, playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -224,6 +228,21 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [displayItems, ask, showThinking]);
+
+  const insertQuote = (seconds: number) => {
+    const sec = roundToMs(seconds);
+    const text = quotePlaceText(sec);
+    setItems((p) => [...p, { kind: "quote", seconds: sec, text, time: now() }]);
+    // נשמר בהיסטוריית הסוכן כדי שיבין את ההפניה בסיבוב הבא
+    const msg: ChatMessage = { role: "user", content: text };
+    savedHistory.current = [...savedHistory.current, msg];
+    if (runnerRef.current) {
+      if (runnerRef.current.isRunning) runnerRef.current.injectMessage(text);
+      else runnerRef.current.history = [...runnerRef.current.history, msg];
+    }
+  };
+
+  if (quoteSink) quoteSink.current = insertQuote;
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
@@ -389,7 +408,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
       </div>
 
       <div className="agent-ctx" aria-label="הקשר נוכחי">
-        <span className="ctx-chip"><MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}</span>
+        <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לצ'אט"
+          data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום בצ'אט">
+          <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
+        </button>
         {selectionLabel
           ? <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 18 ? selectionLabel.slice(0, 17) + "…" : selectionLabel}</span>
           : <span className="ctx-chip muted"><SquareDashedMousePointer size={11} strokeWidth={2} />אין בחירה</span>}
@@ -404,6 +426,19 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, o
           </div>
         )}
         {displayItems.map((it, i) => {
+          if (it.kind === "quote") {
+            return (
+              <div key={i} className="msg2 quote" role="note" aria-label="ציטוט מקום">
+                <div className="b">
+                  <div className="quote-head"><Quote size={13} strokeWidth={2} />ציטוט מקום</div>
+                  <div className="quote-tc">{formatQuoteTime(it.seconds)}</div>
+                  <div className="quote-sec">{it.seconds.toFixed(2)}s על הציר</div>
+                  <button className="cp" onClick={() => copy(it.text, i)} aria-label="העתק">{copied === i ? <Check size={13} /> : <Copy size={13} />}</button>
+                </div>
+                <span className="t">{it.time}</span>
+              </div>
+            );
+          }
           if (it.kind === "tool") {
             const Icon = toolIcon(it.name);
             const count = it.count || 1;
