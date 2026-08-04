@@ -35,10 +35,15 @@
 
 | מה ב־Supabase | שם המשתנה אצלנו | איך נראה |
 |---|---|---|
-| **Project URL** (לרוב תחת Data API / Project Settings) | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
+| **Project URL** (Project Settings → General / API) | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` בלבד |
 | **Publishable key** | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | מתחיל ב־`sb_publishable_...` |
 
 ⚠️ **אל תעתיק** את **Secret key** — זה לשרת בלבד, לא לדפדפן ולא ל־`.env.local` הציבורי.
+
+⚠️ **חשוב מאוד ל־URL:** חייב להסתיים ב־`.supabase.co` **בלי** `/rest/v1` בסוף.  
+אם תדביק `https://xxxx.supabase.co/rest/v1` תופיע שגיאה כמו  
+`No API key found in request` והכתובת בדפדפן תכלול `/rest/v1/auth/...` — זה לא נכון.  
+דוגמה נכונה: `https://dbfednzsladjxjhlwfxr.supabase.co`
 
 ---
 

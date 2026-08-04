@@ -4,17 +4,16 @@
 עורך CapCut-class + סוכן AI + ElevenLabs + Auth/Dashboard אופציונלי (Supabase).
 
 ## Current State (verified)
-- `main` כולל ElevenLabs, ציטוט ל-composer, Auth אופציונלי, ותיקון זום/playhead.
-- **זום טיימליין:** scroll לפי lane אחרי gutter 136px; כותרות מעל playhead; pinch ב-rAF
-- Auth: `/login`, `/dashboard`, `/auth/callback` — Supabase אופציונלי; מדריך `docs/SETUP_AUTH.md`
-- `ELEVENLABS_API_KEY` בשרת בלבד
+- `main` כולל Auth (PR #7), ElevenLabs, תיקוני זום/טיימליין.
+- באג מדווח בפרודקשן: OAuth מגיע ל־`…/rest/v1/auth/v1/authorize` → `No API key found`.
+  סיבה: `NEXT_PUBLIC_SUPABASE_URL` ב־Vercel כולל `/rest/v1`.
+- ענף תיקון: `cursor/fix-supabase-url-505e` — נרמול URL בקוד + אזהרה במדריך.
 
 ## Exact Next Steps
-1. לרענן פריסה — לאמת pinch זום בלי playhead מעל הנעילה
-2. להפעיל Google ב-Supabase Auth לפי SETUP_AUTH (אם רוצים Auth פעיל)
-3. סוכן AI אוטונומי מחוץ לטווח עד אישור
+1. ב־Vercel: לתקן ידנית `NEXT_PUBLIC_SUPABASE_URL` ל־`https://dbfednzsladjxjhlwfxr.supabase.co` (בלי `/rest/v1`) → Redeploy.
+2. למזג את PR של `cursor/fix-supabase-url-505e` (הגנה מפני העתקה שגויה בעתיד).
+3. לבדוק `/login` → Google → `/dashboard` ב־https://hypescript.vercel.app/login
 
 ## Risks
-- Secret/service_role אסור בצד לקוח
-- Forced Alignment של ElevenLabs לא מומלץ לעברית — Scribe word timestamps
-- Roll/Slip/transitions חסרים (GAP_MAP)
+- בלי תיקון ה־env ב־Vercel — גם אחרי מיזוג הקוד, אם ה־URL עדיין עם `/rest/v1` הקוד החדש ינרמל; אבל Redeploy נדרש.
+- Secret/service_role אסור בצד לקוח.
