@@ -7,7 +7,7 @@
 `cursor/fix-captions-speech-sync-c816`
 
 ## Latest commit
-`38196d2` — fix(agent): אנטי-לופ + scriptClips סדרתי + snap למילים
+`235440a` — docs + `38196d2` fix(agent): אנטי-לופ / scriptClips / snap
 
 ## Status
 נדחף ל-PR #23
