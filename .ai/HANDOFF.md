@@ -1,17 +1,18 @@
 # HANDOFF
 
 ## Goal
-המשך GAP / ROADMAP: caption burn-in בייצוא (TX-1) ואז chunking לתמלול ארוך.
+המשך ROADMAP/GAP — אחרי caption burn-in: chunking לתמלול ארוך ב-web.
 
 ## Current State (verified)
-- ענף: `cursor/caption-burnin-505e`
-- צריבת כתוביות בייצוא דרך PNG + overlayBurn, מתג «צריבה» בפאנל כתוביות
-- `npm test` + `npm run build` עברו
+- `main` כולל צריבת כתוביות (#19).
+- ענף: `cursor/transcribe-chunking-505e`
+  - פיצול אודיו ל-20 דק׳ (כמו local), תמלול לכל חלק, איחוד מילים עם offset
+  - משותף לעורך + כלי הסוכן `transcribe_video`
+- בדיקות + build עברו.
 
 ## Exact Next Steps
-1. למזג PR burn-in (Vercel Deploy אוטומטי).
-2. חבילה הבאה: chunking אודיו ארוך ב-web (ROADMAP v0.2.0).
+1. למזג PR chunking (Deploy אוטומטי ב-Vercel).
+2. הבא: אינטרו/אאוטרו, תצוגה מקדימה לפני הורדה, או AG-4.
 
 ## Risks
-- יותר מ-80 כתוביות — נחתכות בצריבה (מגבלת filter graph).
-- צריבה מאריכה את זמן הייצוא ב-ffmpeg.wasm.
+- פיצול בגבול 20 דק׳ עלול לחתוך מילה באמצע — מקובל כמו ב-local.
