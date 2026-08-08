@@ -94,7 +94,36 @@ def _split_phrases(
         chars += (1 if chars else 0) + len(text)
     if cur:
         phrases.append(cur)
-    return phrases
+    return _rebalance_soft_orphans(phrases, max_chars, max_gap)
+
+
+def _phrase_chars(words: List[Tuple[str, float, float]]) -> int:
+    return sum(len(word[0]) for word in words) + max(0, len(words) - 1)
+
+
+def _rebalance_soft_orphans(
+    phrases: List[List[Tuple[str, float, float]]],
+    max_chars: int,
+    max_gap: float,
+) -> List[List[Tuple[str, float, float]]]:
+    """Balance a one-word budget orphan without crossing semantic boundaries."""
+    out = [list(phrase) for phrase in phrases]
+    for index in range(1, len(out)):
+        previous, current = out[index - 1], out[index]
+        if len(current) != 1 or len(previous) < 3:
+            continue
+        boundary_gap = current[0][1] - previous[-1][2]
+        if boundary_gap > max_gap or _ends_phrase(previous[-1][0]):
+            continue
+        shorter_previous = previous[:-1]
+        fuller_current = [previous[-1], *current]
+        if (
+            _phrase_chars(shorter_previous) <= max_chars
+            and _phrase_chars(fuller_current) <= max_chars
+        ):
+            out[index - 1] = shorter_previous
+            out[index] = fuller_current
+    return out
 
 
 def _seal(cues: List[Cue]) -> List[Cue]:

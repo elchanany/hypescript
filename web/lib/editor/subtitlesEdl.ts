@@ -78,6 +78,34 @@ function endsPhrase(text: string | undefined): boolean {
 
 type TimedTok = { text: string; start: number; end: number };
 
+function phraseChars(words: TimedTok[]): number {
+  return words.reduce((total, word, index) => total + word.text.length + (index ? 1 : 0), 0);
+}
+
+/**
+ * Avoid a single-word final caption created only by the character budget.
+ * We move one timed token from the preceding phrase when both resulting
+ * phrases still fit. Pause and punctuation boundaries remain authoritative.
+ */
+export function rebalanceSoftOrphans(phrases: TimedTok[][], maxChars: number, maxGap: number): TimedTok[][] {
+  const out = phrases.map((phrase) => [...phrase]);
+  for (let i = 1; i < out.length; i++) {
+    const previous = out[i - 1];
+    const current = out[i];
+    if (current.length !== 1 || previous.length < 3) continue;
+    const boundaryGap = current[0].start - previous[previous.length - 1].end;
+    if (boundaryGap > maxGap || endsPhrase(previous[previous.length - 1].text)) continue;
+    const moved = previous[previous.length - 1];
+    const shorterPrevious = previous.slice(0, -1);
+    const fullerCurrent = [moved, ...current];
+    if (phraseChars(shorterPrevious) <= maxChars && phraseChars(fullerCurrent) <= maxChars) {
+      out[i - 1] = shorterPrevious;
+      out[i] = fullerCurrent;
+    }
+  }
+  return out;
+}
+
 function assembledWords(clips: Clip[], getWords: WordsBySource): TimedTok[] {
   // משתמש באותו מיפוי כמו assembleTranscript (כולל gaps/disabled)
   return assembleTranscript(clips, getWords).map((w) => ({
@@ -104,7 +132,7 @@ export function splitPhrases(words: TimedTok[], maxChars: number, maxGap: number
     chars += (chars ? 1 : 0) + w.text.length;
   }
   if (cur.length) phrases.push(cur);
-  return phrases;
+  return rebalanceSoftOrphans(phrases, maxChars, maxGap);
 }
 
 function sealCueEdges(cues: Cue[]): Cue[] {

@@ -21,6 +21,7 @@
 - **web:** Next.js על Vercel; ffmpeg.wasm מקומי; תמלול דרך proxy (`/api/transcribe` → Groq); מפתחות ב-`localStorage`/env; `npm run build` עובר.
 - **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים, צ'אט/כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, אנטי-לופ, scriptToClips, כתוביות + תמלול ציר; מוטציות EDL/רצועות דרך EditorApi/CommandBus עם רענון מיידי.
 - **הבנת ציר מבוססת ראיות:** speech מתמלול, אירועי `audio_event` של הספק ופערי עריכה מפורשים ממופים ל-per-time-span ב-web+local; אין ניחוש semantics מהיעדר תמלול או מעוצמת dB.
+- **כתוביות עברית:** progressive/phrase עם script-as-ground-truth; פיצול תקציב רך מאזן מילה יתומה ב-web+local בלי לחצות פאוזה/פיסוק ובלי לשנות timing.
 - **עורך (פאזה 1+):** shell, preview, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום; כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
 - **בדיקות web:** vitest ~151 על ענף המיזוג; tracks/commands/migrate ממוקדים עברו + tsc.

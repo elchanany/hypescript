@@ -5,6 +5,7 @@ import {
   progressiveCues,
   phraseCues,
   collapseProgressiveForBurn,
+  splitPhrases,
 } from "./subtitlesEdl";
 
 describe("edlToCues (multi-source)", () => {
@@ -87,6 +88,31 @@ describe("progressive speech-synced captions", () => {
         expect(gap).toBe(0);
       }
     }
+  });
+});
+
+describe("Hebrew phrase grouping", () => {
+  const timed = (texts: string[], gapBeforeLast = 0.05) => texts.map((text, index) => ({
+    text,
+    start: index === texts.length - 1 ? index * 0.3 + gapBeforeLast : index * 0.3,
+    end: index * 0.3 + 0.2,
+  }));
+
+  it("balances a one-word orphan created only by the character budget", () => {
+    const phrases = splitPhrases(timed(["אחד", "שתיים", "שלושה", "ארבעה"]), 20, 0.45);
+    expect(phrases.map((phrase) => phrase.map((word) => word.text))).toEqual([
+      ["אחד", "שתיים"],
+      ["שלושה", "ארבעה"],
+    ]);
+  });
+
+  it("keeps a one-word phrase when a pause or punctuation makes it meaningful", () => {
+    const pauseWords = timed(["אחד", "שתיים", "שלושה", "ארבעה"]);
+    pauseWords[3] = { ...pauseWords[3], start: 2, end: 2.2 };
+    expect(splitPhrases(pauseWords, 20, 0.45).at(-1)?.map((word) => word.text)).toEqual(["ארבעה"]);
+
+    const punctuationWords = timed(["אחד", "שתיים", "שלושה.", "ארבעה"]);
+    expect(splitPhrases(punctuationWords, 30, 0.45).at(-1)?.map((word) => word.text)).toEqual(["ארבעה"]);
   });
 });
 

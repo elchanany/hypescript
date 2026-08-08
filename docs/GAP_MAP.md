@@ -42,7 +42,7 @@
 ## 4. Text / Captions / Images / Logos / Overlays
 | פריט | סטטוס | פער |
 |---|---|---|
-| כתוביות: create/edit/timing/SRT | OK | — |
+| כתוביות: create/edit/timing/SRT | OK | script-as-ground-truth + Hebrew soft-orphan balancing ב-web/local; pause/punctuation נשמרים |
 | כתוביות: style/position/animation/scope | PARTIAL | style+position+bg + burn-in בייצוא; animation חסר |
 | Text element (add/edit/style) | PARTIAL | style מלא/אנימציה חסרים |
 | Image/Logo overlay | OK | — |
