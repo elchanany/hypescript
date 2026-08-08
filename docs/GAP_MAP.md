@@ -90,7 +90,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — פעולות UI וכלי agent יחידניים וב־bulk דרך CommandBus, כולל opacity ו-atomic clip/subtitle replace; חפיפת השמעה בין חיתוכים שנוצרו מהסקריפט תוקנה (`d3bc7b1`); נותר Query API עשיר יותר ו-I/O media generated שאינו חוזה JSON
+- **AG-2**: PARTIAL — פעולות UI וכלי agent יחידניים וב־bulk דרך CommandBus, כולל opacity ו-atomic clip/subtitle replace; Query API כולל active clip/source/gap/overlays/captions; נותר I/O media generated שאינו חוזה JSON
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
@@ -98,4 +98,4 @@
 ### P3
 - Templates / Effects / Transitions / Filters (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
-- Semantic timeline understanding: MISSING/PARTIAL — per-time-span speech/audio events + gaps (ואחר כך energy evidence) חסר; אין להציג הבנה סמנטית של שיעול/נשימה/צחוק מעבר לעדות `audio_event` של הספק
+- Semantic timeline understanding: PARTIAL — per-time-span direct evidence קיים ל-speech, provider `audio_event`, ו-explicit edit gaps ב-web+local עם כלי agent; energy spans עדיין חסרים. אין להסיק שקט/נשימה/שיעול/צחוק מהיעדר תמלול או מ-dB בלבד

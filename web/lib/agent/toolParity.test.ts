@@ -140,4 +140,16 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.overlays()).toHaveLength(1);
     expect(h.ctx._editorDirty).toBe(true);
   });
+
+  it("reports only direct semantic timeline evidence", async () => {
+    const h = contextWithEditor();
+    h.ctx.transcripts["media-1"] = [
+      { text: "שלום", start: 0.1, end: 0.4, type: "word" },
+      { text: "[cough]", start: 0.8, end: 1, type: "audio_event" },
+    ];
+    const result = await TOOL_BY_NAME.inspect_timeline_evidence.run({}, h.ctx, () => undefined);
+    expect(result).toContain("דיבור מתמלול: שלום");
+    expect(result).toContain("אירוע שסומן במפורש בידי ספק התמלול: [cough]");
+    expect(result).toContain("לא הוסקו נשימה, שיעול או צחוק");
+  });
 });

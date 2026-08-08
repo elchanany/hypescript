@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 dirty checkpoint (bulk atomic replace) מוכן ל־commit דרך clip.replaceAll/subtitle.replaceAll; אחר כך חבילת semantic timeline — הבנת מדיה per-time-span (speech/audio events/gaps תחילה, energy evidence אחר כך), script-as-ground-truth alignment ו-Hebrew caption grouping.
+חבילת semantic timeline evidence: speech/provider audio_event/explicit edit gap ב-web+local, כלי agent לקריאה, Query API עם active timeline context, וניסוח energy-only ישר. אחריה Hebrew caption grouping.
 
 ## Branch
 `main`
 
 ## Latest commit
-`d3bc7b1` — fix(editor): prevent overlapping generated cuts
+`0834e53` — chore(graphify): sync bulk command graph
 
 ## Status
-Dirty AG-2 pending commit · tsc נקי, 42 files/213 tests, production build ו-Graphify update (1596 nodes / 3403 edges) עברו; native render durationDelta=0 / audioDrift=0
+Dirty semantic evidence package · web 43 files/217 tests, local 2/2, type-check ו-production build עברו; Graphify/commit עדיין בהרצה. AG-2 bulk כבר נחת ב-main (`7c61179`).
 
 ## Exact continuation point
-commit dirty AG-2; אחר כך semantic timeline package (speech/audio events/gaps → energy evidence), שימור script alignment ו-caption grouping. בלי שינוי Supabase/Auth ללא אישור.
+finish full verification + commit/push semantic evidence; אחר כך Hebrew caption grouping. בלי שינוי Supabase/Auth ללא אישור.

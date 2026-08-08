@@ -2,38 +2,38 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`d3bc7b1` — `fix(editor): prevent overlapping generated cuts`: script-generated clips clamp tolerated ASR timestamp overlap to the previous emitted end and drop too-short remainders; silence speech segments are re-merged after word snapping/padding — repeated boundary syllables eliminated.
-- Dirty AG-2 (uncommitted, reviewed): agent bulk clip/subtitle workflows commit atomically via `clip.replaceAll`/`subtitle.replaceAll`; pending commit.
+- main ב־`0834e53`; AG-2 bulk state commits landed ב־`7c61179` and Graphify synced.
+- Dirty semantic evidence package: direct speech/provider `audio_event`/explicit gap spans in web+local, read-only agent inspection, richer active-time Query API, and honest energy-only audio wording. Web 43 files/217 tests, local 2/2, type-check and production build pass; Graphify/push pending.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Dirty AG-2: `web/lib/agent/tools.ts`, `web/lib/editor/commands.builtin.ts`, `web/lib/editor/commands.ts`, `web/lib/editor/commands.test.ts`, `web/lib/agent/toolParity.test.ts`.
-- Next package edge: `web/lib/editor/scriptClips.ts`, `web/lib/editor/clipFilter.ts`, subtitle/web caption logic.
+- Semantic package: `web/lib/editor/semanticTimeline.ts`, `local/hypescript/semantic_timeline.py`, `web/lib/agent/tools.ts`, `web/lib/editor/commands.ts`, and tests.
+- Next package edge: `web/lib/editor/subtitlesEdl.ts`, `local/hypescript/subtitles.py`, and Hebrew caption tests.
 
 # Changes Made
 - `d3bc7b1`: `scriptToClips` clamps tolerated ASR overlap (≤~150ms) to the previous clip end and skips remainders shorter than `minClipSec`; `snapSpeechToWords` re-merges touching/overlapping same-source segments after snap+pad — no double-played boundary syllables.
-- Dirty AG-2 (not committed): `setClips` → `clip.replaceAll`; new `setSubs` → `subtitle.replaceAll`; atomic collection-validated commits across bulk agent tools; reviewed.
+- `7c61179`: `setClips` → `clip.replaceAll`; `setSubs` → `subtitle.replaceAll`; atomic collection-validated commits across bulk agent tools.
+- Dirty semantic package preserves only direct evidence; transcript absence never becomes silence and dB evidence no longer claims breath/cough/chair semantics.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
 - Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
 
 # Tests and Verification
-- 42 test files / 213 tests — passed.
+- 43 test files / 217 tests — passed.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
 - Graphify update at `d3bc7b1`: 1596 nodes / 3403 edges.
 
 # Open Risks
 - **Auth**: bad production Supabase publishable/anon key → `Invalid API key` on Vercel; fix env + redeploy (only auth risk).
-- Dirty AG-2 work uncommitted.
 - Semantic event understanding (cough/breath/laugh) is missing/partial — must not overclaim beyond provider `audio_event`.
-- PiP/alpha between tracks stays a future compositor; Query API still basic.
+- PiP/alpha between tracks stays a future compositor; Query API now includes active clip/source/gap/overlay/caption context but broader generated-media I/O remains.
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Commit dirty AG-2 (atomic bulk replace) with its tests/tsc/build.
-2. Semantic timeline package: per-time-span model (speech events, audio events, gaps) preserving script-as-ground-truth alignment; add energy evidence after.
-3. Improve Hebrew caption grouping; keep D-010 (normalize at generation boundaries, not globally).
+1. Full-test/build and commit/push semantic evidence package; update Graphify.
+2. Improve Hebrew caption grouping in web+local; keep D-010 and script-as-ground-truth alignment.
+3. Add richer energy spans later without semantic inference.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.

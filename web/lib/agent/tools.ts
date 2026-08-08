@@ -31,6 +31,7 @@ import { TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/projec
 import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
+import { buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -443,6 +444,31 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "inspect_timeline_evidence", label: "ראיות בציר הזמן", color: "#0f766e", icon: "🔎",
+    schema: {
+      name: "inspect_timeline_evidence",
+      description: "מחזיר ראיות ישירות לפי טווח זמן בציר הערוך: דיבור מתמלול, אירועי שמע שספק התמלול סימן במפורש, ופערי עריכה מפורשים. אינו מנחש שיעול/נשימה/צחוק מהיעדר מילים.",
+      parameters: { type: "object", properties: {} },
+    },
+    run: async (_a, ctx) => {
+      if (!ctx.clips?.length) return "אין ציר ערוך לניתוח.";
+      const main = mainVideo(ctx);
+      const spans = buildTimelineEvidence(
+        ctx.clips,
+        (sourceId) => ctx.transcripts[sourceId] ?? (sourceId === main?.id ? ctx.words : null),
+      );
+      const counts = evidenceCounts(spans);
+      const lines = spans.slice(0, 80).map((span) => {
+        const range = `${span.start.toFixed(2)}–${span.end.toFixed(2)}s`;
+        if (span.kind === "speech") return `• ${range} דיבור מתמלול: ${span.text || ""}`;
+        if (span.kind === "audio_event") return `• ${range} אירוע שסומן במפורש בידי ספק התמלול: ${span.text || "ללא תווית"}`;
+        return `• ${range} פער עריכה מפורש`;
+      });
+      return `ראיות בציר: ${counts.speech} מקטעי דיבור, ${counts.audio_event} אירועי ספק, ${counts.gap} פערי עריכה.\n${lines.join("\n") || "אין ראיות זמינות."}` +
+        "\nהבהרה: היעדר תמלול אינו מוכיח שקט; לא הוסקו נשימה, שיעול או צחוק ללא תווית מפורשת מהספק.";
+    },
+  },
+  {
     name: "get_transcript", label: "קריאת תמלול", color: "#14b8a6", icon: "📄",
     schema: {
       name: "get_transcript",
@@ -566,7 +592,7 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "analyze_audio", label: "ניתוח אודיו", color: "#0891b2", icon: "🔊",
-    schema: { name: "analyze_audio", description: "מנתח את עוצמת הסאונד (dB) ומסווג את הרווחים בין המילים: שקט/נשימה מול רעש (שיעול/כסא/רקע). כדי להחליט מה לחתוך לפי עוצמה, לא רק לפי טקסט.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
+    schema: { name: "analyze_audio", description: "מודד עוצמת סאונד (dB) ברווחים בין מילים ומציג ראיית אנרגיה: שקט יחסי מול עוצמה גבוהה יותר. המדידה אינה מזהה נשימה, שיעול או סוג רעש.", parameters: { type: "object", properties: { source: { type: "string", description: "סרטון (ברירת מחדל הראשי)" } } } },
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "אין סרטון.";
@@ -581,9 +607,9 @@ export const TOOLS: ToolMeta[] = [
       const quiet = prof.floorDb + 6;
       const lines = gaps.slice(0, 40).map(([s, e]) => {
         const d = avgDb(prof, s, e);
-        return `• ${s.toFixed(1)}–${e.toFixed(1)}s (${(e - s).toFixed(1)}s): ${d < quiet ? "שקט/נשימה" : "רעש/קול-רקע (אולי שיעול/כסא)"} [${d.toFixed(0)}dB]`;
+        return `• ${s.toFixed(1)}–${e.toFixed(1)}s (${(e - s).toFixed(1)}s): ${d < quiet ? "עוצמה נמוכה יחסית" : "עוצמה גבוהה מרצפת הרעש"} [${d.toFixed(0)}dB]`;
       });
-      return `ניתוח אודיו "${asset.name}" (רצפת רעש ${prof.floorDb.toFixed(0)}dB, שיא ${prof.peakDb.toFixed(0)}dB):\n${lines.join("\n")}\n(שקט=נשימה/שתיקה לחיתוך; עם עוצמה=ייתכן רעש. השתמש ב-remove_silence לחיתוך אוטומטי לפי עוצמה.)`;
+      return `ניתוח עוצמה "${asset.name}" (רצפת רעש ${prof.floorDb.toFixed(0)}dB, שיא ${prof.peakDb.toFixed(0)}dB):\n${lines.join("\n")}\n(זו ראיית אנרגיה בלבד, לא זיהוי סמנטי של נשימה/שיעול/רעש. השתמש ב-remove_silence לחיתוך לפי סף עוצמה.)`;
     },
   },
   {
@@ -1542,6 +1568,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - list_stt_models: מה זמין ומה ברירת המחדל. אל תקבע מודל שלא קיים.
 - לתמלול תורני: אפשר keyterms עם שמות/מונחים. אל תפעיל no_verbatim כשרוצים לשמור צחוק/נשימות כאירועים.
 - get_transcript: אחרי חיתוך — timeline=true (או ברירת מחדל כשיש קליפים) מחזיר זמנים על הציר הערוך. בלי timeline = מקור גולמי.
+- inspect_timeline_evidence: השתמש להבנת per-time-span מבוססת ראיות. תווית אירוע (כגון שיעול) אמינה רק אם ספק התמלול החזיר audio_event; היעדר מילים אינו ראיה לשקט או נשימה.
 - אחרי עריכת הציר: חובה לרענן הבנה עם transcribe_timeline (mode=remap חינמי) או get_transcript(timeline=true). mode=retranscribe = אודיו זמני + STT מחדש (בתשלום).
 - קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.

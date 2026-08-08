@@ -2,12 +2,13 @@
 // operations (parity). Commands are pure descriptions + a run(api) function.
 // History/Undo still lives in useEditor; commands call into the provided API.
 
-import { Clip, MediaAsset } from "./model";
-import { Overlay } from "./overlay";
+import { assembledToSource, clipEnabled, Clip, MediaAsset } from "./model";
+import { Overlay, overlayVisibleAt } from "./overlay";
 import { Sub } from "./subtitlesEdl";
 import { CanvasSize } from "./canvasCoords";
 import { TrackMeta } from "./project";
 import type { EditorSnapshot } from "@/hooks/useEditor";
+import { isGapClip } from "./timelineOps";
 
 export type CommandId =
   | "clip.delete.ripple"
@@ -190,27 +191,45 @@ export interface ProjectQuery {
   playhead: number;
   selectedClipId: string | null;
   selectedOverlayId: string | null;
+  selectedCaptionId: string | null;
+  activeClipId: string | null;
+  activeSourceTime: number | null;
+  inGap: boolean;
+  activeOverlayIds: string[];
+  activeCaptionIds: string[];
   mediaNames: string[];
   videoTrackCount: number;
 }
 
 export function queryProject(
   api: EditorApi,
-  sel: { clipId: string | null; overlayId: string | null },
+  sel: { clipId: string | null; overlayId: string | null; captionId?: string | null },
 ): ProjectQuery {
   const clips = api.getClips() || [];
+  const activeClips = clips.filter(clipEnabled);
   const overlays = api.getOverlays();
   const subs = api.getSubs() || [];
   const tracks = api.getTracks?.() || [];
-  const dur = clips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
+  const dur = activeClips.reduce((s, c) => s + Math.max(0, c.end - c.start), 0);
+  const playhead = api.getPlayhead();
+  const mapped = assembledToSource(activeClips, playhead);
+  const activeClip = mapped.index >= 0 && playhead >= 0 && playhead <= dur
+    ? activeClips[mapped.index]
+    : null;
   return {
     clipCount: clips.length,
     overlayCount: overlays.length,
     captionCount: subs.length,
     duration: dur,
-    playhead: api.getPlayhead(),
+    playhead,
     selectedClipId: sel.clipId,
     selectedOverlayId: sel.overlayId,
+    selectedCaptionId: sel.captionId ?? null,
+    activeClipId: activeClip?.id ?? null,
+    activeSourceTime: activeClip && !isGapClip(activeClip) ? mapped.source : null,
+    inGap: !!activeClip && isGapClip(activeClip),
+    activeOverlayIds: overlays.filter((overlay) => overlayVisibleAt(overlay, playhead)).map((overlay) => overlay.id),
+    activeCaptionIds: subs.filter((sub) => playhead >= sub.start && playhead <= sub.end).map((sub) => sub.id),
     mediaNames: api.getMedia().map((m) => m.name),
     videoTrackCount: tracks.filter((t) => t.type === "video").length,
   };

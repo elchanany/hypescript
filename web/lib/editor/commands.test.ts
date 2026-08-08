@@ -198,6 +198,26 @@ describe("CommandBus builtins", () => {
     expect(q.duration).toBeCloseTo(2, 5);
   });
 
+  it("queryProject exposes the active timeline context and ignores disabled duration", () => {
+    const api = fakeApi([
+      { id: "off", sourceId: "m", start: 0, end: 10, enabled: false },
+      { id: "gap", sourceId: "__gap__", start: 0, end: 0.5 },
+      { id: "on", sourceId: "m", start: 20, end: 22 },
+    ]) as any;
+    api.getPlayhead = () => 0.25;
+    api.overlays = [{ id: "ov", start: 0, end: 1, hidden: false, kind: "text", zIndex: 1, transform: {} }];
+    api.subs = [{ id: "sub", start: 0.2, end: 0.4, text: "שלום" }];
+    api.getSubs = () => api.subs;
+    const gap = queryProject(api, { clipId: null, overlayId: null, captionId: "sub" });
+    expect(gap).toMatchObject({ duration: 2.5, activeClipId: "gap", activeSourceTime: null, inGap: true, selectedCaptionId: "sub" });
+    expect(gap.activeOverlayIds).toEqual(["ov"]);
+    expect(gap.activeCaptionIds).toEqual(["sub"]);
+
+    api.getPlayhead = () => 1;
+    const source = queryProject(api, { clipId: null, overlayId: null });
+    expect(source).toMatchObject({ activeClipId: "on", activeSourceTime: 20.5, inGap: false });
+  });
+
   it("roll and slip go through CommandBus", () => {
     const api = fakeApi([
       { id: "a", sourceId: "m", start: 0, end: 2 },
