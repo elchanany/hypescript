@@ -60,6 +60,7 @@ describe("CommandBus builtins", () => {
     const agentIds = listAgentCommands().map((c) => c.id);
     expect(agentIds).toContain("track.reorder");
     expect(agentIds).toContain("clip.setOpacity");
+    expect(agentIds).toContain("clip.setAudioFades");
     expect(agentIds).toContain("clip.replaceAll");
     expect(agentIds).toContain("subtitle.replaceAll");
     expect(agentIds).toContain("overlay.addText");
@@ -88,6 +89,12 @@ describe("CommandBus builtins", () => {
     const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
     expect(runCommand("clip.setColorAdjustments", api, { id: "a", contrast: 8, saturation: -2 }).ok).toBe(true);
     expect(api.clips[0]).toMatchObject({ contrast: 2, saturation: 0 });
+  });
+
+  it("normalizes audio fades through CommandBus", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 4 }]);
+    expect(runCommand("clip.setAudioFades", api, { id: "a", fadeIn: 6, fadeOut: 2 }).ok).toBe(true);
+    expect(api.clips[0]).toMatchObject({ fadeIn: 8 / 3, fadeOut: 4 / 3 });
   });
 
   it("atomically replaces validated clip and subtitle collections", () => {

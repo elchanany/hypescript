@@ -59,6 +59,12 @@ describe("export render graph — single continuous stream, no per-clip encode",
     expect(muted.filterComplex).toContain("volume=0.000");
   });
 
+  it("applies normalized linear clip-edge fades after gain", () => {
+    const faded = { ...clip("a", 0, 4), fadeIn: 1, fadeOut: 2 };
+    const graph = buildConcatGraph([faded], [vid("a")], { w: 640, h: 360, fps: 25 });
+    expect(graph.filterComplex).toContain("volume=1.000,afade=t=in:st=0:d=1.000,afade=t=out:st=2.000:d=2.000,asettb=1/44100");
+  });
+
   it("applies clip opacity against black before final yuv conversion", () => {
     const faded = { ...clip("a", 0, 1), opacity: 0.4 };
     const graph = buildConcatGraph([faded], [vid("a")], { w: 640, h: 360, fps: 25 });

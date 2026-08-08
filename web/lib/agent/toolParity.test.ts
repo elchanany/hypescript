@@ -70,6 +70,14 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("set_clip_audio_fades dispatches normalized clip-edge fades", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.set_clip_audio_fades.run({ index: 1, fade_in: 3, fade_out: 3 }, h.ctx, () => undefined);
+    expect(result).toContain("2.00s");
+    expect(h.clips()[0]).toMatchObject({ fadeIn: 2, fadeOut: 2 });
+    expect(h.updates()).toBe(1);
+  });
+
   it("set_clip_opacity dispatches clip.setOpacity and uses command clamping", async () => {
     const h = contextWithEditor();
     const result = await TOOL_BY_NAME.set_clip_opacity.run({ index: 1, opacity: -3 }, h.ctx, () => undefined);

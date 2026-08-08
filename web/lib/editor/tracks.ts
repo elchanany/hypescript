@@ -1,7 +1,7 @@
 // עזרי רצועות וידאו מרובות: סינון קליפים, משך פרויקט, ושטיחה ל-EDL יחיד (cutaway).
 
 import {
-  Clip, clipDur, clipEnabled, clipOpacity, clipVolume, totalDur, uid,
+  Clip, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, totalDur, uid,
 } from "./model";
 import { TrackMeta, primaryVideoTrackId, sortedTracks, videoTracks } from "./project";
 
@@ -118,6 +118,10 @@ export function flattenVideoTracks(clips: Clip[], tracks: TrackMeta[]): Clip[] {
       && prev.enabled === chosen.clip.enabled
       && clipVolume(prev) === clipVolume(chosen.clip)
       && clipOpacity(prev) === clipOpacity(chosen.clip)
+      && clipContrast(prev) === clipContrast(chosen.clip)
+      && clipSaturation(prev) === clipSaturation(chosen.clip)
+      && clipAudioFades(prev).fadeIn === clipAudioFades(chosen.clip).fadeIn
+      && clipAudioFades(prev).fadeOut === clipAudioFades(chosen.clip).fadeOut
     ) {
       prev.end = srcEnd;
     } else {
@@ -129,8 +133,12 @@ export function flattenVideoTracks(clips: Clip[], tracks: TrackMeta[]): Clip[] {
         trackId: tid,
       };
       if (chosen.clip.volume != null) n.volume = chosen.clip.volume;
+      if (chosen.clip.fadeIn != null) n.fadeIn = chosen.clip.fadeIn;
+      if (chosen.clip.fadeOut != null) n.fadeOut = chosen.clip.fadeOut;
       if (chosen.clip.enabled != null) n.enabled = chosen.clip.enabled;
       if (chosen.clip.opacity != null) n.opacity = chosen.clip.opacity;
+      if (chosen.clip.contrast != null) n.contrast = chosen.clip.contrast;
+      if (chosen.clip.saturation != null) n.saturation = chosen.clip.saturation;
       out.push(n);
     }
   }

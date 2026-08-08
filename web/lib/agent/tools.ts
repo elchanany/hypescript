@@ -12,7 +12,7 @@ import {
 } from "@/lib/elevenlabs/prefs";
 import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
-  addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
+  addClip, assembledToSource, Clip, clipAudioFades, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { Overlay, makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
@@ -1112,6 +1112,29 @@ export const TOOLS: ToolMeta[] = [
         return `שגיאה: ${commandError}`;
       }
       return `עוצמת קטע ${a.index}: ${Math.round(volume * 100)}%.`;
+    },
+  },
+  {
+    name: "set_clip_audio_fades", label: "Fade שמע", color: "#64748b", icon: "◢",
+    schema: {
+      name: "set_clip_audio_fades",
+      description: "מגדיר fade-in/fade-out ליניאריים בשניות לקליפ, בתצוגה המקדימה ובייצוא. הערכים מוגבלים יחד למשך הקליפ.",
+      parameters: { type: "object", properties: { index: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } }, required: ["index"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const clip = ctx.clips![i];
+      if (!clip || isGapClip(clip)) return "אינדקס קליפ לא תקין.";
+      if (a.fade_in == null && a.fade_out == null) return "צריך fade_in או fade_out.";
+      const args = { id: clip.id, fadeIn: a.fade_in, fadeOut: a.fade_out };
+      const commandError = dispatch(ctx, "clip.setAudioFades", args);
+      let fades: { fadeIn: number; fadeOut: number };
+      if (commandError === "NO_API") {
+        fades = clipAudioFades({ ...clip, fadeIn: a.fade_in ?? clip.fadeIn, fadeOut: a.fade_out ?? clip.fadeOut });
+        setClips(ctx, ctx.clips!.map((item, index) => index === i ? { ...item, ...fades } : item));
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      else fades = clipAudioFades(ctx.clips![i]);
+      return `דעיכת קטע ${a.index}: כניסה ${fades.fadeIn.toFixed(2)}s, יציאה ${fades.fadeOut.toFixed(2)}s.`;
     },
   },
   {

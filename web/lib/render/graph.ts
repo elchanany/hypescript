@@ -6,7 +6,7 @@
 // This is engine-agnostic: the exact same filter string runs on ffmpeg.wasm today
 // and on native FFmpeg (LocalNativeRenderBackend) later — so the join fix is shared.
 
-import { Clip, MediaAsset, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, mediaById } from "@/lib/editor/model";
+import { Clip, MediaAsset, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, mediaById } from "@/lib/editor/model";
 import { isGapClip } from "@/lib/editor/timelineOps";
 
 export interface RenderTarget { w: number; h: number; fps: number; }
@@ -41,9 +41,11 @@ function vChain(w: number, h: number, fps: number, frames: number, opacity = 1, 
 }
 // Per-segment audio chain: cut -> reset PTS -> async resample (fills/aligns timestamps
 // across VFR sources so concat never pads) -> uniform rate/layout -> gain -> timebase.
-function aChain(volume: number): string {
+function aChain(volume: number, duration = 0, fadeIn = 0, fadeOut = 0): string {
+  const fades = `${fadeIn > 0 ? `afade=t=in:st=0:d=${fadeIn.toFixed(3)},` : ""}`
+    + `${fadeOut > 0 ? `afade=t=out:st=${Math.max(0, duration - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)},` : ""}`;
   return `asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0,`
-    + `aformat=sample_rates=${SR}:channel_layouts=stereo,volume=${volume.toFixed(3)},asettb=1/${SR}`;
+    + `aformat=sample_rates=${SR}:channel_layouts=stereo,volume=${volume.toFixed(3)},${fades}asettb=1/${SR}`;
 }
 
 /** Media/image clips only (excludes gaps & disabled). Kept for callers/tests. */
@@ -109,9 +111,11 @@ export function buildConcatGraph(
       let idx = videoInputIdx.get(asset.id);
       if (idx === undefined) { const fn = writeOnce(asset); idx = ic++; inputArgs.push("-i", fn); videoInputIdx.set(asset.id, idx); }
       const vol = clipVolume(c) * muteGain;
+      const duration = frames / fps;
+      const { fadeIn, fadeOut } = clipAudioFades({ ...c, end: c.start + duration });
       parts.push(
         `[${idx}:v]trim=start=${s}:end=${e},${vChain(w, h, fps, frames, clipOpacity(c), clipContrast(c), clipSaturation(c))}[v${n}];`
-        + `[${idx}:a]atrim=start=${s}:end=${e},${aChain(vol)}[a${n}];`,
+        + `[${idx}:a]atrim=start=${s}:end=${e},${aChain(vol, duration, fadeIn, fadeOut)}[a${n}];`,
       );
     } else {
       // still image -> looped video for exactly `frames` frames + matching silent audio

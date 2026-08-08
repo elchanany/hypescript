@@ -4,7 +4,7 @@
 // clip properties (video/audio). Sub selected -> caption properties.
 // Overlay selected -> transform + text/image properties.
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
-import { Clip, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVolume } from "@/lib/editor/model";
+import { Clip, clipAudioFades, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
@@ -247,6 +247,12 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
     <Section title="שמע">
       <div className="prop"><span className="k">עוצמה</span><span className="v mono">{Math.round(clipVolume(clip) * 100)}%</span></div>
       <input type="range" min={0} max={2} step={0.05} value={clipVolume(clip)} onChange={(e) => p.onUpdate({ volume: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
+      <div className="prop-input"><label className="k" htmlFor={`fade-in-${clip.id}`}>Fade in (שנ׳)</label>
+        <input id={`fade-in-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipAudioFades(clip).fadeIn.toFixed(2)}
+          onChange={(e) => p.onUpdate({ fadeIn: +e.target.value })} /></div>
+      <div className="prop-input"><label className="k" htmlFor={`fade-out-${clip.id}`}>Fade out (שנ׳)</label>
+        <input id={`fade-out-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipAudioFades(clip).fadeOut.toFixed(2)}
+          onChange={(e) => p.onUpdate({ fadeOut: +e.target.value })} /></div>
     </Section>
   );
 

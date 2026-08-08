@@ -442,10 +442,11 @@ export default function EditorPage() {
   const updateClipFromInspector = (id: string, patch: Partial<Clip>) => {
     const api = editorApiRef.current;
     if (!api) return;
-    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume" | "clip.setOpacity" | "clip.setColorAdjustments"; args: Record<string, unknown> }> = [];
+    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume" | "clip.setAudioFades" | "clip.setOpacity" | "clip.setColorAdjustments"; args: Record<string, unknown> }> = [];
     if (patch.start != null || patch.end != null) commands.push({ id: "clip.trim", args: { id, ...patch } });
     if (patch.enabled != null) commands.push({ id: "clip.setEnabled", args: { id, enabled: patch.enabled } });
     if (patch.volume != null) commands.push({ id: "clip.setVolume", args: { id, volume: patch.volume } });
+    if (patch.fadeIn != null || patch.fadeOut != null) commands.push({ id: "clip.setAudioFades", args: { id, fadeIn: patch.fadeIn, fadeOut: patch.fadeOut } });
     if (patch.opacity != null) commands.push({ id: "clip.setOpacity", args: { id, opacity: patch.opacity } });
     if (patch.contrast != null || patch.saturation != null) {
       commands.push({

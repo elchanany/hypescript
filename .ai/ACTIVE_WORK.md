@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-P3 audio parity: per-clip volume now drives Preview through Web Audio as well as FFmpeg Export. Next package is bounded linear clip-edge fades.
+P3 bounded linear clip-edge audio fades with complete Preview+Export parity; next choose another local effect/template package.
 
 ## Branch
 `main`
 
 ## Latest commit
-`2743a00` — chore(graphify): sync inspector color wiring
+`dbd1389` — chore(graphify): sync clip audio preview
 
 ## Status
-Color browser fix is on main (`60c5357`). Dirty audio-parity package multiplies transport volume by the active clip volume in a Web Audio GainNode, including boosts up to 2×; mute is fail-closed at zero and persisted out-of-range volume is clamped. Web 45 files/231 tests and production build pass. Browser audio QA remains pending.
+Clip volume Preview parity is on main (`2f3d0ed`). Dirty fade package adds normalized per-clip fade-in/out to Model, Inspector, Undo/Redo, CommandBus, Agent, Web Audio rAF gain and FFmpeg `afade`; multi-track flattening now preserves fades and the previously omitted color adjustments. Web 45 files/237 tests, production build and native 20-cut render pass. Browser QA proved 1.0s/0.5s fields, gain 0.000 at start, 0.841 at 0.849s, and Undo/Redo.
 
 ## Exact continuation point
-Graphify + commit/push audio Preview parity, then implement bounded linear fade-in/fade-out on the same gain/export pipeline. No Supabase/Auth changes without explicit permission.
+Graphify + commit/push clip-edge fades, then select the next P3 local Preview+Export package. No Supabase/Auth changes without explicit permission.

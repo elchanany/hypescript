@@ -70,4 +70,13 @@ describe("multi-track helpers", () => {
     expect(flat).toHaveLength(2);
     expect(flat.map((item) => [item.opacity, item.volume])).toEqual([[1, 1], [0.4, 0.5]]);
   });
+
+  it("preserves color and audio fades while flattening cutaway tracks", () => {
+    const { tracks } = createVideoTrack(defaultTracks(), "B");
+    const styled: Clip[] = [
+      { id: "a", sourceId: "src", start: 0, end: 2, trackId: "trk_video", contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75 },
+    ];
+    const flat = flattenVideoTracks(styled, tracks);
+    expect(flat[0]).toMatchObject({ contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75 });
+  });
 });

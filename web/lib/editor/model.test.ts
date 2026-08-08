@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trimClip, splitClip, Clip, clipContrast, clipSaturation, clipVolume } from "./model";
+import { trimClip, splitClip, Clip, clipAudioFades, clipContrast, clipSaturation, clipVolume } from "./model";
 
 const clips = (): Clip[] => [{ id: "x", sourceId: "v", start: 55.44, end: 67.92 }];
 
@@ -8,6 +8,12 @@ describe("clipVolume", () => {
     expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1 })).toBe(1);
     expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1, volume: 9 })).toBe(2);
     expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1, volume: -2 })).toBe(0);
+  });
+});
+
+describe("clipAudioFades", () => {
+  it("clamps fades to the clip and preserves their ratio when they overlap", () => {
+    expect(clipAudioFades({ id: "a", sourceId: "v", start: 0, end: 4, fadeIn: 6, fadeOut: 2 })).toEqual({ fadeIn: 8 / 3, fadeOut: 4 / 3 });
   });
 });
 
@@ -32,11 +38,11 @@ describe("trimClip", () => {
 
 describe("splitClip (linked A/V)", () => {
   it("splits into two and inherits volume/enabled on the right half", () => {
-    const src: Clip[] = [{ id: "a", sourceId: "v", start: 0, end: 10, volume: 0.5, enabled: true }];
+    const src: Clip[] = [{ id: "a", sourceId: "v", start: 0, end: 10, volume: 0.5, fadeIn: 1, fadeOut: 2, enabled: true }];
     const r = splitClip(src, "a", 4);
     expect(r).toHaveLength(2);
     expect(r[0]).toMatchObject({ id: "a", start: 0, end: 4, volume: 0.5 });
-    expect(r[1]).toMatchObject({ sourceId: "v", start: 4, end: 10, volume: 0.5, enabled: true });
+    expect(r[1]).toMatchObject({ sourceId: "v", start: 4, end: 10, volume: 0.5, fadeIn: 1, fadeOut: 2, enabled: true });
     expect(r[1].id).not.toBe("a");
   });
 

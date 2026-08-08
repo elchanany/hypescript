@@ -2,13 +2,13 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`2743a00`; browser-discovered Inspector color wiring fix landed in `60c5357` and Graphify synced.
-- Dirty audio-parity package: Preview now uses a Web Audio GainNode with `transport × active clip volume`, including the existing 0..2 boost range; mute maps to zero and fallback media volume clamps safely. Web 45 files/231 tests and production build pass. Browser audio QA pending.
+- main ב־`dbd1389`; per-clip Preview volume parity landed in `2f3d0ed` and Graphify synced.
+- Dirty fade package: normalized linear fade-in/out spans Model, Inspector, Undo/Redo, CommandBus, Agent, Web Audio rAF gain and FFmpeg `afade`. Browser QA and native render pass. Web 45 files/237 tests and production build pass.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: `web/components/VideoPreview.tsx`, `web/lib/editor/previewAudio.ts`, `web/lib/editor/model.ts` and tests.
+- Current package: `web/components/VideoPreview.tsx`, `web/components/InspectorPanel.tsx`, `web/lib/editor/{model,previewAudio,commands.builtin,tracks}.ts`, `web/lib/render/graph.ts`, agent tool and tests.
 - Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
 
 # Changes Made
@@ -21,17 +21,19 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - `2dd41c8`: contrast 0.5..2 and saturation 0..3; defaults 1, split inheritance, CSS `contrast/saturate`, FFmpeg `eq=contrast:saturation` before yuv conversion.
 - `c60cfb2`: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
 - `60c5357`: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
-- Dirty audio parity: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume already feeds FFmpeg Export.
+- `2f3d0ed`: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume feeds FFmpeg Export.
+- Dirty fades: combined fade lengths normalize to clip duration; Preview gain updates every animation frame; export uses `afade`; track flattening preserves fade/color metadata and refuses incompatible merges.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
 - Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
 
 # Tests and Verification
-- 45 test files / 231 tests — passed; production build/type-check pass.
+- 45 test files / 237 tests — passed; production build/type-check pass.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
 - Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
+- Fade browser QA: 1.0s/0.5s values, gain `0.000` at start and `0.841` at 0.849s, Undo/Redo 0↔0.5s; native 20-cut render includes real `afade` with zero drift.
 - Graphify update at `d3bc7b1`: 1596 nodes / 3403 edges.
 
 # Open Risks
@@ -41,7 +43,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Graphify + commit/push per-clip audio Preview parity.
-2. Add bounded linear clip-edge fade-in/fade-out across Model, Inspector, CommandBus, Agent, Preview and FFmpeg Export.
+1. Graphify + commit/push bounded clip-edge fades.
+2. Select the next local P3 effect/template with real Preview+Export parity.
 3. Package C only after working login.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.

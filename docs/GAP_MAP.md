@@ -97,7 +97,7 @@
 
 ### P3
 - Filters: PARTIAL — per-clip contrast+saturation עם shared presets, Inspector/Undo/CommandBus/Agent/Preview/Export; brightness ו-keyframes חסרים
-- Audio: clip volume has Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; bounded clip-edge fades and envelopes remain
+- Audio: clip volume and bounded linear clip-edge fades have Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; envelopes/range-volume/keyframes remain
 - Templates / Effects / Transitions (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
 - Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; מדידת web היא opt-in ו-local mapper עדיין לא מחובר ל-extractor ב-CLI. אין להסיק שקט/נשימה/שיעול/צחוק מהיעדר תמלול או מ-dB בלבד

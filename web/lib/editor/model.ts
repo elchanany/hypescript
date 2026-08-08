@@ -21,6 +21,8 @@ export interface Clip {
   /** רצועת וידאו (ברירת מחדל: הרצועה הראשית). אודיו מקושר לראשי. */
   trackId?: string;
   volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
+  fadeIn?: number; // seconds, linear audio fade from clip start
+  fadeOut?: number; // seconds, linear audio fade to clip end
   enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
   opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
   contrast?: number; // 0.5..2 (ברירת מחדל 1)
@@ -29,6 +31,18 @@ export interface Clip {
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
 export const clipVolume = (c: Clip): number => Number.isFinite(c.volume) ? Math.max(0, Math.min(2, c.volume!)) : 1;
+export function clipAudioFades(c: Clip): { fadeIn: number; fadeOut: number } {
+  const duration = clipDur(c);
+  let fadeIn = Number.isFinite(c.fadeIn) ? Math.max(0, Math.min(duration, c.fadeIn!)) : 0;
+  let fadeOut = Number.isFinite(c.fadeOut) ? Math.max(0, Math.min(duration, c.fadeOut!)) : 0;
+  const sum = fadeIn + fadeOut;
+  if (sum > duration && sum > 0) {
+    const scale = duration / sum;
+    fadeIn *= scale;
+    fadeOut *= scale;
+  }
+  return { fadeIn, fadeOut };
+}
 export const clipOpacity = (c: Clip): number => {
   const o = c.opacity;
   if (o == null || !Number.isFinite(o)) return 1;
@@ -107,6 +121,8 @@ export function splitClip(clips: Clip[], id: string, atSource: number): Clip[] {
   const right: Clip = { id: uid(), sourceId: c.sourceId, start: atSource, end: c.end };
   if (c.trackId != null) right.trackId = c.trackId;
   if (c.volume != null) right.volume = c.volume;
+  if (c.fadeIn != null) right.fadeIn = c.fadeIn;
+  if (c.fadeOut != null) right.fadeOut = c.fadeOut;
   if (c.enabled != null) right.enabled = c.enabled;
   if (c.opacity != null) right.opacity = c.opacity;
   if (c.contrast != null) right.contrast = c.contrast;

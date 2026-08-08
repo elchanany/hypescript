@@ -1,8 +1,8 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, totalDur } from "@/lib/editor/model";
-import { previewAudioGain } from "@/lib/editor/previewAudio";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, totalDur } from "@/lib/editor/model";
+import { audioFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
@@ -53,6 +53,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const canvasBoxRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioGainRef = useRef<GainNode | null>(null);
+  const audioRafRef = useRef<number | null>(null);
+  const audioStateRef = useRef<{ edl: Clip[] | null; vol: number; muted: boolean }>({ edl: null, vol: 1, muted: false });
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
   const idx = useRef(0);
   const loaded = useRef<string | null>(null);
@@ -70,36 +72,80 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     [clips, tracks],
   );
   const edl = flat && flat.length ? flat : null;
+  audioStateRef.current = { edl, vol, muted: !!audioMuted };
   const byId = (id: string) => media.find((m) => m.id === id);
   const firstVid = media.find((m) => m.kind === "video");
   const playable = (c: Clip) => !isGapClip(c) && byId(c.sourceId)?.kind === "video" && clipEnabled(c);
 
-  const activeClipVolume = edl?.[idx.current] ? clipVolume(edl[idx.current]) : 1;
-  const activeAudioGain = previewAudioGain(vol, activeClipVolume, !!audioMuted);
+  const activeClip = edl?.[idx.current] || null;
+  const activeClipOffset = activeClip && edl ? Math.max(0, t - assembledStart(edl, idx.current)) : t;
+  const activeFades = activeClip ? clipAudioFades(activeClip) : { fadeIn: 0, fadeOut: 0 };
+  const activeAudioGain = previewAudioGain(
+    vol,
+    activeClip ? clipVolume(activeClip) : 1,
+    !!audioMuted,
+    activeClip ? audioFadeFactor(activeClipOffset, clipDur(activeClip), activeFades.fadeIn, activeFades.fadeOut) : 1,
+  );
+
+  const syncLiveAudioGain = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const state = audioStateRef.current;
+    const clip = state.edl?.[idx.current] || null;
+    const fades = clip ? clipAudioFades(clip) : { fadeIn: 0, fadeOut: 0 };
+    const factor = clip
+      ? audioFadeFactor(video.currentTime - clip.start, clipDur(clip), fades.fadeIn, fades.fadeOut)
+      : 1;
+    const gain = previewAudioGain(state.vol, clip ? clipVolume(clip) : 1, state.muted, factor);
+    if (audioGainRef.current) audioGainRef.current.gain.value = gain;
+    else video.volume = Math.min(1, gain);
+    video.dataset.previewAudioGain = gain.toFixed(3);
+  };
+
+  const stopAudioClock = () => {
+    if (audioRafRef.current != null) cancelAnimationFrame(audioRafRef.current);
+    audioRafRef.current = null;
+  };
+  const startAudioClock = () => {
+    stopAudioClock();
+    const tick = () => {
+      syncLiveAudioGain();
+      audioRafRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+  };
+
+  const ensureAudioGraph = () => {
+    const video = videoRef.current;
+    if (!video || audioGainRef.current || !window.AudioContext) return;
+    try {
+      const context = new AudioContext();
+      const gain = context.createGain();
+      context.createMediaElementSource(video).connect(gain).connect(context.destination);
+      video.volume = 1;
+      audioContextRef.current = context;
+      audioGainRef.current = gain;
+      syncLiveAudioGain();
+    } catch {
+      // Safe fallback below remains capped at the media element's 0..1 range.
+    }
+  };
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !window.AudioContext) return;
-    const context = new AudioContext();
-    const gain = context.createGain();
-    context.createMediaElementSource(video).connect(gain).connect(context.destination);
-    video.volume = 1;
-    gain.gain.value = activeAudioGain;
-    audioContextRef.current = context;
-    audioGainRef.current = gain;
     return () => {
+      const context = audioContextRef.current;
       audioGainRef.current = null;
       audioContextRef.current = null;
-      void context.close();
+      stopAudioClock();
+      if (context) void context.close();
     };
-  }, []); // one graph per persistent <video>; gain is synchronized below
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     video.muted = !!audioMuted;
-    if (audioGainRef.current) audioGainRef.current.gain.value = activeAudioGain;
-    else video.volume = Math.min(1, activeAudioGain);
+    syncLiveAudioGain();
   }, [activeAudioGain, audioMuted]);
   useEffect(() => () => { if (gapRaf.current != null) cancelAnimationFrame(gapRaf.current); }, []);
 
@@ -232,7 +278,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
         {hasVideo ? (
           <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
             <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-              onPlay={() => { void audioContextRef.current?.resume(); setPlaying(true); }} onPause={() => setPlaying(false)}
+              onPlay={() => { ensureAudioGraph(); void audioContextRef.current?.resume(); startAudioClock(); setPlaying(true); }} onPause={() => { stopAudioClock(); syncLiveAudioGain(); setPlaying(false); }}
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
               data-preview-audio-gain={activeAudioGain.toFixed(3)}
               style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})` }} />
