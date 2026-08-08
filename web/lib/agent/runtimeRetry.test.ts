@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { AgentRunner, type AgentEvents } from "./runtime";
 import type { AgentContext } from "./tools";
+import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
+import type { EditorApi } from "@/lib/editor/commands";
 
 function context(): AgentContext {
   return {
@@ -25,5 +27,29 @@ describe("AgentRunner exact tool retry", () => {
     expect(runner.history[0]).toMatchObject({ role: "assistant", tool_calls: [{ name: "list_media", arguments: { filter: "video" } }] });
     expect(runner.history[1]).toMatchObject({ role: "tool", name: "list_media", content: "אין מדיה טעונה." });
     expect(events.onDone).toHaveBeenCalledOnce();
+  });
+
+  it("captures a checkpoint before a mutating retry", async () => {
+    ensureBuiltinCommands();
+    let clips: any[] = [{ id: "c1", sourceId: "m1", start: 0, end: 2, enabled: true }];
+    const api: EditorApi = {
+      getClips: () => clips, setClips: (next) => { clips = next || []; }, getOverlays: () => [], setOverlays: vi.fn(),
+      updateOverlay: vi.fn(), removeOverlay: vi.fn(), addOverlay: vi.fn(),
+      updateClip: (id, patch) => { clips = clips.map((c) => c.id === id ? { ...c, ...patch } : c); },
+      getMedia: () => [], getSubs: () => [], setSubs: vi.fn(), getTracks: () => [], setTracks: vi.fn(),
+      getCanvas: () => ({ width: 1280, height: 720 }), selectClip: vi.fn(), selectOverlay: vi.fn(), seek: vi.fn(), getPlayhead: () => 0,
+      getSnapshot: () => ({ clips, subs: [], tracks: [], overlays: [] }), restoreSnapshot: vi.fn(),
+    };
+    const ctx = context(); ctx.clips = clips; ctx.editorApi = api;
+    const checkpoints: any[] = [];
+    const events: AgentEvents = {
+      onAssistant: vi.fn(), onToolStart: vi.fn(), onToolStatus: vi.fn(), onToolEnd: vi.fn(), onError: vi.fn(), onDone: vi.fn(),
+      onCheckpoint: (call, snapshot) => checkpoints.push({ call, snapshot }),
+    };
+    const runner = new AgentRunner("deepseek", ctx, events);
+    await runner.retryTool("set_clip_enabled", { index: 1, enabled: false });
+    expect(checkpoints).toHaveLength(1);
+    expect(checkpoints[0].snapshot.clips[0].enabled).toBe(true);
+    expect(clips[0].enabled).toBe(false);
   });
 });

@@ -4,6 +4,7 @@
 import { AgentMode, AgentUsage, ChatMessage, Provider, ToolCall } from "./types";
 import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
 import { repairToolMessages } from "./normalize";
+import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export interface AgentEvents {
   onAssistant: (text: string) => void;
@@ -13,10 +14,20 @@ export interface AgentEvents {
   onError: (msg: string) => void;
   onDone: () => void;
   onUsage?: (usage: AgentUsage, provider: Provider, model?: string) => void;
+  onCheckpoint?: (call: ToolCall, snapshot: EditorSnapshot) => void;
 }
 
 const MAX_ITERS = 40;
 const CALL_TIMEOUT_MS = 120000;
+const MUTATING_TOOLS = new Set([
+  "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
+  "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
+  "set_clip_enabled", "set_clip_volume", "add_video_track", "remove_video_track",
+  "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
+  "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
+  "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
+  "delete_overlay", "generate_narration",
+]);
 
 /** כלים שאסור להריץ בלולאה — אחרי N קריאות בחלון האחרון נחסמים עם רמז לכלי המוני. */
 const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
@@ -122,6 +133,15 @@ export class AgentRunner {
       const content = `כלי לא ידוע: ${tc.name}`;
       this.events.onToolEnd(tc.id, false, content);
       return { tool_call_id: tc.id, name: tc.name, content };
+    }
+    if (MUTATING_TOOLS.has(tc.name)) {
+      const snapshot = this.ctx.editorApi?.getSnapshot?.();
+      if (snapshot) this.events.onCheckpoint?.(tc, {
+        clips: snapshot.clips?.map((c) => ({ ...c })) || snapshot.clips,
+        subs: snapshot.subs?.map((s) => ({ ...s })) || snapshot.subs,
+        tracks: snapshot.tracks.map((t) => ({ ...t })),
+        overlays: snapshot.overlays.map((o) => ({ ...o, transform: { ...o.transform } })),
+      });
     }
     const blocked = enforceLoopGuard ? this.guardLoop(tc.name) : null;
     if (blocked) {
@@ -252,16 +272,7 @@ export class AgentRunner {
 
         // כלים שמשנים state — בסדר סידרתי (מונע race על clips/tracks).
         // כלים לקריאה בלבד יכולים לרוץ במקביל.
-        const MUTATING = new Set([
-          "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
-          "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
-          "set_clip_enabled", "set_clip_volume", "add_video_track", "remove_video_track",
-          "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
-          "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
-          "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
-          "delete_overlay", "generate_narration",
-        ]);
-        const results = toolCalls.some((tc) => MUTATING.has(tc.name))
+        const results = toolCalls.some((tc) => MUTATING_TOOLS.has(tc.name))
           ? await (async () => {
               const out = [];
               for (const tc of toolCalls) out.push(await this.executeTool(tc));

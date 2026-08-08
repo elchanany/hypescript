@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-4 retry/duration כבר על main ב־`0e4b30d`. מקומית נוספה token usage normalization לכל ארבעת הספקים + runtime event + session total בצ'אט; אין כסף בלי rate card. אומת tsc + 181/181 + build + Graphify. אחרי push: checkpoints. Package C רק אחרי login עובד.
+AG-4 usage כבר על main ב־`c21fec7`. מקומית נוסף checkpoint לפני כל mutating tool + restore אטומי דרך EditorApi/useEditor History + בדיקה; tsc, 182/182 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא audit plan approvals מול PR-1. Package C רק אחרי login עובד.

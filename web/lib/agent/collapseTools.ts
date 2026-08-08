@@ -15,6 +15,8 @@ export type CollapsibleTool = {
   args?: Record<string, any>;
   startedAt?: number;
   durationMs?: number;
+  checkpoint?: import("@/hooks/useEditor").EditorSnapshot;
+  restored?: boolean;
 };
 
 export type CollapsedToolView = CollapsibleTool & { count: number };
@@ -49,6 +51,8 @@ export function collapseConsecutiveTools<T extends { kind: string }>(
       prev.args = tool.args;
       prev.startedAt = tool.startedAt;
       prev.durationMs = tool.durationMs;
+      prev.checkpoint = tool.checkpoint;
+      prev.restored = tool.restored;
       continue;
     }
     out.push({ ...tool, count: 1 });

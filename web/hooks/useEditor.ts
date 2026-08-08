@@ -54,6 +54,9 @@ export function useEditor() {
   const setProject = useCallback((c: Clip[] | null, s: Sub[] | null) => {
     commit({ ...now(), clips: c, subs: s });
   }, [commit]);
+  const restoreSnapshot = useCallback((snapshot: EditorSnapshot) => {
+    commit({ clips: snapshot.clips, subs: snapshot.subs, tracks: snapshot.tracks, overlays: snapshot.overlays || [] });
+  }, [commit]);
 
   const updateClip = useCallback((id: string, patch: Partial<Clip>) => {
     const cur = clipsRef.current;
@@ -131,7 +134,7 @@ export function useEditor() {
 
   return {
     clips, subs, tracks, overlays, canvas, captionStyle,
-    setClips, setSubs, setProject, updateClip,
+    setClips, setSubs, setProject, restoreSnapshot, updateClip,
     setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
     renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack, setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,

@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-4 — Usage telemetry. מתאמי DeepSeek/OpenAI/Anthropic/Gemini מנרמלים input/output/total tokens; runtime מעביר אותם והצ'אט מציג סך session. אין המרת כסף בלי rate card מאומת.
+AG-4 — Restorable checkpoints. לפני כל כלי mutating ה-runtime שומר EditorSnapshot; כרטיס הכלי מאפשר restore אטומי דרך useEditor/History, עם Undo נוסף אחרי שחזור.
 
 ## Branch
 `main`
 
 ## Latest commit
-`0e4b30d` — exact retry + tool durations על main
+`c21fec7` — normalized token usage על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 181/181 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 182/182 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך AG-4 checkpoints. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit ל-plan approvals מול PR-1. בלי שינוי Supabase/Auth ללא אישור.

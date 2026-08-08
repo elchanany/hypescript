@@ -52,9 +52,9 @@
 |---|---|---|
 | Docked panel + Ask/Plan/Act (enforced) | OK | — |
 | Slash `/` + `@mentions` + context chips | OK | — |
-| Tool activity rows | PARTIAL | provider label + exact retry + duration + token usage מנורמל + "בטל" קיימים; rate-card כספי/checkpoints חסרים |
+| Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
-| Plan checklist / approval cards / checkpoints | MISSING | — |
+| Plan checklist / approval cards / checkpoints | PARTIAL | checkpoint+restore אטומי קיים לכל כלי mutating; plan checklist/approval cards חסרים |
 | CommandBus + Query API | PARTIAL | agent split/trim/move/add + track ops דרך CommandBus+EditorApi (רענון מיידי); לא כל ה-UI |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
@@ -90,7 +90,7 @@
 
 ### P2 (הבא)
 - **AG-2**: PARTIAL — clip split/trim/move/add + video tracks + enabled/volume + כל פעולות track דרך CommandBus; registry כולל schema/result/permissions/contexts/agentCallable ואימות args; נותר לחבר palette/shortcut/context-menu דינמית ופעולות UI נוספות
-- **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, normalized token usage ו"בטל"; rate-card כספי/checkpoints חסרים
+- **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; rate-card כספי + plan approvals חסרים
 - **PR-1**: PARTIAL — Provider Registry בסיסי וכנה; policies/health-check/Zero-cost חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 

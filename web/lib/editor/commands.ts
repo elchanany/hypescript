@@ -7,6 +7,7 @@ import { Overlay } from "./overlay";
 import { Sub } from "./subtitlesEdl";
 import { CanvasSize } from "./canvasCoords";
 import { TrackMeta } from "./project";
+import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export type CommandId =
   | "clip.delete.ripple"
@@ -57,6 +58,8 @@ export interface EditorApi {
   setCaptionStyle?: (style: import("./captionStyle").CaptionStyle) => void;
   /** Source media duration for roll/slip clamping */
   getMediaDuration?: (sourceId: string) => number;
+  getSnapshot?: () => EditorSnapshot;
+  restoreSnapshot?: (snapshot: EditorSnapshot) => void;
 }
 
 export interface CommandDef {

@@ -339,6 +339,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),
         onUsage: (next) => setUsage((prev) => ({ inputTokens: prev.inputTokens + next.inputTokens, outputTokens: prev.outputTokens + next.outputTokens, totalTokens: prev.totalTokens + next.totalTokens })),
+        onCheckpoint: (call, checkpoint) => setItems((p) => p.map((it) => it.kind === "tool" && it.id === call.id ? { ...it, checkpoint } : it)),
       });
       if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }
@@ -392,6 +393,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setRunning(true);
     try { await getRunner().retryTool(tool.name, tool.args); }
     catch (e: any) { setItems((p) => [...p, { kind: "error", text: e?.message || "הניסיון החוזר נכשל.", time: now() }]); setRunning(false); }
+  };
+  const restoreToolCheckpoint = (tool: ToolItem) => {
+    if (!tool.checkpoint || !editorApi?.restoreSnapshot) return;
+    editorApi.restoreSnapshot(tool.checkpoint);
+    setItems((p) => p.map((it) => it.kind === "tool" && it.id === tool.id ? { ...it, restored: true } : it));
   };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
@@ -539,6 +545,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   {it.state === "ok" && <Check size={15} className="stt ok" />}
                   {it.state === "error" && <AlertTriangle size={15} className="stt err" />}
                   {it.state === "error" && it.args && <button className="btn sm" onClick={() => retryTool(it)} disabled={running}>נסה שוב</button>}
+                  {it.state === "ok" && it.checkpoint && <button className="btn sm" onClick={() => restoreToolCheckpoint(it)} disabled={running || it.restored}>{it.restored ? "שוחזר" : "שחזר"}</button>}
                 </span>
               </div>
             );

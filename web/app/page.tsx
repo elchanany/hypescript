@@ -58,7 +58,7 @@ export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [words, setWords] = useState<Word[] | null>(null);
   const {
-    clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, updateClip,
+    clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, restoreSnapshot, updateClip,
     addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
     setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
@@ -138,6 +138,8 @@ export default function EditorPage() {
       },
       seek: (t) => { setCur(t); previewRef.current?.seek(t); },
       getPlayhead: () => curRef.current,
+      getSnapshot: () => ({ clips: clipsRef.current, subs: subsRef.current, tracks: tracksRef.current, overlays: overlaysRef.current }),
+      restoreSnapshot,
       getCaptionStyle: () => captionStyleRef.current,
       setCaptionStyle: (s) => setCaptionStyle(s),
       getMediaDuration: (sourceId) => mediaRef.current.find((m) => m.id === sourceId)?.duration ?? 0,
