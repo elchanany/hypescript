@@ -72,7 +72,19 @@ export interface CommandDef {
   permissions: CommandPermission[];
   contexts: CommandContext[];
   agentCallable: boolean;
+  presentation?: CommandPresentation;
   run: (api: EditorApi, args?: Record<string, unknown>) => void;
+}
+
+export interface CommandPresentation {
+  target?: "clip" | "gap" | "overlay" | "any";
+  icon?: "copy" | "scissors" | "eye" | "square-dashed" | "trash" | "type" | "layers";
+  order?: number;
+  danger?: boolean;
+  shortcut?: string;
+  separatorBefore?: boolean;
+  disableWhenVideoLocked?: boolean;
+  labelHe?: (api: EditorApi, args: Record<string, unknown>) => string;
 }
 
 export type CommandPermission = "project.read" | "project.write" | "project.export";

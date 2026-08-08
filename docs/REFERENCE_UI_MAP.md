@@ -85,6 +85,6 @@
 ## אזור 8 — Context menus
 | מקום | סטטוס |
 |---|---|
-| Clip (duplicate/split/disable/delete) | חלקי |
+| Clip/Gap (duplicate/split/disable/delete/close) | קיים, דינמי מה-Registry |
 | Command menu (Ctrl/Cmd+K) מה-Registry | קיים |
-| Track / Gap / Asset / Caption menus מלאים | חסר |
+| Track / Asset / Caption menus מלאים | חסר |

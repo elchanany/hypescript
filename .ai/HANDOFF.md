@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-PR-1 Zero-cost approval על main ב־`2c2f257`. מקומית AG-2 מוסיף Ctrl/Cmd+K dynamic command menu מה-Registry עם context/permission/schema/selection filtering והרצה דרך CommandBus. tsc, 191/191 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא dynamic clip context-menu. Package C רק אחרי login עובד.
+AG-2 dynamic Ctrl/Cmd+K menu על main ב־`b879472`. מקומית גם Clip/Gap context-menu נגזר מה-Registry כולל target, order, icon, danger, shortcut ו-lock policy; אין duplication של actions. tsc, 192/192 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא Track context-menu audit. Package C רק אחרי login עובד.

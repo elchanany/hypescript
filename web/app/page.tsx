@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, addClip, clipEnabled, firstVideo, mediaById, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, addClip, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
   audioMuted, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
@@ -21,7 +21,7 @@ import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, EyeOff, Trash2, SquareDashed } from "lucide-react";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -37,6 +37,8 @@ import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 
 ensureBuiltinCommands();
+
+const COMMAND_ICONS = { copy: Copy, scissors: Scissors, eye: Eye, "square-dashed": SquareDashed, trash: Trash2, type: Type, layers: Layers } as const;
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -537,11 +539,6 @@ export default function EditorPage() {
     }
     if (selectedId) deleteClipById(selectedId, leaveGap);
   };
-  const duplicateClip = (id: string) => {
-    if (videoLocked(tracks) || !editorApiRef.current) return;
-    const res = runCommand("clip.duplicate", editorApiRef.current, { id });
-    if (!res.ok) setError(res.error);
-  };
   const rollSelected = (delta: number) => {
     if (!selectedId || videoLocked(tracks) || !editorApiRef.current) return;
     const res = runCommand("clip.roll", editorApiRef.current, { id: selectedId, delta });
@@ -652,20 +649,29 @@ export default function EditorPage() {
     </>
   ) : null;
 
-  const clipMenuItems: CtxItem[] = menuClip ? isGapClip(menuClip) ? [
-    { label: "סגור רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id), disabled: vLocked },
-  ] : [
-    { label: "שכפל", icon: Copy, onClick: () => duplicateClip(menuClip.id), disabled: vLocked },
-    { label: "פצל בראש-הנגן", icon: Scissors, onClick: splitAtPlayhead, disabled: vLocked },
-    { label: clipEnabled(menuClip) ? "השבת" : "הפעל", icon: clipEnabled(menuClip) ? EyeOff : Eye, onClick: () => updateClip(menuClip.id, { enabled: !clipEnabled(menuClip) }) },
-    { sep: true, label: "" },
-    { label: "מחק והשאר רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id, true), disabled: vLocked, kbd: "Shift+Delete" },
-    { label: "מחק", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked, kbd: "Delete" },
-  ] : [];
+  const clipMenuItems: CtxItem[] = menuClip && editorApiRef.current
+    ? listRunnableCommands(editorApiRef.current, { clipId: menuClip.id, overlayId: null }, "context-menu")
+      .flatMap(({ command, args }) => {
+        const presentation = command.presentation;
+        const item: CtxItem = {
+          label: presentation?.labelHe?.(editorApiRef.current!, args) || command.labelHe,
+          icon: presentation?.icon ? COMMAND_ICONS[presentation.icon] : undefined,
+          danger: presentation?.danger,
+          kbd: presentation?.shortcut,
+          disabled: !!presentation?.disableWhenVideoLocked && vLocked,
+          onClick: () => {
+            const result = runCommand(command.id, editorApiRef.current!, args);
+            if (!result.ok) setError(result.error);
+          },
+        };
+        return presentation?.separatorBefore ? [{ sep: true, label: "" } as CtxItem, item] : [item];
+      })
+    : [];
   const commandMenuItems: CtxItem[] = commandMenu && editorApiRef.current
     ? listRunnableCommands(editorApiRef.current, { clipId: selectedId, overlayId: selectedOverlayId }, "shortcut")
       .map(({ command, args }) => ({
-        label: command.labelHe,
+        label: command.presentation?.labelHe?.(editorApiRef.current!, args) || command.labelHe,
+        icon: command.presentation?.icon ? COMMAND_ICONS[command.presentation.icon] : undefined,
         onClick: () => {
           const result = runCommand(command.id, editorApiRef.current!, args);
           if (!result.ok) setError(result.error);

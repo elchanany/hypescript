@@ -49,9 +49,19 @@ export function listRunnableCommands(
   context: "shortcut" | "context-menu",
   granted: readonly CommandPermission[] = ["project.read", "project.write", "project.export"],
 ): RunnableCommand[] {
+  const selectedClip = selection.clipId ? api.getClips()?.find((item) => item.id === selection.clipId) : null;
+  const targetMatches = (command: CommandDef) => {
+    const target = command.presentation?.target || "any";
+    if (target === "any") return true;
+    if (target === "overlay") return !!selection.overlayId;
+    if (!selectedClip) return false;
+    return target === "gap" ? isGapClip(selectedClip) : !isGapClip(selectedClip);
+  };
   return listCommands()
     .filter((command) => command.contexts.includes(context))
+    .filter(targetMatches)
     .filter((command) => command.permissions.every((permission) => granted.includes(permission)))
     .map((command) => ({ command, args: inferArgs(command, api, selection) }))
-    .filter((entry): entry is RunnableCommand => entry.args !== null);
+    .filter((entry): entry is RunnableCommand => entry.args !== null)
+    .sort((a, b) => (a.command.presentation?.order || 100) - (b.command.presentation?.order || 100));
 }

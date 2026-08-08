@@ -18,6 +18,7 @@ export function ensureBuiltinCommands() {
     label: "Delete clip (ripple)",
     labelHe: "מחק קטע (ריפל)",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "clip", icon: "trash", order: 60, danger: true, shortcut: "Delete", disableWhenVideoLocked: true, labelHe: () => "מחק" },
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -32,6 +33,7 @@ export function ensureBuiltinCommands() {
     label: "Delete clip (leave gap)",
     labelHe: "מחק קטע והשאר רווח",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "clip", icon: "square-dashed", order: 50, shortcut: "Shift+Delete", separatorBefore: true, disableWhenVideoLocked: true },
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -46,6 +48,7 @@ export function ensureBuiltinCommands() {
     label: "Close gap",
     labelHe: "סגור רווח",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "gap", icon: "square-dashed", order: 10, disableWhenVideoLocked: true },
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -62,6 +65,7 @@ export function ensureBuiltinCommands() {
     label: "Split at playhead",
     labelHe: "פצל בראש-הנגן",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "clip", icon: "scissors", order: 20, disableWhenVideoLocked: true },
     run: (api) => {
       const clips = api.getClips();
       if (!clips?.length) throw new Error("אין קליפים");
@@ -78,6 +82,7 @@ export function ensureBuiltinCommands() {
     label: "Delete overlay",
     labelHe: "מחק שכבה",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "overlay", icon: "trash", order: 60, danger: true, shortcut: "Delete" },
     run: (api, args) => {
       const id = String(args?.id || "");
       if (!id) throw new Error("אין שכבה");
@@ -91,6 +96,7 @@ export function ensureBuiltinCommands() {
     label: "Add text overlay",
     labelHe: "הוסף טקסט",
     contexts: ["editor", "shortcut"],
+    presentation: { target: "any", icon: "type", order: 80 },
     run: (api, args) => {
       const text = String(args?.text || "טקסט חדש");
       const canvas = api.getCanvas();
@@ -108,6 +114,7 @@ export function ensureBuiltinCommands() {
     label: "Set clip enabled",
     labelHe: "הפעל/השבת קטע",
     contexts: ["editor", "agent", "shortcut", "context-menu"],
+    presentation: { target: "clip", icon: "eye", order: 30, labelHe: (_api, args) => args.enabled ? "הפעל" : "השבת" },
     run: (api, args) => {
       const id = String(args?.id || "");
       if (!id) throw new Error("חסר id");
@@ -132,6 +139,7 @@ export function ensureBuiltinCommands() {
     label: "Duplicate clip",
     labelHe: "שכפל קטע",
     contexts: ["editor", "shortcut", "context-menu"],
+    presentation: { target: "clip", icon: "copy", order: 10, disableWhenVideoLocked: true, labelHe: () => "שכפל" },
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -314,6 +322,7 @@ export function ensureBuiltinCommands() {
     label: "Add video track",
     labelHe: "הוסף רצועת וידאו",
     contexts: ["editor", "agent", "shortcut"],
+    presentation: { target: "any", icon: "layers", order: 90 },
     run: (api, args) => {
       const name = args?.name != null ? String(args.name) : undefined;
       const { tracks } = createVideoTrack(api.getTracks(), name);

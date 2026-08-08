@@ -28,4 +28,20 @@ describe("dynamic command surface", () => {
     expect(noSelection.some((entry) => entry.command.id === "clip.delete.ripple")).toBe(false);
     expect(listRunnableCommands(api(), { clipId: "c1", overlayId: null }, "shortcut", ["project.read"])).toEqual([]);
   });
+
+  it("builds clip and gap context menus from registry target metadata", () => {
+    const normal = listRunnableCommands(api(), { clipId: "c1", overlayId: null }, "context-menu");
+    expect(normal.map((entry) => entry.command.id)).toEqual([
+      "clip.duplicate",
+      "clip.splitAtPlayhead",
+      "clip.setEnabled",
+      "clip.delete.leaveGap",
+      "clip.delete.ripple",
+    ]);
+
+    const gapApi = api();
+    gapApi.getClips = () => [{ id: "gap", sourceId: "__gap__", start: 0, end: 2 }];
+    const gap = listRunnableCommands(gapApi, { clipId: "gap", overlayId: null }, "context-menu");
+    expect(gap.map((entry) => entry.command.id)).toEqual(["gap.close"]);
+  });
 });
