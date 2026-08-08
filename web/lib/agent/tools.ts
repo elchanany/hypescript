@@ -815,6 +815,36 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "set_track_height", label: "גובה רצועה", color: "#64748b", icon: "↕️",
+    schema: { name: "set_track_height", description: "קובע גובה רצועה בפיקסלים (28..140) לפי id, שם או אינדקס 1-based.", parameters: { type: "object", properties: { track: { type: "string" }, height: { type: "number" } }, required: ["track", "height"] } },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const track = /^\d+$/.test(ref) ? ctx.tracks[Number(ref) - 1] : ctx.tracks.find((t) => t.id === ref || t.name === ref || t.name.includes(ref));
+      if (!track) return "רצועה לא נמצאה. השתמש ב-list_tracks.";
+      const height = Math.max(28, Math.min(140, Number(a.height)));
+      if (!Number.isFinite(height)) return "גובה רצועה לא תקין.";
+      const e = dispatch(ctx, "track.setHeight", { trackId: track.id, height });
+      if (e === "NO_API") setTracks(ctx, ctx.tracks.map((t) => t.id === track.id ? { ...t, height } : t));
+      else if (e) return `שגיאה: ${e}`;
+      return `גובה רצועת ${track.name}: ${height}px.`;
+    },
+  },
+  {
+    name: "reorder_track", label: "סידור רצועה", color: "#64748b", icon: "↕️",
+    schema: { name: "reorder_track", description: "מעלה או מוריד רצועה ביחס לרצועה סמוכה מאותו סוג.", parameters: { type: "object", properties: { track: { type: "string" }, direction: { type: "number", description: "-1 למעלה, 1 למטה" } }, required: ["track", "direction"] } },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const track = /^\d+$/.test(ref) ? ctx.tracks[Number(ref) - 1] : ctx.tracks.find((t) => t.id === ref || t.name === ref || t.name.includes(ref));
+      if (!track) return "רצועה לא נמצאה. השתמש ב-list_tracks.";
+      const direction = Number(a.direction);
+      if (direction !== -1 && direction !== 1) return "direction חייב להיות -1 או 1.";
+      const e = dispatch(ctx, "track.reorder", { trackId: track.id, direction });
+      if (e === "NO_API") return "שגיאה: שינוי סדר דורש חיבור לעורך.";
+      if (e) return `שגיאה: ${e}`;
+      return `סדר רצועת ${track.name} עודכן.`;
+    },
+  },
+  {
     name: "add_video_track", label: "הוספת רצועת וידאו", color: "#10b981", icon: "➕",
     schema: {
       name: "add_video_track",

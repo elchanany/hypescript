@@ -11,7 +11,8 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
   let current: Clip[] = [{ id: "clip-1", sourceId: "media-1", start: 0, end: 4, enabled: true, volume: 1 }];
   let currentTracks: TrackMeta[] = [
     { id: "video-1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
-    { id: "audio-1", name: "אודיו", type: "audio", order: 1, height: 56, locked: false, muted: false },
+    { id: "video-2", name: "B-roll", type: "video", order: 1, height: 64, locked: false, muted: false },
+    { id: "audio-1", name: "אודיו", type: "audio", order: 2, height: 56, locked: false, muted: false },
   ];
   let updateCount = 0;
   const api: EditorApi = {
@@ -71,6 +72,16 @@ describe("Agent ↔ UI CommandBus parity", () => {
     await TOOL_BY_NAME.set_track_muted.run({ track: "audio-1", muted: true }, h.ctx, () => undefined);
     expect(h.tracks().find((t) => t.id === "video-1")).toMatchObject({ name: "B-roll", locked: true });
     expect(h.tracks().find((t) => t.id === "audio-1")?.muted).toBe(true);
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
+  it("routes height and reorder track tools through the shared commands", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.set_track_height.run({ track: "video-1", height: 999 }, h.ctx, () => undefined);
+    await TOOL_BY_NAME.reorder_track.run({ track: "video-1", direction: 1 }, h.ctx, () => undefined);
+    expect(h.tracks().find((t) => t.id === "video-1")?.height).toBe(140);
+    expect(h.tracks().find((t) => t.id === "video-1")?.order).toBe(1);
+    expect(h.tracks().find((t) => t.id === "video-2")?.order).toBe(0);
     expect(h.ctx._editorDirty).toBe(true);
   });
 });

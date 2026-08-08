@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-2: `set_clip_enabled`/`set_clip_volume` כבר על main (`86348eb`). מקומית נוספו track rename/lock/mute דרך CommandBus ל-UI+Agent ובדיקת parity; אומת tsc + 172/172 + build + Graphify. אחרי push: height/reorder. Package C רק אחרי login עובד.
+AG-2: clip state (`86348eb`) ו-track rename/lock/mute (`a234152`) כבר על main. מקומית נוספו track height/reorder דרך CommandBus ל-UI+Agent ובדיקת parity; אומת tsc + 173/173 + build + Graphify. אחרי push: registry metadata. Package C רק אחרי login עובד.

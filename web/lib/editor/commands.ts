@@ -30,7 +30,9 @@ export type CommandId =
   | "track.removeVideo"
   | "track.rename"
   | "track.setLocked"
-  | "track.setMuted";
+  | "track.setMuted"
+  | "track.setHeight"
+  | "track.reorder";
 
 export interface EditorApi {
   getClips(): Clip[] | null;

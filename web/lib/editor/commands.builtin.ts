@@ -368,4 +368,40 @@ export function ensureBuiltinCommands() {
     },
   });
 
+  registerCommand({
+    id: "track.setHeight",
+    label: "Set track height",
+    labelHe: "שנה גובה רצועה",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      const height = Number(args?.height);
+      if (!trackId || !api.getTracks().some((t) => t.id === trackId)) throw new Error("רצועה לא נמצאה");
+      if (!Number.isFinite(height)) throw new Error("גובה רצועה לא תקין");
+      api.setTracks(api.getTracks().map((t) => t.id === trackId
+        ? { ...t, height: Math.max(28, Math.min(140, height)) }
+        : t));
+    },
+  });
+
+  registerCommand({
+    id: "track.reorder",
+    label: "Reorder track",
+    labelHe: "שנה סדר רצועה",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      const direction = Number(args?.direction);
+      if (direction !== -1 && direction !== 1) throw new Error("direction חייב להיות 1 או -1");
+      const list = [...api.getTracks()].sort((a, b) => a.order - b.order);
+      const i = list.findIndex((t) => t.id === trackId);
+      const j = i + direction;
+      if (i < 0) throw new Error("רצועה לא נמצאה");
+      if (j < 0 || j >= list.length) throw new Error("הרצועה כבר בקצה");
+      if (list[i].type !== list[j].type) throw new Error("ניתן לשנות סדר רק בין רצועות מאותו סוג");
+      const current = list[i], adjacent = list[j];
+      api.setTracks(api.getTracks().map((t) => t.id === current.id
+        ? { ...t, order: adjacent.order }
+        : t.id === adjacent.id ? { ...t, order: current.order } : t));
+    },
+  });
+
 }

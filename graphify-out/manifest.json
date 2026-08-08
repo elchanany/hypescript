@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786190233.9406528,
-    "ast_hash": "7fd96d61e654059e8b36630cb01ef5d4",
+    "mtime": 1786190589.3059547,
+    "ast_hash": "b3ac4efe7437dfaa669440cb8d53daab",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786190196.333369,
-    "ast_hash": "8de11186eb24a2cc994c3875bfbf37df",
+    "mtime": 1786190589.3099637,
+    "ast_hash": "7afb9d9176b56f420794d43a410c66c7",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
-    "mtime": 1786190196.3263674,
-    "ast_hash": "e1611f4ae22d8b4b1ae015ea74983f60",
+    "mtime": 1786190589.3019545,
+    "ast_hash": "1f2001c4406f7b0497674f4851b4319d",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786190196.3233657,
-    "ast_hash": "4e17ea7da2b4ecd781f92e96963646e1",
+    "mtime": 1786190589.297953,
+    "ast_hash": "69edcb5b868653d3e99f9f4192edea59",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786190317.0161543,
-    "ast_hash": "29083ac497cf602e73b2427e7c2ea7f3",
+    "mtime": 1786190745.4697287,
+    "ast_hash": "ab1d82152f3941b1690625772027cf6b",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786190317.0171728,
-    "ast_hash": "8b2ed6678b1e6ddc1ad7a2009660e8d5",
+    "mtime": 1786190745.4747372,
+    "ast_hash": "2903901759574703ace188640c3dd1b2",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "docs/AGENT_UI_PARITY.md": {
-    "mtime": 1786190317.0106308,
-    "ast_hash": "69e0286be20d4f31c4781f38fd23e40a",
+    "mtime": 1786190745.4517293,
+    "ast_hash": "db3d62d16f7c52eb4def817d716f5c4c",
     "semantic_hash": ""
   },
   "docs/DATA_MODEL.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786190317.0136356,
-    "ast_hash": "76a48de8ce5202a4efdb380d828ad3d2",
+    "mtime": 1786190745.463729,
+    "ast_hash": "070c9353bd1bd58ab91e14b4290c7edb",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786190273.811667,
-    "ast_hash": "04391ddc0ad7230ed1545ffb49cd3eaf",
+    "mtime": 1786190589.3119624,
+    "ast_hash": "c3a601d63d791adcfd06d8d592616ba1",
     "semantic_hash": ""
   }
 }

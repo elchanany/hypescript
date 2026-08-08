@@ -60,7 +60,7 @@ export default function EditorPage() {
   const {
     clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, updateClip,
     addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
-    setTrackHeight, reorderTrack, setTracks,
+    setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
     captionStyle, setCaptionStyle,
@@ -550,10 +550,11 @@ export default function EditorPage() {
     const res = runCommand("clip.slip", editorApiRef.current, { id: selectedId, delta });
     if (!res.ok) setError(res.error);
   };
-  const cycleHeight = (id: string) => { const t = tracks.find((x) => x.id === id); if (!t) return; const hs = [48, 64, 96]; const i = hs.findIndex((h) => h >= t.height); setTrackHeight(id, hs[(i + 1) % hs.length]); };
+  const cycleHeight = (id: string) => { const api = editorApiRef.current; const t = tracks.find((x) => x.id === id); if (!api || !t) return; const hs = [48, 64, 96]; const i = hs.findIndex((h) => h >= t.height); const r = runCommand("track.setHeight", api, { trackId: id, height: hs[(i + 1) % hs.length] }); if (!r.ok) setError(r.error); };
   const renameTrack = (id: string, name: string) => { const api = editorApiRef.current; if (!api) return; const r = runCommand("track.rename", api, { trackId: id, name }); if (!r.ok) setError(r.error); };
   const toggleLock = (id: string) => { const api = editorApiRef.current; const t = tracks.find((x) => x.id === id); if (!api || !t) return; const r = runCommand("track.setLocked", api, { trackId: id, locked: !t.locked }); if (!r.ok) setError(r.error); };
   const toggleMute = (id: string) => { const api = editorApiRef.current; const t = tracks.find((x) => x.id === id); if (!api || !t) return; const r = runCommand("track.setMuted", api, { trackId: id, muted: !t.muted }); if (!r.ok) setError(r.error); };
+  const reorderTrack = (id: string, direction: -1 | 1) => { const api = editorApiRef.current; if (!api) return; const r = runCommand("track.reorder", api, { trackId: id, direction }); if (!r.ok && !r.error.includes("כבר בקצה") && !r.error.includes("מאותו סוג")) setError(r.error); };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
