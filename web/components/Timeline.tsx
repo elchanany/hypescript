@@ -42,6 +42,7 @@ interface Props {
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
+  onTrackMenu?: (id: string, x: number, y: number) => void;
   /** גרירה מספריית מדיה — assetId + אינדקס הכנסה (+ רצועת יעד) */
   onDropMedia?: (assetId: string, atIndex: number, trackId?: string) => void;
   onAddVideoTrack?: () => void;
@@ -547,7 +548,7 @@ export default function Timeline(p: Props) {
           const tLocked = !!track.locked;
           return (
             <div className="tl-rowline" key={track.id} style={{ height: track.height }}>
-              <div className="tl-head2">
+              <div className="tl-head2" onContextMenu={(event) => { event.preventDefault(); p.onTrackMenu?.(track.id, event.clientX, event.clientY); }}>
                 <div className="hd-top">
                   <TypeIcon className="hd-type" size={14} strokeWidth={1.75} />
                   <span className="hd-name" title="לחיצה כפולה לשינוי שם"

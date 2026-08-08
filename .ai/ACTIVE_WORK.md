@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Dynamic Clip/Gap context menu. פעולות, סדר, אייקון, danger, shortcut ונעילה נגזרים מ-presentation metadata ב-Registry ומופעלים דרך CommandBus.
+AG-2 — Dynamic Track context menu. right-click בכותרת רצועה מציג lock/mute/height/remove-safe לפי סוג ומצב הרצועה, נגזר מה-Registry ומופעל דרך CommandBus.
 
 ## Branch
 `main`
 
 ## Latest commit
-`b879472` — dynamic Ctrl/Cmd+K command menu על main
+`7739126` — dynamic Clip/Gap menus על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 192/192 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 193/193 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך audit Track context-menu מול הפער הבא. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit Caption/Asset context menus מול ערך מוצר. בלי שינוי Supabase/Auth ללא אישור.

@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786193766.0845976,
-    "ast_hash": "dee70430ee5b8434d95a894de27fd981",
+    "mtime": 1786194002.667931,
+    "ast_hash": "abf4bf87b83a591ecbe9e27f95d486fd",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "web/components/Timeline.tsx": {
-    "mtime": 1786189582.3979175,
-    "ast_hash": "32fc57150bb14baa59e68b211c326db6",
+    "mtime": 1786194002.6659176,
+    "ast_hash": "8a24518e437394e6935a8124a4b380fd",
     "semantic_hash": ""
   },
   "web/components/TimelineToolbar.tsx": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
-    "mtime": 1786193766.0823102,
-    "ast_hash": "a240982976d1ca72bd136564d24cf303",
+    "mtime": 1786193988.4213984,
+    "ast_hash": "566a40f9c26272192b715dd907fd8c15",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786193725.5735614,
-    "ast_hash": "f0e68b6f94c8d1c186df860636831df1",
+    "mtime": 1786193977.723699,
+    "ast_hash": "1c8a6ac9edf00b034f67c3b88c1a032b",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786193813.580569,
-    "ast_hash": "cd0f6bca84b950a49cb58705bf0256c2",
+    "mtime": 1786194080.7679682,
+    "ast_hash": "fe9a2953388f1627fd7e7f64a9d13534",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786193813.5825632,
-    "ast_hash": "2a557a0663cbfe38c0de0dac324c8536",
+    "mtime": 1786194080.7729588,
+    "ast_hash": "7e162c3c5a5b1a7d2d5ff649637a4ad6",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786193813.5775664,
-    "ast_hash": "2dd1c8929b0fab9f3daa73c4f85cea3b",
+    "mtime": 1786194080.763865,
+    "ast_hash": "ab89772c3dd3139fd726cb64b3097a1e",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "docs/REFERENCE_UI_MAP.md": {
-    "mtime": 1786193813.579565,
-    "ast_hash": "e935e5df36f60e296779cfaaeb2112a1",
+    "mtime": 1786194080.765866,
+    "ast_hash": "b182671d716616f42d2e792ee5537348",
     "semantic_hash": ""
   },
   "docs/RENDER_BACKEND.md": {
@@ -1255,13 +1255,13 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commandSurface.test.ts": {
-    "mtime": 1786193774.1863544,
-    "ast_hash": "8ceee8da36cc3bdfb79cc19d72ddddf9",
+    "mtime": 1786194047.489245,
+    "ast_hash": "bb8cb64045da061ee9dff8a68c979f55",
     "semantic_hash": ""
   },
   "web/lib/editor/commandSurface.ts": {
-    "mtime": 1786193725.5761037,
-    "ast_hash": "0b0a050f9247e1ec38ae220474874878",
+    "mtime": 1786193977.7256975,
+    "ast_hash": "c21b1cbee63c7f9220ecfc25aeb3afeb",
     "semantic_hash": ""
   }
 }

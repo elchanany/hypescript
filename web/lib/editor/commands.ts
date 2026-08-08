@@ -77,14 +77,15 @@ export interface CommandDef {
 }
 
 export interface CommandPresentation {
-  target?: "clip" | "gap" | "overlay" | "any";
-  icon?: "copy" | "scissors" | "eye" | "square-dashed" | "trash" | "type" | "layers";
+  target?: "clip" | "gap" | "overlay" | "track" | "video-track" | "audio-track" | "any";
+  icon?: "copy" | "scissors" | "eye" | "square-dashed" | "trash" | "type" | "layers" | "lock" | "volume" | "height";
   order?: number;
   danger?: boolean;
   shortcut?: string;
   separatorBefore?: boolean;
   disableWhenVideoLocked?: boolean;
   labelHe?: (api: EditorApi, args: Record<string, unknown>) => string;
+  isVisible?: (api: EditorApi, args: Record<string, unknown>) => boolean;
 }
 
 export type CommandPermission = "project.read" | "project.write" | "project.export";

@@ -334,6 +334,8 @@ export function ensureBuiltinCommands() {
     id: "track.removeVideo",
     label: "Remove video track",
     labelHe: "מחק רצועת וידאו",
+    contexts: ["editor", "agent", "context-menu"],
+    presentation: { target: "video-track", icon: "trash", order: 80, danger: true, separatorBefore: true, isVisible: (api) => api.getTracks().filter((track) => track.type === "video").length > 1 },
     run: (api, args) => {
       const trackId = String(args?.trackId || "");
       if (!trackId) throw new Error("חסר trackId");
@@ -366,6 +368,8 @@ export function ensureBuiltinCommands() {
     id: "track.setLocked",
     label: "Set track locked",
     labelHe: "נעל/שחרר רצועה",
+    contexts: ["editor", "agent", "context-menu"],
+    presentation: { target: "track", icon: "lock", order: 10, labelHe: (_api, args) => args.locked ? "נעל רצועה" : "שחרר נעילה" },
     run: (api, args) => {
       const trackId = String(args?.trackId || "");
       if (!trackId || !api.getTracks().some((t) => t.id === trackId)) throw new Error("רצועה לא נמצאה");
@@ -377,6 +381,8 @@ export function ensureBuiltinCommands() {
     id: "track.setMuted",
     label: "Set track muted",
     labelHe: "השתק/בטל השתקת רצועה",
+    contexts: ["editor", "agent", "context-menu"],
+    presentation: { target: "audio-track", icon: "volume", order: 20, labelHe: (_api, args) => args.muted ? "השתק רצועה" : "בטל השתקה" },
     run: (api, args) => {
       const trackId = String(args?.trackId || "");
       const track = api.getTracks().find((t) => t.id === trackId);
@@ -390,6 +396,8 @@ export function ensureBuiltinCommands() {
     id: "track.setHeight",
     label: "Set track height",
     labelHe: "שנה גובה רצועה",
+    contexts: ["editor", "agent", "context-menu"],
+    presentation: { target: "track", icon: "height", order: 30 },
     run: (api, args) => {
       const trackId = String(args?.trackId || "");
       const height = Number(args?.height);

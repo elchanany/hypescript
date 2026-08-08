@@ -44,4 +44,25 @@ describe("dynamic command surface", () => {
     const gap = listRunnableCommands(gapApi, { clipId: "gap", overlayId: null }, "context-menu");
     expect(gap.map((entry) => entry.command.id)).toEqual(["gap.close"]);
   });
+
+  it("derives track actions and hides type-incompatible or unsafe removal commands", () => {
+    const trackApi = api();
+    trackApi.getTracks = () => [
+      { id: "v1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
+      { id: "a1", name: "אודיו", type: "audio", order: 1, height: 56, locked: true, muted: false },
+    ];
+    const audio = listRunnableCommands(trackApi, { clipId: null, overlayId: null, trackId: "a1" }, "context-menu");
+    expect(audio.map((entry) => entry.command.id)).toEqual(["track.setLocked", "track.setMuted", "track.setHeight"]);
+    expect(audio.find((entry) => entry.command.id === "track.setLocked")?.args).toMatchObject({ trackId: "a1", locked: false });
+    expect(audio.find((entry) => entry.command.id === "track.setHeight")?.args).toMatchObject({ trackId: "a1", height: 96 });
+
+    expect(listRunnableCommands(trackApi, { clipId: null, overlayId: null, trackId: "v1" }, "context-menu").map((entry) => entry.command.id))
+      .toEqual(["track.setLocked", "track.setHeight"]);
+    trackApi.getTracks = () => [
+      { id: "v1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
+      { id: "v2", name: "וידאו 2", type: "video", order: 1, height: 64, locked: false, muted: false },
+    ];
+    expect(listRunnableCommands(trackApi, { clipId: null, overlayId: null, trackId: "v2" }, "context-menu").map((entry) => entry.command.id))
+      .toEqual(["track.setLocked", "track.setHeight", "track.removeVideo"]);
+  });
 });

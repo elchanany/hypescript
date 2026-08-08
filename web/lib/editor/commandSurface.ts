@@ -5,6 +5,7 @@ import { listCommands, type CommandDef, type CommandPermission, type EditorApi }
 export interface CommandSelection {
   clipId: string | null;
   overlayId: string | null;
+  trackId?: string | null;
 }
 
 export interface RunnableCommand {
@@ -33,6 +34,24 @@ function inferArgs(command: CommandDef, api: EditorApi, selection: CommandSelect
       args.enabled = !clipEnabled(clip);
       continue;
     }
+    if (key === "trackId" && selection.trackId) {
+      args.trackId = selection.trackId;
+      continue;
+    }
+    if ((key === "locked" || key === "muted") && selection.trackId) {
+      const track = api.getTracks().find((item) => item.id === selection.trackId);
+      if (!track) return null;
+      args[key] = !track[key];
+      continue;
+    }
+    if (key === "height" && selection.trackId) {
+      const track = api.getTracks().find((item) => item.id === selection.trackId);
+      if (!track) return null;
+      const heights = [48, 64, 96];
+      const index = heights.findIndex((height) => height >= track.height);
+      args.height = heights[(index + 1) % heights.length];
+      continue;
+    }
     return null;
   }
   // Optional inferred values may still make a zero-input command useful.
@@ -50,10 +69,14 @@ export function listRunnableCommands(
   granted: readonly CommandPermission[] = ["project.read", "project.write", "project.export"],
 ): RunnableCommand[] {
   const selectedClip = selection.clipId ? api.getClips()?.find((item) => item.id === selection.clipId) : null;
+  const selectedTrack = selection.trackId ? api.getTracks().find((item) => item.id === selection.trackId) : null;
   const targetMatches = (command: CommandDef) => {
     const target = command.presentation?.target || "any";
     if (target === "any") return true;
     if (target === "overlay") return !!selection.overlayId;
+    if (target === "track") return !!selectedTrack;
+    if (target === "video-track") return selectedTrack?.type === "video";
+    if (target === "audio-track") return selectedTrack?.type === "audio";
     if (!selectedClip) return false;
     return target === "gap" ? isGapClip(selectedClip) : !isGapClip(selectedClip);
   };
@@ -63,5 +86,6 @@ export function listRunnableCommands(
     .filter((command) => command.permissions.every((permission) => granted.includes(permission)))
     .map((command) => ({ command, args: inferArgs(command, api, selection) }))
     .filter((entry): entry is RunnableCommand => entry.args !== null)
+    .filter((entry) => entry.command.presentation?.isVisible?.(api, entry.args) ?? true)
     .sort((a, b) => (a.command.presentation?.order || 100) - (b.command.presentation?.order || 100));
 }

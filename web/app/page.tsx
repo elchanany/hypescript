@@ -21,7 +21,7 @@ import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers } from "lucide-react";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -38,7 +38,7 @@ import Timeline from "@/components/Timeline";
 
 ensureBuiltinCommands();
 
-const COMMAND_ICONS = { copy: Copy, scissors: Scissors, eye: Eye, "square-dashed": SquareDashed, trash: Trash2, type: Type, layers: Layers } as const;
+const COMMAND_ICONS = { copy: Copy, scissors: Scissors, eye: Eye, "square-dashed": SquareDashed, trash: Trash2, type: Type, layers: Layers, lock: Lock, volume: Volume2, height: ChevronsUpDown } as const;
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -100,6 +100,7 @@ export default function EditorPage() {
   const [snap, setSnap] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [trackMenu, setTrackMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [commandMenu, setCommandMenu] = useState<{ x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -678,6 +679,22 @@ export default function EditorPage() {
         },
       }))
     : [];
+  const trackMenuItems: CtxItem[] = trackMenu && editorApiRef.current
+    ? listRunnableCommands(editorApiRef.current, { clipId: null, overlayId: null, trackId: trackMenu.id }, "context-menu")
+      .flatMap(({ command, args }) => {
+        const presentation = command.presentation;
+        const item: CtxItem = {
+          label: presentation?.labelHe?.(editorApiRef.current!, args) || command.labelHe,
+          icon: presentation?.icon ? COMMAND_ICONS[presentation.icon] : undefined,
+          danger: presentation?.danger,
+          onClick: () => {
+            const result = runCommand(command.id, editorApiRef.current!, args);
+            if (!result.ok) setError(result.error);
+          },
+        };
+        return presentation?.separatorBefore ? [{ sep: true, label: "" } as CtxItem, item] : [item];
+      })
+    : [];
 
   return (
     <div className="editor-root">
@@ -794,6 +811,7 @@ export default function EditorPage() {
                 onTrimEnd={commitTransaction}
                 onReorder={(id, to) => setClips((c) => (c ? moveClipOnTrack(c, id, to, primaryVideoTrackId(tracks)) : c))}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
+                onTrackMenu={(id, x, y) => setTrackMenu({ id, x, y })}
                 onDropMedia={dropMediaOnTimeline}
                 onAddVideoTrack={addVideoTrack}
                 onOverlayTrimBegin={beginTransaction}
@@ -820,6 +838,12 @@ export default function EditorPage() {
         y={commandMenu.y}
         items={commandMenuItems.length ? commandMenuItems : [{ label: "אין פקודות זמינות לבחירה הנוכחית", disabled: true }]}
         onClose={() => setCommandMenu(null)}
+      />}
+      {trackMenu && <ContextMenu
+        x={trackMenu.x}
+        y={trackMenu.y}
+        items={trackMenuItems.length ? trackMenuItems : [{ label: "אין פעולות זמינות לרצועה", disabled: true }]}
+        onClose={() => setTrackMenu(null)}
       />}
 
       <NameDialog
