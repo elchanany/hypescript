@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786193169.810672,
-    "ast_hash": "56ef2df26e47fa4d67a89ffd12153354",
+    "mtime": 1786211992.699525,
+    "ast_hash": "9a22266f67fccd6947e3fa47b199fb71",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "web/lib/agent/runtime.ts": {
-    "mtime": 1786192491.8135827,
-    "ast_hash": "855873bdf01420877cc765e1c0ffbed5",
+    "mtime": 1786211980.8418164,
+    "ast_hash": "e6dd6c27f7ad13b51e1127a24b4efdb7",
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786211406.0521784,
-    "ast_hash": "9e5a8194fd532e1e6f27cc5a2492117e",
+    "mtime": 1786211971.276934,
+    "ast_hash": "77b65d17a7e0c8f28c1db4267e6c7a3d",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -535,23 +535,23 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786211644.37177,
-    "ast_hash": "dd875f619d6777394edd3fca6156ee82",
+    "mtime": 1786212874.7444057,
+    "ast_hash": "02ce92d2e5692734954a52987e1125aa",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786211644.3889148,
-    "ast_hash": "177eb741f8423ed46b2ffc6581eb26b2",
+    "mtime": 1786212874.7499804,
+    "ast_hash": "d85bc1d627a9b3409e82cc5312f0b09c",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786211644.3773532,
-    "ast_hash": "a9fda44fdb3262ae3bd17d15b4fc4bcb",
+    "mtime": 1786212874.746912,
+    "ast_hash": "37964a6150e3ba04305a0789ce2b01eb",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
-    "mtime": 1786211644.3924403,
-    "ast_hash": "a686c75bdd4855a31c8de8d2f87bd93a",
+    "mtime": 1786212874.7512352,
+    "ast_hash": "eb00ff93f86ee2205b5cb08ab250d237",
     "semantic_hash": ""
   },
   ".ai/WORKFLOW.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786211644.384346,
-    "ast_hash": "139fe59da38875aa9d6faa817af8c881",
+    "mtime": 1786212874.7489736,
+    "ast_hash": "7cfb0edb1a75dee83aa7471487a35cc2",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1220,8 +1220,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {
-    "mtime": 1786192041.1706781,
-    "ast_hash": "7b2c55bde694018994a836f3d5112722",
+    "mtime": 1786211992.7083943,
+    "ast_hash": "0748b9af886f2aee9184fd18d6456c11",
     "semantic_hash": ""
   },
   "web/lib/agent/providerUsage.test.ts": {
