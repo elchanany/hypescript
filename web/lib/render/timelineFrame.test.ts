@@ -4,7 +4,7 @@ import { defaultTracks, createVideoTrack } from "@/lib/editor/project";
 import { makeGap, isGapClip } from "@/lib/editor/timelineOps";
 import { Overlay } from "@/lib/editor/overlay";
 import {
-  buildMicroEdl, clampTimelineAt, fadeLevelAt, MICRO_WINDOW_SEC,
+  buildMicroEdl, clampTimelineAt, fadeLevelAt, MICRO_WINDOW_SEC, microSeekAt,
   overlaysActiveAt, pickTimelineClip, shiftOverlaysToStart, shiftSubsToStart, subsActiveAt,
 } from "./timelineFrame";
 
@@ -112,6 +112,25 @@ describe("buildMicroEdl — multi-track flatten / cutaway", () => {
     // assembled 2 → only primary covers it (srcA)
     const microAtMiddle = buildMicroEdl(clips, mt, 2)!;
     expect(microAtMiddle.segments[0].sourceId).toBe("srcA");
+  });
+
+  it("exact cutaway boundary stays on the cutaway; just past it the base clip shows through", () => {
+    const { tracks: mt } = createVideoTrack(defaultTracks(), "B");
+    const upper = mt.find((t) => t.type === "video" && t.id !== "trk_video")!;
+    const clips = [
+      clip("a", "srcA", 10, 14, { trackId: "trk_video" }),
+      clip("b", "srcB", 0, 1, { trackId: upper.id }), // cutaway covers assembled [0,1]
+    ];
+    // The exact boundary 1.0 belongs to the covering cutaway (flattenVideoTracks splits
+    // at 1.0; pickTimelineClip keeps a boundary time on the clip that covers it).
+    const atBoundary = buildMicroEdl(clips, mt, 1)!;
+    expect(atBoundary.segments[0].sourceId).toBe("srcB");
+    expect(atBoundary.sourceTime).toBeCloseTo(1, 6);
+    // Just past the boundary the base clip shows through again — and the base source
+    // clock has kept running under the cutaway (assembled 1 ↦ source 11).
+    const justPast = buildMicroEdl(clips, mt, 1.0001)!;
+    expect(justPast.segments[0].sourceId).toBe("srcA");
+    expect(justPast.sourceTime).toBeCloseTo(11.0001, 6);
   });
 
   it("returns null when the flattened timeline is empty", () => {
@@ -231,5 +250,34 @@ describe("fadeLevelAt (matches preview edgeFadeFactor)", () => {
     // fades are dropped from the micro clip so the micro window does not re-fade
     expect(micro.segments[0].visualFadeIn).toBeUndefined();
     expect(micro.segments[0].visualFadeOut).toBeUndefined();
+  });
+});
+
+describe("microSeekAt (frame-extraction seek inside a positive micro clip)", () => {
+  it("keeps a mid-window capture as-is", () => {
+    expect(microSeekAt(0.125, 0.25)).toBeCloseTo(0.125, 6);
+  });
+
+  it("pulls back from the clip end by the capped 20ms margin", () => {
+    // microDuration/4 = 0.0625 > 0.02 → capped at 0.02
+    expect(microSeekAt(0.25, 0.25)).toBeCloseTo(0.23, 6);
+  });
+
+  it("scales the margin down for tiny micro clips", () => {
+    // microDuration/4 = 0.0075 < 0.02 → proportional margin keeps seek inside
+    expect(microSeekAt(0.03, 0.03)).toBeCloseTo(0.0225, 6);
+    expect(microSeekAt(0.03, 0.03)).toBeLessThan(0.03);
+    expect(microSeekAt(0.03, 0.03)).toBeGreaterThan(0);
+  });
+
+  it("never seeks before 0", () => {
+    expect(microSeekAt(-1, 0.25)).toBe(0);
+    expect(microSeekAt(0, 0.25)).toBe(0);
+  });
+
+  it("returns 0 for a non-positive micro duration", () => {
+    expect(microSeekAt(0.1, 0)).toBe(0);
+    expect(microSeekAt(0.1, -0.5)).toBe(0);
+    expect(microSeekAt(0.1, Number.NaN)).toBe(0);
   });
 });

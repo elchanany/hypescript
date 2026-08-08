@@ -15,7 +15,7 @@ import { materializeOverlays } from "./render/materializeOverlays";
 import { materializeCaptions } from "./render/captionBurn";
 import { Sub } from "./editor/subtitlesEdl";
 import { CaptionStyle } from "./editor/captionStyle";
-import type { MicroEdl } from "./render/timelineFrame";
+import { microSeekAt, type MicroEdl } from "./render/timelineFrame";
 
 export type { RenderTarget } from "./render/graph";
 
@@ -341,7 +341,6 @@ export async function renderTimelineFrame(req: TimelineFrameRequest): Promise<Bl
   });
   const file = new File([mp4], "micro.mp4", { type: "video/mp4" });
   // The micro render is frame-quantized and can be a hair shorter than microDuration —
-  // seek strictly inside the clip so extraction always hits a frame.
-  const seek = Math.max(0, Math.min(micro.captureAt, Math.max(0, micro.microDuration - 0.02)));
-  return extractFrame(file, seek);
+  // seek strictly inside the clip (proportional capped margin) so extraction always hits a frame.
+  return extractFrame(file, microSeekAt(micro.captureAt, micro.microDuration));
 }

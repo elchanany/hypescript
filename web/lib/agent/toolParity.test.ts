@@ -227,7 +227,7 @@ describe("Agent ↔ UI CommandBus parity", () => {
   it("capture_frame with explicit timeline=false stays raw even when an edited timeline exists", async () => {
     const h = contextWithEditor();
     // ctx has a clip (edited timeline) but no media — the raw path fails on missing
-    // video BEFORE touching ffmpeg, so this proves timeline=false wins over the default.
+    // video BEFORE touching ffmpeg, so this proves timeline=false never composites.
     const result = await TOOL_BY_NAME.capture_frame.run({ at_seconds: 1, timeline: false }, h.ctx, () => undefined);
     expect(result).toContain("אין סרטון לצילום.");
   });
@@ -237,12 +237,24 @@ describe("Agent ↔ UI CommandBus parity", () => {
     const result = await TOOL_BY_NAME.capture_frame.run({ at_seconds: 1, source: "media-1" }, h.ctx, () => undefined);
     expect(result).toContain("אין סרטון לצילום.");
   });
+
+  it("capture_frame with an omitted timeline defaults to raw, even with an edited timeline", async () => {
+    const h = contextWithEditor();
+    // Same missing-media probe: reaching the raw "no video" failure proves the
+    // composited path (a micro-render through ffmpeg) was not even attempted.
+    const result = await TOOL_BY_NAME.capture_frame.run({ at_seconds: 1 }, h.ctx, () => undefined);
+    expect(result).toContain("אין סרטון לצילום.");
+  });
 });
 
 describe("capture_frame mode decision (captureFrameMode)", () => {
-  it("explicit timeline=true → composited", () => {
-    expect(captureFrameMode(true, undefined, false)).toBe("timeline");
-    expect(captureFrameMode("true", undefined, false)).toBe("timeline");
+  it("explicit timeline=true → composited (opt-in)", () => {
+    expect(captureFrameMode(true, undefined, true)).toBe("timeline");
+    expect(captureFrameMode("true", undefined, true)).toBe("timeline");
+  });
+
+  it("timeline=true without an edited timeline falls back to raw", () => {
+    expect(captureFrameMode(true, undefined, false)).toBe("source");
   });
 
   it("explicit timeline=false → raw, even with an edited timeline", () => {
@@ -253,15 +265,12 @@ describe("capture_frame mode decision (captureFrameMode)", () => {
   it("explicit source → raw (timeline omitted)", () => {
     expect(captureFrameMode(undefined, "media-1", true)).toBe("source");
     expect(captureFrameMode(undefined, 2, false)).toBe("source");
-    expect(captureFrameMode(null, "", true)).toBe("timeline"); // empty source ignored
   });
 
-  it("omitted + edited timeline exists → composited (documented default)", () => {
-    expect(captureFrameMode(undefined, undefined, true)).toBe("timeline");
-  });
-
-  it("omitted + no edited timeline → raw", () => {
+  it("omitted timeline → raw, even with an edited timeline (never the silent default)", () => {
+    expect(captureFrameMode(undefined, undefined, true)).toBe("source");
     expect(captureFrameMode(undefined, undefined, false)).toBe("source");
+    expect(captureFrameMode(null, "", true)).toBe("source");
   });
 });
 

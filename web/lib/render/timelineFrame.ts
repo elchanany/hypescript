@@ -103,6 +103,18 @@ export function shiftSubsToStart(subs: Sub[], end: number): Sub[] {
   return subs.map((s) => ({ ...s, start: 0, end }));
 }
 
+/**
+ * Seek offset (micro-timeline seconds) for extracting the captured frame from the
+ * micro render. The micro mp4 is frame-quantized and can be a hair shorter than
+ * `microDuration`, so pull back from the clip end by a duration-proportional margin
+ * (≤20ms) and clamp into the positive micro clip.
+ */
+export function microSeekAt(captureAt: number, microDuration: number): number {
+  if (!(microDuration > 0)) return 0;
+  const margin = Math.min(0.02, microDuration / 4);
+  return Math.max(0, Math.min(captureAt, microDuration - margin));
+}
+
 export interface MicroEdlOptions {
   /** Micro-window duration in seconds (default MICRO_WINDOW_SEC). */
   window?: number;
@@ -140,7 +152,9 @@ export function buildMicroEdl(
   const activeSubs = subsActiveAt(subs, at);
 
   // Disabled clips never appear in export (renderSegments drops them) — render black,
-  // same as a gap, so we never show video the export would not show.
+  // same as a gap, so we never show video the export would not show. Overlays/captions
+  // active at the instant still burn in via the full renderEDL path below (export
+  // parity) — deliberately NO raw-black fast path here even though it would be cheaper.
   if (isGapClip(seg.clip) || seg.clip.enabled === false) {
     return {
       segments: [makeGap(window)],

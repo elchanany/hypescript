@@ -131,17 +131,15 @@ export type CaptureFrameMode = "timeline" | "source";
 /**
  * Decide the capture_frame frame source (pure — the only coercion in the tool).
  *
- * - explicit `timeline=true`  → composited timeline frame
- * - explicit `timeline=false` → raw source frame (even when an EDL exists)
- * - explicit `source`         → raw source frame
- * - omitted + edited timeline exists → composited (the documented default)
- * - otherwise                 → raw source frame
+ * The composited capture is opt-in ONLY: an explicit `timeline=true`/"true"
+ * (with an edited timeline present) selects it. `timeline=false`, an explicit
+ * `source`, or an omitted `timeline` all stay on the cheap raw path — the
+ * expensive composited render is never the silent default.
  */
-export function captureFrameMode(timeline: unknown, source: unknown, hasEditedTimeline: boolean): CaptureFrameMode {
-  if (timeline === true || timeline === "true") return "timeline";
-  if (timeline === false || timeline === "false") return "source";
-  if (source !== undefined && source !== null && source !== "") return "source";
-  return hasEditedTimeline ? "timeline" : "source";
+export function captureFrameMode(timeline: unknown, _source: unknown, hasEditedTimeline: boolean): CaptureFrameMode {
+  const wantsTimeline = timeline === true || timeline === "true";
+  if (wantsTimeline) return hasEditedTimeline ? "timeline" : "source";
+  return "source";
 }
 
 export type Reporter = (status: string) => void;
@@ -789,9 +787,10 @@ export const TOOLS: ToolMeta[] = [
       name: "capture_frame",
       description:
         "מצלם פריים בשנייה מדויקת — כדי לבדוק איך נראה הווידאו בנקודה מסוימת. " +
-        "ברירת מחדל (כשיש ציר ערוך ואין source): פריים מורכב מהציר — בדיוק מה שייראה בייצוא באותו רגע (כולל cutaway, אובריי וכתוביות פעילים, לפי סגנון הכתוביות הנוכחי). " +
-        "timeline=false או ציון source: פריים גולמי מהמקור (לפני עריכה). התמונה מוצגת בצ'אט, ואם הספק תומך בראייה — תוכל לנתח אותה בתור הבא.",
-      parameters: { type: "object", properties: { at_seconds: { type: "number", description: "השנייה לצילום" }, source: { type: "string", description: "סרטון מקור — ציון שלו הופך את הצילום לגולמי (לא מורכב)" }, timeline: { type: "boolean", description: "אופציונלי. true = השנייה על הציר הערוך (assembled) — פריים מורכב כמו בייצוא; false = פריים גולמי מהמקור. מושמט: מורכב כשיש ציר ערוך, אחרת גולמי." } }, required: ["at_seconds"] },
+        "בלי timeline (ברירת מחדל): פריים גולמי מהמקור, מהר. " +
+        "timeline=true: פריים מורכב מהציר הערוך — בדיוק מה שייראה בייצוא באותו רגע (כולל cutaway, אובריי וכתוביות פעילים, לפי סגנון הכתוביות הנוכחי); איטי יותר, כי מרנדר מיקרו-קטע. " +
+        "כדי לאמת את הפלט הערוך בפועל (אחרי שינויי מיקום/סגנון) — העבר timeline=true. התמונה מוצגת בצ'אט, ואם הספק תומך בראייה — תוכל לנתח אותה בתור הבא.",
+      parameters: { type: "object", properties: { at_seconds: { type: "number", description: "השנייה לצילום" }, source: { type: "string", description: "סרטון מקור (אופציונלי, לצילום גולמי)" }, timeline: { type: "boolean", description: "true = השנייה על הציר הערוך (assembled) — פריים מורכב כמו בייצוא. מושמט/false (ברירת מחדל) = פריים גולמי מהמקור" } }, required: ["at_seconds"] },
     },
     run: async (a, ctx) => {
       const at = +a.at_seconds;
@@ -819,7 +818,7 @@ export const TOOLS: ToolMeta[] = [
           ? "רווח (שחור)"
           : `מקור "${srcName || "?"}" ב-${micro.sourceTime.toFixed(1)}s`;
         return {
-          text: `צולם פריים מורכב מהציר הערוך בשנייה ${at.toFixed(1)} (${where}; אובריי וכתוביות פעילים + סגנון כתוביות נוכחי נכללו; ברזולוציית ייצוא). ${micro.gap ? "הנקודה היא רווח — צולם שחור. " : ""}הערה: צילום כזה איטי יותר מפריים גולמי (מרנדר מיקרו-קטע). אם צריך רק את המקור — timeline=false.`,
+          text: `צולם פריים מורכב מהציר הערוך בשנייה ${at.toFixed(1)} (${where}; אובריי וכתוביות פעילים + סגנון כתוביות נוכחי נכללו; ברזולוציית ייצוא). ${micro.gap ? "הנקודה היא רווח — צולם שחור. " : ""}הערה: צילום כזה איטי יותר מפריים גולמי (מרנדר מיקרו-קטע). אם צריך רק את המקור — צלם בלי timeline (ברירת המחדל).`,
           artifacts: [{ blob, name: `timeline_${at.toFixed(1)}s.png`, kind: "image" }],
         };
       }
@@ -1940,6 +1939,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 22. זהות שכבות: אחרי list_overlays השתמש תמיד ב-overlay_id וב-expected_source לעדכון/מחיקה, לעולם לא באינדקס בלבד. אחרי שינוי אמת שה-id ושם הקובץ זהים. אם אינם זהים — עצור; אל תמחק ותבנה מחדש בלולאה.
 23. שמירת עבודה קיימת: אם המשתמש אומר שתמונת סיום/קריינות/שכבה כבר מסודרת, אסור לשנות או למחוק אותה. גע רק בנכס שביקש, לפי id+expected_source. אם לא ברור איזה נכס הוא הלוגו — ask_user פעם אחת. אל "תנקה הכל" ואל תשחזר שכבות אחרות.
 24. שכבה מוגנת אינה ניתנת לשינוי/מחיקה. אפשר ליצור תמונת סיום עם locked=true, ולבטל הגנה רק כשהמשתמש ביקש לערוך אותה במפורש.
+25. אחרי שינוי מיקום/סגנון ויזואלי משמעותי (אובריי, cutaway, כתוביות) — אמת מול הפלט בפועל עם capture_frame(timeline=true, at_seconds=הנקודה שהשתנתה). לא אחרי כל עריכה קטנה ולא שוב באותה נקודה.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -1957,6 +1957,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - set_caption_style: עיצוב כתוביות אמיתי ב-Preview ובייצוא; אל תבטיח "יפות" בלי לקרוא לו.
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
+- capture_frame: ברירת מחדל פריים גולמי מהמקור (מהר). אחרי שינוי ויזואלי משמעותי (אובריי, כתוביות, cutaway, צבע/flip/fades) — צלם capture_frame(timeline=true) פעם אחת כדי לראות את התוצאה בדיוק כמו בייצוא. אל תצלם מורכב אחרי כל שינוי שולי, ואל תצלם שוב את אותה נקודה בלי שינוי — זה רינדור יקר.
 - render_video רק בסוף / כשמבקשים.
 
 זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → render.`;
