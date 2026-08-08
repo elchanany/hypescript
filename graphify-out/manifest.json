@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786210509.9424908,
-    "ast_hash": "7a2ee3b67160e781d719e3eff0b7ebdf",
+    "mtime": 1786211406.0521784,
+    "ast_hash": "9e5a8194fd532e1e6f27cc5a2492117e",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -240,9 +240,9 @@
     "semantic_hash": "2bd7a1ec8327427427e179479f0c558c"
   },
   "web/lib/audio.ts": {
-    "mtime": 1785657860.0445666,
-    "ast_hash": "19feea15d8d8251e4b4e373d507a070f",
-    "semantic_hash": "19feea15d8d8251e4b4e373d507a070f"
+    "mtime": 1786211374.3337293,
+    "ast_hash": "9757b447ee9791b518e8a3da224b2587",
+    "semantic_hash": ""
   },
   "web/lib/editing.ts": {
     "mtime": 1785585665.7677586,
@@ -535,23 +535,23 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786211150.867231,
-    "ast_hash": "6210e667e38ecd3ad58e58dd0438810c",
+    "mtime": 1786211644.37177,
+    "ast_hash": "dd875f619d6777394edd3fca6156ee82",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786211150.878762,
-    "ast_hash": "0839196f67ee9ec1a77d7448b104ce47",
+    "mtime": 1786211644.3889148,
+    "ast_hash": "177eb741f8423ed46b2ffc6581eb26b2",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786211150.8722498,
-    "ast_hash": "54131fe5901c7703f2c797c89a25c8de",
+    "mtime": 1786211644.3773532,
+    "ast_hash": "a9fda44fdb3262ae3bd17d15b4fc4bcb",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
-    "mtime": 1786211150.882761,
-    "ast_hash": "29f2660c6fe4ad8219a6bf02ddccfe2d",
+    "mtime": 1786211644.3924403,
+    "ast_hash": "a686c75bdd4855a31c8de8d2f87bd93a",
     "semantic_hash": ""
   },
   ".ai/WORKFLOW.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786211150.875245,
-    "ast_hash": "e00b1a1bfc637ece890d751a5231a5fa",
+    "mtime": 1786211644.384346,
+    "ast_hash": "139fe59da38875aa9d6faa817af8c881",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "local/hypescript/semantic_timeline.py": {
-    "mtime": 1786210059.0779023,
-    "ast_hash": "b2a1ad6c29a2f875d76f625c4cbe0941",
+    "mtime": 1786211494.818808,
+    "ast_hash": "3225a1d5a55a339e99156778f337b3b1",
     "semantic_hash": ""
   },
   "local/tests/__init__.py": {
@@ -1275,18 +1275,18 @@
     "semantic_hash": ""
   },
   "local/tests/test_semantic_timeline.py": {
-    "mtime": 1786210059.0834744,
-    "ast_hash": "8a118992b00367583ad2885ce37e6815",
+    "mtime": 1786211374.3473487,
+    "ast_hash": "c6800d8b74a949260d2b94d0e0faa11f",
     "semantic_hash": ""
   },
   "web/lib/editor/semanticTimeline.test.ts": {
-    "mtime": 1786210303.255088,
-    "ast_hash": "d586b5f82af75f93db0af2f737811688",
+    "mtime": 1786211406.0472074,
+    "ast_hash": "3f728f9e9bf3d0a3cb9c750e30de3359",
     "semantic_hash": ""
   },
   "web/lib/editor/semanticTimeline.ts": {
-    "mtime": 1786209866.6567073,
-    "ast_hash": "c9e8baf07298cab014b4b2647bc4d58e",
+    "mtime": 1786211374.3372314,
+    "ast_hash": "e9a1ada2cf80132f36c5b15406279608",
     "semantic_hash": ""
   },
   "local/tests/test_subtitles.py": {
