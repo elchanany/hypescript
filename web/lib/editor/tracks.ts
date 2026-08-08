@@ -60,7 +60,7 @@ export function flattenVideoTracks(clips: Clip[], tracks: TrackMeta[]): Clip[] {
   const primaryId = vTracks[0]?.id || "trk_video";
   if (vTracks.length <= 1) {
     const only = clipsOnTrack(clips, primaryId, primaryId);
-    return only.length ? only : clips.map((c) => ({ ...c, trackId: clipTrackId(c, primaryId) }));
+    return only;
   }
 
   const trackEds = vTracks.map((t) => ({

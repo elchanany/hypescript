@@ -27,6 +27,8 @@ export interface Overlay {
   fontSize?: number;     // text size, project px
   bold?: boolean;
   align?: "start" | "center" | "end";
+  background?: string;
+  borderRadius?: number;
   start: number;         // timeline (assembled) seconds
   end: number;
   transform: VisualTransform;
@@ -65,6 +67,17 @@ export function makeTextOverlay(canvasW: number, canvasH: number, overlays: Over
     id: uid("ov"), kind: "text", text, color: "#ffffff", fontSize, bold: true, align: "center",
     start, end, zIndex: nextZ(overlays),
     transform: { x: canvasW / 2, y: Math.round(canvasH * 0.8), w, h, rotation: 0, opacity: 1 },
+  };
+}
+
+export function makeTitlePopup(canvasW: number, canvasH: number, overlays: Overlay[], text: string, start = 0, end = 4): Overlay {
+  const base = makeTextOverlay(canvasW, canvasH, overlays, text, start, end);
+  return {
+    ...base,
+    fontSize: Math.round(canvasH * 0.052),
+    background: "rgba(8,12,20,0.82)",
+    borderRadius: Math.round(canvasH * 0.025),
+    transform: { ...base.transform, x: canvasW / 2, y: Math.round(canvasH * 0.78), w: Math.round(canvasW * 0.78), h: Math.round(canvasH * 0.13) },
   };
 }
 

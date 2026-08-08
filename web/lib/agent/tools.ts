@@ -14,7 +14,7 @@ import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants
 import {
   addClip, assembledToSource, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { Overlay, makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
+import { Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
@@ -36,7 +36,7 @@ import {
 } from "@/lib/editor/assembleTranscript";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
-import { TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
+import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
@@ -802,7 +802,7 @@ export const TOOLS: ToolMeta[] = [
     name: "add_clip", label: "הוספת קליפ", color: "#10b981", icon: "➕",
     schema: {
       name: "add_clip",
-      description: "מוסיף וידאו/אודיו כקליפ לרצועה; מקור תמונה נוסף אוטומטית כשכבת קנבס. source לפי שם, id או אינדקס.",
+      description: "מוסיף וידאו/תמונה כקליפ מלא ברצועת וידאו, אודיו ברצועת אודיו, או תמונה כשכבת לוגו. source לפי שם, id או אינדקס.",
       parameters: {
         type: "object",
         properties: {
@@ -810,7 +810,9 @@ export const TOOLS: ToolMeta[] = [
           start: { type: "number" },
           end: { type: "number" },
           at_index: { type: "number", description: "מיקום ברצועה (1-based, אופציונלי)" },
-          track: { type: "string", description: "שם או id של רצועת וידאו" },
+          timeline_start: { type: "number", description: "זמן מדויק בציר הסופי; מפצל קליפ קיים או מוסיף רווח לפי הצורך" },
+          placement: { type: "string", enum: ["timeline", "overlay"], description: "לתמונה בלבד: קליפ מלא או שכבת לוגו (ברירת מחדל overlay לתאימות)" },
+          track: { type: "string", description: "שם או id של רצועת היעד" },
         },
         required: ["source"],
       },
@@ -818,8 +820,8 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, a.source);
       if (!asset) return `לא נמצא מקור "${a.source}". השתמש ב-list_media.`;
-      if (asset.kind === "image") {
-        const start = a.start != null ? Math.max(0, +a.start) : 0;
+      if (asset.kind === "image" && String(a.placement || "overlay") !== "timeline") {
+        const start = a.timeline_start != null ? Math.max(0, +a.timeline_start) : a.start != null ? Math.max(0, +a.start) : 0;
         const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
         const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
         if (commandError === "NO_API") {
@@ -829,10 +831,11 @@ export const TOOLS: ToolMeta[] = [
         return `נוספה שכבת תמונה מ-"${asset.name}". סה״כ ${ctx.overlays.length} שכבות.`;
       }
       const primary = primaryVideoTrackId(ctx.tracks || []);
-      let trackId = primary;
+      let trackId = asset.kind === "audio" ? (audioTrack(ctx.tracks || [])?.id || "trk_audio") : primary;
       if (a.track != null && String(a.track).trim()) {
         const ref = String(a.track).trim();
-        const t = videoTracks(ctx.tracks || []).find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
+        const candidates = asset.kind === "audio" ? (ctx.tracks || []).filter((x) => x.type === "audio") : videoTracks(ctx.tracks || []);
+        const t = candidates.find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
         if (!t) return `רצועה "${ref}" לא נמצאה. השתמש ב-list_tracks.`;
         trackId = t.id;
       }
@@ -845,6 +848,7 @@ export const TOOLS: ToolMeta[] = [
           end: Math.max(start + 0.1, end),
           trackId,
           at_index: a.at_index != null ? (a.at_index | 0) - 1 : undefined,
+          timeline_start: a.timeline_start != null ? Math.max(0, +a.timeline_start) : undefined,
         });
         if (e && e !== "NO_API") return e;
         if (!e) return `נוסף קליפ מ-"${asset.name}" לרצועה. ${clipsSummary(ctx.clips!)}`;
@@ -878,7 +882,7 @@ export const TOOLS: ToolMeta[] = [
       if (!tracks.length) return "אין רצועות.";
       const primary = primaryVideoTrackId(tracks);
       return tracks.map((t, i) => {
-        const n = t.type === "video" ? clipsOnTrack(ctx.clips || [], t.id, primary).length : t.type === "caption" ? (ctx.subs?.length || 0) : "מקושר";
+        const n = t.type === "caption" ? (ctx.subs?.length || 0) : clipsOnTrack(ctx.clips || [], t.id, primary).length;
         return `${i + 1}. ${t.name} (${t.type}, id=${t.id}) · ${n}${t.locked ? " 🔒" : ""}`;
       }).join("\n");
     },
@@ -1297,20 +1301,35 @@ export const TOOLS: ToolMeta[] = [
     name: "add_text_overlay", label: "הוספת טקסט", color: "#f59e0b", icon: "Ｔ",
     schema: {
       name: "add_text_overlay",
-      description: "מוסיף שכבת טקסט על הקנבס בזמן ראש-הנגן (או start נתון).",
-      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" } } },
+      description: "מוסיף שכבת טקסט או פופ-אפ פתיחה מעוצב על הקנבס בזמן מדויק. preset=source_popup מתאים ל-'מתוך שיעור של…' ומיוצא בדיוק כמו בתצוגה.",
+      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["plain", "source_popup"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, color: { type: "string" }, background: { type: "string" }, font_size: { type: "number" } } },
     },
     run: async (a, ctx) => {
       const canvas = ctx.canvas || defaultCanvasFor();
       const start = a.start != null ? +a.start : 0;
       const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       let o: Overlay;
+      const popup = String(a.preset || "plain") === "source_popup";
       const commandError = dispatch(ctx, "overlay.addText", { text: String(a.text || "טקסט חדש"), start, end });
       if (commandError === "NO_API") {
-        o = makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
+        o = popup
+          ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end)
+          : makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
         ctx.overlays = [...(ctx.overlays || []), o];
       } else if (commandError) return `שגיאה: ${commandError}`;
       else o = ctx.overlays[ctx.overlays.length - 1];
+      const preset = popup ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end) : o;
+      const transform = { ...o.transform, ...(popup ? preset.transform : {}), ...(a.x != null ? { x: +a.x } : {}), ...(a.y != null ? { y: +a.y } : {}), ...(a.w != null ? { w: +a.w } : {}), ...(a.h != null ? { h: +a.h } : {}) };
+      const patch: Partial<Overlay> = { transform };
+      if (popup) { patch.background = preset.background; patch.borderRadius = preset.borderRadius; patch.fontSize = preset.fontSize; }
+      if (a.color != null) patch.color = String(a.color);
+      if (a.background != null) patch.background = String(a.background);
+      if (a.font_size != null) patch.fontSize = Math.max(8, +a.font_size);
+      if (Object.keys(patch).length) {
+        const updateError = dispatch(ctx, "overlay.update", { id: o.id, patch });
+        if (updateError === "NO_API") ctx.overlays = ctx.overlays.map((item) => item.id === o.id ? { ...item, ...patch } : item);
+        else if (updateError) return `שגיאה: ${updateError}`;
+      }
       return `נוספה שכבת טקסט (${o.id}). סה״כ ${ctx.overlays.length} שכבות.`;
     },
   },
@@ -1341,7 +1360,7 @@ export const TOOLS: ToolMeta[] = [
         properties: {
           index: { type: "number" }, text: { type: "string" }, start: { type: "number" }, end: { type: "number" },
           x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
-          rotation: { type: "number" }, opacity: { type: "number" },
+          rotation: { type: "number" }, opacity: { type: "number" }, color: { type: "string" }, background: { type: "string" }, border_radius: { type: "number" }, font_size: { type: "number" },
         },
         required: ["index"],
       },
@@ -1359,6 +1378,10 @@ export const TOOLS: ToolMeta[] = [
       if (a.opacity != null) t.opacity = Math.max(0, Math.min(1, +a.opacity));
       const patch: Partial<Overlay> = { transform: t };
       if (a.text != null) patch.text = String(a.text);
+      if (a.color != null) patch.color = String(a.color);
+      if (a.background != null) patch.background = String(a.background);
+      if (a.border_radius != null) patch.borderRadius = Math.max(0, +a.border_radius);
+      if (a.font_size != null) patch.fontSize = Math.max(8, +a.font_size);
       if (a.start != null) patch.start = Math.max(0, +a.start);
       if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
       const commandError = dispatch(ctx, "overlay.update", { id: o.id, patch });
@@ -1439,14 +1462,17 @@ export const TOOLS: ToolMeta[] = [
       let renderEDL: typeof import("@/lib/ffmpeg").renderEDL;
       try { ({ renderEDL } = await import("@/lib/ffmpeg")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
-      const edl = flattenVideoTracks(ctx.clips!, ctx.tracks || []);
+      let edl = flattenVideoTracks(ctx.clips!, ctx.tracks || []);
+      const aid = audioTrack(ctx.tracks || [])?.id;
+      const audioClips = aid ? clipsOnTrack(ctx.clips!, aid, primaryVideoTrackId(ctx.tracks || [])) : [];
+      if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(ctx.tracks || []) }];
       const secs = edl.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
       const blob = await renderEDL(
         ctx.media, edl,
         (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`),
         undefined,
-        { overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
+        { audioMuted: audioMuted(ctx.tracks || []), audioClips, overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
       );
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
@@ -1795,6 +1821,9 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 16. בריף לקוח כולל שלושה סוגים: (א) טקסט שנאמר ושצריך להישאר — נכנס ל-keep_by_script ולכתוביות; (ב) הוראות עריכה כגון fade — אינן כתוביות; (ג) טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script, ויש ליצור אותו רק בשלב האאוטרו עם הנכסים המתאימים.
 17. אין חזרות גבול: פלט אוטומטי חייב להיות רציף בזמן-מקור. אם קליפ מסתיים ב-29.8, הקליפ הבא מאותו מקור/רצועה מתחיל ב-29.8 או מאוחר יותר — לעולם לא 29.7/29.8 מחדש. דווח הצלחה רק אחרי list_clips ובדיקת הגבולות.
 18. אם המשתמש מבקש fade בנקודת המעבר לסיום, החל set_clip_audio_fades(fade_out=...) על הקליפ האחרון של התוכן המדובר לפני בקשת נכסי האאוטרו.
+19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו/תמונה מעל הסרטון: add_image_overlay(start,end) ואז update_overlay למיקום וגודל. אודיו עצמאי: add_clip(timeline_start=...) לרצועת האודיו ואז set_clip_volume/set_clip_audio_fades. אל תחליף בין קליפ מלא לשכבה.
+20. לפתיח מעוצב כגון "מתוך שיעור של...": add_text_overlay(preset="source_popup", start=..., end=...). זהו אלמנט Preview+Export אמיתי, לא הבטחה טקסטואלית.
+21. תוצרי render_video, export_subtitles, capture_frame ו-generate_narration חוזרים ככרטיסי קובץ בצ'אט עם תצוגה/הורדה. אחרי יצירת תוצר, אמור למשתמש להשתמש בכרטיס המצורף; אל תמציא נתיב או קישור.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -1803,6 +1832,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - delete_clips / clear_clips: מחיקות המוניות.
 - trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.
 - add_video_track / list_tracks / move_clip_to_track / remove_video_track: רצועות וידאו למונטאז'.
+- add_clip: וידאו/תמונה מלאה/אודיו בזמן מדויק באמצעות timeline_start; placement="overlay" לתמונה כשכבה.
+- add_text_overlay(preset="source_popup"): פופ-אפ פתיחה מעוצב שנשמר גם בייצוא.
 - move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).

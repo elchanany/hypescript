@@ -24,6 +24,7 @@ export interface RenderRequest {
   clips: Clip[];
   target?: RenderTarget;
   audioMuted?: boolean;
+  audioClips?: Clip[];
   overlays?: Overlay[];
   canvas?: CanvasSize;
   subs?: Sub[] | null;
@@ -57,6 +58,7 @@ class BrowserRenderBackend implements RenderBackend {
     const { renderEDL } = await import("@/lib/ffmpeg");
     return renderEDL(req.media, req.clips, onProgress, req.target, {
       audioMuted: req.audioMuted,
+      audioClips: req.audioClips,
       signal,
       overlays: req.overlays,
       canvas: req.canvas,

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Clip, MediaAsset, assembledStart, clipDur, clipEnabled, clipOpacity, mediaById, totalDur } from "@/lib/editor/model";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
-import { primaryVideoTrackId, sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
+import { audioTrack, primaryVideoTrackId, sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack } from "@/lib/editor/tracks";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { snapTimeTo } from "@/lib/editor/time";
@@ -42,6 +42,7 @@ interface Props {
   onTrimEnd: () => void;
   onReorder: (id: string, toIndex: number) => void;
   onClipMenu: (id: string, x: number, y: number) => void;
+  onSubMenu?: (id: string, x: number, y: number) => void;
   onTrackMenu?: (id: string, x: number, y: number) => void;
   /** גרירה מספריית מדיה — assetId + אינדקס הכנסה (+ רצועת יעד) */
   onDropMedia?: (assetId: string, atIndex: number, trackId?: string) => void;
@@ -64,6 +65,7 @@ const TYPE_ICON = { video: Film, audio: AudioLines, caption: Captions } as const
 
 export default function Timeline(p: Props) {
   const { media, clips, subs, overlays = [], tracks, currentAssembled, selectedId, selectedOverlayId, selectedSubId, selectionTrack, avLinked = true, zoom, snap } = p;
+  const audioId = audioTrack(tracks)?.id || "trk_audio";
   const scrollRef = useRef<HTMLDivElement>(null);
   const laneRef = useRef<HTMLDivElement>(null);
   const overlayLaneRef = useRef<HTMLDivElement>(null);
@@ -544,7 +546,8 @@ export default function Timeline(p: Props) {
 
         {ordered.map((track) => {
           const TypeIcon = TYPE_ICON[track.type];
-          const tClips = track.type === "video" ? clipsOf(track.id) : primaryClips;
+          const dedicatedAudio = clipsOf(audioId);
+          const tClips = track.type === "video" ? clipsOf(track.id) : track.type === "audio" && dedicatedAudio.length ? dedicatedAudio : primaryClips;
           const tLocked = !!track.locked;
           return (
             <div className="tl-rowline" key={track.id} style={{ height: track.height }}>
@@ -633,17 +636,17 @@ export default function Timeline(p: Props) {
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}
                   onDragOver={onLaneDragOver}
                   onDragLeave={onLaneDragLeave}
-                  onDrop={(e) => onLaneDrop(e, primaryId)}>
+                  onDrop={(e) => onLaneDrop(e, audioId)}>
                   <Grid />
-                  {primaryClips.map((c, i) => {
+                  {tClips.map((c, i) => {
                     const gap = isGapClip(c);
                     const asset = mediaById(media, c.sourceId);
                     return (
                       <div
                         key={c.id}
                         className={`clip-audio ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || vLocked ? "locked" : ""}`}
-                        style={{ left: `${pct(assembledStart(primaryClips, i))}%`, width: `${pct(clipDur(c))}%` }}
-                        onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio", primaryId); }}
+                        style={{ left: `${pct(assembledStart(tClips, i))}%`, width: `${pct(clipDur(c))}%` }}
+                        onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio", audioId); }}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
@@ -669,19 +672,24 @@ export default function Timeline(p: Props) {
               {track.type === "caption" && (
                 <div className="tl-lane2" onClick={(e) => { if (!drag.current) { p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}>
                   <Grid />
-                  {(subs || []).map((s) => (
+                  {(subs || []).map((s, _cueIndex, allSubs) => {
+                    const overlapping = allSubs.filter((other) => other.start < s.end && other.end > s.start);
+                    const overlapLevel = overlapping.findIndex((other) => other.id === s.id);
+                    return (
                     <div
                       key={s.id}
-                      className={`cue2 ${selectedSubId === s.id ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""}`}
-                      style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%` }}
-                      title={s.text}
+                      className={`cue2 ${overlapping.length > 1 ? "overlap" : ""} ${selectedSubId === s.id ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""}`}
+                      style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%`, top: `${4 + Math.max(0, overlapLevel) * 18}px`, height: 17, bottom: "auto" }}
+                      title={`${s.text}${overlapping.length > 1 ? ` · חפיפה עם ${overlapping.length - 1} כתוביות` : ""}`}
                       onClick={(e) => { e.stopPropagation(); p.onSelect(null); p.onSelectOverlay?.(null); p.onSelectSub?.(s.id); }}
+                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); p.onSelectSub?.(s.id); p.onSubMenu?.(s.id, e.clientX, e.clientY); }}
                       onMouseEnter={() => setHoveredSubId(s.id)}
                       onMouseLeave={() => setHoveredSubId((h) => (h === s.id ? null : h))}
                     >
                       <span className="cue-txt">{s.text}</span>
+                      {overlapping.length > 1 && <span className="cue-overlap-count">{overlapLevel + 1}/{overlapping.length}</span>}
                     </div>
-                  ))}
+                  );})}
                   <Playhead laneEl={null} />
                 </div>
               )}

@@ -34,11 +34,12 @@ export function Button({
   children?: ReactNode; icon?: LucideIcon; variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "tall"; disabled?: boolean; onClick?: (e: React.MouseEvent) => void; tip?: string; className?: string;
 }) {
+  const autoTip = tip || (typeof children === "string" ? children : undefined);
   return (
     <button
       type="button"
       className={`btn ${variant} ${size || ""} ${className}`}
-      disabled={disabled} onClick={onClick} data-tip={tip}
+      disabled={disabled} onClick={onClick} data-tip={autoTip} aria-label={autoTip}
     >
       {Icon && <Icon size={ICON} strokeWidth={STROKE} />}
       {children}

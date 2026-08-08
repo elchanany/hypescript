@@ -142,7 +142,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
               // checkerboard behind semi-transparent / dark images so they're never "invisible"
               <div className="ov-img-wrap"><img src={asset.url} alt="" draggable={false} /></div>
             ) : o.kind === "text" ? (
-              <div className="ov-text" style={{ color: o.color || "#fff", fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>
+              <div className="ov-text" style={{ color: o.color || "#fff", background: o.background || "transparent", borderRadius: `${(o.borderRadius || 0) * scale}px`, padding: `${Math.max(4, (o.fontSize || 48) * 0.18) * scale}px`, fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>
                 {o.text || ""}
               </div>
             ) : (

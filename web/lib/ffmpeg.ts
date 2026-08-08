@@ -247,6 +247,7 @@ export function terminateFFmpeg() {
 // אין קידוד לכל קליפ בנפרד ואין concat demuxer — Stream רציף אחד, קידוד יחיד.
 export interface RenderOpts {
   audioMuted?: boolean;
+  audioClips?: Clip[];
   signal?: AbortSignal;
   overlays?: Overlay[];
   canvas?: CanvasSize;
@@ -266,7 +267,7 @@ export async function renderEDL(
   return runExclusive(async () => {
     if (opts.signal?.aborted) throw new Error("בוטל");
     const ff = await getFFmpeg();
-    const base = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted });
+    const base = buildConcatGraph(clips, media, target, { audioMuted: opts.audioMuted, audioClips: opts.audioClips });
     // Burn-in overlays AFTER the verified concat (identity when empty).
     const mats = (opts.overlays?.length && opts.canvas)
       ? await materializeOverlays(opts.overlays, media, opts.canvas, target)

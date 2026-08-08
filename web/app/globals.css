@@ -358,9 +358,14 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 /* letterboxed project-canvas box: holds the video + overlays + captions */
 .pv-canvas { position: relative; background: #000; box-shadow: 0 0 0 1px var(--border); overflow: hidden; container-type: size; }
 .pv-canvas video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; cursor: pointer; }
+.pv-still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; z-index: 2; }
+.pv-audio-only { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--text-2); background: radial-gradient(circle at center, #18202d, #07090d 64%); z-index: 3; }
 .pv-empty { color: var(--text-3); font-size: var(--fs); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pv-empty svg { color: var(--text-3); opacity: .6; }
-.pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: none; white-space: pre-line; line-height: 1.35; z-index: 5; margin: 0 4%; }
+.pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: auto; white-space: pre-line; line-height: 1.35; z-index: 7; margin: 0 4%; cursor: move; }
+.pv-caption.selected { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 4px; }
+.pv-caption.selected[contenteditable="true"] { cursor: text; }
+.pv-caption-overlap { position: absolute; inset-inline-end: 10px; top: 10px; z-index: 9; border: 1px solid #f59e0b; background: rgba(74,45,5,.92); color: #fde68a; border-radius: 999px; padding: 4px 9px; font-size: 11px; cursor: pointer; }
 .pv-gap { position: absolute; inset: 0; background: #000; z-index: 4; pointer-events: none; }
 
 /* ---- direct-manipulation overlay layer (project coordinates) ---- */
@@ -627,6 +632,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 }
 .cue2.hovered:not(.selected), .cue2:hover:not(.selected) { border-color: rgba(196,140,255,.95); box-shadow: 0 0 0 1px rgba(168,85,247,.45); z-index: 2; }
 .cue2.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.35); z-index: 3; }
+.cue2.overlap { border-color: #f59e0b; background: repeating-linear-gradient(135deg, rgba(168,85,247,.35) 0 7px, rgba(245,158,11,.32) 7px 14px); }
+.cue-overlap-count { flex: 0 0 auto; margin-inline: 3px; padding: 0 3px; border-radius: 3px; background: #7c4a03; color: #fff3c4; font-size: 8px; line-height: 12px; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 
 /* drag ghost + drop indicator (timeline move) — כרטיס תצוגה מקדימה */

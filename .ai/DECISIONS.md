@@ -87,3 +87,10 @@
 - **בחירה:** `remove_silence` משתמש בתמלול word-level כשקיים. מצב `tight` חותך פערים מעל 0.22s עם 0.04s שוליים, מסיר מהססים נפוצים ומכריח גבול ב-`audio_event` מפורש; ניתוח dB משמש רק כשאין תמלול. כל פלט אוטומטי עובר `normalizeGeneratedCuts` בגבול היצירה.
 - **סיבה:** סף אנרגיה עם 0.12–0.15s שוליים בכל צד השאיר נשימות, ואחרי חיתוך בתוך EDL חופף היה אפשר להשמיע שוב 29.7–29.8. חותמות-מילה מגנות על הברות ומאפשרות קצב TikTok הדוק בלי להמציא סיווג סמנטי.
 - **השלכה:** קליפים אוטומטיים מאותו source/track יכולים לגעת אך לא לחפוף; שארית קצרה/מכוסה נזרקת. חזרות ידניות ורצועות חופפות נשארות חוקיות. ברירות המחדל המקומיות עודכנו ל-0.22/0.04 לשמירת parity.
+# 2026-08-08 — media placement and Preview/Export parity
+
+- An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.
+- Standalone audio lives on `trk_audio` as sequential clips. Exact late placement is represented by an explicit gap so Preview, Timeline and Export have the same time model.
+- `timeline_start` insertion splits a source clip when necessary; it never creates overlapping/repeated source-time boundaries on one sequential track.
+- Opening source attribution is a text overlay preset, not a separate mock component: background, radius, transform and timing are materialized to PNG for FFmpeg export.
+- Multiple simultaneous captions remain legal but must be surfaced through stacking, warning styling and an on-canvas overlap badge.

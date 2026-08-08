@@ -1,9 +1,9 @@
 "use client";
 
-import { Type } from "lucide-react";
+import { Sparkles, Type } from "lucide-react";
 import { Button, Section } from "@/components/ui";
 
-export default function TextPanel({ onAddText }: { onAddText: () => void }) {
+export default function TextPanel({ onAddText, onAddSourcePopup }: { onAddText: () => void; onAddSourcePopup: () => void }) {
   return (
     <>
       <div className="panel-header">
@@ -16,6 +16,7 @@ export default function TextPanel({ onAddText }: { onAddText: () => void }) {
               הוסף שכבת טקסט מעל הווידאו. אפשר לגרור, לשנות גודל ולסובב בתצוגה המקדימה, ולערוך מאפיינים בפאנל הימני.
             </p>
             <Button variant="secondary" icon={Type} onClick={onAddText}>הוסף טקסט</Button>
+            <Button variant="secondary" icon={Sparkles} onClick={onAddSourcePopup} tip="פופ-אפ מעוצב לפתיח, למשל: מתוך שיעור של…">פופ-אפ מקור מעוצב</Button>
           </div>
         </Section>
       </div>

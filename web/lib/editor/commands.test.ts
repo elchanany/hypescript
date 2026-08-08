@@ -159,6 +159,21 @@ describe("CommandBus builtins", () => {
     expect(api.style.fontSize).toBe(7);
   });
 
+  it("adds full-frame images and standalone audio at exact timeline positions", () => {
+    const api = fakeApi([{ id: "base", sourceId: "m", start: 0, end: 4, trackId: "trk_video" }]) as any;
+    api.getMedia = () => [
+      { id: "m", name: "a.mp4", kind: "video", duration: 100, url: "" },
+      { id: "img", name: "still.png", kind: "image", duration: 5, url: "" },
+      { id: "music", name: "music.mp3", kind: "audio", duration: 8, url: "" },
+    ];
+    expect(runCommand("clip.add", api, { sourceId: "img", trackId: "trk_video", timeline_start: 2, start: 0, end: 5 }).ok).toBe(true);
+    expect(api.clips.filter((c: Clip) => c.trackId === "trk_video").map((c: Clip) => c.sourceId)).toEqual(["m", "img", "m"]);
+    expect(runCommand("clip.add", api, { sourceId: "music", trackId: "trk_audio", timeline_start: 3, start: 0, end: 8 }).ok).toBe(true);
+    const audio = api.clips.filter((c: Clip) => c.trackId === "trk_audio");
+    expect(audio[0]).toMatchObject({ sourceId: "__gap__", end: 3 });
+    expect(audio[1]).toMatchObject({ sourceId: "music", start: 0, end: 8 });
+  });
+
   it("edits and deletes subtitles through CommandBus", () => {
     const api = fakeApi([]) as any;
     api.subs = [{ id: "s1", start: 0, end: 1, text: "ישן" }];

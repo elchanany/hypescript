@@ -290,15 +290,19 @@ export function ensureBuiltinCommands() {
       if (!sourceId) throw new Error("חסר sourceId");
       const media = api.getMedia().find((m) => m.id === sourceId);
       if (!media) throw new Error("מקור לא נמצא");
-      if (media.kind === "image") throw new Error("תמונה יש להוסיף כשכבה באמצעות overlay.addImage");
       const tracks = api.getTracks();
       const primary = primaryVideoTrackId(tracks);
-      const trackId = String(args?.trackId || primary);
-      if (!tracks.some((t) => t.id === trackId && t.type === "video")) {
-        throw new Error("רצועת וידאו לא נמצאה");
+      const defaultTrack = media.kind === "audio"
+        ? (tracks.find((track) => track.type === "audio")?.id || "trk_audio")
+        : primary;
+      const trackId = String(args?.trackId || defaultTrack);
+      const expectedType = media.kind === "audio" ? "audio" : "video";
+      if (!tracks.some((t) => t.id === trackId && t.type === expectedType)) {
+        throw new Error(expectedType === "audio" ? "רצועת אודיו לא נמצאה" : "רצועת וידאו לא נמצאה");
       }
       const start = args?.start != null ? Math.max(0, Number(args.start)) : 0;
-      const end = args?.end != null ? Math.min(media.duration, Number(args.end)) : media.duration;
+      const sourceDuration = Math.max(0.1, media.duration || (media.kind === "image" ? 5 : 0.1));
+      const end = args?.end != null ? Math.min(sourceDuration, Number(args.end)) : sourceDuration;
       const clip = {
         id: uid(),
         sourceId,
@@ -308,12 +312,36 @@ export function ensureBuiltinCommands() {
       };
       const clips = api.getClips() || [];
       const at = args?.at_index != null ? Number(args.at_index) : undefined;
-      if (at != null && Number.isFinite(at)) {
+      const timelineStart = args?.timeline_start != null ? Math.max(0, Number(args.timeline_start)) : undefined;
+      if (timelineStart != null && Number.isFinite(timelineStart)) {
         const onTrack = clipsOnTrack(clips, trackId, primary);
-        const inserted = addClip(onTrack, clip, Math.max(0, at));
-        api.setClips(replaceTrackClips(clips, trackId, inserted, primary));
+        const next: Clip[] = [];
+        let cursor = 0;
+        let inserted = false;
+        for (const current of onTrack) {
+          const duration = clipDur(current);
+          if (!inserted && timelineStart <= cursor + duration + 1e-4) {
+            const local = Math.max(0, Math.min(duration, timelineStart - cursor));
+            if (local > 0.001 && local < duration - 0.001 && !isGapClip(current)) {
+              const [left, right] = splitClip([current], current.id, current.start + local);
+              next.push(left, clip, right);
+            } else if (local >= duration - 0.001) next.push(current, clip);
+            else next.push(clip, current);
+            inserted = true;
+          } else next.push(current);
+          cursor += duration;
+        }
+        if (!inserted) {
+          if (timelineStart > cursor + 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: timelineStart - cursor, trackId });
+          next.push(clip);
+        }
+        api.setClips(replaceTrackClips(clips, trackId, next, primary));
+      } else if (at != null && Number.isFinite(at)) {
+        const onTrack = clipsOnTrack(clips, trackId, primary);
+        api.setClips(replaceTrackClips(clips, trackId, addClip(onTrack, clip, Math.max(0, at)), primary));
       } else {
-        api.setClips(addClip(clips, clip));
+        const onTrack = clipsOnTrack(clips, trackId, primary);
+        api.setClips(replaceTrackClips(clips, trackId, addClip(onTrack, clip), primary));
       }
       api.selectClip(clip.id);
     },
@@ -512,6 +540,8 @@ export function ensureBuiltinCommands() {
       if (raw.fontSize != null) patch.fontSize = Math.max(8, Number(raw.fontSize));
       if (raw.bold != null) patch.bold = !!raw.bold;
       if (raw.align === "start" || raw.align === "center" || raw.align === "end") patch.align = raw.align;
+      if (raw.background != null) patch.background = String(raw.background);
+      if (raw.borderRadius != null) patch.borderRadius = Math.max(0, Number(raw.borderRadius));
       if (raw.locked != null) patch.locked = !!raw.locked;
       if (raw.hidden != null) patch.hidden = !!raw.hidden;
       const start = raw.start != null ? Math.max(0, Number(raw.start)) : current.start;

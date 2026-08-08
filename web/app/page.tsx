@@ -7,7 +7,7 @@ import {
   assembledStart, Clip, MediaAsset, MediaKind, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
-  audioMuted, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
+  audioMuted, audioTrack, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
 } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
@@ -17,7 +17,8 @@ import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
-import { flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
+import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
+import { makeTitlePopup } from "@/lib/editor/overlay";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
@@ -360,23 +361,23 @@ export default function EditorPage() {
     const result = runCommand("media.remove", editorApiRef.current, { id });
     if (!result.ok) setError(result.error);
   };
+  const addImageOverlay = (asset: MediaAsset) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const end = Math.max(cur + 4, totalEdited || 4);
+    const apply = (iw?: number, ih?: number) => {
+      const result = runCommand("overlay.addImage", api, { assetId: asset.id, start: cur, end, width: iw, height: ih });
+      if (!result.ok) setError(result.error);
+    };
+    const img = new Image();
+    img.onload = () => apply(img.naturalWidth, img.naturalHeight);
+    img.onerror = () => apply();
+    img.src = asset.url;
+  };
   const addMediaClip = (asset: MediaAsset, atIndex?: number) => {
     const api = editorApiRef.current;
     if (!api) return;
-    if (asset.kind === "image") {
-      // image -> canvas overlay (CapCut-style), not a main-track clip
-      const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
-      const apply = (iw?: number, ih?: number) => {
-        const result = runCommand("overlay.addImage", api, { assetId: asset.id, start: cur, end, width: iw, height: ih });
-        if (!result.ok) setError(result.error);
-      };
-      const img = new Image();
-      img.onload = () => apply(img.naturalWidth, img.naturalHeight);
-      img.onerror = () => apply();
-      img.src = asset.url;
-      return;
-    }
-    const trackId = primaryVideoTrackId(tracks);
+    const trackId = asset.kind === "audio" ? (audioTrack(tracks)?.id || "trk_audio") : primaryVideoTrackId(tracks);
     const result = runCommand("clip.add", api, { sourceId: asset.id, trackId, at_index: atIndex });
     if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
@@ -386,11 +387,19 @@ export default function EditorPage() {
   const dropMediaOnTimeline = (assetId: string, atIndex: number, trackId?: string) => {
     const asset = mediaById(media, assetId);
     if (!asset) return;
-    if (asset.kind === "image") { addMediaClip(asset, atIndex); return; }
     const api = editorApiRef.current;
     if (!api) return;
-    const tid = trackId || primaryVideoTrackId(tracks);
-    const result = runCommand("clip.add", api, { sourceId: asset.id, trackId: tid, at_index: atIndex });
+    const requested = tracks.find((track) => track.id === trackId);
+    const tid = asset.kind === "audio"
+      ? (audioTrack(tracks)?.id || "trk_audio")
+      : requested?.type === "video" ? requested.id : primaryVideoTrackId(tracks);
+    const result = runCommand("clip.add", api, {
+      sourceId: asset.id,
+      trackId: tid,
+      at_index: atIndex,
+      start: 0,
+      end: asset.duration,
+    });
     if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
     setSelectedSubId(null);
@@ -407,6 +416,19 @@ export default function EditorPage() {
     const created = editorApiRef.current.getOverlays().at(-1);
     if (created) setSelectedOverlayId(created.id);
     setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+  };
+  const addSourcePopup = () => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const end = Math.max(cur + 3.5, cur + 0.1);
+    const result = runCommand("overlay.addText", api, { text: "מתוך שיעור של…", start: cur, end });
+    if (!result.ok) { setError(result.error); return; }
+    const created = api.getOverlays().at(-1);
+    if (!created) return;
+    const preset = makeTitlePopup(canvas.width, canvas.height, api.getOverlays(), created.text || "מתוך שיעור של…", cur, end);
+    const styled = runCommand("overlay.update", api, { id: created.id, patch: { fontSize: preset.fontSize, background: preset.background, borderRadius: preset.borderRadius, transform: preset.transform } });
+    if (!styled.ok) { setError(styled.error); return; }
+    setSelectedOverlayId(created.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
   const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
     setSelectedId(id);
@@ -518,10 +540,14 @@ export default function EditorPage() {
       const { getRenderBackend } = await import("@/lib/render/RenderBackend");
       const backend = getRenderBackend();
       setPhase("מרנדר בדפדפן…");
-      const edl = flattenVideoTracks(clips, tracks);
+      let edl = flattenVideoTracks(clips, tracks);
+      const aid = audioTrack(tracks)?.id;
+      const audioClips = aid ? clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)) : [];
+      if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
       const blob = await backend.renderProject(
         {
           media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas,
+          audioClips,
           subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
         },
         (r) => setProgress(Math.min(1, r)),
@@ -656,9 +682,23 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  useEffect(() => {
+    const applyTips = () => {
+      document.querySelectorAll<HTMLElement>("button:not([data-tip]), [role='button']:not([data-tip])").forEach((el) => {
+        const label = el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent?.trim();
+        if (label) el.dataset.tip = label.replace(/\s+/g, " ").slice(0, 120);
+      });
+    };
+    applyTips();
+    const observer = new MutationObserver(applyTips);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   const working = busy || rendering;
-  const totalEdited = clips ? projectDuration(clips, tracks) : duration;
-  const timelineDuration = Math.max(duration, clips ? projectDuration(clips, tracks) : 0, ...overlays.map((o) => o.end), 0.001);
+  const dedicatedAudioClips = clips && audioTrack(tracks) ? clipsOnTrack(clips, audioTrack(tracks)!.id, primaryVideoTrackId(tracks)) : [];
+  const totalEdited = clips ? Math.max(projectDuration(clips, tracks), totalDur(dedicatedAudioClips)) : duration;
+  const timelineDuration = Math.max(duration, totalEdited, ...overlays.map((o) => o.end), 0.001);
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay
@@ -767,7 +807,8 @@ export default function EditorPage() {
   const assetMenuTarget = assetMenu ? media.find((asset) => asset.id === assetMenu.id) : null;
   const assetMenuItems: CtxItem[] = assetMenuTarget && editorApiRef.current
     ? [
-        { label: "הוסף לציר הזמן", icon: Plus, onClick: () => addMediaClip(assetMenuTarget) },
+        { label: assetMenuTarget.kind === "image" ? "הוסף כתמונה מלאה לציר" : "הוסף לציר הזמן", icon: Plus, onClick: () => addMediaClip(assetMenuTarget) },
+        ...(assetMenuTarget.kind === "image" ? [{ label: "הוסף כשכבה / לוגו", icon: Layers, onClick: () => addImageOverlay(assetMenuTarget) }] : []),
         ...listRunnableCommands(editorApiRef.current, { clipId: null, overlayId: null, assetId: assetMenuTarget.id }, "context-menu")
           .flatMap(({ command, args }) => {
             const presentation = command.presentation;
@@ -786,7 +827,11 @@ export default function EditorPage() {
     : [];
 
   return (
-    <div className="editor-root">
+    <div className="editor-root" onContextMenu={(e) => {
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      setCommandMenu({ x: e.clientX, y: e.clientY });
+    }}>
       <TopBar
         projectName={projectName} projects={projects} projectId={projectId} saving={saving}
         onSwitch={switchProject} onNew={newProject} onRename={renameCurrent} onDelete={deleteCurrent}
@@ -806,7 +851,7 @@ export default function EditorPage() {
             <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
-            <TextPanel onAddText={addTextOverlay} />
+            <TextPanel onAddText={addTextOverlay} onAddSourcePopup={addSourcePopup} />
           ) : (
             <CaptionsPanel
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
@@ -831,6 +876,12 @@ export default function EditorPage() {
           <div className="upper">
             <div className="center-col">
               <VideoPreview ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
+                selectedSubId={selectedSubId} onSelectSub={selectSub} onEditSub={editSub}
+                onCaptionPosition={(position) => {
+                  if (!editorApiRef.current) return;
+                  const result = runCommand("caption.setStyle", editorApiRef.current, { position });
+                  if (!result.ok) setError(result.error);
+                }}
                 onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
                 canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
@@ -914,6 +965,7 @@ export default function EditorPage() {
                   if (!result.ok) setError(result.error);
                 }}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
+                onSubMenu={(id, x, y) => setSubMenu({ id, x, y })}
                 onTrackMenu={(id, x, y) => setTrackMenu({ id, x, y })}
                 onDropMedia={dropMediaOnTimeline}
                 onAddVideoTrack={addVideoTrack}

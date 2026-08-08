@@ -121,7 +121,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.delete.ripple": schema(["id"], { id }), "clip.delete.leaveGap": schema(["id"], { id }),
   "clip.splitAtPlayhead": schema(), "clip.split": schema(["id", "at_source"], { id, at_source: num }),
   "clip.trim": schema(["id"], { id, start: num, end: num }), "clip.move": schema(["id", "to_index"], { id, to_index: num }),
-  "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num }),
+  "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num, timeline_start: num }),
   "clip.replaceAll": schema(["clips"], { clips: arr }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num }),

@@ -101,3 +101,13 @@
 - Templates / Effects / Transitions (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
 - Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; `remove_silence` משתמש בחותמות-מילה במצב tight ‏(0.22s/0.04s), מסיר audio_event מפורש ומהססים נפוצים, ו-dB נשאר fallback בלבד. local משתמש באותם גבולות ברירת מחדל. אין להסיק סוג אירוע מהיעדר תמלול או מ-dB בלבד
+# 2026-08-08 closed gaps
+
+- CLOSED: image-only/audio-only Preview and mixed-media continuation.
+- CLOSED: image placement on the primary video lane via drag/plus; logo placement remains an explicit overlay action.
+- CLOSED: dedicated audio-track Preview + Export mix with per-clip volume/audio fades.
+- CLOSED: direct on-canvas caption select/edit/vertical move; overlapping cues are stacked and warned.
+- CLOSED: custom context menu on blank editor/Preview surfaces and caption cues.
+- CLOSED: broad button tooltip coverage, including controls mounted after initial render.
+- CLOSED: UI + Agent real opening source-popup preset with Preview/Export parity.
+- CLOSED: Agent exact-time media placement and downloadable render/SRT/image/audio artifacts in chat.

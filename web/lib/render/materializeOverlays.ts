@@ -27,6 +27,15 @@ async function renderTextPng(o: Overlay, canvas: CanvasSize): Promise<Uint8Array
   const ctx = c.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D לא זמין לרינדור טקסט");
   ctx.clearRect(0, 0, tw, th);
+  if (o.background && o.background !== "transparent") {
+    ctx.save();
+    ctx.fillStyle = o.background;
+    const radius = Math.max(0, Math.min(Math.min(tw, th) / 2, o.borderRadius || 0));
+    ctx.beginPath();
+    ctx.roundRect(0, 0, tw, th, radius);
+    ctx.fill();
+    ctx.restore();
+  }
   const fs = Math.max(8, o.fontSize || Math.round(canvas.height * 0.06));
   ctx.font = `${o.bold ? 700 : 500} ${fs}px "Assistant", "Segoe UI", Arial, sans-serif`;
   ctx.fillStyle = o.color || "#ffffff";
@@ -37,8 +46,9 @@ async function renderTextPng(o: Overlay, canvas: CanvasSize): Promise<Uint8Array
   ctx.shadowColor = "rgba(0,0,0,0.55)";
   ctx.shadowBlur = 6;
   ctx.shadowOffsetY = 2;
-  const x = o.align === "start" ? tw - 4 : o.align === "end" ? 4 : tw / 2;
-  ctx.fillText(o.text || "", x, th / 2, tw - 8);
+  const pad = Math.max(8, fs * 0.2);
+  const x = o.align === "start" ? tw - pad : o.align === "end" ? pad : tw / 2;
+  ctx.fillText(o.text || "", x, th / 2, tw - pad * 2);
   const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png"));
   return new Uint8Array(await blob.arrayBuffer());
 }

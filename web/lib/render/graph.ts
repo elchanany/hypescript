@@ -11,7 +11,7 @@ import { isGapClip } from "@/lib/editor/timelineOps";
 
 export interface RenderTarget { w: number; h: number; fps: number; }
 export const DEFAULT_TARGET: RenderTarget = { w: 1280, h: 720, fps: 30 };
-export interface RenderGraphOpts { audioMuted?: boolean; }
+export interface RenderGraphOpts { audioMuted?: boolean; audioClips?: Clip[]; }
 
 export interface RenderGraph {
   segmentCount: number;
@@ -135,10 +135,32 @@ export function buildConcatGraph(
     labels.push(`[v${n}][a${n}]`);
   });
 
-  const filterComplex = parts.join("") + `${labels.join("")}concat=n=${usable.length}:v=1:a=1[outv][outa]`;
+  let filterComplex = parts.join("") + `${labels.join("")}concat=n=${usable.length}:v=1:a=1[outv][outa];`;
+  const extraAudioLabels: string[] = [];
+  let audioAt = 0;
+  for (const c of opts.audioClips || []) {
+    const duration = clipDur(c);
+    if (!clipEnabled(c) || duration <= 0) { audioAt += duration; continue; }
+    if (isGapClip(c)) { audioAt += duration; continue; }
+    const asset = mediaById(media, c.sourceId);
+    if (!asset || (asset.kind !== "audio" && asset.kind !== "video")) { audioAt += duration; continue; }
+    const fn = writeOnce(asset);
+    const idx = ic++; inputArgs.push("-i", fn);
+    const { fadeIn, fadeOut } = clipAudioFades(c);
+    const delayMs = Math.max(0, Math.round(audioAt * 1000));
+    const label = `ax${extraAudioLabels.length}`;
+    filterComplex += `[${idx}:a]atrim=start=${c.start.toFixed(3)}:end=${c.end.toFixed(3)},${aChain(clipVolume(c) * muteGain, duration, fadeIn, fadeOut)},adelay=${delayMs}|${delayMs}[${label}];`;
+    extraAudioLabels.push(`[${label}]`);
+    audioAt += duration;
+  }
+  if (extraAudioLabels.length) {
+    filterComplex += `[outa]${extraAudioLabels.join("")}amix=inputs=${extraAudioLabels.length + 1}:duration=first:dropout_transition=0[mixa]`;
+  } else {
+    filterComplex = filterComplex.slice(0, -1);
+  }
 
   const encodeArgs = [
-    "-map", "[outv]", "-map", "[outa]",
+    "-map", "[outv]", "-map", extraAudioLabels.length ? "[mixa]" : "[outa]",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-r", String(fps),
     "-c:a", "aac", "-b:a", "192k", "-ar", String(SR), "-ac", "2",
     "-movflags", "+faststart",

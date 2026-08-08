@@ -1,6 +1,10 @@
 # Goal
 Make the agent reliably turn a Hebrew client brief into a tight, script-grounded promotional cut: no repeated source time, no avoidable pauses, real styled captions, correct fade sequencing, and deferred missing assets requested only when their stage is reached.
 
+## 2026-08-08 continuation
+
+The mixed-media/UI parity package is implemented but not yet committed at this note: full-frame images and standalone audio are first-class timeline clips, Preview and Export share standalone-audio fades/volume, captions edit/move directly on canvas, overlaps are unmistakable, custom right-click covers blank editor/Preview surfaces, and tooltips cover buttons mounted later. The Agent now distinguishes a full-frame image from a logo overlay, supports exact `timeline_start`, generates the real `source_popup` preset, and renders the audio track. Finish with full tests/build, Graphify update/query, direct `main` push, then Graphify-only push if output changes.
+
 # Current State
 - `main` at `f2442e3`; flip package and Graphify sync are pushed.
 - Dirty client-brief package spans word-timestamp tight cutting, explicit event/filler boundaries, generated-cut normalization after script and EDL intersection, Agent caption styling, and strict brief sequencing.

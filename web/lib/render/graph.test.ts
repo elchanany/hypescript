@@ -3,6 +3,7 @@ import { buildConcatGraph, toExecArgs } from "./graph";
 import { Clip, MediaAsset } from "@/lib/editor/model";
 
 const vid = (id: string): MediaAsset => ({ id, name: `${id}.mp4`, kind: "video", duration: 60, file: new File([], `${id}.mp4`), url: "" });
+const aud = (id: string): MediaAsset => ({ id, name: `${id}.mp3`, kind: "audio", duration: 60, file: new File([], `${id}.mp3`), url: "" });
 const clip = (sourceId: string, start: number, end: number): Clip => ({ id: `c_${sourceId}_${start}`, sourceId, start, end });
 
 describe("export render graph — single continuous stream, no per-clip encode", () => {
@@ -99,5 +100,15 @@ describe("export render graph — single continuous stream, no per-clip encode",
     expect(g.filterComplex).toContain("concat=n=3:v=1:a=1[outv][outa]");
     // still exactly one encode
     expect(toExecArgs(g, "out.mp4").join(" ").match(/libx264/g)?.length).toBe(1);
+  });
+
+  it("mixes an independent timed audio track with volume and fades", () => {
+    const audioClip: Clip = { id: "music", sourceId: "music", start: 2, end: 7, volume: 0.4, fadeIn: 1, fadeOut: 2 };
+    const graph = buildConcatGraph([clip("a", 0, 10)], [vid("a"), aud("music")], { w: 640, h: 360, fps: 30 }, { audioClips: [{ id: "gap", sourceId: "__gap__", start: 0, end: 3 }, audioClip] });
+    expect(graph.filterComplex).toContain("atrim=start=2.000:end=7.000");
+    expect(graph.filterComplex).toContain("volume=0.400,afade=t=in:st=0:d=1.000,afade=t=out:st=3.000:d=2.000");
+    expect(graph.filterComplex).toContain("adelay=3000|3000");
+    expect(graph.filterComplex).toContain("amix=inputs=2:duration=first");
+    expect(graph.encodeArgs).toContain("[mixa]");
   });
 });
