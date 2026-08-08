@@ -1,5 +1,5 @@
 // Register built-in editor commands used by UI + Agent.
-import { addClip, assembledToSource, clipAudioFades, clipDur, splitClip, trimClip, uid, type Clip } from "./model";
+import { addClip, assembledToSource, clipAudioFades, clipDur, clipVisualFades, splitClip, trimClip, uid, type Clip } from "./model";
 import type { Sub } from "./subtitlesEdl";
 import { makeImageOverlay, makeTextOverlay } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
@@ -455,6 +455,27 @@ export function ensureBuiltinCommands() {
       }
       if (!Object.keys(patch).length) throw new Error("חסר תיקון צבע");
       api.updateClip(id, patch);
+    },
+  });
+
+  registerCommand({
+    id: "clip.setVisualFades",
+    label: "Set clip visual fades",
+    labelHe: "דעיכה חזותית בקצות קטע",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clip = api.getClips()?.find((item) => item.id === id);
+      if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
+      if (args?.fadeIn == null && args?.fadeOut == null) throw new Error("חסרה דעיכה");
+      const candidate = {
+        ...clip,
+        visualFadeIn: args?.fadeIn == null ? clip.visualFadeIn : Number(args.fadeIn),
+        visualFadeOut: args?.fadeOut == null ? clip.visualFadeOut : Number(args.fadeOut),
+      };
+      if (!Number.isFinite(candidate.visualFadeIn ?? 0) || !Number.isFinite(candidate.visualFadeOut ?? 0)) throw new Error("דעיכה לא תקינה");
+      const fades = clipVisualFades(candidate);
+      api.updateClip(id, { visualFadeIn: fades.fadeIn, visualFadeOut: fades.fadeOut });
     },
   });
 

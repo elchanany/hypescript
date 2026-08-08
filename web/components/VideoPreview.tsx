@@ -1,8 +1,8 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, totalDur } from "@/lib/editor/model";
-import { audioFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
+import { audioFadeFactor, edgeFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
@@ -80,6 +80,10 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const activeClip = edl?.[idx.current] || null;
   const activeClipOffset = activeClip && edl ? Math.max(0, t - assembledStart(edl, idx.current)) : t;
   const activeFades = activeClip ? clipAudioFades(activeClip) : { fadeIn: 0, fadeOut: 0 };
+  const activeVisualFades = activeClip ? clipVisualFades(activeClip) : { fadeIn: 0, fadeOut: 0 };
+  const activeVisualFactor = activeClip
+    ? edgeFadeFactor(activeClipOffset, clipDur(activeClip), activeVisualFades.fadeIn, activeVisualFades.fadeOut)
+    : 1;
   const activeAudioGain = previewAudioGain(
     vol,
     activeClip ? clipVolume(activeClip) : 1,
@@ -93,13 +97,19 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
     const state = audioStateRef.current;
     const clip = state.edl?.[idx.current] || null;
     const fades = clip ? clipAudioFades(clip) : { fadeIn: 0, fadeOut: 0 };
+    const visualFades = clip ? clipVisualFades(clip) : { fadeIn: 0, fadeOut: 0 };
     const factor = clip
       ? audioFadeFactor(video.currentTime - clip.start, clipDur(clip), fades.fadeIn, fades.fadeOut)
       : 1;
     const gain = previewAudioGain(state.vol, clip ? clipVolume(clip) : 1, state.muted, factor);
+    const visualFactor = clip
+      ? edgeFadeFactor(video.currentTime - clip.start, clipDur(clip), visualFades.fadeIn, visualFades.fadeOut)
+      : 1;
     if (audioGainRef.current) audioGainRef.current.gain.value = gain;
     else video.volume = Math.min(1, gain);
     video.dataset.previewAudioGain = gain.toFixed(3);
+    video.style.opacity = String((clip ? clipOpacity(clip) : 1) * visualFactor);
+    video.dataset.previewVisualFactor = visualFactor.toFixed(3);
   };
 
   const stopAudioClock = () => {
@@ -159,7 +169,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   }, []);
   const box = displayRect(stageSize.w, stageSize.h, canvas);
   const total = edl ? totalDur(edl) : dur;
-  const activeOpacity = edl?.[idx.current] ? clipOpacity(edl[idx.current]) : 1;
+  const activeOpacity = (edl?.[idx.current] ? clipOpacity(edl[idx.current]) : 1) * activeVisualFactor;
   const activeContrast = edl?.[idx.current] ? clipContrast(edl[idx.current]) : 1;
   const activeSaturation = edl?.[idx.current] ? clipSaturation(edl[idx.current]) : 1;
 
@@ -281,6 +291,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
               onPlay={() => { ensureAudioGraph(); void audioContextRef.current?.resume(); startAudioClock(); setPlaying(true); }} onPause={() => { stopAudioClock(); syncLiveAudioGain(); setPlaying(false); }}
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
               data-preview-audio-gain={activeAudioGain.toFixed(3)}
+              data-preview-visual-factor={activeVisualFactor.toFixed(3)}
               style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})` }} />
             {inGap && <div className="pv-gap" aria-hidden />}
             {(() => {

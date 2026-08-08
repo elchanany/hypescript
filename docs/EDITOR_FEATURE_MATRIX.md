@@ -49,6 +49,7 @@
 |---|---|---|---|---|---|---|---|---|
 | Clip volume | ✔ | ✔ | ✔(Web Audio gain) | ✔ | ✔ | ✔ | ✔ | Complete (browser QA passed) |
 | Clip-edge linear fades | ✔ | ✔ | ✔(rAF Web Audio gain) | ✔(`afade`) | ✔ | ✔ | ✔ | Complete (browser + native render passed) |
+| Clip-edge visual fades | ✔ | ✔ | ✔(rAF opacity) | ✔(`fade` to black) | ✔ | ✔ | ✔ | Complete (native render; dedicated browser QA pending) |
 | Envelope/range-volume/keyframes | ✖ | ✖ | ✖ | ✖ | — | ✖ | ✖ | Not started |
 | Captions create/edit/timing/SRT | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Partial |
 | Caption style/position/animation | ✖ | ✖ | ✖ | ✖ | — | ✖ | ✖ | Not started |

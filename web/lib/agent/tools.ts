@@ -12,7 +12,7 @@ import {
 } from "@/lib/elevenlabs/prefs";
 import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
-  addClip, assembledToSource, Clip, clipAudioFades, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
+  addClip, assembledToSource, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { Overlay, makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
@@ -1190,6 +1190,28 @@ export const TOOLS: ToolMeta[] = [
         setClips(ctx, ctx.clips!.map((item, index) => index === i ? { ...item, contrast, saturation } : item));
       } else if (commandError) return `שגיאה: ${commandError}`;
       return `תיקוני צבע לקליפ ${a.index} עודכנו.`;
+    },
+  },
+  {
+    name: "set_clip_visual_fades", label: "Fade חזותי", color: "#8b5cf6", icon: "◩",
+    schema: {
+      name: "set_clip_visual_fades",
+      description: "מגדיר fade-in/fade-out חזותיים ליניאריים בשניות, משחור ואל שחור, ב-Preview וב-Export.",
+      parameters: { type: "object", properties: { index: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } }, required: ["index"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const clip = ctx.clips![i];
+      if (!clip || isGapClip(clip)) return "אינדקס קליפ לא תקין.";
+      if (a.fade_in == null && a.fade_out == null) return "צריך fade_in או fade_out.";
+      const commandError = dispatch(ctx, "clip.setVisualFades", { id: clip.id, fadeIn: a.fade_in, fadeOut: a.fade_out });
+      let fades: { fadeIn: number; fadeOut: number };
+      if (commandError === "NO_API") {
+        fades = clipVisualFades({ ...clip, visualFadeIn: a.fade_in ?? clip.visualFadeIn, visualFadeOut: a.fade_out ?? clip.visualFadeOut });
+        setClips(ctx, ctx.clips!.map((item, index) => index === i ? { ...item, visualFadeIn: fades.fadeIn, visualFadeOut: fades.fadeOut } : item));
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      else fades = clipVisualFades(ctx.clips![i]);
+      return `דעיכה חזותית לקליפ ${a.index}: כניסה ${fades.fadeIn.toFixed(2)}s, יציאה ${fades.fadeOut.toFixed(2)}s.`;
     },
   },
   {

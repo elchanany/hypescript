@@ -96,7 +96,7 @@
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 
 ### P3
-- Filters: PARTIAL — per-clip contrast+saturation עם shared presets, Inspector/Undo/CommandBus/Agent/Preview/Export; brightness ו-keyframes חסרים
+- Filters: PARTIAL — per-clip contrast+saturation presets and bounded visual fade-to/from-black have Inspector/Undo/CommandBus/Agent/Preview/Export; brightness and generic keyframes are missing
 - Audio: clip volume and bounded linear clip-edge fades have Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; envelopes/range-volume/keyframes remain
 - Templates / Effects / Transitions (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits

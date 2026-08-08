@@ -2,13 +2,13 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`dbd1389`; per-clip Preview volume parity landed in `2f3d0ed` and Graphify synced.
-- Dirty fade package: normalized linear fade-in/out spans Model, Inspector, Undo/Redo, CommandBus, Agent, Web Audio rAF gain and FFmpeg `afade`. Browser QA and native render pass. Web 45 files/237 tests and production build pass.
+- main ב־`359b301`; audio fades landed in `0d7215b` and Graphify synced.
+- Dirty visual-fade package: normalized linear fade-to/from-black spans Model, Inspector, Undo/Redo, CommandBus, Agent, rAF Preview opacity and FFmpeg `fade`. Web 45 files/241 tests, type-check/build and native render pass. Dedicated browser upload failed in the in-app chooser, so visual browser QA is pending.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: `web/components/VideoPreview.tsx`, `web/components/InspectorPanel.tsx`, `web/lib/editor/{model,previewAudio,commands.builtin,tracks}.ts`, `web/lib/render/graph.ts`, agent tool and tests.
+- Current package: the same Preview/Inspector/model/commands/tracks/render/agent seam, extended with `visualFadeIn`/`visualFadeOut`.
 - Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
 
 # Changes Made
@@ -22,14 +22,15 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - `c60cfb2`: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
 - `60c5357`: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
 - `2f3d0ed`: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume feeds FFmpeg Export.
-- Dirty fades: combined fade lengths normalize to clip duration; Preview gain updates every animation frame; export uses `afade`; track flattening preserves fade/color metadata and refuses incompatible merges.
+- `0d7215b`: combined audio fade lengths normalize to clip duration; Preview gain updates every animation frame; export uses `afade`; track flattening preserves fade/color metadata.
+- Dirty visual fades: the same bounded edge factor drives Preview opacity and FFmpeg fade-to-black; native render is proven, dedicated browser upload is pending after chooser timeouts.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
 - Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
 
 # Tests and Verification
-- 45 test files / 237 tests — passed; production build/type-check pass.
+- 45 test files / 241 tests — passed; production build/type-check pass.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
 - Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
@@ -43,7 +44,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Graphify + commit/push bounded clip-edge fades.
-2. Select the next local P3 effect/template with real Preview+Export parity.
+1. Graphify + commit/push bounded visual fades.
+2. Retry dedicated visual browser QA; then select the next local P3 effect/template.
 3. Package C only after working login.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.

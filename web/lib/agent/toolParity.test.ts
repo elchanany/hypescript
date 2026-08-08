@@ -78,6 +78,13 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.updates()).toBe(1);
   });
 
+  it("set_clip_visual_fades dispatches normalized fade-to-black values", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.set_clip_visual_fades.run({ index: 1, fade_in: 3, fade_out: 3 }, h.ctx, () => undefined);
+    expect(result).toContain("2.00s");
+    expect(h.clips()[0]).toMatchObject({ visualFadeIn: 2, visualFadeOut: 2 });
+  });
+
   it("set_clip_opacity dispatches clip.setOpacity and uses command clamping", async () => {
     const h = contextWithEditor();
     const result = await TOOL_BY_NAME.set_clip_opacity.run({ index: 1, opacity: -3 }, h.ctx, () => undefined);

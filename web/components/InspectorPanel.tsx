@@ -4,7 +4,7 @@
 // clip properties (video/audio). Sub selected -> caption properties.
 // Overlay selected -> transform + text/image properties.
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
-import { Clip, clipAudioFades, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVolume } from "@/lib/editor/model";
+import { Clip, clipAudioFades, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVisualFades, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
@@ -279,6 +279,12 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       <input type="range" min={0} max={3} step={0.05} value={clipSaturation(clip)}
         onChange={(e) => p.onUpdate({ saturation: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
       <button type="button" className="btn sm" onClick={() => p.onUpdate({ contrast: 1, saturation: 1 })}>איפוס צבע</button>
+      <div className="prop-input"><label className="k" htmlFor={`visual-fade-in-${clip.id}`}>Fade in חזותי (שנ׳)</label>
+        <input id={`visual-fade-in-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipVisualFades(clip).fadeIn.toFixed(2)}
+          onChange={(e) => p.onUpdate({ visualFadeIn: +e.target.value })} /></div>
+      <div className="prop-input"><label className="k" htmlFor={`visual-fade-out-${clip.id}`}>Fade out חזותי (שנ׳)</label>
+        <input id={`visual-fade-out-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipVisualFades(clip).fadeOut.toFixed(2)}
+          onChange={(e) => p.onUpdate({ visualFadeOut: +e.target.value })} /></div>
     </Section>
   );
 

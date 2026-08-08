@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-P3 bounded linear clip-edge audio fades with complete Preview+Export parity; next choose another local effect/template package.
+P3 bounded linear visual fade-to/from-black with Preview+Export parity; dedicated browser upload retry remains.
 
 ## Branch
 `main`
 
 ## Latest commit
-`dbd1389` — chore(graphify): sync clip audio preview
+`359b301` — chore(graphify): sync clip audio fades
 
 ## Status
-Clip volume Preview parity is on main (`2f3d0ed`). Dirty fade package adds normalized per-clip fade-in/out to Model, Inspector, Undo/Redo, CommandBus, Agent, Web Audio rAF gain and FFmpeg `afade`; multi-track flattening now preserves fades and the previously omitted color adjustments. Web 45 files/237 tests, production build and native 20-cut render pass. Browser QA proved 1.0s/0.5s fields, gain 0.000 at start, 0.841 at 0.849s, and Undo/Redo.
+Audio fades are on main (`0d7215b`). Dirty visual-fade package adds normalized fade-to/from-black to Model, Inspector, Undo/Redo, CommandBus, Agent, rAF Preview opacity and FFmpeg `fade`; multi-track flattening preserves it. Web 45 files/241 tests, production build and native 20-cut render pass. The dedicated browser page loaded, but the in-app file chooser timed out twice; the same rAF path was browser-proven for audio fades, while visual upload QA remains unproven.
 
 ## Exact continuation point
-Graphify + commit/push clip-edge fades, then select the next P3 local Preview+Export package. No Supabase/Auth changes without explicit permission.
+Graphify + commit/push visual fades, then retry dedicated browser visual QA before the next P3 package. No Supabase/Auth changes without explicit permission.

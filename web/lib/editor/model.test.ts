@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trimClip, splitClip, Clip, clipAudioFades, clipContrast, clipSaturation, clipVolume } from "./model";
+import { trimClip, splitClip, Clip, clipAudioFades, clipContrast, clipSaturation, clipVisualFades, clipVolume } from "./model";
 
 const clips = (): Clip[] => [{ id: "x", sourceId: "v", start: 55.44, end: 67.92 }];
 
@@ -14,6 +14,12 @@ describe("clipVolume", () => {
 describe("clipAudioFades", () => {
   it("clamps fades to the clip and preserves their ratio when they overlap", () => {
     expect(clipAudioFades({ id: "a", sourceId: "v", start: 0, end: 4, fadeIn: 6, fadeOut: 2 })).toEqual({ fadeIn: 8 / 3, fadeOut: 4 / 3 });
+  });
+});
+
+describe("clipVisualFades", () => {
+  it("uses the same bounded clip-edge normalization", () => {
+    expect(clipVisualFades({ id: "a", sourceId: "v", start: 0, end: 4, visualFadeIn: 3, visualFadeOut: 3 })).toEqual({ fadeIn: 2, fadeOut: 2 });
   });
 });
 
