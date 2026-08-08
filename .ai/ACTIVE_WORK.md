@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-P3 clip color browser verification and Inspector wiring repair; next select another local Preview+Export capability that does not require Auth.
+P3 audio parity: per-clip volume now drives Preview through Web Audio as well as FFmpeg Export. Next package is bounded linear clip-edge fades.
 
 ## Branch
 `main`
 
 ## Latest commit
-`f76b45e` — chore(graphify): sync shared color presets
+`2743a00` — chore(graphify): sync inspector color wiring
 
 ## Status
-Browser QA loaded a real 4-second MP4 in local guest mode and exposed a missing `clip.setColorAdjustments` dispatch in `updateClipFromInspector`. The wiring is fixed: monochrome now produces Inspector 105%/0% and Preview `contrast(1.05) saturate(0)`; reset returns `contrast(1) saturate(1)`. Web 44 files/228 tests and production build pass.
+Color browser fix is on main (`60c5357`). Dirty audio-parity package multiplies transport volume by the active clip volume in a Web Audio GainNode, including boosts up to 2×; mute is fail-closed at zero and persisted out-of-range volume is clamped. Web 45 files/231 tests and production build pass. Browser audio QA remains pending.
 
 ## Exact continuation point
-Graphify + commit/push the Inspector wiring repair and browser-QA evidence; then choose the next P3 package. No Supabase/Auth changes without explicit permission.
+Graphify + commit/push audio Preview parity, then implement bounded linear fade-in/fade-out on the same gain/export pipeline. No Supabase/Auth changes without explicit permission.

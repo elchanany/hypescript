@@ -1,7 +1,8 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVolume, totalDur } from "@/lib/editor/model";
+import { previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
@@ -50,6 +51,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const videoRef = useRef<HTMLVideoElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioGainRef = useRef<GainNode | null>(null);
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
   const idx = useRef(0);
   const loaded = useRef<string | null>(null);
@@ -71,8 +74,33 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const firstVid = media.find((m) => m.kind === "video");
   const playable = (c: Clip) => !isGapClip(c) && byId(c.sourceId)?.kind === "video" && clipEnabled(c);
 
-  useEffect(() => { if (videoRef.current) videoRef.current.muted = !!audioMuted; }, [audioMuted]);
-  useEffect(() => { if (videoRef.current) videoRef.current.volume = vol; }, [vol]);
+  const activeClipVolume = edl?.[idx.current] ? clipVolume(edl[idx.current]) : 1;
+  const activeAudioGain = previewAudioGain(vol, activeClipVolume, !!audioMuted);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !window.AudioContext) return;
+    const context = new AudioContext();
+    const gain = context.createGain();
+    context.createMediaElementSource(video).connect(gain).connect(context.destination);
+    video.volume = 1;
+    gain.gain.value = activeAudioGain;
+    audioContextRef.current = context;
+    audioGainRef.current = gain;
+    return () => {
+      audioGainRef.current = null;
+      audioContextRef.current = null;
+      void context.close();
+    };
+  }, []); // one graph per persistent <video>; gain is synchronized below
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !!audioMuted;
+    if (audioGainRef.current) audioGainRef.current.gain.value = activeAudioGain;
+    else video.volume = Math.min(1, activeAudioGain);
+  }, [activeAudioGain, audioMuted]);
   useEffect(() => () => { if (gapRaf.current != null) cancelAnimationFrame(gapRaf.current); }, []);
 
   // measure the stage so we can letterbox the project canvas box inside it
@@ -155,7 +183,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
 
   const onLoaded = () => {
     const p = pending.current; const v = videoRef.current;
-    if (v) { setDur(edl ? totalDur(edl) : v.duration || 0); v.volume = vol; if (v.videoWidth && v.videoHeight) onCanvasDetected?.(v.videoWidth, v.videoHeight); }
+    if (v) { setDur(edl ? totalDur(edl) : v.duration || 0); if (v.videoWidth && v.videoHeight) onCanvasDetected?.(v.videoWidth, v.videoHeight); }
     if (p && v) { v.currentTime = p.t; if (p.play) { v.play(); setPlaying(true); } pending.current = null; }
   };
 
@@ -204,8 +232,9 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
         {hasVideo ? (
           <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
             <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+              onPlay={() => { void audioContextRef.current?.resume(); setPlaying(true); }} onPause={() => setPlaying(false)}
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
+              data-preview-audio-gain={activeAudioGain.toFixed(3)}
               style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})` }} />
             {inGap && <div className="pv-gap" aria-hidden />}
             {(() => {

@@ -1,7 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { trimClip, splitClip, Clip, clipContrast, clipSaturation } from "./model";
+import { trimClip, splitClip, Clip, clipContrast, clipSaturation, clipVolume } from "./model";
 
 const clips = (): Clip[] => [{ id: "x", sourceId: "v", start: 55.44, end: 67.92 }];
+
+describe("clipVolume", () => {
+  it("normalizes missing and persisted clip volume", () => {
+    expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1 })).toBe(1);
+    expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1, volume: 9 })).toBe(2);
+    expect(clipVolume({ id: "a", sourceId: "v", start: 0, end: 1, volume: -2 })).toBe(0);
+  });
+});
 
 describe("trimClip", () => {
   it("trims end within clip without NaN", () => {

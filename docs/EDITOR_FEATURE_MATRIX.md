@@ -47,7 +47,7 @@
 ## אודיו / כתוביות
 | Feature | Model | UI | Preview | Export | Undo | Tests | Agent | סטטוס |
 |---|---|---|---|---|---|---|---|---|
-| Clip volume | ✔ | ✔ | ✔ | ✔ | ✔ | ✖ | ✔(ב-tools) | Partial |
+| Clip volume | ✔ | ✔ | ✔(Web Audio gain) | ✔ | ✔ | ✔ | ✔ | Complete (browser audio QA pending) |
 | Envelope/fades/range-volume | ✖ | ✖ | ✖ | ✖ | — | ✖ | ✖ | Not started |
 | Captions create/edit/timing/SRT | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Partial |
 | Caption style/position/animation | ✖ | ✖ | ✖ | ✖ | — | ✖ | ✖ | Not started |

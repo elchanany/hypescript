@@ -28,7 +28,7 @@ export interface Clip {
 }
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
-export const clipVolume = (c: Clip): number => (c.volume == null ? 1 : c.volume);
+export const clipVolume = (c: Clip): number => Number.isFinite(c.volume) ? Math.max(0, Math.min(2, c.volume!)) : 1;
 export const clipOpacity = (c: Clip): number => {
   const o = c.opacity;
   if (o == null || !Number.isFinite(o)) return 1;

@@ -2,13 +2,13 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`f76b45e`; clip color landed ב־`2dd41c8`, shared presets in `c60cfb2`, and Graphify synced.
-- Browser QA with a real local 4-second MP4 found and fixed the missing Inspector → `clip.setColorAdjustments` dispatch. Monochrome is proven at Inspector 105%/0% and Preview `contrast(1.05) saturate(0)`; reset is proven at `contrast(1) saturate(1)`. Web 44 files/228 tests and production build pass; fix commit/push pending.
+- main ב־`2743a00`; browser-discovered Inspector color wiring fix landed in `60c5357` and Graphify synced.
+- Dirty audio-parity package: Preview now uses a Web Audio GainNode with `transport × active clip volume`, including the existing 0..2 boost range; mute maps to zero and fallback media volume clamps safely. Web 45 files/231 tests and production build pass. Browser audio QA pending.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: `web/app/page.tsx`, `web/lib/editor/colorPresets.ts`, `InspectorPanel.tsx`, agent color tool and tests.
+- Current package: `web/components/VideoPreview.tsx`, `web/lib/editor/previewAudio.ts`, `web/lib/editor/model.ts` and tests.
 - Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
 
 # Changes Made
@@ -20,14 +20,15 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - `b6ba1fa`: `ToolRunResult = string | ToolOutcome`; artifacts never enter JSON/history and identical Blob references are de-duplicated per tool completion.
 - `2dd41c8`: contrast 0.5..2 and saturation 0..3; defaults 1, split inheritance, CSS `contrast/saturate`, FFmpeg `eq=contrast:saturation` before yuv conversion.
 - `c60cfb2`: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
-- Dirty browser fix: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
+- `60c5357`: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
+- Dirty audio parity: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume already feeds FFmpeg Export.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
 - Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
 
 # Tests and Verification
-- 44 test files / 228 tests — passed; production build/type-check pass.
+- 45 test files / 231 tests — passed; production build/type-check pass.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
 - Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
@@ -40,7 +41,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Graphify + commit/push the Inspector color dispatch fix and browser-QA evidence.
-2. Select and implement the next P3 preview+export capability that does not need Auth.
+1. Graphify + commit/push per-clip audio Preview parity.
+2. Add bounded linear clip-edge fade-in/fade-out across Model, Inspector, CommandBus, Agent, Preview and FFmpeg Export.
 3. Package C only after working login.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.
