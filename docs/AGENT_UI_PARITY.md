@@ -2,7 +2,7 @@
 
 עיקרון: *No feature is complete until it is controllable through both the UI and the AI agent using the same validated command* (כשהפעולה מתאימה סמנטית לסוכן).
 
-**מצב נוכחי (אמת):** יש CommandBus קל (`commands.ts` + builtins). ה-UI קורא ל-`runCommand` לחלק מהפעולות; הסוכן מעביר split/trim/move/add + רצועות וידאו דרך אותו `EditorApi` (עדכון מיידי + Undo), עם נפילה למוטציה ישירה כשאין גשר. מודל: `clip.trackId` + כמה רצועות `video` (cutaway). עדיין חסרים schema/permissions מלאים לכל פעולת UI.
+**מצב נוכחי (אמת):** CommandBus מפרסם schema/permissions/contexts ומאחד את פעולות ה-UI המקבילות של clip/track/subtitle/overlay/media, כולל opacity ב-Preview+Export. כלי bulk/workflow של הסוכן עדיין משתמשים בחלקם ב-EditorApi ישיר ונשארו להמרה לפקודות אטומיות. מודל הרצועות הוא cutaway; alpha בין רצועות/PiP טרם קיים.
 
 ## מקרא
 UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהורה) · Command (עתידי מזהה)
@@ -21,6 +21,7 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | מחיקה | ✔(Del/menu) | `delete_clip` | ✔ `removeClip` | `DELETE_CLIP` | ✔ | Gap semantics חסר |
 | השבתת קליפ | ✔(menu/inspector) | ✔ `set_clip_enabled` | ✔ `clip.setEnabled` | `clip.setEnabled` | ✔ | UI+Agent דרך אותו CommandBus; fallback רק ללא EditorApi |
 | עוצמת קליפ | ✔(inspector) | ✔ `set_clip_volume` | ✔ `clip.setVolume` | `clip.setVolume` | ✔ | UI+Agent דרך אותו CommandBus; clamp מרכזי 0..2 |
+| שקיפות קליפ | ✔(inspector) | ✔ `set_clip_opacity` | ✔ `clip.setOpacity` | `clip.setOpacity` | ✔ | Preview+FFmpeg מול שחור; alpha בין רצועות/PiP טרם קיים |
 | ניתוח אודיו | ✖ | `analyze_audio` | ✔ | query | n/a | |
 | הסרת שתיקות | ✖(UI) | `remove_silence` | ✔ | `REMOVE_SILENCE` | ✔ | UI חסר |
 | צילום פריים | ✔(preview) | `capture_frame` | ✔ | — | n/a | |
@@ -34,7 +35,7 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | שינוי מצב סוכן Ask/Plan/Act | ✔(dock) | n/a | — | — | n/a | חדש |
 
 ## פערי Parity מיידיים (לחבילה הבאה)
-1. **CommandBus + Command registry**: חוזי `inputSchema/resultSchema/permissions/contexts/agentCallable` קיימים ונאכפים ב־`runCommand`; נותר לחבר palette/shortcut/context-menu ליצירה דינמית מה־registry.
+1. **CommandBus + Command registry**: חוזי `inputSchema/resultSchema/permissions/contexts/agentCallable` קיימים ונאכפים; surfaces דינמיים קיימים. נותר להמיר כלי bulk/workflow לפקודות אטומיות.
 2. **Query API** (`getSelection/getActiveClip/getSelectedRange/getVisibleElementsAtTime/...`) לסוכן.
 3. הרחבת registry metadata (`inputSchema/resultSchema/permissions/contexts/agentCallable`) לכל פקודות הרצועה.
 4. פעולות ידניות חסרות ב-UI: `remove_segments`/`remove_silence` (כפתורים/תפריט).

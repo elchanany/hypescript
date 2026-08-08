@@ -59,4 +59,15 @@ describe("multi-track helpers", () => {
     expect(flat[0].sourceId).toBe("srcB");
     expect(flat[flat.length - 1].sourceId).toBe("srcA");
   });
+
+  it("does not merge adjacent source ranges with different opacity or volume", () => {
+    const { tracks } = createVideoTrack(defaultTracks(), "B");
+    const clips: Clip[] = [
+      { id: "a", sourceId: "src", start: 0, end: 1, trackId: "trk_video", opacity: 1, volume: 1 },
+      { id: "b", sourceId: "src", start: 1, end: 2, trackId: "trk_video", opacity: 0.4, volume: 0.5 },
+    ];
+    const flat = flattenVideoTracks(clips, tracks);
+    expect(flat).toHaveLength(2);
+    expect(flat.map((item) => [item.opacity, item.volume])).toEqual([[1, 1], [0.4, 0.5]]);
+  });
 });

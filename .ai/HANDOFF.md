@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-Inspector/timeline parity על main ב־`972ebac` ו-Graphify sync ב־`58b4c94`. מקומית video/audio add עוברים דרך clip.add ותמונות דרך overlay.addImage ב-UI ובסוכן; generic add_clip מנתב תמונה לשכבה ו-resolveAsset תומך id/שם/אינדקס. File probe/object URL נשארים בגבול I/O מחוץ לחוזה JSON. tsc, 203/203 tests, production build ו־Graphify update (1592/3386) עברו; להשלים commit+push, ואז clip opacity Preview+Export. Package C רק אחרי login עובד.
+Media placement parity על main ב־`69397c9` ו-Graphify sync ב־`9710720`. מקומית clip opacity עובר UI/Agent דרך clip.setOpacity, מופיע בנגן ומיוצא ב-FFmpeg מול שחור; flatten לא מאחד גבולות opacity/volume. PiP/alpha בין רצועות אינו נטען. tsc, 207/207 tests, production build ו-Graphify update (1592/3392) עברו; native 20-cut עם opacity שומר durationDelta=0/audioDrift=0. להשלים commit+push, ואז commandize bulk workflow mutations. Package C רק אחרי login עובד.

@@ -59,6 +59,7 @@ describe("CommandBus builtins", () => {
     }
     const agentIds = listAgentCommands().map((c) => c.id);
     expect(agentIds).toContain("track.reorder");
+    expect(agentIds).toContain("clip.setOpacity");
     expect(agentIds).toContain("overlay.addText");
     expect(agentIds).toContain("overlay.addImage");
     expect(agentIds).toContain("overlay.update");
@@ -71,6 +72,14 @@ describe("CommandBus builtins", () => {
     expect(runCommand("clip.setVolume", api, { id: "a", volume: "loud" as any })).toEqual({ ok: false, error: "פרמטר לא תקין: volume" });
     expect(runCommand("track.rename", api, { trackId: "trk_video" })).toEqual({ ok: false, error: "חסר פרמטר: name" });
     expect(api.clips).toEqual(before);
+  });
+
+  it("clamps clip opacity through CommandBus", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
+    expect(runCommand("clip.setOpacity", api, { id: "a", opacity: 4 }).ok).toBe(true);
+    expect(api.clips[0].opacity).toBe(1);
+    expect(runCommand("clip.setOpacity", api, { id: "a", opacity: -1 }).ok).toBe(true);
+    expect(api.clips[0].opacity).toBe(0);
   });
 
   it("leave-gap delete preserves timeline duration", () => {

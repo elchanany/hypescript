@@ -70,6 +70,15 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("set_clip_opacity dispatches clip.setOpacity and uses command clamping", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.set_clip_opacity.run({ index: 1, opacity: -3 }, h.ctx, () => undefined);
+    expect(result).toContain("0%");
+    expect(h.clips()[0].opacity).toBe(0);
+    expect(h.updates()).toBe(1);
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
   it("routes rename/lock/mute track tools through the shared commands", async () => {
     const h = contextWithEditor();
     await TOOL_BY_NAME.rename_track.run({ track: "video-1", name: "B-roll" }, h.ctx, () => undefined);

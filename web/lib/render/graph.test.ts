@@ -59,6 +59,12 @@ describe("export render graph — single continuous stream, no per-clip encode",
     expect(muted.filterComplex).toContain("volume=0.000");
   });
 
+  it("applies clip opacity against black before final yuv conversion", () => {
+    const faded = { ...clip("a", 0, 1), opacity: 0.4 };
+    const graph = buildConcatGraph([faded], [vid("a")], { w: 640, h: 360, fps: 25 });
+    expect(graph.filterComplex).toContain("format=rgb24,colorchannelmixer=rr=0.400:gg=0.400:bb=0.400,format=yuv420p");
+  });
+
   it("inserts black lavfi segments for gap clips without dropping neighbors", () => {
     const withGap: Clip[] = [clip("a", 0, 1), { id: "g1", sourceId: "__gap__", start: 0, end: 0.5 }, clip("b", 0, 1)];
     const g = buildConcatGraph(withGap, media, { w: 640, h: 360, fps: 30 });

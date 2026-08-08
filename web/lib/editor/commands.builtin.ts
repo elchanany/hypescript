@@ -379,6 +379,21 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "clip.setOpacity",
+    label: "Set clip opacity",
+    labelHe: "שקיפות קטע",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const opacity = Number(args?.opacity);
+      const clip = api.getClips()?.find((item) => item.id === id);
+      if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
+      if (!Number.isFinite(opacity)) throw new Error("שקיפות לא תקינה");
+      api.updateClip(id, { opacity: Math.max(0, Math.min(1, opacity)) });
+    },
+  });
+
+  registerCommand({
     id: "overlay.update",
     label: "Update overlay",
     labelHe: "עדכן שכבה",

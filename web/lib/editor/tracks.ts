@@ -1,7 +1,7 @@
 // עזרי רצועות וידאו מרובות: סינון קליפים, משך פרויקט, ושטיחה ל-EDL יחיד (cutaway).
 
 import {
-  Clip, clipDur, clipEnabled, totalDur, uid,
+  Clip, clipDur, clipEnabled, clipOpacity, clipVolume, totalDur, uid,
 } from "./model";
 import { TrackMeta, primaryVideoTrackId, sortedTracks, videoTracks } from "./project";
 
@@ -116,6 +116,8 @@ export function flattenVideoTracks(clips: Clip[], tracks: TrackMeta[]): Clip[] {
       && Math.abs(prev.end - srcOffset) < 0.001
       && clipTrackId(prev, primaryId) === tid
       && prev.enabled === chosen.clip.enabled
+      && clipVolume(prev) === clipVolume(chosen.clip)
+      && clipOpacity(prev) === clipOpacity(chosen.clip)
     ) {
       prev.end = srcEnd;
     } else {

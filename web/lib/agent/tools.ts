@@ -1042,6 +1042,25 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "set_clip_opacity", label: "שקיפות קטע", color: "#64748b", icon: "◐",
+    schema: {
+      name: "set_clip_opacity",
+      description: "קובע שקיפות חזותית לקליפ (0..1) מול רקע שחור, בתצוגה המקדימה ובייצוא.",
+      parameters: { type: "object", properties: { index: { type: "number" }, opacity: { type: "number" } }, required: ["index", "opacity"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
+      if (isGapClip(c)) return "לרווח אין שקיפות.";
+      const opacity = Math.max(0, Math.min(1, +a.opacity));
+      const commandError = dispatch(ctx, "clip.setOpacity", { id: c.id, opacity });
+      if (commandError === "NO_API") {
+        setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, opacity } : x)));
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      return `שקיפות קטע ${a.index}: ${Math.round(opacity * 100)}%.`;
+    },
+  },
+  {
     name: "list_overlays", label: "רשימת שכבות", color: "#64748b", icon: "🧩",
     schema: { name: "list_overlays", description: "מחזיר את שכבות התמונה/טקסט על הקנבס.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {

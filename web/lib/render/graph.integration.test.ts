@@ -50,6 +50,7 @@ describe.skipIf(!FF)("export integration — native FFmpeg render + ffprobe join
       const len = i % 3 === 0 ? 0.3 : i % 3 === 1 ? 0.5 : 0.8;
       clips.push(clip(src, start, +(start + len).toFixed(2)));
     }
+    clips[7].opacity = 0.45; // exercise the native opacity filter inside a real 20-cut render
     const media = [asset("a"), asset("b")];
     // frame-quantized sum — the physically achievable duration (video is whole frames)
     const snap = (c: Clip) => Math.max(1, Math.round((c.end - c.start) * FPS)) / FPS;
