@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786223610.649626,
-    "ast_hash": "38137ba3df6010a48a80f6c52dea2246",
+    "mtime": 1786228539.171734,
+    "ast_hash": "5faa030a9576afc464294ce267fd485f",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786220149.6378336,
-    "ast_hash": "b54553145e2343ae9663579ede17abeb",
+    "mtime": 1786228539.1727347,
+    "ast_hash": "5755230bfdb9047f632b00352a7d9c20",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786223738.7539775,
-    "ast_hash": "26276662f25148fd39a9a5410763099d",
+    "mtime": 1786228539.3640819,
+    "ast_hash": "fbe4e8e241304bfb33bc31e681f47213",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "web/lib/ffmpeg.ts": {
-    "mtime": 1786217846.094905,
-    "ast_hash": "7a5ad1d6fe18c34a46357e50bb65df45",
+    "mtime": 1786228539.3650813,
+    "ast_hash": "fa5e0632887526b42dcb08a1f61833c9",
     "semantic_hash": ""
   },
   "web/lib/keys.ts": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786223786.1399636,
-    "ast_hash": "3f435671d9b87067660fcc5a90facf5b",
+    "mtime": 1786228539.3620806,
+    "ast_hash": "bd2da200996e87034a98bf3b35d5338a",
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {
@@ -1322,6 +1322,16 @@
   "web/lib/editor/overlay.test.ts": {
     "mtime": 1786223761.0680141,
     "ast_hash": "2dce6986fca71a8f28e034f0344b3b81",
+    "semantic_hash": ""
+  },
+  "web/lib/render/timelineFrame.test.ts": {
+    "mtime": 1786228539.3660817,
+    "ast_hash": "60d53d4bedf0dbbc194e538395c98044",
+    "semantic_hash": ""
+  },
+  "web/lib/render/timelineFrame.ts": {
+    "mtime": 1786228539.368083,
+    "ast_hash": "9823be1faf011c9b86d5f0b78ed0f27a",
     "semantic_hash": ""
   }
 }

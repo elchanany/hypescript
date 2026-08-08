@@ -1,5 +1,13 @@
 # ACTIVE_WORK.md
 
+## 2026-08-09 — composited timeline frame capture (export-parity, opt-in)
+
+- `main` ab2dcf1 + 58f39c6: `capture_frame` can now render an export-parity composited frame of the edited timeline. Explicit `timeline=true` (with an edited timeline) selects it; `timeline=false`, an explicit `source`, or an omitted `timeline` always stay on the fast raw source frame.
+- Composited path reuses the export renderEDL flow: multi-track flatten/cutaway, active overlays, current styled caption, clip effects and export resolution; gaps and disabled clips render black. It renders a micro-segment, so it is slower by design and opt-in only.
+- SYSTEM_PROMPT: after significant visual edits (overlay, cutaway, captions, color/flip/fades), verify once with `capture_frame(timeline=true)` at the changed point; no redundant or repeated captures.
+- Verification: 47 files / 296 tests, `tsc` clean, production build passes; native export integration `durationDelta=0`/`audioDrift=0`; `graphify update .` → 1722 nodes / 3847 edges. Browser-live ffmpeg.wasm capture not yet manually E2E tested.
+- Next product package (user-approved): local-first organization/brand kit — logos, colors picker, writing guidelines, reference images — selectable across projects and exposed safely to the agent, reusing the reliable mixed-media/logo agent workflow. IndexedDB first; cloud sync waits for working auth.
+
 ## 2026-08-09 — stable overlay identity, alpha preview and safe logo geometry
 
 - Fixed the real multi-overlay Agent race: `add_image_overlay` is now one atomic command and never performs a stale second update against “the last overlay”. UI-facing EditorApi refs also advance synchronously across same-tick Agent commands.
@@ -28,16 +36,16 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Agent/client-brief reliability: tight Hebrew speech cutting, zero repeated source-time boundaries, caption styling, and deferred-asset sequencing.
+Approved local-first organization/brand kit: logos, colors picker, writing guidelines and reference images, selectable across projects and exposed safely to the agent; no new cloud service while the production Supabase auth key is broken.
 
 ## Branch
 `main`
 
 ## Latest commit
-`f2442e3` — chore(graphify): sync clip flip controls
+`58f39c6` — fix(agent): make composited capture opt in
 
 ## Status
-Dirty agent/core package replaces dB-first silence cutting with word-timestamp `tight` pacing (0.22s gap, 0.04s handles), removes explicit audio events/fillers, normalizes every automatic same-source/track boundary, and adds real Agent caption-style control. SYSTEM_PROMPT compiles client briefs into spoken keep text, edit instructions, deferred CTA assets, boundary verification and final fade. Web 45 files/251 tests, type-check and production build pass; local 8 tests pass.
+Merged: client-brief tight cutting, overlay safety, logo/card parity, and export-parity composited frame capture (opt-in `timeline=true`). Web 47 files / 296 tests, `tsc` clean, production build passes; native export `durationDelta=0`/`audioDrift=0`; graphify 1722 nodes / 3847 edges. Composited capture is browser-untested and slower by design.
 
 ## Exact continuation point
-Run Graphify update, commit/push the agent/core package, then validate the workflow against a real uploaded lecture when source media is available. Do not claim acoustic breath classification without provider `audio_event`; no Supabase/Auth changes without explicit permission.
+Build the approved local-first organization/brand kit (logos, colors picker, writing guidelines, reference images) selectable across projects and safely exposed to the agent, reusing the mixed-media/logo agent workflow; IndexedDB first, cloud sync waits for working auth. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.

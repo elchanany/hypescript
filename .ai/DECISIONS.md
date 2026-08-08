@@ -107,6 +107,10 @@
 - **בחירה:** Preview אינו מצייר checkerboard בתוך הסרטון; PNG alpha חושף את הווידאו. UI/Agent/CommandBus חולקים חישוב יחס-מקור ו-clamp לקנבס; `fit_canvas` מכיל תמונת סיום בלי crop.
 - **סיבה:** checkerboard עיצובי נראה כתוכן סופי, ומידות fallback ריבועיות חתכו לוגו רחב או אפשרו מרכז מחוץ לקנבס.
 - **השלכה:** לוגו נשמר כולו בגבולות וביחס הנכון; Export ממשיך להשתמש באלפא המקורית; הזזה/resize אינם יכולים להשאיר שכבה חצויה מחוץ לפריים.
+## D-022 — אימות ויזואלי: פריים מורכב opt-in בלבד, שקול לייצוא
+- **בחירה:** `capture_frame` יודע לצלם פריים מורכב של הציר הערוך (multi-track flatten/cutaway, אובריי פעילים, סגנון כתוביות נוכחי, אפקטי קליפ, רזולוציית ייצוא; רווחים = שחור) — **רק** עם `timeline=true` מפורש ועם ציר ערוך קיים. `timeline=false`, `source` מפורש או השמטת `timeline` נשארים בפריים הגולמי המהיר מהמקור, שהוא ברירת המחדל.
+- **סיבה:** הרינדור המורכב מרנדר מיקרו-קטע ולכן איטי יותר; צריך לאמת בו שינוי ויזואלי משמעותי בלבד (אובריי, cutaway, כתוביות, צבע/flip/fades), פעם אחת לכל נקודה שהשתנתה, בלי צילומים חוזרים מיותרים.
+- **השלכה:** SYSTEM_PROMPT מחייב את הסוכן לאמת שינויים משמעותיים בלי צילומים מיותרים; הפריים אמור להראות בדיוק מה שייצא ב-render. כל נתיב אחר (גולמי/ברירת מחדל) נשאר זול ומהיר.
 # 2026-08-08 — media placement and Preview/Export parity
 
 - An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.

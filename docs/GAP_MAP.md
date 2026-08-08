@@ -63,6 +63,7 @@
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |
 | CommandBus + Query API | PARTIAL | פעולות UI וכלי agent יחידניים וב־bulk עוברים דרך פקודות מאומתות, כולל clip/subtitle replace אטומי; File probe/object-URL נשאר גבול I/O; נותר Query API עשיר יותר |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
+| אימות ויזואלי (capture_frame) | OK | ברירת מחדל = פריים גולמי מהמקור (מהיר); `timeline=true` = פריים מורכב שקול לייצוא (opt-in); SYSTEM_PROMPT מגביל לאימות שינוי משמעותי בלי צילומים מיותרים |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
 ## 6. Project / Auth / Dashboard
@@ -104,7 +105,7 @@
 - Filters: PARTIAL — contrast+saturation presets, bounded fade-to/from-black and horizontal/vertical flip have Inspector/Undo/CommandBus/Agent/Preview/Export; brightness and generic keyframes are missing
 - Audio: clip volume and bounded linear clip-edge fades have Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; envelopes/range-volume/keyframes remain
 - Templates / Effects / Transitions (רק עם Preview+Export)
-- Organizations / Brand / Usage / Credits
+- Organizations / Brand: אושר כחבילה מקומית (לוגו, בוחר צבעים, קווים מנחים לכתיבה, תמונות רפרנס) לבחירה בין פרויקטים וחשיפה בטוחה לסוכן; IndexedDB מקומי בשלב ראשון, סנכרון ענן אחרי auth תקין — Usage / Credits חסרים
 - Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; `remove_silence` משתמש בחותמות-מילה במצב tight ‏(0.22s/0.04s), מסיר audio_event מפורש ומהססים נפוצים, ו-dB נשאר fallback בלבד. local משתמש באותם גבולות ברירת מחדל. אין להסיק סוג אירוע מהיעדר תמלול או מ-dB בלבד
 # 2026-08-08 closed gaps
 
@@ -116,3 +117,7 @@
 - CLOSED: broad button tooltip coverage, including controls mounted after initial render.
 - CLOSED: UI + Agent real opening source-popup preset with Preview/Export parity.
 - CLOSED: Agent exact-time media placement and downloadable render/SRT/image/audio artifacts in chat.
+
+# 2026-08-09 closed gaps
+
+- CLOSED: export-parity composited timeline frame capture for agent visual verification — `capture_frame(timeline=true)`, opt-in; raw source capture remains the fast default.
