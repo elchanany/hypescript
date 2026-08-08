@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
 import { Film, Image as ImageIcon, Music, Plus, Trash2, Upload, LayoutGrid, List } from "lucide-react";
-import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
+import { IconButton } from "@/components/ui";
 
 const KIND_ICON = { video: Film, image: ImageIcon, audio: Music } as const;
 const KIND_LABEL = { video: "וידאו", image: "תמונה", audio: "שמע" } as const;
@@ -41,29 +41,23 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 }
 
 export default function MediaPanel({
-  media, mainId, onUpload, onAddClip, onRemove,
+  media, mainId, onUpload, onAddClip, onRemove, onAssetMenu,
 }: {
   media: MediaAsset[]; mainId?: string;
   onUpload: (files: FileList | File[] | null) => void;
   onAddClip: (asset: MediaAsset) => void;
   onRemove: (id: string) => void;
+  onAssetMenu?: (id: string, x: number, y: number) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [over, setOver] = useState(false);
   const [view, setView] = useState<View>("grid");
-  const [menu, setMenu] = useState<{ x: number; y: number; asset: MediaAsset } | null>(null);
   const dragPreviewRef = useRef<HTMLElement | null>(null);
   const thumbCache = useRef<Map<string, string>>(new Map());
 
   useEffect(() => { const v = localStorage.getItem("hs_mediaview"); if (v === "list" || v === "grid") setView(v); }, []);
   const changeView = (v: View) => { setView(v); localStorage.setItem("hs_mediaview", v); };
-
-  const menuItems = (a: MediaAsset): CtxItem[] => [
-    { label: "הוסף לציר הזמן", icon: Plus, onClick: () => onAddClip(a) },
-    { sep: true, label: "" },
-    { label: "הסר קובץ", icon: Trash2, danger: true, onClick: () => onRemove(a.id) },
-  ];
 
   const startMediaDrag = (e: React.DragEvent, m: MediaAsset) => {
     e.dataTransfer.setData(MEDIA_DRAG_MIME, m.id);
@@ -146,7 +140,7 @@ export default function MediaPanel({
                 onDragEnd={endMediaDrag}
                 onClick={() => setSel(m.id)}
                 onDoubleClick={() => onAddClip(m)}
-                onContextMenu={(e) => { e.preventDefault(); setSel(m.id); setMenu({ x: e.clientX, y: e.clientY, asset: m }); }}
+                onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                 title={`${m.name} — גרור לציר הזמן`}>
                 <CellThumb asset={m} />
                 {m.id === mainId && <span className="cell-badge">ראשי</span>}
@@ -170,7 +164,7 @@ export default function MediaPanel({
                   onDragEnd={endMediaDrag}
                   onClick={() => setSel(m.id)}
                   onDoubleClick={() => onAddClip(m)}
-                  onContextMenu={(e) => { e.preventDefault(); setSel(m.id); setMenu({ x: e.clientX, y: e.clientY, asset: m }); }}
+                  onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                   title={`${m.name} — גרור לציר הזמן`}>
                   <div className="media-thumb"><Icon size={16} strokeWidth={1.5} /></div>
                   <div className="media-meta">
@@ -189,7 +183,6 @@ export default function MediaPanel({
         )}
       </div>
 
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems(menu.asset)} onClose={() => setMenu(null)} />}
     </>
   );
 }

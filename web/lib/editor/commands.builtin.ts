@@ -352,6 +352,26 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "media.remove",
+    label: "Remove media asset",
+    labelHe: "הסר קובץ",
+    contexts: ["editor", "context-menu"],
+    presentation: { target: "asset", icon: "trash", order: 90, danger: true, separatorBefore: true },
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const asset = api.getMedia().find((item) => item.id === id);
+      if (!asset || !id) throw new Error("קובץ המדיה לא נמצא");
+      const clipRefs = (api.getClips() || []).filter((clip) => clip.sourceId === id).length;
+      const overlayRefs = api.getOverlays().filter((overlay) => overlay.assetId === id).length;
+      if (clipRefs || overlayRefs) {
+        throw new Error(`לא ניתן להסיר את \"${asset.name}\": הקובץ בשימוש ב-${clipRefs} קליפים ו-${overlayRefs} שכבות. הסר אותם מהציר קודם.`);
+      }
+      if (!api.removeMediaAsset) throw new Error("הסרת מדיה אינה זמינה");
+      api.removeMediaAsset(id);
+    },
+  });
+
+  registerCommand({
     id: "subtitle.edit",
     label: "Edit subtitle",
     labelHe: "ערוך כתובית",

@@ -21,7 +21,7 @@ import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown } from "lucide-react";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -102,6 +102,7 @@ export default function EditorPage() {
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [trackMenu, setTrackMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [subMenu, setSubMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [assetMenu, setAssetMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [commandMenu, setCommandMenu] = useState<{ x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -128,6 +129,11 @@ export default function EditorPage() {
       addOverlay,
       updateClip,
       getMedia: () => mediaRef.current,
+      removeMediaAsset: (id) => setMedia((items) => {
+        const asset = items.find((item) => item.id === id);
+        if (asset) URL.revokeObjectURL(asset.url);
+        return items.filter((item) => item.id !== id);
+      }),
       getSubs: () => subsRef.current,
       setSubs: (next) => setSubs(next),
       getTracks: () => tracksRef.current,
@@ -348,10 +354,9 @@ export default function EditorPage() {
   const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
 
   const removeMedia = (id: string) => {
-    setMedia((ms) => { const m = ms.find((x) => x.id === id); if (m) URL.revokeObjectURL(m.url); return ms.filter((x) => x.id !== id); });
-    setClips((cs) => (cs ? cs.filter((c) => c.sourceId !== id) : cs));
-    setOverlays((os) => os.filter((o) => o.assetId !== id));
-    if (selectedOverlayId) setSelectedOverlayId(null);
+    if (!editorApiRef.current) return;
+    const result = runCommand("media.remove", editorApiRef.current, { id });
+    if (!result.ok) setError(result.error);
   };
   const addMediaClip = (asset: MediaAsset, atIndex?: number) => {
     if (asset.kind === "image") {
@@ -718,6 +723,26 @@ export default function EditorPage() {
         },
       }))
     : [];
+  const assetMenuTarget = assetMenu ? media.find((asset) => asset.id === assetMenu.id) : null;
+  const assetMenuItems: CtxItem[] = assetMenuTarget && editorApiRef.current
+    ? [
+        { label: "הוסף לציר הזמן", icon: Plus, onClick: () => addMediaClip(assetMenuTarget) },
+        ...listRunnableCommands(editorApiRef.current, { clipId: null, overlayId: null, assetId: assetMenuTarget.id }, "context-menu")
+          .flatMap(({ command, args }) => {
+            const presentation = command.presentation;
+            const item: CtxItem = {
+              label: presentation?.labelHe?.(editorApiRef.current!, args) || command.labelHe,
+              icon: presentation?.icon ? COMMAND_ICONS[presentation.icon] : undefined,
+              danger: presentation?.danger,
+              onClick: () => {
+                const result = runCommand(command.id, editorApiRef.current!, args);
+                if (!result.ok) setError(result.error);
+              },
+            };
+            return presentation?.separatorBefore ? [{ sep: true, label: "" } as CtxItem, item] : [item];
+          }),
+      ]
+    : [];
 
   return (
     <div className="editor-root">
@@ -737,7 +762,8 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }}>
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia} />
+            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia}
+              onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel onAddText={addTextOverlay} />
           ) : (
@@ -874,6 +900,12 @@ export default function EditorPage() {
         y={subMenu.y}
         items={subMenuItems.length ? subMenuItems : [{ label: "אין פעולות זמינות לכתובית", disabled: true }]}
         onClose={() => setSubMenu(null)}
+      />}
+      {assetMenu && <ContextMenu
+        x={assetMenu.x}
+        y={assetMenu.y}
+        items={assetMenuItems.length ? assetMenuItems : [{ label: "אין פעולות זמינות לקובץ", disabled: true }]}
+        onClose={() => setAssetMenu(null)}
       />}
 
       <NameDialog

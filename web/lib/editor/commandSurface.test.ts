@@ -72,4 +72,11 @@ describe("dynamic command surface", () => {
     expect(listRunnableCommands(api(), { clipId: null, overlayId: null }, "context-menu").some((entry) => entry.command.id === "subtitle.delete"))
       .toBe(false);
   });
+
+  it("exposes guarded media removal only for a selected asset", () => {
+    expect(listRunnableCommands(api(), { clipId: null, overlayId: null, assetId: "m1" }, "context-menu").map((entry) => entry.command.id))
+      .toEqual(["media.remove"]);
+    expect(listRunnableCommands(api(), { clipId: null, overlayId: null }, "context-menu").some((entry) => entry.command.id === "media.remove"))
+      .toBe(false);
+  });
 });

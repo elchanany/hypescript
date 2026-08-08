@@ -89,4 +89,4 @@
 | Command menu (Ctrl/Cmd+K) מה-Registry | קיים |
 | Track (lock/mute/height/remove-safe) | קיים, דינמי מה-Registry |
 | Caption delete | קיים, דינמי מה-Registry; עריכה נשארת inline |
-| Asset menu מלא | חסר |
+| Asset add/remove menu | חלקי: remove דינמי ומוגן references; add נשאר adapter כי image/video דורשים מסלולים שונים |

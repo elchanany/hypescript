@@ -114,6 +114,21 @@ describe("CommandBus builtins", () => {
     expect(api.subs).toEqual([]);
   });
 
+  it("fails closed when removing referenced media and removes only an unused asset", () => {
+    const api = fakeApi([{ id: "c1", sourceId: "m", start: 0, end: 2 }]) as any;
+    let media = api.getMedia();
+    api.getMedia = () => media;
+    api.removeMediaAsset = (id: string) => { media = media.filter((item: any) => item.id !== id); };
+    const blocked = runCommand("media.remove", api, { id: "m" });
+    expect(blocked).toMatchObject({ ok: false });
+    expect((blocked as any).error).toContain("בשימוש");
+    expect(media).toHaveLength(1);
+
+    api.clips = [];
+    expect(runCommand("media.remove", api, { id: "m" }).ok).toBe(true);
+    expect(media).toEqual([]);
+  });
+
   it("queryProject reports counts", () => {
     const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
     const q = queryProject(api, { clipId: "a", overlayId: null });

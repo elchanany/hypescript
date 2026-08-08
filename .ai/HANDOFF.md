@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-2 Track context menu על main ב־`5ee7f61`. מקומית UI+Agent subtitle edit/delete עברו ל-CommandBus ונוסף Caption delete context-menu דינמי; right-click בתוך שדה הטקסט שומר את תפריט העריכה הטבעי. tsc, 196/196 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא Asset CommandBus/data-safety audit. Package C רק אחרי login עובד.
+AG-2 subtitle parity על main ב־`dccf792`. מקומית media.remove עבר ל-CommandBus fail-closed: asset בשימוש אינו מוסר; asset פנוי מוסר ואז URL מבוטל. Asset context-menu מקבל remove מה-Registry ושומר add adapter למסלולי image/video השונים. tsc, 198/198 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא AG-2 remaining UI מול TX-1 animation audit. Package C רק אחרי login עובד.

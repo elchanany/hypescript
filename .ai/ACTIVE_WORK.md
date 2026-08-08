@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Subtitle CommandBus + Caption menu. UI והסוכן עורכים/מוחקים כתוביות דרך אותן פקודות; right-click על שורת כתובית מציג delete דינמי מה-Registry.
+AG-2 — Safe Asset removal. media.remove עובר ב-CommandBus, מסרב להסיר asset שבשימוש ב-clips/overlays, ורק בהצלחה מבטל object URL; תפריט asset נגזר מה-Registry להסרה.
 
 ## Branch
 `main`
 
 ## Latest commit
-`5ee7f61` — dynamic Track context menu על main
+`dccf792` — subtitle CommandBus + Caption menu על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 196/196 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 198/198 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך audit Asset CommandBus/data safety. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit AG-2 remaining UI mutations מול TX-1 animation. בלי שינוי Supabase/Auth ללא אישור.

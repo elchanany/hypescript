@@ -21,6 +21,7 @@ export type CommandId =
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
+  | "media.remove"
   | "clip.setEnabled"
   | "clip.setVolume"
   | "clip.duplicate"
@@ -47,6 +48,7 @@ export interface EditorApi {
   addOverlay(o: Overlay): void;
   updateClip(id: string, patch: Partial<Clip>): void;
   getMedia(): MediaAsset[];
+  removeMediaAsset?: (id: string) => void;
   getSubs(): Sub[] | null;
   setSubs?(subs: Sub[] | null): void;
   getTracks(): TrackMeta[];
@@ -79,7 +81,7 @@ export interface CommandDef {
 }
 
 export interface CommandPresentation {
-  target?: "clip" | "gap" | "overlay" | "caption" | "track" | "video-track" | "audio-track" | "any";
+  target?: "clip" | "gap" | "overlay" | "caption" | "asset" | "track" | "video-track" | "audio-track" | "any";
   icon?: "copy" | "scissors" | "eye" | "square-dashed" | "trash" | "type" | "layers" | "lock" | "volume" | "height";
   order?: number;
   danger?: boolean;
@@ -110,6 +112,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str }),
+  "media.remove": schema(["id"], { id }),
   "clip.setEnabled": schema(["id", "enabled"], { id, enabled: bool }), "clip.setVolume": schema(["id", "volume"], { id, volume: num }),
   "clip.duplicate": schema(["id"], { id }), "caption.setStyle": schema(),
   "subtitle.edit": schema(["id", "text"], { id, text: str }), "subtitle.delete": schema(["id"], { id }),
