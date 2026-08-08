@@ -60,6 +60,8 @@ describe("CommandBus builtins", () => {
     const agentIds = listAgentCommands().map((c) => c.id);
     expect(agentIds).toContain("track.reorder");
     expect(agentIds).toContain("clip.setOpacity");
+    expect(agentIds).toContain("clip.replaceAll");
+    expect(agentIds).toContain("subtitle.replaceAll");
     expect(agentIds).toContain("overlay.addText");
     expect(agentIds).toContain("overlay.addImage");
     expect(agentIds).toContain("overlay.update");
@@ -80,6 +82,21 @@ describe("CommandBus builtins", () => {
     expect(api.clips[0].opacity).toBe(1);
     expect(runCommand("clip.setOpacity", api, { id: "a", opacity: -1 }).ok).toBe(true);
     expect(api.clips[0].opacity).toBe(0);
+  });
+
+  it("atomically replaces validated clip and subtitle collections", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]) as any;
+    api.subs = [];
+    api.getSubs = () => api.subs;
+    api.setSubs = (subtitles: any[]) => { api.subs = subtitles; };
+    const nextClips = [{ id: "b", sourceId: "m", start: 2, end: 4, trackId: "trk_video" }];
+    const nextSubs = [{ id: "s", start: 0, end: 1, text: "חדש" }];
+    expect(runCommand("clip.replaceAll", api, { clips: nextClips }).ok).toBe(true);
+    expect(runCommand("subtitle.replaceAll", api, { subtitles: nextSubs }).ok).toBe(true);
+    expect(api.clips).toEqual(nextClips);
+    expect(api.subs).toEqual(nextSubs);
+    expect(runCommand("clip.replaceAll", api, { clips: [{ id: "bad" }] }).ok).toBe(false);
+    expect(api.clips).toEqual(nextClips);
   });
 
   it("leave-gap delete preserves timeline duration", () => {

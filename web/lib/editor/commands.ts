@@ -17,6 +17,7 @@ export type CommandId =
   | "clip.trim"
   | "clip.move"
   | "clip.add"
+  | "clip.replaceAll"
   | "clip.moveToTrack"
   | "gap.close"
   | "overlay.delete"
@@ -33,6 +34,7 @@ export type CommandId =
   | "subtitle.delete"
   | "subtitle.retime"
   | "subtitle.clear"
+  | "subtitle.replaceAll"
   | "clip.roll"
   | "clip.slip"
   | "track.addVideo"
@@ -101,7 +103,7 @@ export type CommandPermission = "project.read" | "project.write" | "project.expo
 export type CommandContext = "editor" | "agent" | "shortcut" | "context-menu";
 export interface CommandSchema {
   type: "object";
-  properties?: Record<string, { type: "string" | "number" | "boolean" | "object" }>;
+  properties?: Record<string, { type: "string" | "number" | "boolean" | "object" | "array" }>;
   required?: string[];
   additionalProperties?: boolean;
 }
@@ -109,12 +111,13 @@ export interface CommandSchema {
 type CommandRegistration = Omit<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable"> &
   Partial<Pick<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable">>;
 const schema = (required: string[] = [], properties: CommandSchema["properties"] = {}): CommandSchema => ({ type: "object", properties, required, additionalProperties: true });
-const id = { type: "string" as const }, num = { type: "number" as const }, bool = { type: "boolean" as const }, str = { type: "string" as const }, obj = { type: "object" as const };
+const id = { type: "string" as const }, num = { type: "number" as const }, bool = { type: "boolean" as const }, str = { type: "string" as const }, obj = { type: "object" as const }, arr = { type: "array" as const };
 const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.delete.ripple": schema(["id"], { id }), "clip.delete.leaveGap": schema(["id"], { id }),
   "clip.splitAtPlayhead": schema(), "clip.split": schema(["id", "at_source"], { id, at_source: num }),
   "clip.trim": schema(["id"], { id, start: num, end: num }), "clip.move": schema(["id", "to_index"], { id, to_index: num }),
   "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num }),
+  "clip.replaceAll": schema(["clips"], { clips: arr }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num }),
   "overlay.addImage": schema(["assetId"], { assetId: id, start: num, end: num, width: num, height: num }),
@@ -124,13 +127,14 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.duplicate": schema(["id"], { id }), "caption.setStyle": schema(),
   "subtitle.edit": schema(["id", "text"], { id, text: str }), "subtitle.delete": schema(["id"], { id }),
   "subtitle.retime": schema(["id", "start", "end"], { id, start: num, end: num }), "subtitle.clear": schema(),
+  "subtitle.replaceAll": schema(["subtitles"], { subtitles: arr }),
   "clip.roll": schema(["delta"], { id, leftIndex: num, delta: num }), "clip.slip": schema(["id", "delta"], { id, delta: num }),
   "track.addVideo": schema([], { name: str }), "track.removeVideo": schema(["trackId"], { trackId: id }),
   "track.rename": schema(["trackId", "name"], { trackId: id, name: str }), "track.setLocked": schema(["trackId", "locked"], { trackId: id, locked: bool }),
   "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
   "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
 };
-const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "clip.setOpacity", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.replaceAll", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "clip.setOpacity", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "subtitle.replaceAll", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
 const RESULT_SCHEMA = schema(["ok"], { ok: bool });
 
 const registry = new Map<CommandId, CommandDef>();
@@ -157,7 +161,8 @@ function validateArgs(contract: CommandSchema, args: Record<string, unknown>): s
   for (const [key, spec] of Object.entries(contract.properties || {})) {
     const value = args[key];
     if (value === undefined || value === null) continue;
-    if (typeof value !== spec.type || (spec.type === "number" && !Number.isFinite(value))) return `פרמטר לא תקין: ${key}`;
+    const validType = spec.type === "array" ? Array.isArray(value) : typeof value === spec.type;
+    if (!validType || (spec.type === "number" && !Number.isFinite(value))) return `פרמטר לא תקין: ${key}`;
   }
   return null;
 }

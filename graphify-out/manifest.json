@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786197333.7831173,
-    "ast_hash": "d5c717a731dd602705633a0028f2c8f1",
+    "mtime": 1786198302.215852,
+    "ast_hash": "54f21598268eafdd994538e680ced9be",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -260,28 +260,28 @@
     "semantic_hash": ""
   },
   "web/lib/editor/clipFilter.test.ts": {
-    "mtime": 1786189582.487999,
-    "ast_hash": "d2bfa8eb3d7056bb46860aafe7aa7321",
+    "mtime": 1786207857.0947604,
+    "ast_hash": "aed3f42bd3db3ae9ec16040c76be8a90",
     "semantic_hash": ""
   },
   "web/lib/editor/clipFilter.ts": {
-    "mtime": 1786189582.492047,
-    "ast_hash": "d2912cadd1b4568dff41e36e30d9dec0",
+    "mtime": 1786207857.0962677,
+    "ast_hash": "ebed1006f21b9983ba5eaff521630521",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
-    "mtime": 1786197278.5954003,
-    "ast_hash": "77aa66e16eb5d331fd8f1db8565e7d19",
+    "mtime": 1786198180.4759278,
+    "ast_hash": "4a391ff8577e7c7a6f21ed2f2a3400cd",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
-    "mtime": 1786197385.9248934,
-    "ast_hash": "d95f1d777bc26c24e4b37d4505bd5dfa",
+    "mtime": 1786198216.7746527,
+    "ast_hash": "01d7d37f07741c5d8c3d3615d8a4234b",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786197278.5904057,
-    "ast_hash": "d2a889e081b7b797c8d5957104bc4e88",
+    "mtime": 1786198167.2460775,
+    "ast_hash": "57de89b97424c8133a364679dac23053",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.ts": {
-    "mtime": 1786189582.5182395,
-    "ast_hash": "8896c96791d6d645c0eb7c33847a94e9",
+    "mtime": 1786207857.0982802,
+    "ast_hash": "971e2cf4e0a22f70985a70fad4f36d46",
     "semantic_hash": ""
   },
   "web/lib/editor/subtitlesEdl.test.ts": {
@@ -535,18 +535,18 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786197670.122433,
-    "ast_hash": "74eba682517d31ab901acf90fce98255",
+    "mtime": 1786198566.3825848,
+    "ast_hash": "cdc93c27aa3eedce4160dc82fef0c1dd",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786197604.6986523,
-    "ast_hash": "8dfa466946f3b3c8ef2229e501267ab5",
+    "mtime": 1786198496.4189363,
+    "ast_hash": "fdb5462de7bd7afa3b1f5ac8349472ef",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786197670.1294374,
-    "ast_hash": "50a5df0eefa55d9d0a53e7a3efc5f212",
+    "mtime": 1786198566.3875875,
+    "ast_hash": "4b012b3e427daa126b7ddbec73ceb104",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "docs/AGENT_UI_PARITY.md": {
-    "mtime": 1786197604.6906426,
-    "ast_hash": "6506ae1d5c7f58d47002bb72c11eec7b",
+    "mtime": 1786198496.412924,
+    "ast_hash": "54542d406115a302cd2737677acb420d",
     "semantic_hash": ""
   },
   "docs/DATA_MODEL.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786197604.6840065,
-    "ast_hash": "dd650d1036cbc2bcca738d79b5ac36f7",
+    "mtime": 1786198496.4049623,
+    "ast_hash": "d9afec459a08c2912ad45eea0165c2de",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -920,8 +920,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.test.ts": {
-    "mtime": 1786189582.5162191,
-    "ast_hash": "47ef6b89f72e499bdd10854e1d840a69",
+    "mtime": 1786207857.0972753,
+    "ast_hash": "54581c9856dc331e64e7c32f8bb8c0b3",
     "semantic_hash": ""
   },
   "web/lib/subtitles.test.ts": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786197385.9329028,
-    "ast_hash": "1ceb8ae1d717bd94c22b0cc628dddd38",
+    "mtime": 1786198240.0414019,
+    "ast_hash": "57184feba77acf41ed24d745675226e1",
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {

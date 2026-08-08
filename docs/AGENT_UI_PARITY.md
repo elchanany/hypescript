@@ -2,7 +2,7 @@
 
 עיקרון: *No feature is complete until it is controllable through both the UI and the AI agent using the same validated command* (כשהפעולה מתאימה סמנטית לסוכן).
 
-**מצב נוכחי (אמת):** CommandBus מפרסם schema/permissions/contexts ומאחד את פעולות ה-UI המקבילות של clip/track/subtitle/overlay/media, כולל opacity ב-Preview+Export. כלי bulk/workflow של הסוכן עדיין משתמשים בחלקם ב-EditorApi ישיר ונשארו להמרה לפקודות אטומיות. מודל הרצועות הוא cutaway; alpha בין רצועות/PiP טרם קיים.
+**מצב נוכחי (אמת):** CommandBus מפרסם schema/permissions/contexts ומאחד פעולות UI וכלי agent של clip/track/subtitle/overlay/media. כלי bulk/workflow מחשבים state בכלי ומבצעים commit אטומי דרך `clip.replaceAll`/`subtitle.replaceAll`. מודל הרצועות הוא cutaway; alpha בין רצועות/PiP טרם קיים. Query API עדיין בסיסי.
 
 ## מקרא
 UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהורה) · Command (עתידי מזהה)
@@ -35,7 +35,7 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | שינוי מצב סוכן Ask/Plan/Act | ✔(dock) | n/a | — | — | n/a | חדש |
 
 ## פערי Parity מיידיים (לחבילה הבאה)
-1. **CommandBus + Command registry**: חוזי `inputSchema/resultSchema/permissions/contexts/agentCallable` קיימים ונאכפים; surfaces דינמיים קיימים. נותר להמיר כלי bulk/workflow לפקודות אטומיות.
+1. **CommandBus + Command registry**: חוזים, surfaces דינמיים ופקודות bulk אטומיות קיימים. נותר להרחיב Query API ולהשאיר File/object-URL בגבול I/O בטוח.
 2. **Query API** (`getSelection/getActiveClip/getSelectedRange/getVisibleElementsAtTime/...`) לסוכן.
 3. הרחבת registry metadata (`inputSchema/resultSchema/permissions/contexts/agentCallable`) לכל פקודות הרצועה.
 4. פעולות ידניות חסרות ב-UI: `remove_segments`/`remove_silence` (כפתורים/תפריט).

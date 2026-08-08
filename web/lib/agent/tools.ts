@@ -230,11 +230,23 @@ function setClips(ctx: AgentContext, clips: Clip[] | null) {
   const primary = primaryVideoTrackId(ctx.tracks || []);
   const tagged = clips?.map((c) => (c.trackId ? c : { ...c, trackId: primary })) ?? null;
   if (ctx.editorApi) {
-    ctx.editorApi.setClips(tagged);
+    const result = runCommand("clip.replaceAll", ctx.editorApi, { clips: tagged || [] });
+    if (!result.ok) throw new Error(result.error);
     syncFromEditor(ctx);
     ctx._editorDirty = true;
   } else {
     ctx.clips = tagged;
+  }
+}
+
+function setSubs(ctx: AgentContext, subtitles: Sub[]) {
+  if (ctx.editorApi) {
+    const result = runCommand("subtitle.replaceAll", ctx.editorApi, { subtitles });
+    if (!result.ok) throw new Error(result.error);
+    syncFromEditor(ctx);
+    ctx._editorDirty = true;
+  } else {
+    ctx.subs = subtitles;
   }
 }
 
@@ -1281,12 +1293,13 @@ export const TOOLS: ToolMeta[] = [
       if (script) ctx.script = script;
       const modeRaw = String(a.mode || "progressive").toLowerCase();
       const mode = modeRaw === "phrase" ? "phrase" as const : "progressive" as const;
-      ctx.subs = script
+      const generated = script
         ? edlToSubsWithScript(clips, getWords, script, max, { mode })
         : edlToSubs(clips, getWords, max, { mode });
+      setSubs(ctx, generated);
       return script
-        ? `נוצרו ${ctx.subs.length} כתוביות (${mode}) לפי הסקריפט הנקי — תזמון מהתמלול, טקסט מתוקן, חשיפה לפי קצב דיבור. בדוק list_subtitles.`
-        : `נוצרו ${ctx.subs.length} כתוביות (${mode}) מהתמלול הגולמי. אם יש טקסט נקי — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
+        ? `נוצרו ${generated.length} כתוביות (${mode}) לפי הסקריפט הנקי — תזמון מהתמלול, טקסט מתוקן, חשיפה לפי קצב דיבור. בדוק list_subtitles.`
+        : `נוצרו ${generated.length} כתוביות (${mode}) מהתמלול הגולמי. אם יש טקסט נקי — הרץ שוב עם script=... כדי לתקן שיבושי ASR.`;
     },
   },
   {
@@ -1362,7 +1375,7 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const subs = parseSrt(String(a.content || ""));
       if (!subs.length) return "לא זוהו כתוביות בתוכן.";
-      ctx.subs = subs;
+      setSubs(ctx, subs);
       return `יובאו ${subs.length} כתוביות. אפשר לערוך/לייצא.`;
     },
   },

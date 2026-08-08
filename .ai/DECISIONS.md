@@ -42,3 +42,13 @@
 - **בחירה:** (1) `clip.trackId` + N רצועות `type:"video"` (schema v5); (2) קומפוזיציה = cutaway (`flattenVideoTracks`, order גבוה מנצח) לנגן ולייצוא; (3) סוכן משנה פרויקט דרך `EditorApi`/`runCommand` עם `_editorDirty` (בלי History כפול), וכלים משני-state בסדר.
 - **סיבה:** בקשת משתמש לרענון מיידי בעורך + מונטאז'/רצועות; AG-2 parity.
 - **השלכה:** אודיו בזמן חפיפה מגיע מהרצועה המנצחת (לא A-roll שמור); clip opacity מיושם מול שחור באופן זהה בנגן ובייצוא. PiP/alpha שמגלה רצועה תחתונה נשאר compositor עתידי.
+
+## D-009 — Commit אטומי לכלי workflow
+- **בחירה:** חישובי keep/remove/filter/generate/import נשארים פונקציות וכלים ייעודיים; החלת EDL/כתוביות מלאה נעשית דרך `clip.replaceAll` ו-`subtitle.replaceAll` עם אימות collection לפני mutation.
+- **סיבה:** כלי bulk צריכים Undo/checkpoint יחיד ונתיב state זהה לעורך, בלי להפוך את CommandBus למנוע ניתוח.
+- **השלכה:** `setClips`/יצירה וייבוא מלא של כתוביות בסוכן אינם כותבים עוד ישירות ל-EditorApi; fallback מקומי נשמר רק כשאין גשר עורך.
+
+## D-010 — חיתוכים שנוצרים אוטומטית: סופיים, חיוביים, source-non-overlapping
+- **בחירה:** חיתוכים הנוצרים מאותו מקור חייבים להיות סופיים (finite), חיוביים (`end > start`) וללא חפיפות; נורמליזציה/הידוק חפיפות נעשים **בגבולות ה-generation** (בסוף `scriptToClips`/`snapSpeechToWords`), לא גלובלית על כל הרצועה.
+- **סיבה:** חפיפת ASR נסבלת (~150ms) גרמה להשמעה כפולה של הברות גבול במעבר בין קליפים; נורמליזציה גלובלית הייתה חוסמת חזרות ידניות מכוונות.
+- **השלכה:** `scriptToClips` מהדק חפיפה נסבלת ל-`lastEndTime` ודוחה שארית קצרה מ-`minClipSec`; `snapSpeechToWords` מאחד מקטעים חופפים מאותו מקור אחרי snap+pad. חזרות מכוונות שהמשתמש מכניס ידנית נשארות אפשריות.

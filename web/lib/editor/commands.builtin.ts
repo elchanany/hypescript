@@ -1,5 +1,6 @@
 // Register built-in editor commands used by UI + Agent.
-import { addClip, assembledToSource, clipDur, splitClip, trimClip, uid } from "./model";
+import { addClip, assembledToSource, clipDur, splitClip, trimClip, uid, type Clip } from "./model";
+import type { Sub } from "./subtitlesEdl";
 import { makeImageOverlay, makeTextOverlay } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
@@ -379,6 +380,25 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "clip.replaceAll",
+    label: "Replace clip timeline",
+    labelHe: "החלף את ציר הקליפים",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const clips = args?.clips;
+      if (!Array.isArray(clips)) throw new Error("רשימת קליפים לא תקינה");
+      for (const raw of clips) {
+        if (!raw || typeof raw !== "object") throw new Error("קליפ לא תקין");
+        const clip = raw as Partial<Clip>;
+        if (!clip.id || !clip.sourceId || !Number.isFinite(clip.start) || !Number.isFinite(clip.end) || Number(clip.end) <= Number(clip.start)) {
+          throw new Error("קליפ לא תקין");
+        }
+      }
+      api.setClips(clips as Clip[]);
+    },
+  });
+
+  registerCommand({
     id: "clip.setOpacity",
     label: "Set clip opacity",
     labelHe: "שקיפות קטע",
@@ -504,6 +524,25 @@ export function ensureBuiltinCommands() {
     run: (api) => {
       if (!api.setSubs) throw new Error("כתוביות אינן זמינות");
       api.setSubs([]);
+    },
+  });
+
+  registerCommand({
+    id: "subtitle.replaceAll",
+    label: "Replace subtitles",
+    labelHe: "החלף את כל הכתוביות",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const subtitles = args?.subtitles;
+      if (!api.setSubs || !Array.isArray(subtitles)) throw new Error("רשימת כתוביות לא תקינה");
+      for (const raw of subtitles) {
+        if (!raw || typeof raw !== "object") throw new Error("כתובית לא תקינה");
+        const sub = raw as Partial<Sub>;
+        if (!sub.id || typeof sub.text !== "string" || !Number.isFinite(sub.start) || !Number.isFinite(sub.end) || Number(sub.end) <= Number(sub.start)) {
+          throw new Error("כתובית לא תקינה");
+        }
+      }
+      api.setSubs(subtitles as Sub[]);
     },
   });
 

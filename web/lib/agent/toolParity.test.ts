@@ -117,6 +117,16 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("routes bulk clip and subtitle replacement through atomic commands", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.clear_clips.run({}, h.ctx, () => undefined);
+    expect(h.clips()).toEqual([]);
+    await TOOL_BY_NAME.import_srt.run({ content: "1\n00:00:00,000 --> 00:00:01,000\nשלום\n" }, h.ctx, () => undefined);
+    expect(h.subs()).toHaveLength(1);
+    expect(h.subs()[0]).toMatchObject({ start: 0, end: 1, text: "שלום" });
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
   it("routes overlay add, update, and delete tools through the shared commands", async () => {
     const h = contextWithEditor();
     h.ctx.media.push({ id: "image-1", name: "logo.png", kind: "image", file: null as any, duration: 4, url: "blob:logo" });

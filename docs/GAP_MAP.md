@@ -56,7 +56,7 @@
 | Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |
-| CommandBus + Query API | PARTIAL | פקודות clip/track/subtitle/overlay/Inspector/timeline/media/opacity משותפות; File probe/object-URL נשאר גבול I/O; נותר להעביר כלי bulk/workflow של הסוכן וליישר Query API מלא |
+| CommandBus + Query API | PARTIAL | פעולות UI וכלי agent יחידניים וב־bulk עוברים דרך פקודות מאומתות, כולל clip/subtitle replace אטומי; File probe/object-URL נשאר גבול I/O; נותר Query API עשיר יותר |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
@@ -90,7 +90,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — פעולות UI והכלים המקבילים דרך CommandBus כולל opacity עם Preview+Export; נותרו כלי bulk/workflow של הסוכן (`keep/remove/filter/generate/import`) ו-Query API מלא
+- **AG-2**: PARTIAL — פעולות UI וכלי agent יחידניים וב־bulk דרך CommandBus, כולל opacity ו-atomic clip/subtitle replace; חפיפת השמעה בין חיתוכים שנוצרו מהסקריפט תוקנה (`d3bc7b1`); נותר Query API עשיר יותר ו-I/O media generated שאינו חוזה JSON
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
@@ -98,3 +98,4 @@
 ### P3
 - Templates / Effects / Transitions / Filters (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
+- Semantic timeline understanding: MISSING/PARTIAL — per-time-span speech/audio events + gaps (ואחר כך energy evidence) חסר; אין להציג הבנה סמנטית של שיעול/נשימה/צחוק מעבר לעדות `audio_event` של הספק
