@@ -27,7 +27,10 @@ export type CommandId =
   | "clip.roll"
   | "clip.slip"
   | "track.addVideo"
-  | "track.removeVideo";
+  | "track.removeVideo"
+  | "track.rename"
+  | "track.setLocked"
+  | "track.setMuted";
 
 export interface EditorApi {
   getClips(): Clip[] | null;

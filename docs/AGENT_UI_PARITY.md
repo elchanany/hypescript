@@ -29,13 +29,13 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | תזמון/מחיקה/ניקוי כתוביות | ✔(חלקי) | `retime/delete/clear_subtitles` | ✔ | `UPDATE_CAPTION_TIMING`... | ✔ | |
 | ייבוא/ייצוא SRT | ✔ | `import/export_srt` | ✔ | `IMPORT_SRT`/`EXPORT_SRT` | ✔ | |
 | רינדור/ייצוא | ✔(Export) | `render_video` | ✔ `RenderBackend` | `EXPORT_PROJECT` | n/a | native verified |
-| רצועות (rename/lock/mute/height/reorder) | ✔ | חלקי | ✔ `useEditor` | `track.*` | ✔ | add/remove video + list_tracks בסוכן; rename/lock עדיין UI |
+| רצועות (rename/lock/mute/height/reorder) | ✔ | חלקי | ✔ `track.rename/setLocked/setMuted` | `track.*` | ✔ | rename/lock/mute משותפים ל-UI+Agent; height/reorder עדיין UI בלבד |
 | רצועת וידאו נוספת / העברת קליפ | ✔(+) | ✔ `add_video_track` / `move_clip_to_track` | ✔ | `track.addVideo` / `clip.moveToTrack` | ✔ | cutaway בנגן+ייצוא |
 | שינוי מצב סוכן Ask/Plan/Act | ✔(dock) | n/a | — | — | n/a | חדש |
 
 ## פערי Parity מיידיים (לחבילה הבאה)
 1. **CommandBus + Command registry** עם `inputSchema/resultSchema/permissions/contexts/agentCallable` — מקור אחד ל-UI/Agent/palette/shortcut/context-menu.
 2. **Query API** (`getSelection/getActiveClip/getSelectedRange/getVisibleElementsAtTime/...`) לסוכן.
-3. פעולות רצועה נוספות לסוכן ול-CommandBus (rename/lock/mute/height/reorder).
+3. פעולות רצועה נוספות לסוכן ול-CommandBus (height/reorder).
 4. פעולות ידניות חסרות ב-UI: `remove_segments`/`remove_silence` (כפתורים/תפריט).
 5. Message normalizer + idempotency + repair (DeepSeek reasoning) — בדיקות פר-ספק.

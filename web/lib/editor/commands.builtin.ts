@@ -331,4 +331,41 @@ export function ensureBuiltinCommands() {
     },
   });
 
+  registerCommand({
+    id: "track.rename",
+    label: "Rename track",
+    labelHe: "שנה שם רצועה",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      const name = String(args?.name || "").trim();
+      if (!trackId || !name) throw new Error("חסרים trackId או name");
+      if (!api.getTracks().some((t) => t.id === trackId)) throw new Error("רצועה לא נמצאה");
+      api.setTracks(api.getTracks().map((t) => t.id === trackId ? { ...t, name } : t));
+    },
+  });
+
+  registerCommand({
+    id: "track.setLocked",
+    label: "Set track locked",
+    labelHe: "נעל/שחרר רצועה",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      if (!trackId || !api.getTracks().some((t) => t.id === trackId)) throw new Error("רצועה לא נמצאה");
+      api.setTracks(api.getTracks().map((t) => t.id === trackId ? { ...t, locked: !!args?.locked } : t));
+    },
+  });
+
+  registerCommand({
+    id: "track.setMuted",
+    label: "Set track muted",
+    labelHe: "השתק/בטל השתקת רצועה",
+    run: (api, args) => {
+      const trackId = String(args?.trackId || "");
+      const track = api.getTracks().find((t) => t.id === trackId);
+      if (!track) throw new Error("רצועה לא נמצאה");
+      if (track.type !== "audio") throw new Error("השתקה זמינה כרגע לרצועת אודיו בלבד");
+      api.setTracks(api.getTracks().map((t) => t.id === trackId ? { ...t, muted: !!args?.muted } : t));
+    },
+  });
+
 }

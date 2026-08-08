@@ -1,16 +1,16 @@
 # Graph Report - hipescript  (2026-08-08)
 
 ## Corpus Check
-- 217 files · ~413,582 words
+- 217 files · ~414,393 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1541 nodes · 3235 edges · 111 communities (93 shown, 18 thin omitted)
+- 1541 nodes · 3237 edges · 111 communities (93 shown, 18 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.7)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b23f978f`
+- Built from commit: `86348eb1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -122,9 +122,9 @@
 - ChatMarkdown.tsx
 - ChatMediaCard.tsx
 - Word
-- audio.ts
 - ThemeProvider.tsx
 - layout.tsx
+- audio.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `EditorPage()` - 52 edges
@@ -511,17 +511,17 @@ Nodes (6): BeatAudioPlayer(), ChatMediaCard(), fmt(), LABEL, MKind, Props
 Cohesion: 0.36
 Nodes (6): ElevenLabsSttRaw, ElevenLabsWordRaw, mapTokenType(), NormalizedTranscript, normalizeElevenLabsStt(), Word
 
-### Community 108 - "audio.ts"
-Cohesion: 0.33
-Nodes (6): analyzeAudio(), avgDb(), cache, EnergyProfile, findSilences(), fp()
-
-### Community 109 - "ThemeProvider.tsx"
+### Community 108 - "ThemeProvider.tsx"
 Cohesion: 0.29
 Nodes (8): OnboardingPage(), Step, Ctx, resolve(), ThemeCtx, ThemeMode, ThemeProvider(), useTheme()
 
-### Community 110 - "layout.tsx"
+### Community 109 - "layout.tsx"
 Cohesion: 0.28
 Nodes (6): metadata, viewport, ChunkReload(), isChunkError(), BRAND_TAGLINE_EN, BRAND_TAGLINE_HE
+
+### Community 110 - "audio.ts"
+Cohesion: 0.33
+Nodes (6): analyzeAudio(), avgDb(), cache, EnergyProfile, findSilences(), fp()
 
 ## Knowledge Gaps
 - **487 isolated node(s):** `track-edit.sh script`, `runtime`, `maxDuration`, `runtime`, `runtime` (+482 more)

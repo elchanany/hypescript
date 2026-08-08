@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — איחוד פעולות Agent/UI דרך CommandBus. `set_clip_enabled` ו־`set_clip_volume` הועברו ל־`clip.setEnabled`/`clip.setVolume` עם בדיקות parity.
+AG-2 — איחוד פעולות Agent/UI דרך CommandBus. אחרי clip enabled/volume, נוספו `track.rename`/`track.setLocked`/`track.setMuted`; ה־UI וכלי הסוכן משתמשים באותן פקודות.
 
 ## Branch
 `main`
 
 ## Latest commit
-`b23f978` — main לפני לולאת AG-2 המקומית
+`86348eb` — clip enabled/volume parity על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 171/171 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 172/172 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push ל־main; אחר כך להמשיך AG-2 לפעולות track rename/lock/mute דרך CommandBus. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך AG-2 track height/reorder. בלי שינוי Supabase/Auth ללא אישור.

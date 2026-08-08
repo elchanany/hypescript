@@ -775,6 +775,46 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "rename_track", label: "שינוי שם רצועה", color: "#64748b", icon: "✏️",
+    schema: { name: "rename_track", description: "משנה שם רצועה לפי id, שם או אינדקס 1-based.", parameters: { type: "object", properties: { track: { type: "string" }, name: { type: "string" } }, required: ["track", "name"] } },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const track = /^\d+$/.test(ref) ? ctx.tracks[Number(ref) - 1] : ctx.tracks.find((t) => t.id === ref || t.name === ref || t.name.includes(ref));
+      if (!track) return "רצועה לא נמצאה. השתמש ב-list_tracks.";
+      const e = dispatch(ctx, "track.rename", { trackId: track.id, name: a.name });
+      if (e === "NO_API") setTracks(ctx, ctx.tracks.map((t) => t.id === track.id ? { ...t, name: String(a.name).trim() } : t));
+      else if (e) return `שגיאה: ${e}`;
+      return `שם הרצועה שונה ל-${String(a.name).trim()}.`;
+    },
+  },
+  {
+    name: "set_track_locked", label: "נעילת רצועה", color: "#64748b", icon: "🔒",
+    schema: { name: "set_track_locked", description: "נועל או משחרר רצועה לפי id, שם או אינדקס 1-based.", parameters: { type: "object", properties: { track: { type: "string" }, locked: { type: "boolean" } }, required: ["track", "locked"] } },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const track = /^\d+$/.test(ref) ? ctx.tracks[Number(ref) - 1] : ctx.tracks.find((t) => t.id === ref || t.name === ref || t.name.includes(ref));
+      if (!track) return "רצועה לא נמצאה. השתמש ב-list_tracks.";
+      const e = dispatch(ctx, "track.setLocked", { trackId: track.id, locked: !!a.locked });
+      if (e === "NO_API") setTracks(ctx, ctx.tracks.map((t) => t.id === track.id ? { ...t, locked: !!a.locked } : t));
+      else if (e) return `שגיאה: ${e}`;
+      return `רצועת ${track.name}: ${a.locked ? "נעולה" : "משוחררת"}.`;
+    },
+  },
+  {
+    name: "set_track_muted", label: "השתקת רצועה", color: "#64748b", icon: "🔇",
+    schema: { name: "set_track_muted", description: "משתיק או מפעיל רצועת אודיו לפי id, שם או אינדקס 1-based.", parameters: { type: "object", properties: { track: { type: "string" }, muted: { type: "boolean" } }, required: ["track", "muted"] } },
+    run: async (a, ctx) => {
+      const ref = String(a.track || "").trim();
+      const track = /^\d+$/.test(ref) ? ctx.tracks[Number(ref) - 1] : ctx.tracks.find((t) => t.id === ref || t.name === ref || t.name.includes(ref));
+      if (!track) return "רצועה לא נמצאה. השתמש ב-list_tracks.";
+      if (track.type !== "audio") return "השתקה זמינה כרגע לרצועת אודיו בלבד.";
+      const e = dispatch(ctx, "track.setMuted", { trackId: track.id, muted: !!a.muted });
+      if (e === "NO_API") setTracks(ctx, ctx.tracks.map((t) => t.id === track.id ? { ...t, muted: !!a.muted } : t));
+      else if (e) return `שגיאה: ${e}`;
+      return `רצועת ${track.name}: ${a.muted ? "מושתקת" : "פעילה"}.`;
+    },
+  },
+  {
     name: "add_video_track", label: "הוספת רצועת וידאו", color: "#10b981", icon: "➕",
     schema: {
       name: "add_video_track",
