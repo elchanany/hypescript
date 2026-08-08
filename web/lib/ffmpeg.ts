@@ -15,6 +15,7 @@ import { materializeOverlays } from "./render/materializeOverlays";
 import { materializeCaptions } from "./render/captionBurn";
 import { Sub } from "./editor/subtitlesEdl";
 import { CaptionStyle } from "./editor/captionStyle";
+import type { MicroEdl } from "./render/timelineFrame";
 
 export type { RenderTarget } from "./render/graph";
 
@@ -310,4 +311,37 @@ export async function renderEDL(
       if (opts.signal && onAbort) opts.signal.removeEventListener("abort", onAbort);
     }
   });
+}
+
+export interface TimelineFrameRequest {
+  media: MediaAsset[];
+  micro: MicroEdl;
+  canvas: CanvasSize;
+  captionStyle?: CaptionStyle | null;
+}
+
+/**
+ * Render ONE composited timeline frame through the exact export path (renderEDL with
+ * overlay/caption burn-in) and extract a PNG from the result — so the screenshot shows
+ * what the edited output actually looks like at that assembled timestamp (base/cutaway/
+ * gap, clip opacity/fades, active overlays and active styled captions).
+ *
+ * renderEDL and extractFrame each serialize through runExclusive; they are awaited
+ * SEQUENTIALLY here and never nested.
+ */
+export async function renderTimelineFrame(req: TimelineFrameRequest): Promise<Blob> {
+  const { media, micro, canvas, captionStyle } = req;
+  const mp4 = await renderEDL(media, micro.segments, undefined, undefined, {
+    audioMuted: true,
+    overlays: micro.overlays,
+    canvas,
+    subs: micro.subs,
+    captionStyle: captionStyle ?? null,
+    burnCaptions: true,
+  });
+  const file = new File([mp4], "micro.mp4", { type: "video/mp4" });
+  // The micro render is frame-quantized and can be a hair shorter than microDuration —
+  // seek strictly inside the clip so extraction always hits a frame.
+  const seek = Math.max(0, Math.min(micro.captureAt, Math.max(0, micro.microDuration - 0.02)));
+  return extractFrame(file, seek);
 }

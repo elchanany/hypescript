@@ -15,6 +15,7 @@ import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
+import { CaptionStyle } from "@/lib/editor/captionStyle";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
@@ -94,6 +95,8 @@ interface ChatProps {
   script?: string;
   overlays?: Overlay[];
   canvas?: CanvasSize;
+  /** סגנון כתוביות נוכחי — משמש את capture_frame (timeline=true) לצריבת כתוביות */
+  captionStyle?: CaptionStyle;
   projectId: string | null;
   onProject: (p: {
     words: Word[] | null;
@@ -127,7 +130,7 @@ const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -195,6 +198,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const ctxRef = useRef<AgentContext>({
     media: [], duration: 0, words: null, transcripts: {}, clips: null, subs: null,
     overlays: [], tracks: defaultTracks(), canvas: defaultCanvasFor(), lastRender: null,
+    captionStyle: null,
     editorApi: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
     pendingImages: [],
@@ -272,8 +276,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     }
     c.canvas = canvas || defaultCanvasFor();
     c.editorApi = editorApi || null;
+    c.captionStyle = captionStyle || null;
     if (script.trim()) c.script = script.trim();
-  }, [media, words, clips, subs, overlays, tracks, canvas, script, editorApi]);
+  }, [media, words, clips, subs, overlays, tracks, canvas, script, editorApi, captionStyle]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));

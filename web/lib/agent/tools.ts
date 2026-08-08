@@ -12,7 +12,7 @@ import {
 } from "@/lib/elevenlabs/prefs";
 import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
-  addClip, assembledToSource, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
+  addClip, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import { clampOverlayTransform, imageOverlayGeometry, Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
@@ -29,6 +29,7 @@ import {
 } from "@/lib/editor/clipFilter";
 import { DEFAULT_FILLERS } from "@/lib/editing";
 import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
+import { CaptionStyle } from "@/lib/editor/captionStyle";
 import {
   assembleTranscript,
   assembledDuration,
@@ -42,6 +43,7 @@ import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
 import { colorPreset } from "@/lib/editor/colorPresets";
+import { buildMicroEdl } from "@/lib/render/timelineFrame";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -59,6 +61,8 @@ export interface AgentContext {
   overlays: Overlay[];
   tracks: TrackMeta[];
   canvas: CanvasSize;
+  /** סגנון כתוביות נוכחי מהפאנל — לצריבה בפריימים מורכבים (capture_frame timeline=true) */
+  captionStyle?: CaptionStyle | null;
   lastRender: Blob | null;
   /** גשר ל-CommandBus/useEditor — עדכון מיידי בעורך + Undo */
   editorApi?: EditorApi | null;
@@ -120,6 +124,24 @@ function overlayTarget(args: any, ctx: AgentContext): { overlay: Overlay; index:
     }
   }
   return { overlay, index };
+}
+
+export type CaptureFrameMode = "timeline" | "source";
+
+/**
+ * Decide the capture_frame frame source (pure — the only coercion in the tool).
+ *
+ * - explicit `timeline=true`  → composited timeline frame
+ * - explicit `timeline=false` → raw source frame (even when an EDL exists)
+ * - explicit `source`         → raw source frame
+ * - omitted + edited timeline exists → composited (the documented default)
+ * - otherwise                 → raw source frame
+ */
+export function captureFrameMode(timeline: unknown, source: unknown, hasEditedTimeline: boolean): CaptureFrameMode {
+  if (timeline === true || timeline === "true") return "timeline";
+  if (timeline === false || timeline === "false") return "source";
+  if (source !== undefined && source !== null && source !== "") return "source";
+  return hasEditedTimeline ? "timeline" : "source";
 }
 
 export type Reporter = (status: string) => void;
@@ -765,25 +787,52 @@ export const TOOLS: ToolMeta[] = [
     name: "capture_frame", label: "צילום פריים", color: "#06b6d4", icon: "📸",
     schema: {
       name: "capture_frame",
-      description: "מצלם פריים בשנייה מדויקת — כדי לבדוק איך נראה הווידאו בנקודה מסוימת. מקור: סרטון ספציפי (source) או הציר הערוך (timeline=true). התמונה מוצגת בצ'אט, ואם הספק תומך בראייה — תוכל לנתח אותה בתור הבא.",
-      parameters: { type: "object", properties: { at_seconds: { type: "number", description: "השנייה לצילום" }, source: { type: "string", description: "סרטון מקור (אופציונלי)" }, timeline: { type: "boolean", description: "true = השנייה על הציר הערוך (assembled), לא על המקור" } }, required: ["at_seconds"] },
+      description:
+        "מצלם פריים בשנייה מדויקת — כדי לבדוק איך נראה הווידאו בנקודה מסוימת. " +
+        "ברירת מחדל (כשיש ציר ערוך ואין source): פריים מורכב מהציר — בדיוק מה שייראה בייצוא באותו רגע (כולל cutaway, אובריי וכתוביות פעילים, לפי סגנון הכתוביות הנוכחי). " +
+        "timeline=false או ציון source: פריים גולמי מהמקור (לפני עריכה). התמונה מוצגת בצ'אט, ואם הספק תומך בראייה — תוכל לנתח אותה בתור הבא.",
+      parameters: { type: "object", properties: { at_seconds: { type: "number", description: "השנייה לצילום" }, source: { type: "string", description: "סרטון מקור — ציון שלו הופך את הצילום לגולמי (לא מורכב)" }, timeline: { type: "boolean", description: "אופציונלי. true = השנייה על הציר הערוך (assembled) — פריים מורכב כמו בייצוא; false = פריים גולמי מהמקור. מושמט: מורכב כשיש ציר ערוך, אחרת גולמי." } }, required: ["at_seconds"] },
     },
     run: async (a, ctx) => {
-      let asset: MediaAsset | undefined;
-      let srcTime = +a.at_seconds;
-      if (a.timeline && ctx.clips?.length) {
-        const { index, source } = assembledToSource(ctx.clips, +a.at_seconds);
-        asset = index >= 0 ? mediaById(ctx.media, ctx.clips[index].sourceId) : undefined;
-        srcTime = source;
-      } else {
-        asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+      const at = +a.at_seconds;
+      const mode = captureFrameMode(a.timeline, a.source, !!ctx.clips?.length);
+
+      if (mode === "timeline") {
+        // פריים מורכב: מיקרו-EDL של ~0.25s דרך מסלול הייצוא המאומת (renderEDL + burn-in) → חילוץ PNG
+        let renderTimelineFrame: typeof import("@/lib/ffmpeg").renderTimelineFrame;
+        try { ({ renderTimelineFrame } = await import("@/lib/ffmpeg")); }
+        catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז צלם שוב."); }
+        const micro = buildMicroEdl(
+          ctx.clips!, ctx.tracks || [], at,
+          ctx.overlays || [], ctx.subs || [], {},
+        );
+        if (!micro) return "שגיאה: אין תוכן על הציר הערוך לצילום.";
+        const blob = await renderTimelineFrame({
+          media: ctx.media,
+          micro,
+          canvas: ctx.canvas || defaultCanvasFor(),
+          captionStyle: ctx.captionStyle ?? null,
+        });
+        try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+        const srcName = mediaById(ctx.media, micro.segments[0]?.sourceId)?.name;
+        const where = micro.gap
+          ? "רווח (שחור)"
+          : `מקור "${srcName || "?"}" ב-${micro.sourceTime.toFixed(1)}s`;
+        return {
+          text: `צולם פריים מורכב מהציר הערוך בשנייה ${at.toFixed(1)} (${where}; אובריי וכתוביות פעילים + סגנון כתוביות נוכחי נכללו; ברזולוציית ייצוא). ${micro.gap ? "הנקודה היא רווח — צולם שחור. " : ""}הערה: צילום כזה איטי יותר מפריים גולמי (מרנדר מיקרו-קטע). אם צריך רק את המקור — timeline=false.`,
+          artifacts: [{ blob, name: `timeline_${at.toFixed(1)}s.png`, kind: "image" }],
+        };
       }
+
+      // פריים גולמי מהמקור (התנהגות קודמת, ללא קומפוזיציה)
+      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "אין סרטון לצילום.";
+      const srcTime = +a.at_seconds;
       const { extractFrame } = await import("@/lib/ffmpeg");
       const blob = await extractFrame(asset.file, srcTime);
       try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
       return {
-        text: `צולם פריים מ-"${asset.name}" בשנייה ${srcTime.toFixed(1)} (מוצג בצ'אט). אם הספק תומך בראייה — אנתח אותו בתור הבא.`,
+        text: `צולם פריים גולמי מהמקור "${asset.name}" בשנייה ${srcTime.toFixed(1)} (בלי אובריי/כתוביות). לצילום מורכב של מה שנראה בפועל — השתמש ב-timeline=true.`,
         artifacts: [{ blob, name: `frame_${srcTime.toFixed(1)}s.png`, kind: "image" }],
       };
     },

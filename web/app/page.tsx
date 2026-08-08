@@ -775,6 +775,7 @@ export default function EditorPage() {
       <aside className="agent-dock" style={{ width: chatWidth }}>
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           script={script} overlays={overlays} canvas={canvas} projectId={projectId}
+          captionStyle={captionStyle}
           editorApi={editorApiRef.current} tracks={tracks}
           onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
             setWords(w);
