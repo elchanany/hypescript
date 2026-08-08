@@ -18,6 +18,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { ChatMessage } from "@/lib/agent/types";
 import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
+import { approvedPlanPrompt, parsePlanSteps } from "@/lib/agent/planApproval";
 import {
   activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore,
   switchConversation, upsertActive,
@@ -321,7 +322,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
       runnerRef.current = new AgentRunner(provider, ctxRef.current, {
-        onAssistant: (text) => setItems((p) => [...p, { kind: "assistant", text, time: now() }]),
+        onAssistant: (text, responseMode) => setItems((p) => [...p, responseMode === "plan"
+          ? { kind: "plan", id: `plan_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, text, steps: parsePlanSteps(text), state: "pending", time: now() }
+          : { kind: "assistant", text, time: now() }]),
         onToolStart: (call, toolProvider) => {
           const m = TOOL_BY_NAME[call.name];
           setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider], args: { ...call.arguments }, startedAt: Date.now() }]);
@@ -398,6 +401,26 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     if (!tool.checkpoint || !editorApi?.restoreSnapshot) return;
     editorApi.restoreSnapshot(tool.checkpoint);
     setItems((p) => p.map((it) => it.kind === "tool" && it.id === tool.id ? { ...it, restored: true } : it));
+  };
+  const approvePlan = (plan: Extract<Item, { kind: "plan" }>) => {
+    if (running || plan.state !== "pending") return;
+    const command = approvedPlanPrompt(plan.text);
+    setItems((p) => [
+      ...p.map((it) => it.kind === "plan" && it.id === plan.id ? { ...it, state: "approved" as const } : it),
+      { kind: "user", text: "התוכנית אושרה — בצע אותה.", time: now() } as Item,
+    ]);
+    changeMode("act");
+    setRunning(true);
+    const runner = getRunner();
+    runner.mode = "act";
+    runner.send(command);
+  };
+  const revisePlan = (plan: Extract<Item, { kind: "plan" }>) => {
+    if (running || plan.state !== "pending") return;
+    setItems((p) => p.map((it) => it.kind === "plan" && it.id === plan.id ? { ...it, state: "revision" as const } : it));
+    changeMode("plan");
+    setInput("עדכן את התוכנית הזו כך ש");
+    requestAnimationFrame(() => taRef.current?.focus());
   };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
@@ -547,6 +570,29 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   {it.state === "error" && it.args && <button className="btn sm" onClick={() => retryTool(it)} disabled={running}>נסה שוב</button>}
                   {it.state === "ok" && it.checkpoint && <button className="btn sm" onClick={() => restoreToolCheckpoint(it)} disabled={running || it.restored}>{it.restored ? "שוחזר" : "שחזר"}</button>}
                 </span>
+              </div>
+            );
+          }
+          if (it.kind === "plan") {
+            return (
+              <div key={it.id} className="msg2 assistant" role="region" aria-label="תוכנית עריכה לאישור">
+                <div className="b">
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><ClipboardList size={15} />תוכנית עריכה</div>
+                  {it.steps.length > 0 ? (
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {it.steps.map((step, index) => <div key={index} style={{ display: "flex", gap: 7 }}><span aria-hidden="true">☐</span><span>{step}</span></div>)}
+                    </div>
+                  ) : <ChatMarkdown text={it.text} />}
+                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                    {it.state === "pending" && <>
+                      <button className="btn primary sm" onClick={() => approvePlan(it)} disabled={running}>אשר ובצע</button>
+                      <button className="btn sm" onClick={() => revisePlan(it)} disabled={running}>בקש שינוי</button>
+                    </>}
+                    {it.state === "approved" && <span className="ctx-chip on"><Check size={12} />אושרה ונשלחה לביצוע</span>}
+                    {it.state === "revision" && <span className="ctx-chip muted">ממתינה לעדכון</span>}
+                  </div>
+                </div>
+                <span className="t">{it.time}</span>
               </div>
             );
           }

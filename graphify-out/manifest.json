@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786191998.705431,
-    "ast_hash": "6062bdb6652eb44f79a9f61947d45908",
+    "mtime": 1786192451.714297,
+    "ast_hash": "3e7e42f710ec97367cf880b911736b57",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -190,8 +190,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/chatStore.ts": {
-    "mtime": 1786191998.6847825,
-    "ast_hash": "d104cbd8137b38266b838dc3b2587f8e",
+    "mtime": 1786192451.7042232,
+    "ast_hash": "25b6f75e18ce57442d2a0f6a001aa035",
     "semantic_hash": ""
   },
   "web/lib/agent/collapseTools.test.ts": {
@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "web/lib/agent/runtime.ts": {
-    "mtime": 1786191998.680781,
-    "ast_hash": "643e5b73e4c174610df33b09f713a5b1",
+    "mtime": 1786192491.8135827,
+    "ast_hash": "855873bdf01420877cc765e1c0ffbed5",
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786190589.3099637,
-    "ast_hash": "7afb9d9176b56f420794d43a410c66c7",
+    "mtime": 1786192451.697145,
+    "ast_hash": "5d7ad2fbb65a46f57445a79c3ac5e93a",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786192114.6876225,
-    "ast_hash": "780fe8f657576b874d1086e3b9144f26",
+    "mtime": 1786192672.3352473,
+    "ast_hash": "39d47e07033af3ee36d67bc396eedd84",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786192114.6896155,
-    "ast_hash": "51132ab5ba923bc394f96422739bccf4",
+    "mtime": 1786192672.3392508,
+    "ast_hash": "f7d6f913bda626c545d07008a5904264",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786192114.6856263,
-    "ast_hash": "edbd83fb0e9190f1b9fc9027a052af7d",
+    "mtime": 1786192672.3332188,
+    "ast_hash": "d0076ddbd2c62922ee99cff6a314d2b0",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1227,6 +1227,21 @@
   "web/lib/agent/providerUsage.test.ts": {
     "mtime": 1786191726.4699976,
     "ast_hash": "909b733e505cc5968b79436ba22c3ba6",
+    "semantic_hash": ""
+  },
+  "web/lib/agent/planApproval.test.ts": {
+    "mtime": 1786192451.7102616,
+    "ast_hash": "4f7329ffb1c01a322f12c5a2288c1d98",
+    "semantic_hash": ""
+  },
+  "web/lib/agent/planApproval.ts": {
+    "mtime": 1786192451.707262,
+    "ast_hash": "287a95b7e02cbc49d709c3bf8e9dc979",
+    "semantic_hash": ""
+  },
+  "web/lib/agent/runtimePlan.test.ts": {
+    "mtime": 1786192547.5304718,
+    "ast_hash": "2850f46bd0b4177870557bc1ed2a2517",
     "semantic_hash": ""
   }
 }

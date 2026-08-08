@@ -7,7 +7,7 @@ import { repairToolMessages } from "./normalize";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export interface AgentEvents {
-  onAssistant: (text: string) => void;
+  onAssistant: (text: string, mode: AgentMode) => void;
   onToolStart: (call: ToolCall, provider: Provider) => void;
   onToolStatus: (id: string, status: string) => void;
   onToolEnd: (id: string, ok: boolean, summary: string) => void;
@@ -190,7 +190,7 @@ export class AgentRunner {
     try {
       for (let iter = 0; iter < MAX_ITERS; iter++) {
         if (this.stopped) {
-          this.events.onAssistant("⏹ המשימה נעצרה.");
+          this.events.onAssistant("⏹ המשימה נעצרה.", this.mode);
           break;
         }
         // הודעות שהמשתמש הזריק תוך כדי ריצה — נכנסות לשיחה לפני הפנייה הבאה.
@@ -244,7 +244,7 @@ export class AgentRunner {
             break;
           }
         } catch (e: any) {
-          if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
+          if (this.stopped) { this.events.onAssistant("⏹ נעצר.", this.mode); break; }
           const msg = e?.message || "שגיאת רשת.";
           if (e?.name === "AbortError") {
             this.events.onError("הסוכן נתקע (timeout על קריאת ה-LLM). נסה שוב.");
@@ -257,11 +257,11 @@ export class AgentRunner {
           }
           break;
         } finally { clearTimeout(to); this.currentAbort = null; }
-        if (this.stopped) { this.events.onAssistant("⏹ נעצר."); break; }
+        if (this.stopped) { this.events.onAssistant("⏹ נעצר.", this.mode); break; }
         const content: string | null = data.content;
         const toolCalls: ToolCall[] = data.tool_calls || [];
 
-        if (content) this.events.onAssistant(content);
+        if (content) this.events.onAssistant(content, this.mode);
 
         if (!toolCalls.length) {
           this.history.push({ role: "assistant", content });
