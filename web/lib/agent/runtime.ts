@@ -2,7 +2,7 @@
 // (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
 
 import { AgentMode, AgentUsage, ChatMessage, Provider, ToolCall } from "./types";
-import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
+import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS, type ToolArtifact, type ToolRunResult } from "./tools";
 import { repairToolMessages } from "./normalize";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
@@ -15,6 +15,15 @@ export interface AgentEvents {
   onDone: () => void;
   onUsage?: (usage: AgentUsage, provider: Provider, model?: string) => void;
   onCheckpoint?: (call: ToolCall, snapshot: EditorSnapshot) => void;
+  onArtifact?: (artifact: ToolArtifact, call: ToolCall) => void;
+}
+
+export function normalizeToolResult(result: ToolRunResult): { text: string; artifacts: ToolArtifact[] } {
+  if (typeof result === "string") return { text: result, artifacts: [] };
+  const artifacts = (result.artifacts || []).filter((artifact) =>
+    artifact?.blob instanceof Blob && !!artifact.name && !!artifact.kind,
+  );
+  return { text: String(result.text || ""), artifacts };
 }
 
 const MAX_ITERS = 40;
@@ -151,14 +160,21 @@ export class AgentRunner {
     }
     this.noteTool(tc.name);
     try {
-      const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
-      if (isChunkLoadError(out)) {
-        const formatted = formatToolError(out);
+      const raw = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
+      const out = normalizeToolResult(raw);
+      if (isChunkLoadError(out.text)) {
+        const formatted = formatToolError(out.text);
         this.events.onToolEnd(tc.id, false, formatted);
         return { tool_call_id: tc.id, name: tc.name, content: formatted };
       }
-      this.events.onToolEnd(tc.id, true, out);
-      return { tool_call_id: tc.id, name: tc.name, content: out };
+      const emitted = new Set<Blob>();
+      for (const artifact of out.artifacts) {
+        if (emitted.has(artifact.blob)) continue;
+        emitted.add(artifact.blob);
+        this.events.onArtifact?.(artifact, tc);
+      }
+      this.events.onToolEnd(tc.id, true, out.text);
+      return { tool_call_id: tc.id, name: tc.name, content: out.text };
     } catch (e: any) {
       const msg = formatToolError(e?.message || String(e));
       this.events.onToolEnd(tc.id, false, msg);

@@ -90,7 +90,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — פעולות UI וכלי agent יחידניים וב־bulk דרך CommandBus, כולל opacity ו-atomic clip/subtitle replace; Query API כולל active clip/source/gap/overlays/captions; נותר I/O media generated שאינו חוזה JSON
+- **AG-2**: OK — פעולות UI וכלי agent יחידניים וב־bulk דרך CommandBus; Query API כולל active clip/source/gap/overlays/captions; generated media חוזר כ-ToolOutcome עם text ל-LLM ו-Blob client-only לכרטיס המדיה פעם אחת
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)

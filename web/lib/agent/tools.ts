@@ -55,8 +55,6 @@ export interface AgentContext {
   /** מוטציה כבר נכנסה דרך EditorApi — Chat לא יבצע setProject כפול */
   _editorDirty?: boolean;
   askUser: (question: string, options: string[]) => Promise<string>;
-  // מוציא קובץ תוצר לצ'אט (קישור הורדה + תצוגה מקדימה).
-  onOutput?: (blob: Blob, name: string, kind: "video" | "srt" | "image" | "audio") => void;
   // תמונות שהסוכן צילם — יצורפו להודעה הבאה כדי שיוכל "לראות" אותן (בספק תומך-ראייה).
   pendingImages?: string[];
 }
@@ -89,26 +87,35 @@ function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | und
 
 export type Reporter = (status: string) => void;
 
+export type ToolArtifactKind = "video" | "srt" | "image" | "audio";
+
+/** Binary output stays client-side and never enters LLM JSON/history. */
+export interface ToolArtifact {
+  blob: Blob;
+  name: string;
+  kind: ToolArtifactKind;
+}
+
+export interface ToolOutcome {
+  text: string;
+  artifacts?: ToolArtifact[];
+}
+
+export type ToolRunResult = string | ToolOutcome;
+
 export interface ToolMeta {
   name: string;
   label: string;
   color: string;
   icon: string;
   schema: ToolSchema;
-  run: (args: any, ctx: AgentContext, report: Reporter) => Promise<string>;
+  run: (args: any, ctx: AgentContext, report: Reporter) => Promise<ToolRunResult>;
 }
 
 const fmt = (s: number) => {
   if (!Number.isFinite(s) || s < 0) return "—";
   return `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
 };
-
-function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
 
 // --- אחסון תמלול לפי טביעת-אצבע (לא מתמללים שוב אותו סרטון) ---
 type TxCache = { words: Word[]; provider: string; model: string; v: 2 };
@@ -608,10 +615,11 @@ export const TOOLS: ToolMeta[] = [
         onPhase: (msg) => report(msg),
       });
       ctx.assembledWords = words;
-      // אופציונלי: להציע הורדת האודיו הזמני
-      ctx.onOutput?.(blob, "edited_timeline.mp3", "audio");
       const n = words.filter(isSpeechWord).length;
-      return `תומלל הציר הערוך מחדש ב-${provider}/${model}: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`;
+      return {
+        text: `תומלל הציר הערוך מחדש ב-${provider}/${model}: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`,
+        artifacts: [{ blob, name: "edited_timeline.mp3", kind: "audio" }],
+      };
     },
   },
   {
@@ -722,9 +730,11 @@ export const TOOLS: ToolMeta[] = [
       if (!asset || asset.kind !== "video") return "אין סרטון לצילום.";
       const { extractFrame } = await import("@/lib/ffmpeg");
       const blob = await extractFrame(asset.file, srcTime);
-      ctx.onOutput?.(blob, `frame_${srcTime.toFixed(1)}s.png`, "image");
       try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
-      return `צולם פריים מ-"${asset.name}" בשנייה ${srcTime.toFixed(1)} (מוצג בצ'אט). אם הספק תומך בראייה — אנתח אותו בתור הבא.`;
+      return {
+        text: `צולם פריים מ-"${asset.name}" בשנייה ${srcTime.toFixed(1)} (מוצג בצ'אט). אם הספק תומך בראייה — אנתח אותו בתור הבא.`,
+        artifacts: [{ blob, name: `frame_${srcTime.toFixed(1)}s.png`, kind: "image" }],
+      };
     },
   },
   {
@@ -1311,8 +1321,10 @@ export const TOOLS: ToolMeta[] = [
       );
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");
-      ctx.onOutput?.(blob, `${base}_edited.mp4`, "video");
-      return `הייצוא הושלם — קישור להורדה ותצוגה מקדימה בצ'אט.`;
+      return {
+        text: "הייצוא הושלם — קישור להורדה ותצוגה מקדימה בצ'אט.",
+        artifacts: [{ blob, name: `${base}_edited.mp4`, kind: "video" }],
+      };
     },
   },
   {
@@ -1415,8 +1427,11 @@ export const TOOLS: ToolMeta[] = [
       const { contextualFileName } = await import("@/lib/chat/markdown");
       const sample = (ctx.subs?.[0]?.text || mainVideo(ctx)?.name || "כתוביות").slice(0, 40);
       const name = contextualFileName(sample, "srt", (mainVideo(ctx)?.name.replace(/\.[^.]+$/, "") || "subs") + ".srt");
-      ctx.onOutput?.(new Blob([subsToSrt(ctx.subs)], { type: "text/plain;charset=utf-8" }), name, "srt");
-      return `יוצא SRT (${ctx.subs.length} כתוביות) — קישור להורדה בצ'אט.`;
+      const blob = new Blob([subsToSrt(ctx.subs)], { type: "text/plain;charset=utf-8" });
+      return {
+        text: `יוצא SRT (${ctx.subs.length} כתוביות) — קישור להורדה בצ'אט.`,
+        artifacts: [{ blob, name, kind: "srt" }],
+      };
     },
   },
   {
@@ -1564,9 +1579,10 @@ export const TOOLS: ToolMeta[] = [
         url,
       };
       ctx.media.push(asset);
-      ctx.onOutput?.(blob, name, "audio");
-      download(blob, name);
-      return `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`;
+      return {
+        text: `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`,
+        artifacts: [{ blob, name, kind: "audio" }],
+      };
     },
   },
   {

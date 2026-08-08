@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AgentRunner, type AgentEvents } from "./runtime";
-import type { AgentContext } from "./tools";
+import { TOOL_BY_NAME, type AgentContext, type ToolMeta } from "./tools";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import type { EditorApi } from "@/lib/editor/commands";
 
@@ -51,5 +51,36 @@ describe("AgentRunner exact tool retry", () => {
     expect(checkpoints).toHaveLength(1);
     expect(checkpoints[0].snapshot.clips[0].enabled).toBe(true);
     expect(clips[0].enabled).toBe(false);
+  });
+
+  it("emits binary artifacts once while keeping only text in LLM history", async () => {
+    const blob = new Blob(["hello"], { type: "text/plain" });
+    const tool: ToolMeta = {
+      name: "test_artifact", label: "test", color: "#000", icon: "x",
+      schema: { name: "test_artifact", description: "test", parameters: { type: "object", properties: {} } },
+      run: async () => ({
+        text: "artifact ready",
+        artifacts: [
+          { blob, name: "hello.txt", kind: "srt" },
+          { blob, name: "duplicate.txt", kind: "srt" },
+        ],
+      }),
+    };
+    TOOL_BY_NAME.test_artifact = tool;
+    const artifacts: any[] = [];
+    const events: AgentEvents = {
+      onAssistant: vi.fn(), onToolStart: vi.fn(), onToolStatus: vi.fn(), onToolEnd: vi.fn(), onError: vi.fn(), onDone: vi.fn(),
+      onArtifact: (artifact, call) => artifacts.push({ artifact, call }),
+    };
+    try {
+      const runner = new AgentRunner("deepseek", context(), events);
+      await runner.retryTool("test_artifact", {});
+      expect(artifacts).toHaveLength(1);
+      expect(artifacts[0].artifact).toMatchObject({ blob, name: "hello.txt", kind: "srt" });
+      expect(runner.history.at(-1)).toMatchObject({ role: "tool", content: "artifact ready" });
+      expect(JSON.stringify(runner.history)).not.toContain("hello.txt");
+    } finally {
+      delete TOOL_BY_NAME.test_artifact;
+    }
   });
 });

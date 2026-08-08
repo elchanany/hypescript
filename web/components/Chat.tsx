@@ -193,14 +193,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     overlays: [], tracks: defaultTracks(), canvas: defaultCanvasFor(), lastRender: null,
     editorApi: null,
     askUser: (q, options) => new Promise<string>((resolve) => setAsk({ q, options, resolve })),
-    onOutput: addOutput,
     pendingImages: [],
   });
   const runnerRef = useRef<AgentRunner | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const onProjectRef = useRef(onProject);
   onProjectRef.current = onProject;
-  ctxRef.current.onOutput = addOutput;
   const savedHistory = useRef<ChatMessage[]>([]);
   const lastUserPromptRef = useRef("");
   const [restoredChat, setRestoredChat] = useState(false);
@@ -344,6 +342,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onDone: () => setRunning(false),
         onUsage: (next) => setUsage((prev) => ({ inputTokens: prev.inputTokens + next.inputTokens, outputTokens: prev.outputTokens + next.outputTokens, totalTokens: prev.totalTokens + next.totalTokens })),
         onCheckpoint: (call, checkpoint) => setItems((p) => p.map((it) => it.kind === "tool" && it.id === call.id ? { ...it, checkpoint } : it)),
+        onArtifact: (artifact) => addOutput(artifact.blob, artifact.name, artifact.kind),
       });
       if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }

@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-Measured energy evidence: RMS/dBFS windows ממופים לציר הערוך, low/elevated יחסית לרצפת המקור, עם opt-in בכלי agent; web מודד בפועל ו-local מכיל mapper טהור מקביל. אחריו AG-2 generated-media I/O boundary.
+AG-2 generated-media I/O boundary: ToolOutcome מפריד text מ-artifacts בינאריים; runtime שומר רק text בהיסטוריית LLM ומעביר Blob פעם אחת לכרטיס המדיה. אחריו בחר את חבילת P3 הבאה שאינה תלויה ב-Auth.
 
 ## Branch
 `main`
 
 ## Latest commit
-`73c93ff` — chore(graphify): sync caption grouping graph
+`2c7809c` — chore(graphify): sync energy evidence graph
 
 ## Status
-Dirty energy evidence package · web 43 files/220 tests, local 5/5, type-check ו-production build עברו; Graphify/commit עדיין בהרצה. Hebrew grouping נחת ב-main (`75337e7`).
+Dirty AG-2 artifact package · web 43 files/221 tests, type-check ו-production build עברו; Graphify/commit עדיין בהרצה. Energy evidence נחת ב-main (`b11ab15`).
 
 ## Exact continuation point
-Graphify + commit/push energy evidence; אחר כך AG-2 generated-media I/O boundary. בלי שינוי Supabase/Auth ללא אישור.
+Graphify + commit/push AG-2 artifact boundary; אחר כך חבילת P3 מקומית שאינה תלויה ב-Auth. בלי שינוי Supabase/Auth ללא אישור.
