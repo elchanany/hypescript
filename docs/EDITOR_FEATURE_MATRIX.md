@@ -34,7 +34,7 @@
 | Ripple / Roll / Slip | ✔ Ripple+LeaveGap+Roll+Slip | ✔ | — | Preview/Export | ✔ | ✖ | ✖ | Roll/Slip via CommandBus |
 | Delete leaves Gap / Gap entity / Ripple-delete | ✖ | ✖ | — | — | — | ✖ | ✖ | Not started |
 | Drag Ghost + Drop indicator | ✔ | ✔ | — | — | ✔ | ✖ | — | Partial |
-| Clip color: contrast/saturation | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Complete (browser visual QA pending) |
+| Clip color: contrast/saturation | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Complete (real MP4 browser QA passed) |
 | Transitions / other effects / Keyframes visuals | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | ✖ | Not started |
 
 ## Inspector

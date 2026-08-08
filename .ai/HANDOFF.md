@@ -2,13 +2,13 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`bb888d9`; clip color landed ב־`2dd41c8` and Graphify synced.
-- Dirty color presets package: one registry supplies neutral/crisp/vivid/muted/mono to Inspector and agent; presets only assign proven contrast/saturation values and therefore inherit Preview+Export. Web 44 files/228 tests, type-check/build pass; Graphify/push pending. No browser visual QA yet.
+- main ב־`f76b45e`; clip color landed ב־`2dd41c8`, shared presets in `c60cfb2`, and Graphify synced.
+- Browser QA with a real local 4-second MP4 found and fixed the missing Inspector → `clip.setColorAdjustments` dispatch. Monochrome is proven at Inspector 105%/0% and Preview `contrast(1.05) saturate(0)`; reset is proven at `contrast(1) saturate(1)`. Web 44 files/228 tests and production build pass; fix commit/push pending.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: `web/lib/editor/colorPresets.ts`, `InspectorPanel.tsx`, agent color tool and tests.
+- Current package: `web/app/page.tsx`, `web/lib/editor/colorPresets.ts`, `InspectorPanel.tsx`, agent color tool and tests.
 - Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
 
 # Changes Made
@@ -19,7 +19,8 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - `b11ab15`: contiguous equal-level energy windows merge with duration-weighted dB; source discontinuities, edit gaps and different relative levels remain separate.
 - `b6ba1fa`: `ToolRunResult = string | ToolOutcome`; artifacts never enter JSON/history and identical Blob references are de-duplicated per tool completion.
 - `2dd41c8`: contrast 0.5..2 and saturation 0..3; defaults 1, split inheritance, CSS `contrast/saturate`, FFmpeg `eq=contrast:saturation` before yuv conversion.
-- Dirty presets: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
+- `c60cfb2`: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
+- Dirty browser fix: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
@@ -29,6 +30,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - 44 test files / 228 tests — passed; production build/type-check pass.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
+- Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
 - Graphify update at `d3bc7b1`: 1596 nodes / 3403 edges.
 
 # Open Risks
@@ -38,7 +40,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Graphify + commit/push shared color presets.
-2. Select and implement the next P3 preview+export capability that does not need Auth; perform browser visual QA when a stable session is available.
+1. Graphify + commit/push the Inspector color dispatch fix and browser-QA evidence.
+2. Select and implement the next P3 preview+export capability that does not need Auth.
 3. Package C only after working login.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.
