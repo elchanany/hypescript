@@ -47,7 +47,9 @@ export default function SettingsPage() {
 
   const Status = ({ status }: { status: ProviderStatusInfo }) =>
     status.status === "ready"
-      ? <span className="ok">✓ מוכן</span>
+      ? <span className="ok">✓ נבדק וזמין</span>
+      : status.status === "configured_unverified"
+        ? <span title={status.reasonHe}>◐ מוגדר · לא נבדק</span>
       : <span className="err">— {status.status === "missing_key" ? "חסר מפתח" : "לא זמין"}</span>;
 
   return (

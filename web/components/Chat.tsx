@@ -7,7 +7,7 @@ import { EditorApi } from "@/lib/editor/commands";
 import { TrackMeta, defaultTracks } from "@/lib/editor/project";
 import { AgentMode, AgentUsage, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
-import { getProviderStatus } from "@/lib/providers/health";
+import { getProviderStatus, isProviderUsable } from "@/lib/providers/health";
 import { LLM_PROVIDERS } from "@/lib/providers/registry";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
@@ -373,7 +373,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     }
     if (!configLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק עדיין את סטטוס המפתחות. נסה שוב בעוד רגע.", time: now() }]); return; }
     const status = getProviderStatus(provider, configured);
-    if (status.status !== "ready") { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
+    if (!isProviderUsable(status)) { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
     setItems((p) => [...p, { kind: "user", text, time: now() }]);
     lastUserPromptRef.current = text;
     setInput(""); setRunning(true);
@@ -382,7 +382,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   const changeProvider = (p: Provider) => {
     const status = getProviderStatus(p, configured);
-    if (configLoaded && status.status !== "ready") {
+    if (configLoaded && !isProviderUsable(status)) {
       setItems((prev) => [...prev, { kind: "error", text: `${status.labelHe} לא זמין כרגע: ${status.reasonHe}.`, time: now() }]);
       return;
     }
@@ -472,7 +472,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             style={{ width: "auto", height: 26, padding: "0 6px", fontSize: 12 }}>
             {LLM_PROVIDERS.map((p) => {
               const status = getProviderStatus(p.id, configured);
-              const disabled = configLoaded && status.status !== "ready";
+              const disabled = configLoaded && !isProviderUsable(status);
               return (
                 <option key={p.id} value={p.id} disabled={disabled}>
                   {p.labelHe}{disabled ? ` — ${status.reasonHe}` : ""}

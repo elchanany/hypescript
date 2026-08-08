@@ -1,4 +1,5 @@
 // מחזיר אילו ספקים מוגדרים (מפתח קיים ב-env) — בלי לחשוף את הערכים.
+// זה אינו health check ואינו מוכיח שהמפתח או שירות הספק עובדים.
 // גם סטטוס מפתחות תמלול (Groq / ElevenLabs) ו-Auth.
 
 import { NextResponse } from "next/server";

@@ -27,7 +27,7 @@ export function getProviderStatuses(configured: Record<string, boolean>): Provid
       return { ...provider, status: "unavailable", reasonHe: unavailableReasonHe };
     }
     if (isProviderConfigured(provider, configured)) {
-      return { ...provider, status: "ready", reasonHe: "מוגדר ומוכן" };
+      return { ...provider, status: "configured_unverified", reasonHe: "המפתח מוגדר; הזמינות טרם נבדקה" };
     }
     return {
       ...provider,
@@ -41,4 +41,9 @@ export function getProviderStatus(id: ProviderId, configured: Record<string, boo
   const provider = PROVIDER_BY_ID[id];
   const [status] = getProviderStatuses(configured).filter((item) => item.id === provider.id);
   return status;
+}
+
+/** A configured provider may be attempted; only `ready` means a live probe succeeded. */
+export function isProviderUsable(status: ProviderStatusInfo): boolean {
+  return status.status === "ready" || status.status === "configured_unverified";
 }

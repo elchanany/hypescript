@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { configuredProviders } from "@/lib/agent/providers";
-import { flattenApiConfig, getProviderStatus, getProviderStatuses } from "./health";
+import { flattenApiConfig, getProviderStatus, getProviderStatuses, isProviderUsable } from "./health";
 import { PROVIDER_REGISTRY } from "./registry";
 
 describe("provider registry", () => {
@@ -37,10 +37,18 @@ describe("provider registry", () => {
     });
     const statuses = getProviderStatuses(configured);
 
-    expect(statuses.find((provider) => provider.id === "deepseek")?.status).toBe("ready");
+    expect(statuses.find((provider) => provider.id === "deepseek")?.status).toBe("configured_unverified");
     expect(statuses.find((provider) => provider.id === "openai")?.status).toBe("missing_key");
-    expect(statuses.find((provider) => provider.id === "groq-transcribe")?.status).toBe("ready");
-    expect(statuses.find((provider) => provider.id === "elevenlabs-transcribe")?.status).toBe("ready");
-    expect(statuses.find((provider) => provider.id === "elevenlabs-voice")?.status).toBe("ready");
+    expect(statuses.find((provider) => provider.id === "groq-transcribe")?.status).toBe("configured_unverified");
+    expect(statuses.find((provider) => provider.id === "elevenlabs-transcribe")?.status).toBe("configured_unverified");
+    expect(statuses.find((provider) => provider.id === "elevenlabs-voice")?.status).toBe("configured_unverified");
+  });
+
+  it("does not claim live readiness from a key, while still allowing an attempted call", () => {
+    const status = getProviderStatus("openai", { openai: true });
+    expect(status.status).toBe("configured_unverified");
+    expect(status.reasonHe).toContain("טרם נבדקה");
+    expect(isProviderUsable(status)).toBe(true);
+    expect(isProviderUsable(getProviderStatus("openai", { openai: false }))).toBe(false);
   });
 });

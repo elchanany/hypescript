@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-4 checkpoint restore כבר על main ב־`60f93e5`. מקומית נוסף Plan checklist + כרטיס אישור שמעביר ל-Act ומבצע את אותה תוכנית + בקשת שינוי שנשארת ב-Plan ללא כלים. tsc, 186/186 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא PR-1 provider policy/health audit. Package C רק אחרי login עובד.
+AG-4 Plan approvals על main ב־`2d8e2a0`. מקומית PR-1 מפריד `configured_unverified` מ-`ready`, מעדכן Chat/Settings ובדיקות בלי לבצע probe שעלול לעלות כסף. tsc, 187/187 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא provider billing policy/Zero-cost approval. Package C רק אחרי login עובד.

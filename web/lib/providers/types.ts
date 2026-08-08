@@ -1,6 +1,7 @@
 export type ProviderKind = "llm" | "transcribe" | "voice";
 
-export type ProviderStatus = "ready" | "missing_key" | "unavailable";
+/** `ready` is reserved for a successful live probe; an env key alone is unverified. */
+export type ProviderStatus = "ready" | "configured_unverified" | "missing_key" | "unavailable";
 
 export type ProviderId =
   | "deepseek"
