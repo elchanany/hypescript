@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trimClip, splitClip, Clip } from "./model";
+import { trimClip, splitClip, Clip, clipContrast, clipSaturation } from "./model";
 
 const clips = (): Clip[] => [{ id: "x", sourceId: "v", start: 55.44, end: 67.92 }];
 
@@ -30,5 +30,13 @@ describe("splitClip (linked A/V)", () => {
     expect(r[0]).toMatchObject({ id: "a", start: 0, end: 4, volume: 0.5 });
     expect(r[1]).toMatchObject({ sourceId: "v", start: 4, end: 10, volume: 0.5, enabled: true });
     expect(r[1].id).not.toBe("a");
+  });
+
+  it("inherits color adjustments on the right half", () => {
+    const src: Clip[] = [{ id: "a", sourceId: "v", start: 0, end: 10, contrast: 1.4, saturation: 0.6 }];
+    const r = splitClip(src, "a", 4);
+    expect(r[1]).toMatchObject({ contrast: 1.4, saturation: 0.6 });
+    expect(clipContrast({ ...r[1], contrast: 9 })).toBe(2);
+    expect(clipSaturation({ ...r[1], saturation: -1 })).toBe(0);
   });
 });

@@ -23,6 +23,7 @@
 - **הבנת ציר מבוססת ראיות:** speech מתמלול, אירועי `audio_event` של הספק ופערי עריכה מפורשים ממופים ל-per-time-span ב-web+local; אין ניחוש semantics מהיעדר תמלול או מעוצמת dB.
 - **Energy evidence:** web יכול למדוד RMS/dBFS ב-opt-in ולמפות low/elevated יחסי לציר הערוך; local מכיל mapper טהור מקביל אך ה-CLI אינו מפיק עדיין את פרופיל ה-dB.
 - **Agent artifacts:** וידאו/אודיו/תמונה/SRT חוזרים דרך חוזה typed שמפריד טקסט מ-Blob; ה-LLM מקבל טקסט בלבד וה-Chat מציג כל Blob פעם אחת. הקבצים זמניים ל-session ואינם persisted.
+- **Clip color:** contrast/saturation per-clip עובדים ב-Inspector, Preview ו-FFmpeg export, עם Undo/CommandBus/Agent ו-clamping; brightness/presets/keyframes טרם קיימים.
 - **כתוביות עברית:** progressive/phrase עם script-as-ground-truth; פיצול תקציב רך מאזן מילה יתומה ב-web+local בלי לחצות פאוזה/פיסוק ובלי לשנות timing.
 - **עורך (פאזה 1+):** shell, preview, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום; כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.

@@ -1133,6 +1133,36 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "set_clip_color", label: "תיקוני צבע", color: "#8b5cf6", icon: "◉",
+    schema: {
+      name: "set_clip_color",
+      description: "מעדכן ניגודיות ורוויה של קליפ עם Preview ו-Export. index הוא 1-based; contrast=0.5..2, saturation=0..3.",
+      parameters: { type: "object", properties: { index: { type: "number" }, contrast: { type: "number" }, saturation: { type: "number" } }, required: ["index"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const clip = ctx.clips![i];
+      if (!clip || isGapClip(clip)) return "אינדקס קליפ לא תקין.";
+      const args: Record<string, number | string> = { id: clip.id };
+      if (a.contrast != null) {
+        if (!Number.isFinite(+a.contrast)) return "contrast לא תקין.";
+        args.contrast = +a.contrast;
+      }
+      if (a.saturation != null) {
+        if (!Number.isFinite(+a.saturation)) return "saturation לא תקין.";
+        args.saturation = +a.saturation;
+      }
+      if (args.contrast == null && args.saturation == null) return "צריך להעביר contrast או saturation.";
+      const commandError = dispatch(ctx, "clip.setColorAdjustments", args);
+      if (commandError === "NO_API") {
+        const contrast = args.contrast == null ? clip.contrast : Math.max(0.5, Math.min(2, Number(args.contrast)));
+        const saturation = args.saturation == null ? clip.saturation : Math.max(0, Math.min(3, Number(args.saturation)));
+        setClips(ctx, ctx.clips!.map((item, index) => index === i ? { ...item, contrast, saturation } : item));
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      return `תיקוני צבע לקליפ ${a.index} עודכנו.`;
+    },
+  },
+  {
     name: "list_overlays", label: "רשימת שכבות", color: "#64748b", icon: "🧩",
     schema: { name: "list_overlays", description: "מחזיר את שכבות התמונה/טקסט על הקנבס.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {

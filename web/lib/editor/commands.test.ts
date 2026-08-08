@@ -84,6 +84,12 @@ describe("CommandBus builtins", () => {
     expect(api.clips[0].opacity).toBe(0);
   });
 
+  it("clamps clip color adjustments through CommandBus", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
+    expect(runCommand("clip.setColorAdjustments", api, { id: "a", contrast: 8, saturation: -2 }).ok).toBe(true);
+    expect(api.clips[0]).toMatchObject({ contrast: 2, saturation: 0 });
+  });
+
   it("atomically replaces validated clip and subtitle collections", () => {
     const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]) as any;
     api.subs = [];

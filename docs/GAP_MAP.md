@@ -96,6 +96,7 @@
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 
 ### P3
-- Templates / Effects / Transitions / Filters (רק עם Preview+Export)
+- Filters: PARTIAL — per-clip contrast+saturation עם Inspector/Undo/CommandBus/Agent/Preview/Export; brightness/presets חסרים
+- Templates / Effects / Transitions (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
 - Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; מדידת web היא opt-in ו-local mapper עדיין לא מחובר ל-extractor ב-CLI. אין להסיק שקט/נשימה/שיעול/צחוק מהיעדר תמלול או מ-dB בלבד

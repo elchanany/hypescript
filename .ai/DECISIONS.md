@@ -72,3 +72,8 @@
 - **בחירה:** כלי מחזיר `ToolOutcome { text, artifacts }`; ה-runtime מכניס להיסטוריית הספק רק `text` ומעביר כל `Blob` ישירות ל-Chat דרך `onArtifact`. Blob זהה נפלט פעם אחת בכל השלמת כלי.
 - **סיבה:** Blob אינו חוזה JSON, אסור לשלוח אותו לספק, ונתיבי callback/auto-download מקבילים יצרו סיכון לכרטיסים או הורדות כפולים.
 - **השלכה:** render, SRT, frame, narration ואודיו זמני משתמשים באותו boundary; output cards נשארים מקומיים ולא נשמרים בין sessions כי object URLs אינם durable.
+
+## D-015 — פילטר ראשון רק כשיש Preview/Export שקולים
+- **בחירה:** תיקוני הצבע הראשונים הם contrast (0.5..2) ו-saturation (0..3), שממופים ישירות ל-CSS ול-FFmpeg `eq`. Brightness לא נכלל כי הסקאלה האדיטיבית של FFmpeg אינה שקולה ל-multiplier של CSS.
+- **סיבה:** פילטר שמופיע רק בתצוגה או רק בייצוא מפר את חוזה המוצר; parity חשוב יותר ממספר סליידרים.
+- **השלכה:** השדות אופציונליים עם default 1, עוברים split/Undo/CommandBus/Agent, ומופעלים לפני yuv conversion. Presets, keyframes ויתר effects נשארים P3 עתידי.

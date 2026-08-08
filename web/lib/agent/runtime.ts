@@ -31,7 +31,7 @@ const CALL_TIMEOUT_MS = 120000;
 const MUTATING_TOOLS = new Set([
   "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
   "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
-  "set_clip_enabled", "set_clip_volume", "add_video_track", "remove_video_track",
+  "set_clip_enabled", "set_clip_volume", "set_clip_opacity", "set_clip_color", "add_video_track", "remove_video_track",
   "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
   "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
   "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",

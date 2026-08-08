@@ -414,6 +414,31 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "clip.setColorAdjustments",
+    label: "Set clip color adjustments",
+    labelHe: "תיקוני צבע לקליפ",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clip = api.getClips()?.find((item) => item.id === id);
+      if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
+      const patch: Partial<Clip> = {};
+      if (args?.contrast != null) {
+        const value = Number(args.contrast);
+        if (!Number.isFinite(value)) throw new Error("ניגודיות לא תקינה");
+        patch.contrast = Math.max(0.5, Math.min(2, value));
+      }
+      if (args?.saturation != null) {
+        const value = Number(args.saturation);
+        if (!Number.isFinite(value)) throw new Error("רוויה לא תקינה");
+        patch.saturation = Math.max(0, Math.min(3, value));
+      }
+      if (!Object.keys(patch).length) throw new Error("חסר תיקון צבע");
+      api.updateClip(id, patch);
+    },
+  });
+
+  registerCommand({
     id: "overlay.update",
     label: "Update overlay",
     labelHe: "עדכן שכבה",

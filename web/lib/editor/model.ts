@@ -23,6 +23,8 @@ export interface Clip {
   volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
   enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
   opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
+  contrast?: number; // 0.5..2 (ברירת מחדל 1)
+  saturation?: number; // 0..3 (ברירת מחדל 1)
 }
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
@@ -32,6 +34,8 @@ export const clipOpacity = (c: Clip): number => {
   if (o == null || !Number.isFinite(o)) return 1;
   return Math.max(0, Math.min(1, o));
 };
+export const clipContrast = (c: Clip): number => Number.isFinite(c.contrast) ? Math.max(0.5, Math.min(2, c.contrast!)) : 1;
+export const clipSaturation = (c: Clip): number => Number.isFinite(c.saturation) ? Math.max(0, Math.min(3, c.saturation!)) : 1;
 
 export function uid(prefix = "c"): string {
   return prefix + Math.random().toString(36).slice(2, 9);
@@ -105,6 +109,8 @@ export function splitClip(clips: Clip[], id: string, atSource: number): Clip[] {
   if (c.volume != null) right.volume = c.volume;
   if (c.enabled != null) right.enabled = c.enabled;
   if (c.opacity != null) right.opacity = c.opacity;
+  if (c.contrast != null) right.contrast = c.contrast;
+  if (c.saturation != null) right.saturation = c.saturation;
   arr.splice(i, 1, { ...c, end: atSource }, right);
   return arr;
 }

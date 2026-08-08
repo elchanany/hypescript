@@ -4,7 +4,7 @@
 // clip properties (video/audio). Sub selected -> caption properties.
 // Overlay selected -> transform + text/image properties.
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
-import { Clip, clipEnabled, clipOpacity, clipVolume } from "@/lib/editor/model";
+import { Clip, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
@@ -255,6 +255,13 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       <input type="range" min={0} max={1} step={0.01} value={clipOpacity(clip)}
         onChange={(e) => p.onUpdate({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
         style={{ width: "100%", marginTop: 4 }} />
+      <div className="prop"><span className="k">ניגודיות</span><span className="v mono">{Math.round(clipContrast(clip) * 100)}%</span></div>
+      <input type="range" min={0.5} max={2} step={0.05} value={clipContrast(clip)}
+        onChange={(e) => p.onUpdate({ contrast: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
+      <div className="prop"><span className="k">רוויה</span><span className="v mono">{Math.round(clipSaturation(clip) * 100)}%</span></div>
+      <input type="range" min={0} max={3} step={0.05} value={clipSaturation(clip)}
+        onChange={(e) => p.onUpdate({ saturation: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
+      <button type="button" className="btn sm" onClick={() => p.onUpdate({ contrast: 1, saturation: 1 })}>איפוס צבע</button>
     </Section>
   );
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipDur, clipEnabled, clipOpacity, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, totalDur } from "@/lib/editor/model";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
@@ -86,6 +86,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const box = displayRect(stageSize.w, stageSize.h, canvas);
   const total = edl ? totalDur(edl) : dur;
   const activeOpacity = edl?.[idx.current] ? clipOpacity(edl[idx.current]) : 1;
+  const activeContrast = edl?.[idx.current] ? clipContrast(edl[idx.current]) : 1;
+  const activeSaturation = edl?.[idx.current] ? clipSaturation(edl[idx.current]) : 1;
 
   const clearGapClock = () => { if (gapRaf.current != null) { cancelAnimationFrame(gapRaf.current); gapRaf.current = null; } };
 
@@ -204,7 +206,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
             <video ref={videoRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
               onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
-              style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity }} />
+              style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})` }} />
             {inGap && <div className="pv-gap" aria-hidden />}
             {(() => {
               const list = subs || [];
