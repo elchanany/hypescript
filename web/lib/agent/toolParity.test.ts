@@ -95,4 +95,13 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.subs()).toEqual([]);
     expect(h.ctx._editorDirty).toBe(true);
   });
+
+  it("routes subtitle retime and clear tools through the shared commands", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.retime_subtitle.run({ index: 1, start: -5, end: 0 }, h.ctx, () => undefined);
+    expect(h.subs()[0]).toMatchObject({ start: 0, end: 0.2 });
+    await TOOL_BY_NAME.clear_subtitles.run({}, h.ctx, () => undefined);
+    expect(h.subs()).toEqual([]);
+    expect(h.ctx._editorDirty).toBe(true);
+  });
 });

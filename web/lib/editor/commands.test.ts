@@ -114,6 +114,17 @@ describe("CommandBus builtins", () => {
     expect(api.subs).toEqual([]);
   });
 
+  it("retimes and clears subtitles through CommandBus with safe bounds", () => {
+    const api = fakeApi([]) as any;
+    api.subs = [{ id: "s1", start: 1, end: 2, text: "טקסט" }];
+    api.getSubs = () => api.subs;
+    api.setSubs = (subs: any[]) => { api.subs = subs; };
+    expect(runCommand("subtitle.retime", api, { id: "s1", start: -2, end: 0.05 }).ok).toBe(true);
+    expect(api.subs[0]).toMatchObject({ start: 0, end: 0.2 });
+    expect(runCommand("subtitle.clear", api).ok).toBe(true);
+    expect(api.subs).toEqual([]);
+  });
+
   it("fails closed when removing referenced media and removes only an unused asset", () => {
     const api = fakeApi([{ id: "c1", sourceId: "m", start: 0, end: 2 }]) as any;
     let media = api.getMedia();

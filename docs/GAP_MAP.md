@@ -55,7 +55,7 @@
 | Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |
-| CommandBus + Query API | PARTIAL | agent clip/track/subtitle ops + guarded media.remove דרך CommandBus; Ctrl/Cmd+K ותפריטי Clip/Gap/Track/Caption/Asset נגזרים מה-Registry; לא כל ה-UI |
+| CommandBus + Query API | PARTIAL | agent clip/track/subtitle ops, caption style UI ו-guarded media.remove דרך CommandBus; כל ה-command surfaces הקיימים נגזרים מה-Registry; לא כל ה-UI |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
@@ -89,7 +89,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — clip/track/subtitle parity + guarded asset removal; Ctrl/Cmd+K וכל context menus הקיימים נגזרים מה-Registry; נותרו פעולות UI נוספות ו-media.add מורכב
+- **AG-2**: PARTIAL — clip/track/subtitle parity (edit/delete/retime/clear), caption style UI ו-guarded asset removal; נותרו פעולות UI נוספות ו-media.add מורכב
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)

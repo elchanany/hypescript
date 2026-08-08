@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786194653.0538301,
-    "ast_hash": "2e384b1cf164f5a6e767750cf7d7da3c",
+    "mtime": 1786194898.0032704,
+    "ast_hash": "31cceae55ef77940368478ea33277fc7",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786194279.456838,
-    "ast_hash": "0ad41aa0da069a6922b4738daea29355",
+    "mtime": 1786194898.00027,
+    "ast_hash": "e08200c988d119cc18d374cb89fb440d",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -270,18 +270,18 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
-    "mtime": 1786194572.1184704,
-    "ast_hash": "21b211c2b6274cd2214f35c2c03d2420",
+    "mtime": 1786194877.1051402,
+    "ast_hash": "cfee7670cea0efc867693e141c49c55b",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
-    "mtime": 1786194606.5566657,
-    "ast_hash": "fcde68077b730efc67de7b7435548c79",
+    "mtime": 1786194925.2571394,
+    "ast_hash": "1612cfc7c7c14ea0328b769cb320bdd9",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786194572.111494,
-    "ast_hash": "59578f7e5d6878d755a7c5a192cfe00e",
+    "mtime": 1786194877.1021402,
+    "ast_hash": "d98876642f1e36a62e4224c8c00aa430",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786194699.8506975,
-    "ast_hash": "2681442c259657afb9d8ed87d5ac12e6",
+    "mtime": 1786194976.5328736,
+    "ast_hash": "6f56c8995e17b01369d395c7f852a4ee",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786194699.8527603,
-    "ast_hash": "e9b522473e811cbefe87f8e9bc898d5d",
+    "mtime": 1786194976.5348728,
+    "ast_hash": "016b0ddf2824f5c11d066467543c2ed5",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786194699.844206,
-    "ast_hash": "114a49c737e2344c141d9802827edd3a",
+    "mtime": 1786194976.5298698,
+    "ast_hash": "7ac060cfbb924d3d633d00f44233ac4c",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786194323.9980955,
-    "ast_hash": "583a4b1725851f6d5e105b7314088b99",
+    "mtime": 1786194925.2601542,
+    "ast_hash": "20919da450cb0896ef980ef0f5388291",
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {

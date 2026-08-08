@@ -826,7 +826,11 @@ export default function EditorPage() {
               onUpdateSub={(patch) => selectedSub && updateSub(selectedSub.id, patch)}
               canvas={canvas}
               captionStyle={captionStyle}
-              onCaptionStyle={(patch) => setCaptionStyle({ ...captionStyle, ...patch })}
+              onCaptionStyle={(patch) => {
+                if (!editorApiRef.current) return;
+                const result = runCommand("caption.setStyle", editorApiRef.current, patch);
+                if (!result.ok) setError(result.error);
+              }}
               projectName={projectName} mediaCount={media.length} sourceDuration={duration} editedDuration={totalEdited}
             />
           </div>

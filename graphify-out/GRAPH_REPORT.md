@@ -1,7 +1,7 @@
 # Graph Report - hipescript  (2026-08-08)
 
 ## Corpus Check
-- 226 files · ~420,841 words
+- 226 files · ~421,126 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dccf7925`
+- Built from commit: `b5af02db`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -83,7 +83,7 @@
 - AGENTS.md
 - chatStore.ts
 - REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר
-- useAuth
+- normalizeSupabaseUrl
 - chunking.ts
 - graphify reference: extra exports and benchmark
 - EDITOR_FEATURE_MATRIX
@@ -110,19 +110,19 @@
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - .codex/skills/graphify/references/extraction-spec.md
-- layout.tsx
-- normalizeSupabaseUrl
+- login/page.tsx
+- useAuth
 - providers.ts
 - loopGuard.test.ts
 - VideoPreview.tsx
 - Chat.tsx
 - models.ts
 - Hypescript — Brand Guidelines
-- login/page.tsx
+- ThemeProvider.tsx
 - ChatMarkdown.tsx
 - ChatMediaCard.tsx
+- layout.tsx
 - Word
-- ThemeProvider.tsx
 - RenderBackend.ts
 - graph.integration.test.ts
 
@@ -375,9 +375,9 @@ Nodes (10): addConversation(), ChatItem, ChatStoreV2, emptyConversation(), empty
 Cohesion: 0.18
 Nodes (10): REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר, אזור 1 — Top bar, אזור 2 — Tool rail (סרגל קטגוריות), אזור 3 — Left content panel (Media), אזור 4 — Viewer / Canvas, אזור 5 — Inspector, אזור 6 — Timeline, אזור 7 — Agent dock (Cursor/Copilot-class) (+2 more)
 
-### Community 69 - "useAuth"
-Cohesion: 0.31
-Nodes (8): TopBar(), ContextMenu(), CtxItem, getSupabaseBrowser(), AuthState, humanAuthError(), postBootstrap(), useAuth()
+### Community 69 - "normalizeSupabaseUrl"
+Cohesion: 0.30
+Nodes (11): POST(), runtime, ensureBootstrapSystemOwner(), normalizeSupabaseUrl(), allowGuestEditor(), getBootstrapSuperAdminEmail(), getServiceRoleKey(), getSupabaseAnonServer() (+3 more)
 
 ### Community 70 - "chunking.ts"
 Cohesion: 0.44
@@ -471,13 +471,13 @@ Nodes (3): AGENT_UI_PARITY, מקרא, פערי Parity מיידיים (לחביל
 Cohesion: 0.50
 Nodes (4): local/, STACK.md — טכנולוגיות, web/ (המסלול המרכזי), עתידי / אפשרי (טרם הוחלט)
 
-### Community 96 - "layout.tsx"
-Cohesion: 0.28
-Nodes (6): metadata, viewport, ChunkReload(), isChunkError(), BRAND_TAGLINE_EN, BRAND_TAGLINE_HE
+### Community 96 - "login/page.tsx"
+Cohesion: 0.26
+Nodes (7): ContinueInner(), LoginInner(), Tab, AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession()
 
-### Community 97 - "normalizeSupabaseUrl"
-Cohesion: 0.30
-Nodes (11): POST(), runtime, ensureBootstrapSystemOwner(), normalizeSupabaseUrl(), allowGuestEditor(), getBootstrapSuperAdminEmail(), getServiceRoleKey(), getSupabaseAnonServer() (+3 more)
+### Community 97 - "useAuth"
+Cohesion: 0.31
+Nodes (8): TopBar(), ContextMenu(), CtxItem, getSupabaseBrowser(), AuthState, humanAuthError(), postBootstrap(), useAuth()
 
 ### Community 98 - "providers.ts"
 Cohesion: 0.18
@@ -499,9 +499,9 @@ Nodes (16): findRanges(), FINALS, getOpcodes(), lcsMatches(), normalizeHebrew(),
 Cohesion: 0.13
 Nodes (14): Accessibility, Clear space / Minimum size, Email, Hypescript — Brand Guidelines, Metadata / PWA / Social, Palette (נדגם מהלוגו), Theme, כלל מקור (+6 more)
 
-### Community 104 - "login/page.tsx"
-Cohesion: 0.26
-Nodes (7): ContinueInner(), LoginInner(), Tab, AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession()
+### Community 104 - "ThemeProvider.tsx"
+Cohesion: 0.29
+Nodes (8): OnboardingPage(), Step, Ctx, resolve(), ThemeCtx, ThemeMode, ThemeProvider(), useTheme()
 
 ### Community 105 - "ChatMarkdown.tsx"
 Cohesion: 0.36
@@ -511,13 +511,13 @@ Nodes (4): ChatMarkdown(), contextualFileName(), MdPart, parseChatMarkdown()
 Cohesion: 0.29
 Nodes (6): BeatAudioPlayer(), ChatMediaCard(), fmt(), LABEL, MKind, Props
 
+### Community 107 - "layout.tsx"
+Cohesion: 0.28
+Nodes (6): metadata, viewport, ChunkReload(), isChunkError(), BRAND_TAGLINE_EN, BRAND_TAGLINE_HE
+
 ### Community 108 - "Word"
 Cohesion: 0.36
 Nodes (6): ElevenLabsSttRaw, ElevenLabsWordRaw, mapTokenType(), NormalizedTranscript, normalizeElevenLabsStt(), Word
-
-### Community 111 - "ThemeProvider.tsx"
-Cohesion: 0.29
-Nodes (8): OnboardingPage(), Step, Ctx, resolve(), ThemeCtx, ThemeMode, ThemeProvider(), useTheme()
 
 ### Community 112 - "RenderBackend.ts"
 Cohesion: 0.20

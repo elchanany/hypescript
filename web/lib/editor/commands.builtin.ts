@@ -402,6 +402,33 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "subtitle.retime",
+    label: "Retime subtitle",
+    labelHe: "תזמן כתובית",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const start = Number(args?.start);
+      const end = Number(args?.end);
+      const subs = api.getSubs();
+      if (!subs || !api.setSubs || !id) throw new Error("אין כתובית לתזמון");
+      if (!subs.some((sub) => sub.id === id)) throw new Error("כתובית לא נמצאה");
+      api.setSubs(subs.map((sub) => sub.id === id ? { ...sub, start: Math.max(0, start), end: Math.max(Math.max(0, start) + 0.2, end) } : sub));
+    },
+  });
+
+  registerCommand({
+    id: "subtitle.clear",
+    label: "Clear subtitles",
+    labelHe: "מחק את כל הכתוביות",
+    contexts: ["editor", "agent"],
+    run: (api) => {
+      if (!api.setSubs) throw new Error("כתוביות אינן זמינות");
+      api.setSubs([]);
+    },
+  });
+
+  registerCommand({
     id: "track.rename",
     label: "Rename track",
     labelHe: "שנה שם רצועה",

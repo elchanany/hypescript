@@ -1255,7 +1255,10 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, start: +a.start, end: Math.max(+a.start + 0.2, +a.end) } : s));
+      const id = ctx.subs[i].id;
+      const commandError = dispatch(ctx, "subtitle.retime", { id, start: +a.start, end: +a.end });
+      if (commandError === "NO_API") ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, start: Math.max(0, +a.start), end: Math.max(Math.max(0, +a.start) + 0.2, +a.end) } : s));
+      else if (commandError) return `שגיאה: ${commandError}`;
       return `תוזמנה כתובית ${i + 1}.`;
     },
   },
@@ -1275,7 +1278,13 @@ export const TOOLS: ToolMeta[] = [
   {
     name: "clear_subtitles", label: "מחיקת כל הכתוביות", color: "#ef4444", icon: "🧹",
     schema: { name: "clear_subtitles", description: "מוחק את כל הכתוביות בבת אחת (השתמש בזה במקום למחוק אחת-אחת).", parameters: { type: "object", properties: {} } },
-    run: async (_a, ctx) => { const n = ctx.subs?.length || 0; ctx.subs = []; return `נמחקו כל ${n} הכתוביות.`; },
+    run: async (_a, ctx) => {
+      const n = ctx.subs?.length || 0;
+      const commandError = dispatch(ctx, "subtitle.clear");
+      if (commandError === "NO_API") ctx.subs = [];
+      else if (commandError) return `שגיאה: ${commandError}`;
+      return `נמחקו כל ${n} הכתוביות.`;
+    },
   },
   {
     name: "export_srt", label: "ייצוא SRT", color: "#8b5cf6", icon: "⬇️",

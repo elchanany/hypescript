@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Safe Asset removal. media.remove עובר ב-CommandBus, מסרב להסיר asset שבשימוש ב-clips/overlays, ורק בהצלחה מבטל object URL; תפריט asset נגזר מה-Registry להסרה.
+AG-2 — Subtitle completion + caption style parity. retime/clear של הסוכן ו-caption style מה-UI עוברים דרך CommandBus; TX-1 animation לא מסומן כי export עדיין סטטי.
 
 ## Branch
 `main`
 
 ## Latest commit
-`dccf792` — subtitle CommandBus + Caption menu על main
+`b5af02d` — guarded media.remove + Asset menu על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 198/198 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 200/200 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך audit AG-2 remaining UI mutations מול TX-1 animation. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit overlay mutation parity מול TX-1 export animation design. בלי שינוי Supabase/Auth ללא אישור.

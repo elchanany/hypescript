@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-2 subtitle parity על main ב־`dccf792`. מקומית media.remove עבר ל-CommandBus fail-closed: asset בשימוש אינו מוסר; asset פנוי מוסר ואז URL מבוטל. Asset context-menu מקבל remove מה-Registry ושומר add adapter למסלולי image/video השונים. tsc, 198/198 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא AG-2 remaining UI מול TX-1 animation audit. Package C רק אחרי login עובד.
+AG-2 safe media removal על main ב־`b5af02d`. מקומית subtitle retime/clear וכל caption-style controls עוברים דרך CommandBus; TX-1 animation נשאר חסר ביושר כי export caption PNG סטטי. tsc, 200/200 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא overlay mutation parity מול export-animation design. Package C רק אחרי login עובד.
