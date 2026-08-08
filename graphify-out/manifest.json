@@ -275,13 +275,13 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
-    "mtime": 1786189582.5000367,
-    "ast_hash": "04fdeb8276237ebfa942c47ef7b745fb",
+    "mtime": 1786191055.4664433,
+    "ast_hash": "00224e5cb559dc5d4225ab6ea767c326",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786190589.297953,
-    "ast_hash": "69edcb5b868653d3e99f9f4192edea59",
+    "mtime": 1786191046.3396108,
+    "ast_hash": "c7cca020dc15c19f8b9a39eaf3ffff17",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786190745.4697287,
-    "ast_hash": "ab1d82152f3941b1690625772027cf6b",
+    "mtime": 1786191101.5373578,
+    "ast_hash": "ce83ab2c0bc27e9b72796720c49fd6eb",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786190745.4747372,
-    "ast_hash": "2903901759574703ace188640c3dd1b2",
+    "mtime": 1786191101.540358,
+    "ast_hash": "e5b73551dd634a23966fcdbcddbf30e8",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "docs/AGENT_UI_PARITY.md": {
-    "mtime": 1786190745.4517293,
-    "ast_hash": "db3d62d16f7c52eb4def817d716f5c4c",
+    "mtime": 1786191101.5313585,
+    "ast_hash": "ee574810eebbc0834e78d1999a3633e5",
     "semantic_hash": ""
   },
   "docs/DATA_MODEL.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786190745.463729,
-    "ast_hash": "070c9353bd1bd58ab91e14b4290c7edb",
+    "mtime": 1786191101.5353577,
+    "ast_hash": "9d5dbb4168ae9aed09af9b6fac6a21b7",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {

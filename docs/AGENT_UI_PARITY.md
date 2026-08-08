@@ -34,7 +34,7 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | שינוי מצב סוכן Ask/Plan/Act | ✔(dock) | n/a | — | — | n/a | חדש |
 
 ## פערי Parity מיידיים (לחבילה הבאה)
-1. **CommandBus + Command registry** עם `inputSchema/resultSchema/permissions/contexts/agentCallable` — מקור אחד ל-UI/Agent/palette/shortcut/context-menu.
+1. **CommandBus + Command registry**: חוזי `inputSchema/resultSchema/permissions/contexts/agentCallable` קיימים ונאכפים ב־`runCommand`; נותר לחבר palette/shortcut/context-menu ליצירה דינמית מה־registry.
 2. **Query API** (`getSelection/getActiveClip/getSelectedRange/getVisibleElementsAtTime/...`) לסוכן.
 3. הרחבת registry metadata (`inputSchema/resultSchema/permissions/contexts/agentCallable`) לכל פקודות הרצועה.
 4. פעולות ידניות חסרות ב-UI: `remove_segments`/`remove_silence` (כפתורים/תפריט).

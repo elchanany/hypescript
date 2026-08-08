@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ensureBuiltinCommands } from "./commands.builtin";
-import { EditorApi, listCommands, queryProject, runCommand } from "./commands";
+import { EditorApi, listAgentCommands, listCommands, queryProject, runCommand } from "./commands";
 import { Clip } from "./model";
 
 function fakeApi(clips: Clip[]): EditorApi & { clips: Clip[] } {
@@ -46,6 +46,28 @@ describe("CommandBus builtins", () => {
     expect(ids).toContain("overlay.addText");
     expect(ids).toContain("clip.duplicate");
     expect(ids).toContain("caption.setStyle");
+  });
+
+  it("publishes complete contracts and scopes agent-callable commands", () => {
+    const commands = listCommands();
+    for (const command of commands) {
+      expect(command.inputSchema.type).toBe("object");
+      expect(command.resultSchema.type).toBe("object");
+      expect(command.permissions).toContain("project.write");
+      expect(command.contexts).toContain("editor");
+      expect(command.contexts.includes("agent")).toBe(command.agentCallable);
+    }
+    const agentIds = listAgentCommands().map((c) => c.id);
+    expect(agentIds).toContain("track.reorder");
+    expect(agentIds).not.toContain("overlay.delete");
+  });
+
+  it("rejects invalid arguments before mutation", () => {
+    const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
+    const before = [...api.clips];
+    expect(runCommand("clip.setVolume", api, { id: "a", volume: "loud" as any })).toEqual({ ok: false, error: "פרמטר לא תקין: volume" });
+    expect(runCommand("track.rename", api, { trackId: "trk_video" })).toEqual({ ok: false, error: "חסר פרמטר: name" });
+    expect(api.clips).toEqual(before);
   });
 
   it("leave-gap delete preserves timeline duration", () => {

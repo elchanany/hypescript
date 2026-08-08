@@ -64,13 +64,50 @@ export interface CommandDef {
   label: string;
   /** Hebrew label for agent/UI */
   labelHe: string;
+  inputSchema: CommandSchema;
+  resultSchema: CommandSchema;
+  permissions: CommandPermission[];
+  contexts: CommandContext[];
+  agentCallable: boolean;
   run: (api: EditorApi, args?: Record<string, unknown>) => void;
 }
 
+export type CommandPermission = "project.read" | "project.write" | "project.export";
+export type CommandContext = "editor" | "agent" | "shortcut" | "context-menu";
+export interface CommandSchema {
+  type: "object";
+  properties?: Record<string, { type: "string" | "number" | "boolean" }>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+type CommandRegistration = Omit<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable"> &
+  Partial<Pick<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable">>;
+const schema = (required: string[] = [], properties: CommandSchema["properties"] = {}): CommandSchema => ({ type: "object", properties, required, additionalProperties: true });
+const id = { type: "string" as const }, num = { type: "number" as const }, bool = { type: "boolean" as const }, str = { type: "string" as const };
+const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
+  "clip.delete.ripple": schema(["id"], { id }), "clip.delete.leaveGap": schema(["id"], { id }),
+  "clip.splitAtPlayhead": schema(), "clip.split": schema(["id", "at_source"], { id, at_source: num }),
+  "clip.trim": schema(["id"], { id, start: num, end: num }), "clip.move": schema(["id", "to_index"], { id, to_index: num }),
+  "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num }),
+  "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
+  "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str }),
+  "clip.setEnabled": schema(["id", "enabled"], { id, enabled: bool }), "clip.setVolume": schema(["id", "volume"], { id, volume: num }),
+  "clip.duplicate": schema(["id"], { id }), "caption.setStyle": schema(),
+  "clip.roll": schema(["delta"], { id, leftIndex: num, delta: num }), "clip.slip": schema(["id", "delta"], { id, delta: num }),
+  "track.addVideo": schema([], { name: str }), "track.removeVideo": schema(["trackId"], { trackId: id }),
+  "track.rename": schema(["trackId", "name"], { trackId: id, name: str }), "track.setLocked": schema(["trackId", "locked"], { trackId: id, locked: bool }),
+  "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
+  "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
+};
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const RESULT_SCHEMA = schema(["ok"], { ok: bool });
+
 const registry = new Map<CommandId, CommandDef>();
 
-export function registerCommand(cmd: CommandDef) {
-  registry.set(cmd.id, cmd);
+export function registerCommand(cmd: CommandRegistration) {
+  const agentCallable = cmd.agentCallable ?? AGENT_COMMANDS.has(cmd.id);
+  registry.set(cmd.id, { ...cmd, inputSchema: cmd.inputSchema ?? INPUT_SCHEMAS[cmd.id], resultSchema: cmd.resultSchema ?? RESULT_SCHEMA, permissions: cmd.permissions ?? ["project.write"], contexts: cmd.contexts ?? (agentCallable ? ["editor", "agent"] : ["editor"]), agentCallable });
 }
 
 export function getCommand(id: CommandId): CommandDef | undefined {
@@ -81,11 +118,28 @@ export function listCommands(): CommandDef[] {
   return [...registry.values()];
 }
 
+export function listAgentCommands(): CommandDef[] {
+  return listCommands().filter((command) => command.agentCallable && command.contexts.includes("agent"));
+}
+
+function validateArgs(contract: CommandSchema, args: Record<string, unknown>): string | null {
+  for (const key of contract.required || []) if (!(key in args) || args[key] === undefined || args[key] === null || args[key] === "") return `חסר פרמטר: ${key}`;
+  for (const [key, spec] of Object.entries(contract.properties || {})) {
+    const value = args[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== spec.type || (spec.type === "number" && !Number.isFinite(value))) return `פרמטר לא תקין: ${key}`;
+  }
+  return null;
+}
+
 export function runCommand(id: CommandId, api: EditorApi, args?: Record<string, unknown>): { ok: true } | { ok: false; error: string } {
   const cmd = registry.get(id);
   if (!cmd) return { ok: false, error: `פקודה לא ידועה: ${id}` };
   try {
-    cmd.run(api, args);
+    const input = args || {};
+    const validationError = validateArgs(cmd.inputSchema, input);
+    if (validationError) return { ok: false, error: validationError };
+    cmd.run(api, input);
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || String(e) };

@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — איחוד פעולות Agent/UI דרך CommandBus. נוספו `track.setHeight`/`track.reorder` וה־UI וכלי הסוכן משתמשים כעת באותן פקודות לכל פעולות הרצועה.
+AG-2 — Command registry contracts. לכל פקודה יש input/result schema, permissions, contexts ו-agentCallable; `runCommand` מאמת required/types לפני mutation ו־`listAgentCommands` מסנן surface סוכנית.
 
 ## Branch
 `main`
 
 ## Latest commit
-`a234152` — track rename/lock/mute parity על main
+`96f53e9` — track height/reorder parity על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 173/173 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 175/175 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך AG-2 registry metadata. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך לחבר command surfaces דינמית או לעבור ל־AG-4 לפי audit. בלי שינוי Supabase/Auth ללא אישור.
