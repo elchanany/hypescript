@@ -40,18 +40,18 @@
     "semantic_hash": "a086fe828e8c57af65f7ca4764eaaa36"
   },
   "local/hypescript/cli.py": {
-    "mtime": 1786189582.2542894,
-    "ast_hash": "2811ad7433cf0df5961967085ba1db3e",
+    "mtime": 1786216955.2191186,
+    "ast_hash": "970eb291bf17549a6f799e0a923dfed4",
     "semantic_hash": ""
   },
   "local/hypescript/editing.py": {
-    "mtime": 1785581013.7170517,
-    "ast_hash": "c5847e260ccc88b678d50b8ce069833a",
-    "semantic_hash": "c5847e260ccc88b678d50b8ce069833a"
+    "mtime": 1786216955.2155418,
+    "ast_hash": "6d4ddfdce421dd4c3beb9ed43cb6d8fa",
+    "semantic_hash": ""
   },
   "local/hypescript/gui.py": {
-    "mtime": 1786189582.255282,
-    "ast_hash": "e2fad32ef024e6c8ee493d8f1f176fd0",
+    "mtime": 1786216955.2231147,
+    "ast_hash": "81611afe0f9b6d6c2c5965530a3081ff",
     "semantic_hash": ""
   },
   "local/hypescript/media.py": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786215657.8396688,
-    "ast_hash": "4018ddc91c69b7a25fbd91f0aa977e19",
+    "mtime": 1786217368.7307398,
+    "ast_hash": "db19d02a89bccc24a763adf28f7bd5e4",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -245,9 +245,9 @@
     "semantic_hash": ""
   },
   "web/lib/editing.ts": {
-    "mtime": 1785585665.7677586,
-    "ast_hash": "151fa9c56e6a6425871a776f9b942971",
-    "semantic_hash": "151fa9c56e6a6425871a776f9b942971"
+    "mtime": 1786216955.2133324,
+    "ast_hash": "4b78af2f26dd5ac39725e663ed0de30c",
+    "semantic_hash": ""
   },
   "web/lib/editor/canvasCoords.test.ts": {
     "mtime": 1786189582.4819984,
@@ -260,13 +260,13 @@
     "semantic_hash": ""
   },
   "web/lib/editor/clipFilter.test.ts": {
-    "mtime": 1786207857.0947604,
-    "ast_hash": "aed3f42bd3db3ae9ec16040c76be8a90",
+    "mtime": 1786217135.9708078,
+    "ast_hash": "f5dbe5f6a2ce731b3fa4820813b38fde",
     "semantic_hash": ""
   },
   "web/lib/editor/clipFilter.ts": {
-    "mtime": 1786207857.0962677,
-    "ast_hash": "ebed1006f21b9983ba5eaff521630521",
+    "mtime": 1786216967.2774384,
+    "ast_hash": "7f5029fcdb34af944288afdffce7ed80",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.ts": {
-    "mtime": 1786207857.0982802,
-    "ast_hash": "971e2cf4e0a22f70985a70fad4f36d46",
+    "mtime": 1786216955.2071347,
+    "ast_hash": "0a2ec46b72b7e34eb5502106fd03451a",
     "semantic_hash": ""
   },
   "web/lib/editor/subtitlesEdl.test.ts": {
@@ -535,18 +535,18 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786215762.3571718,
-    "ast_hash": "0936e1b2f5fa096b650529fad0a157bf",
+    "mtime": 1786217375.8208108,
+    "ast_hash": "22bc155ba7364c390ef13017162c8203",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786213545.7088015,
-    "ast_hash": "a035cfca3de9d94aa16586306fa95c1c",
+    "mtime": 1786217277.0934622,
+    "ast_hash": "8e47cd8058be82d322fd7cd0ed11f899",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786215762.3631723,
-    "ast_hash": "7910fba3814dd778ddb60c7b9e6e97db",
+    "mtime": 1786217368.7332425,
+    "ast_hash": "385427f4153bc05480e765c8a4db94ea",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786215762.3741803,
-    "ast_hash": "f7b668903cc78555d3bb524b16cb12cf",
+    "mtime": 1786217277.090051,
+    "ast_hash": "f9849d30a8e7f1df311a23925712a069",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -750,8 +750,8 @@
     "semantic_hash": ""
   },
   "local/README.md": {
-    "mtime": 1786189582.2522993,
-    "ast_hash": "aa86097bfdbb9b8f308bb620c57f677b",
+    "mtime": 1786217254.7197385,
+    "ast_hash": "31d5534e8dd3d260688523943fa7ddae",
     "semantic_hash": ""
   },
   "local/requirements.txt": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786215657.8486676,
-    "ast_hash": "e7114a0f89d85cf478e95e0b156460d5",
+    "mtime": 1786217174.1595266,
+    "ast_hash": "b3377f221cf1da733de5cdde9a39c13c",
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {
@@ -1312,6 +1312,11 @@
   "web/lib/editor/previewAudio.ts": {
     "mtime": 1786215176.7739606,
     "ast_hash": "ce2e1ef63a73448ac3a59b7f769023aa",
+    "semantic_hash": ""
+  },
+  "local/tests/test_editing.py": {
+    "mtime": 1786217107.5858142,
+    "ast_hash": "ef6f1cdca452ffef67298b3238827ffd",
     "semantic_hash": ""
   }
 }
