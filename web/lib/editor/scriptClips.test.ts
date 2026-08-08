@@ -69,4 +69,50 @@ describe("scriptToClips", () => {
     const clips = scriptToClips(words, script, "v1", { minClipSec: 0.2 });
     expect(clips.every((c) => c.end - c.start >= 0.2)).toBe(true);
   });
+
+  it("clamps tolerated tiny backward overlap to the previous emitted end", () => {
+    // וברכה מסתיימת רחב (1.9) וקובעת את lastEndTime; הרץ הבא מתחיל 0.1s לפניו
+    // (בתוך חלון ה-lookback הקטן שנסבל) — ההידוק נוהק את ההתחלה לסוף הקליפ הקודם.
+    // הטוקנים הזרים (א–ד), שתחילתותיהן בתוך חותם הזמן הרחב, שוברים את הרצף
+    // (gapTol=3) ומכריחים שני רצים נפרדים.
+    const words = [
+      { text: "שלום", start: 1.0, end: 1.2 },
+      { text: "וברכה", start: 1.3, end: 1.9 }, // סיום רחב — קובע lastEndTime
+      { text: "א", start: 1.4, end: 1.5 },
+      { text: "ב", start: 1.5, end: 1.6 },
+      { text: "ג", start: 1.6, end: 1.7 },
+      { text: "ד", start: 1.7, end: 1.8 },
+      { text: "שלום", start: 1.8, end: 1.9 }, // מתחיל 0.1s לפני lastEndTime
+      { text: "המשך", start: 2.1, end: 2.3 },
+    ];
+    const script = "שלום וברכה שלום המשך";
+    const clips = scriptToClips(words, script, "v1", { gapTol: 3 });
+    expect(clips.map((c) => [c.start, c.end])).toEqual([
+      [1.0, 1.9],
+      [1.9, 2.3],
+    ]);
+    for (let i = 1; i < clips.length; i++) {
+      expect(clips[i].start).toBeGreaterThanOrEqual(clips[i - 1].end);
+    }
+  });
+
+  it("drops clips whose clamped remainder falls below minClipSec", () => {
+    // אותו מבנה, אבל הרץ החופף קצר: אחרי ההידוק נשאר 0.15s — מתחת ל-minClipSec.
+    // בקוד הישן הוא היה נפלט כחפיפה (0.25s ≥ minClipSec); עכשיו הוא נזרק.
+    const words = [
+      { text: "שלום", start: 1.0, end: 1.2 },
+      { text: "וברכה", start: 1.3, end: 1.9 }, // סיום רחב — קובע lastEndTime
+      { text: "א", start: 1.4, end: 1.5 },
+      { text: "ב", start: 1.5, end: 1.6 },
+      { text: "ג", start: 1.6, end: 1.7 },
+      { text: "ד", start: 1.7, end: 1.8 },
+      { text: "שלום", start: 1.8, end: 2.05 }, // חופף 0.1s; אחרי ההידוק 0.15s
+    ];
+    const script = "שלום וברכה שלום";
+    const clips = scriptToClips(words, script, "v1", { gapTol: 3, minClipSec: 0.2 });
+    expect(clips.map((c) => [c.start, c.end])).toEqual([[1.0, 1.9]]);
+    for (let i = 1; i < clips.length; i++) {
+      expect(clips[i].start).toBeGreaterThanOrEqual(clips[i - 1].end);
+    }
+  });
 });

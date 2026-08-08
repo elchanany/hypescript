@@ -97,13 +97,25 @@ export function scriptToClips(
     const bestLocal = bestForward || bestLookback;
     if (!bestLocal) { si++; continue; }
 
-    const start = speech[bestLocal.tStart].start;
+    let start = speech[bestLocal.tStart].start;
     const end = speech[bestLocal.tEnd].end;
-    if (!(end > start)) { si++; continue; }
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !(end > start)) { si++; continue; }
 
     // דוחים קפיצה אחורה גדולה באמצע רצף
     if (clips.length && start + 0.5 < lastEndTime - lookbackSec && bestLocal.len < 5) {
       si++;
+      continue;
+    }
+
+    // מהדקים חפיפה זעירה שנסבלה (עד ~150ms) לסוף הקליפ הקודם —
+    // מונע השמעה כפולה של אותה הברה במעבר בין קליפים.
+    if (clips.length && start < lastEndTime) {
+      start = lastEndTime;
+    }
+    // אחרי ההידוק נשאר שבר קצר מדי — ההתאמה כבר מכוסה בידי הקליפ הקודם; דוחים אותה
+    if (end - start < minClipSec) {
+      si += bestLocal.len;
+      cursor = bestLocal.tEnd + 1;
       continue;
     }
 

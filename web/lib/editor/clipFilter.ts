@@ -69,7 +69,7 @@ export function snapSpeechToWords(
   const maxSnap = opts?.maxSnapSec ?? 0.45;
   const pad = opts?.padSec ?? 0.04;
 
-  return speech.map((seg) => {
+  const expanded = speech.map((seg) => {
     let start = seg.start;
     let end = seg.end;
     for (const w of list) {
@@ -87,4 +87,25 @@ export function snapSpeechToWords(
     if (!(end > start)) return seg;
     return { ...seg, start, end };
   });
+
+  // ההרחבה נעשתה לכל קטע בנפרד ויכולה ליצור חפיפות/נגיעות בין קטעים;
+  // מאחדים קטעים מאותו מקור שנוגעים או חופפים — כך שלא נותרות חפיפות לפני חיתוך מאוחר יותר.
+  return mergeOverlappingSameSource(expanded);
+}
+
+/** מאחד מקטעים מאותו מקור שנוגעים או חופפים (אחרי snap/הרחבה) לרצף בלי חפיפות. */
+function mergeOverlappingSameSource(clips: Clip[]): Clip[] {
+  if (clips.length < 2) return clips;
+  const sorted = [...clips].sort((a, b) => a.start - b.start || a.end - b.end);
+  const out: Clip[] = [];
+  for (const c of sorted) {
+    const last = out[out.length - 1];
+    // סובלנות זעירה לנקודה צפה — pad (0.04) אינו מדויק בינארית
+    if (last && last.sourceId === c.sourceId && c.start <= last.end + 1e-6) {
+      if (c.end > last.end) last.end = c.end;
+    } else {
+      out.push({ ...c });
+    }
+  }
+  return out;
 }
