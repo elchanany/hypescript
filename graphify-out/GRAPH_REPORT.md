@@ -1,25 +1,25 @@
 # Graph Report - hipescript  (2026-08-08)
 
 ## Corpus Check
-- 236 files · ~431,823 words
+- 236 files · ~432,446 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1665 nodes · 3532 edges · 113 communities (94 shown, 19 thin omitted)
+- 1667 nodes · 3548 edges · 114 communities (95 shown, 19 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.67)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `92c4c4d0`
+- Built from commit: `74866611`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Timeline.tsx
-- commands.ts
+- thumbnails.ts
+- runtime.ts
 - BrandLogo.tsx
-- overlay.ts
-- EditorApi
+- graph.ts
+- commands.ts
 - dependencies
 - HypescriptGUI
 - colorPresets.ts
@@ -75,13 +75,13 @@
 - graphify
 - .claude/skills/graphify/references/extraction-spec.md
 - handoff.md
-- providers/policy.ts
+- time.ts
 - Word
-- BrandLogo
+- useAuth
 - מדריך התחברות (Supabase) — צעד־אחר־צעד
 - tests/__init__.py
 - AGENTS.md
-- VideoPreview.tsx
+- Clip
 - REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר
 - project.ts
 - normalizeSupabaseUrl
@@ -110,22 +110,23 @@
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - .codex/skills/graphify/references/extraction-spec.md
-- runtime.ts
+- providers.ts
 - toast.ts
-- useAuth
+- login/page.tsx
 - loopGuard.test.ts
-- Word
+- elevenlabs/normalize.test.ts
 - Chat.tsx
-- commands.builtin.ts
+- overlay.ts
 - Hypescript — Brand Guidelines
 - ffmpeg.ts
 - ChatMarkdown.tsx
 - ChatMediaCard.tsx
 - BrowserRenderBackend
-- chatStore.ts
-- collapseTools.ts
-- clipFilter.ts
-- audio.ts
+- subtitles.ts
+- providers/policy.ts
+- chunking.ts
+- ChatMessage
+- previewAudio.ts
 - graph.integration.test.ts
 
 ## God Nodes (most connected - your core abstractions)
@@ -155,27 +156,27 @@
 ## Import Cycles
 - None detected.
 
-## Communities (113 total, 19 thin omitted)
+## Communities (114 total, 19 thin omitted)
 
-### Community 0 - "Timeline.tsx"
-Cohesion: 0.06
-Nodes (56): Filmstrip(), CellThumb(), fmtDur(), KIND_ICON, KIND_LABEL, MediaPanel(), View, SOURCE_COLORS (+48 more)
-
-### Community 1 - "commands.ts"
+### Community 0 - "thumbnails.ts"
 Cohesion: 0.10
-Nodes (18): AGENT_COMMANDS, arr, bool, CommandContext, CommandId, CommandPresentation, CommandSchema, id (+10 more)
+Nodes (29): Filmstrip(), CellThumb(), fmtDur(), KIND_ICON, KIND_LABEL, MediaPanel(), View, Waveform() (+21 more)
+
+### Community 1 - "runtime.ts"
+Cohesion: 0.12
+Nodes (19): AgentEvents, AgentRunner, formatLlmError(), formatToolError(), isChunkLoadError(), LOOP_GUARDS, MUTATING_TOOLS, normalizeToolResult() (+11 more)
 
 ### Community 2 - "BrandLogo.tsx"
-Cohesion: 0.17
-Nodes (16): metadata, viewport, Props, ChunkReload(), isChunkError(), BRAND_NAME, BRAND_NAME_HE, BRAND_PATHS (+8 more)
+Cohesion: 0.14
+Nodes (17): metadata, viewport, BrandLogo(), Props, ChunkReload(), isChunkError(), BRAND_NAME, BRAND_NAME_HE (+9 more)
 
-### Community 3 - "overlay.ts"
-Cohesion: 0.13
-Nodes (14): PreviewOverlays(), makeImageOverlay(), makeTextOverlay(), nextZ(), OverlayKind, overlayVisibleAt(), VisualTransform, RenderGraph (+6 more)
+### Community 3 - "graph.ts"
+Cohesion: 0.11
+Nodes (18): mediaById(), aChain(), ext(), RenderGraph, RenderGraphOpts, RenderTarget, toExecArgs(), usableClips() (+10 more)
 
-### Community 4 - "EditorApi"
-Cohesion: 0.08
-Nodes (19): download(), EditorPage(), kindOf(), probeDuration(), CommandDef, CommandPermission, EditorApi, queryProject() (+11 more)
+### Community 4 - "commands.ts"
+Cohesion: 0.06
+Nodes (30): download(), EditorPage(), kindOf(), probeDuration(), AGENT_COMMANDS, arr, bool, CommandContext (+22 more)
 
 ### Community 5 - "dependencies"
 Cohesion: 0.05
@@ -210,20 +211,20 @@ Cohesion: 0.14
 Nodes (20): auth.users, public.handle_new_user, public.protect_system_owner, public.protect_system_owner_role, on_auth_user_created, public.audit_logs, public.credit_accounts, public.has_permission() (+12 more)
 
 ### Community 13 - "timelineOps.ts"
-Cohesion: 0.40
-Nodes (8): closeGap(), isGapClip(), makeGap(), removeClipLeaveGap(), removeClipRipple(), rollAtBoundary(), slipClip(), trimGap()
+Cohesion: 0.23
+Nodes (14): assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), closeGap(), GAP_SOURCE, isGapClip(), makeGap() (+6 more)
 
 ### Community 14 - "run"
 Cohesion: 0.18
 Nodes (17): ArgumentParser, build_parser(), Config, config_from_args(), _fmt(), main(), _print_summary(), KeepInterval (+9 more)
 
 ### Community 15 - "config.ts"
-Cohesion: 0.23
-Nodes (14): GET(), runtime, GET(), configuredProviders(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics(), getRawPublicKey() (+6 more)
+Cohesion: 0.25
+Nodes (13): GET(), runtime, GET(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics(), getRawPublicKey(), getSupabasePublicConfig() (+5 more)
 
 ### Community 16 - "tools.ts"
-Cohesion: 0.09
-Nodes (22): clipsSummary(), dispatch(), fetchTranscribeConfigured(), fmt(), mainVideo(), readTranscribeModelPref(), readTranscribePref(), Reporter (+14 more)
+Cohesion: 0.08
+Nodes (28): clipsSummary(), dispatch(), fetchTranscribeConfigured(), fmt(), mainVideo(), readTranscribeModelPref(), readTranscribePref(), Reporter (+20 more)
 
 ### Community 17 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -235,35 +236,35 @@ Nodes (26): CaptionMode, KeepInterval, קטע שנשמור בעריכה (על צ
 
 ### Community 19 - "settings/page.tsx"
 Cohesion: 0.17
-Nodes (20): SettingsPage(), GROQ_KEY, OPENAI_KEY, PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF, ApiConfigShape, flattenApiConfig() (+12 more)
+Nodes (21): SettingsPage(), GROQ_KEY, OPENAI_KEY, PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF, ApiConfigShape, flattenApiConfig() (+13 more)
 
 ### Community 20 - "models.ts"
-Cohesion: 0.14
-Nodes (18): FINALS, getOpcodes(), lcsMatches(), normalizeHebrew(), Op, scriptKeepMask(), buildKeepIntervals(), DEFAULT_FILLERS (+10 more)
+Cohesion: 0.11
+Nodes (23): FINALS, getOpcodes(), lcsMatches(), normalizeHebrew(), Op, scriptKeepMask(), buildKeepIntervals(), DEFAULT_FILLERS (+15 more)
 
 ### Community 22 - "semanticTimeline.ts"
 Cohesion: 0.16
-Nodes (18): avgDb(), assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), WordsBySource, assembledStart(), buildTimelineEnergyEvidence() (+10 more)
+Nodes (15): analyzeAudio(), avgDb(), cache, EnergyProfile, findSilences(), fp(), buildTimelineEnergyEvidence(), buildTimelineEvidence() (+7 more)
 
 ### Community 23 - "subtitlesEdl.ts"
-Cohesion: 0.10
-Nodes (36): assembledWords(), CaptionBuildOpts, CaptionMode, edlToCues(), edlToCuesWithScript(), edlToSrt(), edlToSubs(), edlToSubsWithScript() (+28 more)
+Cohesion: 0.16
+Nodes (23): WordsBySource, assembledWords(), CaptionBuildOpts, CaptionMode, edlToCues(), edlToCuesWithScript(), edlToSrt(), edlToSubs() (+15 more)
 
 ### Community 24 - "transcribe/route.ts"
-Cohesion: 0.14
-Nodes (24): GET(), runtime, maxDuration, POST(), runtime, GET(), runtime, maxDuration (+16 more)
+Cohesion: 0.13
+Nodes (25): GET(), runtime, maxDuration, POST(), runtime, GET(), runtime, maxDuration (+17 more)
 
 ### Community 25 - "useEditor.ts"
-Cohesion: 0.20
-Nodes (16): Updater, useEditor(), captionStyleToCss(), DEFAULT_CAPTION_STYLE, normalizeCaptionStyle(), DEFAULT_CANVAS, defaultTracks(), collapseProgressiveForBurn() (+8 more)
+Cohesion: 0.17
+Nodes (18): Updater, useEditor(), CaptionBg, CaptionPosition, captionStyleToCss(), DEFAULT_CAPTION_STYLE, normalizeCaptionStyle(), DEFAULT_CANVAS (+10 more)
 
 ### Community 30 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 31 - "app/page.tsx"
-Cohesion: 0.05
-Nodes (71): DashboardPage(), DialogState, fmtDate(), fmtRelativeHe(), ProjectCard(), userAvatarUrl(), userLabel(), COMMAND_ICONS (+63 more)
+Cohesion: 0.06
+Nodes (69): DashboardPage(), DialogState, fmtDate(), fmtRelativeHe(), ProjectCard(), userAvatarUrl(), userLabel(), COMMAND_ICONS (+61 more)
 
 ### Community 32 - "canvasCoords.ts"
 Cohesion: 0.29
@@ -279,7 +280,7 @@ Nodes (8): Active Files, Changes Made, Current State, Exact Next Steps, Failed A
 
 ### Community 35 - "model.ts"
 Cohesion: 0.16
-Nodes (26): ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num(), OverlayInspector(), SubInspector(), titleFor() (+18 more)
+Nodes (35): ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num(), OverlayInspector(), SubInspector(), titleFor() (+27 more)
 
 ### Community 36 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -349,33 +350,33 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 Cohesion: 0.09
 Nodes (22): 1. השג מפתח (Groq, חינם), 2. הרצה — התרחיש המרכזי, hypescript — עורך אוטומטי לסרטוני שיעורים בעברית, איך זה עובד (למתעניינים), אינטרו/אאוטרו וכללי, דוגמאות נוספות, דרישות מוקדמות, התקנה (+14 more)
 
-### Community 61 - "providers/policy.ts"
-Cohesion: 0.29
-Nodes (9): ApprovalStore, empty(), ensureProviderBillingApproval(), getProviderApprovals(), isProviderBillingApproved(), parseProviderApprovals(), PROVIDER_APPROVALS_KEY, setProviderBillingApproval() (+1 more)
+### Community 61 - "time.ts"
+Cohesion: 0.16
+Nodes (23): TimelineToolbar(), clampTime(), clampZoom(), formatTimecode(), MS, msToSec(), pixelsToTime(), roundToMs() (+15 more)
 
 ### Community 62 - "Word"
 Cohesion: 0.16
 Nodes (17): is_speech_word(), מבני נתונים משותפים לכל שלבי ה-pipeline. חשוב: שני מנועי התמלול (מקומי וענן)…, מילה בודדת עם חותמות זמן (בשניות, על ציר הזמן המקורי של הווידאו)., מילת דיבור בלבד — ללא רווחים/אירועי שמע., כל המילים מכל הקטעים, ממוינות לפי זמן התחלה., speech_words(), Word, energy_evidence_from_db() (+9 more)
 
-### Community 63 - "BrandLogo"
+### Community 63 - "useAuth"
 Cohesion: 0.18
-Nodes (9): OnboardingPage(), Step, BrandLogo(), Ctx, resolve(), ThemeCtx, ThemeMode, ThemeProvider() (+1 more)
+Nodes (14): OnboardingPage(), Step, TopBar(), getSupabaseBrowser(), AuthState, humanAuthError(), postBootstrap(), useAuth() (+6 more)
 
 ### Community 64 - "מדריך התחברות (Supabase) — צעד־אחר־צעד"
 Cohesion: 0.12
 Nodes (15): 4א — Google Cloud Console, 4ב — Redirect אחרי התחברות (ב־Supabase), Migration, `No API key found in request` / כתובת עם `/rest/v1/auth/...`, Package A — משתני שרת נוספים, הרצה מקומית (אופציונלי), מדריך התחברות (Supabase) — צעד־אחר־צעד, מה קורה במוצר אחרי זה (+7 more)
 
-### Community 67 - "VideoPreview.tsx"
-Cohesion: 0.14
-Nodes (25): ChatProps, Props, CORNERS, DragState, Handle, Props, Props, Props (+17 more)
+### Community 67 - "Clip"
+Cohesion: 0.15
+Nodes (24): ChatProps, Props, CORNERS, DragState, Handle, PreviewOverlays(), Props, Props (+16 more)
 
 ### Community 68 - "REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר"
 Cohesion: 0.18
 Nodes (10): REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר, אזור 1 — Top bar, אזור 2 — Tool rail (סרגל קטגוריות), אזור 3 — Left content panel (Media), אזור 4 — Viewer / Canvas, אזור 5 — Inspector, אזור 6 — Timeline, אזור 7 — Agent dock (Cursor/Copilot-class) (+2 more)
 
 ### Community 69 - "project.ts"
-Cohesion: 0.20
-Nodes (18): migrateClips(), migrateState(), audioMuted(), audioTrack(), captionLocked(), captionTrack(), clampHeight(), createVideoTrack() (+10 more)
+Cohesion: 0.19
+Nodes (19): migrateClips(), migrateState(), audioMuted(), audioTrack(), captionLocked(), captionTrack(), clampHeight(), createVideoTrack() (+11 more)
 
 ### Community 70 - "normalizeSupabaseUrl"
 Cohesion: 0.30
@@ -469,37 +470,37 @@ Nodes (3): AGENT_UI_PARITY, מקרא, פערי Parity מיידיים (לחביל
 Cohesion: 0.50
 Nodes (4): local/, STACK.md — טכנולוגיות, web/ (המסלול המרכזי), עתידי / אפשרי (טרם הוחלט)
 
-### Community 96 - "runtime.ts"
-Cohesion: 0.06
-Nodes (50): maxDuration, POST(), runtime, SlashCmd, EditorSnapshot, Conversation, CANCELLED_RESULT, isToolHistoryValid() (+42 more)
+### Community 96 - "providers.ts"
+Cohesion: 0.14
+Nodes (24): maxDuration, POST(), runtime, anthropicParts(), asText(), callAnthropic(), callGemini(), callOpenAICompat() (+16 more)
 
 ### Community 97 - "toast.ts"
 Cohesion: 0.26
 Nodes (11): ICONS, ToastHost(), dismissToast(), emit(), items, Listener, listeners, pushToast() (+3 more)
 
-### Community 98 - "useAuth"
-Cohesion: 0.18
-Nodes (13): ContinueInner(), LoginInner(), Tab, TopBar(), AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession() (+5 more)
+### Community 98 - "login/page.tsx"
+Cohesion: 0.26
+Nodes (7): ContinueInner(), LoginInner(), Tab, AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession()
 
-### Community 100 - "Word"
-Cohesion: 0.18
-Nodes (12): ElevenLabsSttRaw, ElevenLabsWordRaw, mapTokenType(), NormalizedTranscript, normalizeElevenLabsStt(), DEFAULT_TRANSCRIBE_PREF, defaultModelFor(), resolveTranscribeProvider() (+4 more)
+### Community 100 - "elevenlabs/normalize.test.ts"
+Cohesion: 0.32
+Nodes (6): DEFAULT_TRANSCRIBE_PREF, defaultModelFor(), resolveTranscribeProvider(), TranscribeConfigured, TranscribeProviderId, TranscribeProviderPref
 
 ### Community 101 - "Chat.tsx"
-Cohesion: 0.18
-Nodes (17): Chat(), fmtTc(), Item, KIND_ICON, MODES, now(), SLASH, TOOL_ICON (+9 more)
+Cohesion: 0.10
+Nodes (36): Chat(), fmtTc(), Item, KIND_ICON, MODES, now(), SLASH, SlashCmd (+28 more)
 
-### Community 102 - "commands.builtin.ts"
+### Community 102 - "overlay.ts"
 Cohesion: 0.28
-Nodes (11): ensureBuiltinCommands(), addClip(), assembledToSource(), splitClip(), totalDur(), trimClip(), clipsOnTrack(), clipTrackId() (+3 more)
+Nodes (5): makeImageOverlay(), makeTextOverlay(), nextZ(), OverlayKind, VisualTransform
 
 ### Community 103 - "Hypescript — Brand Guidelines"
 Cohesion: 0.13
 Nodes (14): Accessibility, Clear space / Minimum size, Email, Hypescript — Brand Guidelines, Metadata / PWA / Social, Palette (נדגם מהלוגו), Theme, כלל מקור (+6 more)
 
 ### Community 104 - "ffmpeg.ts"
-Cohesion: 0.20
-Nodes (18): uid(), extOf(), extractAssembledAudio(), extractAudio(), extractAudioChunks(), extractAudioSegment(), extractFrame(), ffQueue (+10 more)
+Cohesion: 0.29
+Nodes (16): CaptionStyle, uid(), extOf(), extractAssembledAudio(), extractAudio(), extractAudioChunks(), extractAudioSegment(), extractFrame() (+8 more)
 
 ### Community 105 - "ChatMarkdown.tsx"
 Cohesion: 0.36
@@ -509,21 +510,25 @@ Nodes (4): ChatMarkdown(), contextualFileName(), MdPart, parseChatMarkdown()
 Cohesion: 0.29
 Nodes (6): BeatAudioPlayer(), ChatMediaCard(), fmt(), LABEL, MKind, Props
 
-### Community 108 - "chatStore.ts"
-Cohesion: 0.36
-Nodes (10): addConversation(), ChatItem, ChatStoreV2, emptyConversation(), emptyStore(), isPlaceholderTitle(), migrateChatStore(), newId() (+2 more)
+### Community 108 - "subtitles.ts"
+Cohesion: 0.23
+Nodes (14): buildCues(), CaptionMode, Cue, endsPhrase(), endsSentence(), formatCueText(), mapToEdited(), phraseBlocks() (+6 more)
 
-### Community 109 - "collapseTools.ts"
-Cohesion: 0.36
-Nodes (6): collapseConsecutiveTools(), CollapsedToolView, CollapsibleTool, mergeToolState(), toolGroupSummary(), toolGroupTitle()
+### Community 109 - "providers/policy.ts"
+Cohesion: 0.32
+Nodes (8): ApprovalStore, empty(), ensureProviderBillingApproval(), getProviderApprovals(), isProviderBillingApproved(), parseProviderApprovals(), PROVIDER_APPROVALS_KEY, setProviderBillingApproval()
 
-### Community 110 - "clipFilter.ts"
-Cohesion: 0.42
-Nodes (6): deleteClipRange(), deleteClipsAt(), intersectClipsWithSpeech(), keepSourceRange(), mergeOverlappingSameSource(), snapSpeechToWords()
+### Community 110 - "chunking.ts"
+Cohesion: 0.44
+Nodes (7): DEFAULT_CHUNK_SEC, mergeWordChunks(), planChunkOffsets(), shiftWords(), wordsFromProviderPayload(), transcribeMediaFile(), TranscribeMediaOpts
 
-### Community 111 - "audio.ts"
-Cohesion: 0.40
-Nodes (5): analyzeAudio(), cache, EnergyProfile, findSilences(), fp()
+### Community 111 - "ChatMessage"
+Cohesion: 0.39
+Nodes (4): CANCELLED_RESULT, isToolHistoryValid(), repairToolMessages(), ChatMessage
+
+### Community 112 - "previewAudio.ts"
+Cohesion: 0.60
+Nodes (3): audioFadeFactor, edgeFadeFactor(), previewAudioGain()
 
 ### Community 114 - "graph.integration.test.ts"
 Cohesion: 0.29
@@ -537,17 +542,17 @@ Nodes (5): astream(), fmtDur(), probe(), vPackets(), vstream()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Clip` connect `VideoPreview.tsx` to `Timeline.tsx`, `commands.ts`, `overlay.ts`, `EditorApi`, `timelineOps.ts`, `tools.ts`, `models.ts`, `semanticTimeline.ts`, `subtitlesEdl.ts`, `useEditor.ts`, `app/page.tsx`, `model.ts`, `project.ts`, `runtime.ts`, `Chat.tsx`, `commands.builtin.ts`, `ffmpeg.ts`, `clipFilter.ts`, `graph.integration.test.ts`?**
+- **Why does `Clip` connect `Clip` to `runtime.ts`, `model.ts`, `commands.ts`, `Chat.tsx`, `project.ts`, `graph.ts`, `ffmpeg.ts`, `timelineOps.ts`, `tools.ts`, `graph.integration.test.ts`, `models.ts`, `semanticTimeline.ts`, `subtitlesEdl.ts`, `useEditor.ts`, `app/page.tsx`?**
   _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `Word` connect `Word` to `VideoPreview.tsx`, `EditorApi`, `Chat.tsx`, `clipFilter.ts`, `tools.ts`, `models.ts`, `semanticTimeline.ts`, `subtitlesEdl.ts`, `app/page.tsx`?**
+- **Why does `Word` connect `models.ts` to `Clip`, `Chat.tsx`, `subtitles.ts`, `timelineOps.ts`, `chunking.ts`, `tools.ts`, `semanticTimeline.ts`, `app/page.tsx`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `MediaAsset` connect `VideoPreview.tsx` to `Timeline.tsx`, `runtime.ts`, `commands.ts`, `model.ts`, `EditorApi`, `Chat.tsx`, `overlay.ts`, `ffmpeg.ts`, `tools.ts`, `graph.integration.test.ts`, `app/page.tsx`?**
+- **Why does `MediaAsset` connect `Clip` to `thumbnails.ts`, `runtime.ts`, `model.ts`, `commands.ts`, `Chat.tsx`, `graph.ts`, `ffmpeg.ts`, `tools.ts`, `graph.integration.test.ts`, `app/page.tsx`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `Current task`, `Branch`, `Latest commit` to the rest of the system?**
   _521 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Timeline.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.06265984654731457 - nodes in this community are weakly interconnected._
-- **Should `commands.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10276679841897234 - nodes in this community are weakly interconnected._
-- **Should `overlay.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.13043478260869565 - nodes in this community are weakly interconnected._
+- **Should `thumbnails.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.10317460317460317 - nodes in this community are weakly interconnected._
+- **Should `runtime.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.12096774193548387 - nodes in this community are weakly interconnected._
+- **Should `BrandLogo.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.13675213675213677 - nodes in this community are weakly interconnected._
