@@ -7,15 +7,16 @@ named when the transcription provider supplied that label.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
-from typing import Iterable, Literal, Optional
+from typing import Iterable, Literal, Optional, Sequence
 
 from .models import Word, is_speech_word
 
 
-EvidenceKind = Literal["speech", "audio_event", "gap"]
+EvidenceKind = Literal["speech", "audio_event", "gap", "energy"]
 EvidenceSource = Literal[
-    "transcript_word", "provider_audio_event", "explicit_timeline_gap"
+    "transcript_word", "provider_audio_event", "explicit_timeline_gap", "measured_rms_dbfs"
 ]
 
 
@@ -28,7 +29,12 @@ class TimelineEvidenceSpan:
     text: Optional[str] = None
     source_id: Optional[str] = None
     speaker_id: Optional[str] = None
-    confidence: Literal["direct"] = "direct"
+    source_start: Optional[float] = None
+    source_end: Optional[float] = None
+    db: Optional[float] = None
+    floor_db: Optional[float] = None
+    energy_level: Optional[Literal["low", "elevated"]] = None
+    confidence: Literal["direct", "measured"] = "direct"
 
 
 def evidence_from_words(
@@ -90,3 +96,54 @@ def explicit_gap(start: float, end: float) -> TimelineEvidenceSpan:
         text="explicit edit gap",
         evidence="explicit_timeline_gap",
     )
+
+
+def energy_evidence_from_db(
+    db_values: Sequence[float],
+    *,
+    hop: float,
+    floor_db: float,
+    source_start: float,
+    source_end: float,
+    timeline_start: float = 0.0,
+    source_id: Optional[str] = None,
+    window_sec: float = 0.5,
+    low_margin_db: float = 6.0,
+) -> list[TimelineEvidenceSpan]:
+    """Map measured RMS/dBFS windows to a timeline; no sound type is inferred."""
+    if hop <= 0 or source_end <= source_start:
+        return []
+    window_sec = max(0.1, window_sec)
+    spans: list[TimelineEvidenceSpan] = []
+    cursor = source_start
+    while cursor < source_end - 1e-9:
+        end = min(source_end, cursor + window_sec)
+        first = max(0, int(cursor // hop))
+        last = min(len(db_values), math.ceil(end / hop)) if len(db_values) else 0
+        values = db_values[first:last]
+        db = sum(values) / len(values) if values else floor_db
+        level: Literal["low", "elevated"] = "low" if db < floor_db + low_margin_db else "elevated"
+        span = TimelineEvidenceSpan(
+            kind="energy",
+            start=timeline_start + cursor - source_start,
+            end=timeline_start + end - source_start,
+            source_id=source_id,
+            source_start=cursor,
+            source_end=end,
+            db=db,
+            floor_db=floor_db,
+            energy_level=level,
+            evidence="measured_rms_dbfs",
+            confidence="measured",
+        )
+        previous = spans[-1] if spans else None
+        if previous and previous.energy_level == level and abs((previous.source_end or 0) - cursor) < 1e-9:
+            previous_duration = previous.end - previous.start
+            duration = span.end - span.start
+            previous.db = ((previous.db or db) * previous_duration + db * duration) / (previous_duration + duration)
+            previous.end = span.end
+            previous.source_end = end
+        else:
+            spans.append(span)
+        cursor = end
+    return spans

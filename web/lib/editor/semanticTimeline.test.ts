@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Word } from "@/lib/models";
 import type { Clip } from "./model";
-import { buildTimelineEvidence, evidenceCounts } from "./semanticTimeline";
+import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "./semanticTimeline";
 
 describe("semantic timeline evidence", () => {
   it("maps speech, provider events, and explicit gaps without semantic guessing", () => {
@@ -27,8 +27,28 @@ describe("semantic timeline evidence", () => {
     expect(spans[3]).toMatchObject({ text: "סוף" });
     expect(spans[3].start).toBeCloseTo(2.7, 8);
     expect(spans[3].end).toBeCloseTo(3, 8);
-    expect(evidenceCounts(spans)).toEqual({ speech: 2, audio_event: 1, gap: 1 });
+    expect(evidenceCounts(spans)).toEqual({ speech: 2, audio_event: 1, gap: 1, energy: 0 });
     expect(spans.some((span) => /breath|laugh/i.test(span.text || ""))).toBe(false);
+  });
+
+  it("maps measured RMS energy to assembled time without semantic labels", () => {
+    const clips: Clip[] = [
+      { id: "c1", sourceId: "m", start: 1, end: 2 },
+      { id: "g", sourceId: "__gap__", start: 0, end: 0.5 },
+      { id: "c2", sourceId: "m", start: 3, end: 3.5 },
+    ];
+    const profile = {
+      hop: 0.5,
+      db: new Float32Array([-60, -60, -40, -40, -30, -30, -59, -59]),
+      duration: 4,
+      floorDb: -60,
+      peakDb: -30,
+    };
+    const spans = buildTimelineEnergyEvidence(clips, (sourceId) => sourceId === "m" ? profile : null, { windowSec: 0.5 });
+    expect(spans).toHaveLength(2);
+    expect(spans[0]).toMatchObject({ kind: "energy", start: 0, end: 1, energyLevel: "elevated", evidence: "measured_rms_dbfs", confidence: "measured" });
+    expect(spans[1]).toMatchObject({ kind: "energy", start: 1.5, end: 2, energyLevel: "low" });
+    expect(spans.some((span) => /cough|breath|silence/i.test(span.text || ""))).toBe(false);
   });
 
   it("skips disabled clips and never converts transcript absence into a gap", () => {

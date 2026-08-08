@@ -2,9 +2,10 @@ import { isSpeechWord, type Word } from "@/lib/models";
 import { assembledStart, clipDur, clipEnabled, type Clip } from "./model";
 import { isGapClip } from "./timelineOps";
 import type { WordsBySource } from "./assembleTranscript";
+import { avgDb, type EnergyProfile } from "@/lib/audio";
 
-export type TimelineEvidenceKind = "speech" | "audio_event" | "gap";
-export type TimelineEvidenceSource = "transcript_word" | "provider_audio_event" | "explicit_timeline_gap";
+export type TimelineEvidenceKind = "speech" | "audio_event" | "gap" | "energy";
+export type TimelineEvidenceSource = "transcript_word" | "provider_audio_event" | "explicit_timeline_gap" | "measured_rms_dbfs";
 
 export interface TimelineEvidenceSpan {
   kind: TimelineEvidenceKind;
@@ -13,13 +14,23 @@ export interface TimelineEvidenceSpan {
   text?: string;
   sourceId?: string;
   speakerId?: string;
+  sourceStart?: number;
+  sourceEnd?: number;
+  db?: number;
+  floorDb?: number;
+  energyLevel?: "low" | "elevated";
   evidence: TimelineEvidenceSource;
-  confidence: "direct";
+  confidence: "direct" | "measured";
 }
 
 export interface TimelineEvidenceOpts {
   /** Merge adjacent speech tokens into readable spans, without crossing events/gaps. */
   maxSpeechGap?: number;
+}
+
+export interface TimelineEnergyOpts {
+  windowSec?: number;
+  lowMarginDb?: number;
 }
 
 function tokenSpan(word: Word, clip: Clip, base: number): TimelineEvidenceSpan | null {
@@ -95,9 +106,58 @@ export function buildTimelineEvidence(
   return merged;
 }
 
+/** Map RMS/dBFS measurements into assembled time without assigning sound semantics. */
+export function buildTimelineEnergyEvidence(
+  clips: Clip[],
+  getProfile: (sourceId: string) => EnergyProfile | null | undefined,
+  opts: TimelineEnergyOpts = {},
+): TimelineEvidenceSpan[] {
+  const active = clips.filter(clipEnabled);
+  const windowSec = Math.max(0.1, opts.windowSec ?? 0.5);
+  const lowMarginDb = opts.lowMarginDb ?? 6;
+  const out: TimelineEvidenceSpan[] = [];
+  for (let index = 0; index < active.length; index++) {
+    const clip = active[index];
+    if (isGapClip(clip)) continue;
+    const profile = getProfile(clip.sourceId);
+    if (!profile) continue;
+    const base = assembledStart(active, index);
+    for (let sourceStart = clip.start; sourceStart < clip.end - 1e-6; sourceStart += windowSec) {
+      const sourceEnd = Math.min(clip.end, sourceStart + windowSec);
+      const db = avgDb(profile, sourceStart, sourceEnd);
+      const energyLevel = db < profile.floorDb + lowMarginDb ? "low" : "elevated";
+      const span: TimelineEvidenceSpan = {
+        kind: "energy",
+        start: base + sourceStart - clip.start,
+        end: base + sourceEnd - clip.start,
+        sourceId: clip.sourceId,
+        sourceStart,
+        sourceEnd,
+        db,
+        floorDb: profile.floorDb,
+        energyLevel,
+        evidence: "measured_rms_dbfs",
+        confidence: "measured",
+      };
+      const previous = out[out.length - 1];
+      const contiguousSource = previous?.sourceEnd != null && Math.abs(previous.sourceEnd - sourceStart) < 1e-6;
+      if (previous?.kind === "energy" && previous.sourceId === span.sourceId && previous.energyLevel === energyLevel && contiguousSource) {
+        const previousDuration = previous.end - previous.start;
+        const spanDuration = span.end - span.start;
+        previous.db = (((previous.db ?? db) * previousDuration) + db * spanDuration) / (previousDuration + spanDuration);
+        previous.end = span.end;
+        previous.sourceEnd = sourceEnd;
+      } else {
+        out.push(span);
+      }
+    }
+  }
+  return out;
+}
+
 export function evidenceCounts(spans: TimelineEvidenceSpan[]) {
   return spans.reduce((counts, span) => {
     counts[span.kind] += 1;
     return counts;
-  }, { speech: 0, audio_event: 0, gap: 0 } as Record<TimelineEvidenceKind, number>);
+  }, { speech: 0, audio_event: 0, gap: 0, energy: 0 } as Record<TimelineEvidenceKind, number>);
 }

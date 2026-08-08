@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-Hebrew caption grouping: איזון orphan של מילה אחת שנוצר רק מתקציב תווים, זהה ב-web+local, בלי לחצות פאוזה/פיסוק ובלי לשנות timing. אחריו energy evidence spans.
+Measured energy evidence: RMS/dBFS windows ממופים לציר הערוך, low/elevated יחסית לרצפת המקור, עם opt-in בכלי agent; web מודד בפועל ו-local מכיל mapper טהור מקביל. אחריו AG-2 generated-media I/O boundary.
 
 ## Branch
 `main`
 
 ## Latest commit
-`ecf3808` — chore(graphify): sync semantic timeline graph
+`73c93ff` — chore(graphify): sync caption grouping graph
 
 ## Status
-Dirty Hebrew grouping package · web 43 files/219 tests, local 4/4 ו-production build עברו; Graphify/commit עדיין בהרצה. Semantic evidence נחת ב-main (`071ed3d`).
+Dirty energy evidence package · web 43 files/220 tests, local 5/5, type-check ו-production build עברו; Graphify/commit עדיין בהרצה. Hebrew grouping נחת ב-main (`75337e7`).
 
 ## Exact continuation point
-Graphify + commit/push Hebrew grouping; אחר כך energy evidence spans ללא semantic inference. בלי שינוי Supabase/Auth ללא אישור.
+Graphify + commit/push energy evidence; אחר כך AG-2 generated-media I/O boundary. בלי שינוי Supabase/Auth ללא אישור.

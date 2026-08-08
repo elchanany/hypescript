@@ -98,4 +98,4 @@
 ### P3
 - Templates / Effects / Transitions / Filters (רק עם Preview+Export)
 - Organizations / Brand / Usage / Credits
-- Semantic timeline understanding: PARTIAL — per-time-span direct evidence קיים ל-speech, provider `audio_event`, ו-explicit edit gaps ב-web+local עם כלי agent; energy spans עדיין חסרים. אין להסיק שקט/נשימה/שיעול/צחוק מהיעדר תמלול או מ-dB בלבד
+- Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; מדידת web היא opt-in ו-local mapper עדיין לא מחובר ל-extractor ב-CLI. אין להסיק שקט/נשימה/שיעול/צחוק מהיעדר תמלול או מ-dB בלבד

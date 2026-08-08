@@ -31,7 +31,7 @@ import { TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/projec
 import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
-import { buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
+import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -448,23 +448,47 @@ export const TOOLS: ToolMeta[] = [
     schema: {
       name: "inspect_timeline_evidence",
       description: "מחזיר ראיות ישירות לפי טווח זמן בציר הערוך: דיבור מתמלול, אירועי שמע שספק התמלול סימן במפורש, ופערי עריכה מפורשים. אינו מנחש שיעול/נשימה/צחוק מהיעדר מילים.",
-      parameters: { type: "object", properties: {} },
+      parameters: {
+        type: "object",
+        properties: {
+          include_energy: { type: "boolean", description: "true=נתח גם RMS/dBFS מקומי (איטי יותר; אינו מזהה סוגי צליל)" },
+        },
+      },
     },
-    run: async (_a, ctx) => {
+    run: async (a, ctx, report) => {
       if (!ctx.clips?.length) return "אין ציר ערוך לניתוח.";
       const main = mainVideo(ctx);
-      const spans = buildTimelineEvidence(
+      const directSpans = buildTimelineEvidence(
         ctx.clips,
         (sourceId) => ctx.transcripts[sourceId] ?? (sourceId === main?.id ? ctx.words : null),
       );
+      let energySpans: ReturnType<typeof buildTimelineEnergyEvidence> = [];
+      const includeEnergy = a.include_energy === true || a.include_energy === "true";
+      if (includeEnergy) {
+        report("מודד אנרגיית RMS בציר…");
+        const profiles = new Map<string, Awaited<ReturnType<typeof analyzeAudio>>>();
+        const sourceIds = [...new Set(ctx.clips.map((clip) => clip.sourceId))];
+        for (const sourceId of sourceIds) {
+          const asset = mediaById(ctx.media, sourceId);
+          if (!asset || asset.kind === "image" || !asset.file) continue;
+          try { profiles.set(sourceId, await analyzeAudio(asset.file)); }
+          catch { /* source remains without measured energy evidence */ }
+        }
+        energySpans = buildTimelineEnergyEvidence(ctx.clips, (sourceId) => profiles.get(sourceId));
+      }
+      const spans = [...directSpans, ...energySpans]
+        .sort((left, right) => left.start - right.start || left.end - right.end || left.kind.localeCompare(right.kind));
       const counts = evidenceCounts(spans);
       const lines = spans.slice(0, 80).map((span) => {
         const range = `${span.start.toFixed(2)}–${span.end.toFixed(2)}s`;
         if (span.kind === "speech") return `• ${range} דיבור מתמלול: ${span.text || ""}`;
         if (span.kind === "audio_event") return `• ${range} אירוע שסומן במפורש בידי ספק התמלול: ${span.text || "ללא תווית"}`;
-        return `• ${range} פער עריכה מפורש`;
+        if (span.kind === "gap") return `• ${range} פער עריכה מפורש`;
+        return `• ${range} אנרגיה ${span.energyLevel === "low" ? "נמוכה יחסית" : "מוגברת"}: ${(span.db ?? 0).toFixed(1)}dBFS (רצפה ${(span.floorDb ?? 0).toFixed(1)}dBFS)`;
       });
-      return `ראיות בציר: ${counts.speech} מקטעי דיבור, ${counts.audio_event} אירועי ספק, ${counts.gap} פערי עריכה.\n${lines.join("\n") || "אין ראיות זמינות."}` +
+      return `ראיות בציר: ${counts.speech} מקטעי דיבור, ${counts.audio_event} אירועי ספק, ${counts.gap} פערי עריכה` +
+        (includeEnergy ? `, ${counts.energy} מקטעי אנרגיה מדודים` : "") +
+        `.\n${lines.join("\n") || "אין ראיות זמינות."}` +
         "\nהבהרה: היעדר תמלול אינו מוכיח שקט; לא הוסקו נשימה, שיעול או צחוק ללא תווית מפורשת מהספק.";
     },
   },

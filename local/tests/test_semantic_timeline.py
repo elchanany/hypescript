@@ -1,7 +1,7 @@
 import unittest
 
 from hypescript.models import Word
-from hypescript.semantic_timeline import evidence_from_words, explicit_gap
+from hypescript.semantic_timeline import energy_evidence_from_db, evidence_from_words, explicit_gap
 
 
 class SemanticTimelineTests(unittest.TestCase):
@@ -31,6 +31,20 @@ class SemanticTimelineTests(unittest.TestCase):
         )
         gap = explicit_gap(4, 4.5)
         self.assertEqual((gap.kind, gap.evidence), ("gap", "explicit_timeline_gap"))
+
+    def test_energy_is_measured_without_semantic_inference(self):
+        spans = energy_evidence_from_db(
+            [-60, -60, -30, -30],
+            hop=0.5,
+            floor_db=-60,
+            source_start=0,
+            source_end=2,
+            source_id="media-1",
+            window_sec=0.5,
+        )
+        self.assertEqual([span.energy_level for span in spans], ["low", "elevated"])
+        self.assertTrue(all(span.evidence == "measured_rms_dbfs" for span in spans))
+        self.assertTrue(all(span.text is None for span in spans))
 
 
 if __name__ == "__main__":

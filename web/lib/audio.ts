@@ -1,5 +1,5 @@
-// ניתוח עוצמת סאונד (RMS/dB) בדפדפן — כדי לזהות נשימות/שתיקות לפי *עוצמה*
-// בפועל, ולהבחין בין שקט לבין רעש (שיעול/כסא/רקע) בין המילים.
+// ניתוח עוצמת סאונד (RMS/dB) בדפדפן. זו ראיית אנרגיה מדודה בלבד;
+// היא אינה מזהה סמנטית נשימה, שיעול, דיבור או סוג רעש.
 
 "use client";
 
@@ -61,7 +61,7 @@ export function avgDb(p: EnergyProfile, start: number, end: number): number {
   return s / (b - a);
 }
 
-// אזורי שקט/נשימה לפי עוצמה מתחת לסף, באורך מינימלי.
+// אזורים מתחת לסף עוצמה, באורך מינימלי (לא סיווג סמנטי של שקט/נשימה).
 export function findSilences(p: EnergyProfile, thresholdDb: number, minLen: number): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   let start = -1;
