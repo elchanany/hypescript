@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Command registry contracts. לכל פקודה יש input/result schema, permissions, contexts ו-agentCallable; `runCommand` מאמת required/types לפני mutation ו־`listAgentCommands` מסנן surface סוכנית.
+AG-4 — Tool activity reliability. כרטיס כלי שומר args+duration; "נסה שוב" מריץ את אותה קריאה בדיוק ושומר assistant/tool history תקין; כלי track מסווגים כמוטציות סדרתיות.
 
 ## Branch
 `main`
 
 ## Latest commit
-`96f53e9` — track height/reorder parity על main
+`7450f59` — validated command contracts על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 175/175 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 177/177 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך לחבר command surfaces דינמית או לעבור ל־AG-4 לפי audit. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך AG-4 checkpoints או cost telemetry לפי audit. בלי שינוי Supabase/Auth ללא אישור.

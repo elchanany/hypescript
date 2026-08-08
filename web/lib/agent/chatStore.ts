@@ -5,7 +5,7 @@ import { ChatMessage } from "./types";
 export type ChatItem =
   | { kind: "user" | "assistant" | "error"; text: string; time: string }
   | { kind: "quote"; seconds: number; text: string; time: string }
-  | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string; providerLabel?: string }
+  | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string; providerLabel?: string; args?: Record<string, any>; startedAt?: number; durationMs?: number }
   | { kind: "output"; name: string; url: string; mkind: "video" | "srt" | "image" | "audio"; time: string };
 
 export interface Conversation {

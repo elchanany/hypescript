@@ -12,6 +12,9 @@ export type CollapsibleTool = {
   summary: string;
   time: string;
   providerLabel?: string;
+  args?: Record<string, any>;
+  startedAt?: number;
+  durationMs?: number;
 };
 
 export type CollapsedToolView = CollapsibleTool & { count: number };
@@ -43,6 +46,9 @@ export function collapseConsecutiveTools<T extends { kind: string }>(
       prev.status = tool.status;
       if (tool.summary) prev.summary = tool.summary;
       prev.time = tool.time;
+      prev.args = tool.args;
+      prev.startedAt = tool.startedAt;
+      prev.durationMs = tool.durationMs;
       continue;
     }
     out.push({ ...tool, count: 1 });

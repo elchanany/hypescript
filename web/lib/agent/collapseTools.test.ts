@@ -87,6 +87,14 @@ describe("collapseConsecutiveTools", () => {
     ]);
     expect(err[0]).toMatchObject({ state: "error", count: 2, summary: "שגיאה" });
   });
+
+  it("keeps retry arguments and duration from the latest collapsed call", () => {
+    const r = collapseConsecutiveTools([
+      tool({ id: "a", name: "delete_clip", args: { index: 1 }, durationMs: 120 }),
+      tool({ id: "b", name: "delete_clip", state: "error", args: { index: 2 }, durationMs: 340 }),
+    ]);
+    expect(r[0]).toMatchObject({ count: 2, state: "error", args: { index: 2 }, durationMs: 340 });
+  });
 });
 
 describe("toolGroupTitle / toolGroupSummary", () => {

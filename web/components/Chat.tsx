@@ -323,11 +323,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onAssistant: (text) => setItems((p) => [...p, { kind: "assistant", text, time: now() }]),
         onToolStart: (call, toolProvider) => {
           const m = TOOL_BY_NAME[call.name];
-          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider] }]);
+          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider], args: { ...call.arguments }, startedAt: Date.now() }]);
         },
         onToolStatus: (id, status) => setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, status } : it))),
         onToolEnd: (id, ok, summary) => {
-          setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary } : it)));
+          setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, state: ok ? "ok" : "error", status: ok ? "הושלם" : "שגיאה", summary, durationMs: Math.max(0, Date.now() - (it.startedAt || Date.now())) } : it)));
           const c = ctxRef.current;
           const viaEditor = !!c._editorDirty;
           c._editorDirty = false;
@@ -385,10 +385,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const copy = (t: string, i: number) => { navigator.clipboard?.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1200); };
   const attachRef = useRef<HTMLInputElement>(null);
 
-  const suggestToolRetry = (tool: ToolItem) => {
-    const suffix = lastUserPromptRef.current ? ` עבור הבקשה האחרונה: ${lastUserPromptRef.current}` : ".";
-    setInput(`נסה שוב את הפעולה "${tool.label}"${suffix}`);
-    requestAnimationFrame(() => taRef.current?.focus());
+  const retryTool = async (tool: ToolItem) => {
+    if (!tool.args || running) return;
+    setRunning(true);
+    try { await getRunner().retryTool(tool.name, tool.args); }
+    catch (e: any) { setItems((p) => [...p, { kind: "error", text: e?.message || "הניסיון החוזר נכשל.", time: now() }]); setRunning(false); }
   };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
@@ -521,7 +522,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             const count = it.count || 1;
             const title = toolGroupTitle(it.label, count);
             const detail = toolGroupSummary(it.name, count, it.summary, it.status, it.state);
-            const statusText = it.state === "running" ? (count > 1 ? `${it.status} (×${count})` : it.status) : detail;
+            const duration = it.durationMs != null ? ` · ${(it.durationMs / 1000).toFixed(it.durationMs < 10000 ? 1 : 0)}s` : "";
+            const statusText = (it.state === "running" ? (count > 1 ? `${it.status} (×${count})` : it.status) : detail) + duration;
             return (
               <div key={it.id || i} className="tool2">
                 <span className="ic" style={{ background: it.color + "22", color: it.color }}><Icon size={15} strokeWidth={1.75} /></span>
@@ -533,7 +535,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
                   {it.state === "ok" && <Check size={15} className="stt ok" />}
                   {it.state === "error" && <AlertTriangle size={15} className="stt err" />}
-                  {it.state === "error" && <button className="btn sm" onClick={() => suggestToolRetry(it)}>נסה שוב</button>}
+                  {it.state === "error" && it.args && <button className="btn sm" onClick={() => retryTool(it)} disabled={running}>נסה שוב</button>}
                 </span>
               </div>
             );

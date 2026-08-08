@@ -114,6 +114,53 @@ export class AgentRunner {
     if (this.recentTools.length > 40) this.recentTools.splice(0, this.recentTools.length - 40);
   }
 
+  private async executeTool(tc: ToolCall, enforceLoopGuard = true) {
+    const meta = TOOL_BY_NAME[tc.name];
+    this.events.onToolStart(tc, this.provider);
+    if (!meta) {
+      const content = `כלי לא ידוע: ${tc.name}`;
+      this.events.onToolEnd(tc.id, false, content);
+      return { tool_call_id: tc.id, name: tc.name, content };
+    }
+    const blocked = enforceLoopGuard ? this.guardLoop(tc.name) : null;
+    if (blocked) {
+      this.noteTool(tc.name);
+      this.events.onToolEnd(tc.id, false, blocked);
+      return { tool_call_id: tc.id, name: tc.name, content: blocked };
+    }
+    this.noteTool(tc.name);
+    try {
+      const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
+      if (isChunkLoadError(out)) {
+        const formatted = formatToolError(out);
+        this.events.onToolEnd(tc.id, false, formatted);
+        return { tool_call_id: tc.id, name: tc.name, content: formatted };
+      }
+      this.events.onToolEnd(tc.id, true, out);
+      return { tool_call_id: tc.id, name: tc.name, content: out };
+    } catch (e: any) {
+      const msg = formatToolError(e?.message || String(e));
+      this.events.onToolEnd(tc.id, false, msg);
+      return { tool_call_id: tc.id, name: tc.name, content: msg };
+    }
+  }
+
+  /** Retry אמיתי של אותה קריאת כלי, עם אותם arguments, ושמירת פרוטוקול history תקין. */
+  async retryTool(name: string, args: Record<string, any>): Promise<void> {
+    if (this.running) throw new Error("הסוכן עדיין פועל");
+    const call: ToolCall = { id: `retry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name, arguments: { ...args } };
+    this.running = true;
+    this.stopped = false;
+    try {
+      this.history.push({ role: "assistant", content: null, tool_calls: [call] });
+      const result = await this.executeTool(call, false);
+      this.history.push({ role: "tool", tool_call_id: result.tool_call_id, name: result.name, content: result.content });
+    } finally {
+      this.running = false;
+      this.events.onDone();
+    }
+  }
+
   async send(userText: string): Promise<void> {
     this.history.push({ role: "user", content: userText });
     this.stopped = false;
@@ -207,46 +254,18 @@ export class AgentRunner {
           "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
           "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
           "set_clip_enabled", "set_clip_volume", "add_video_track", "remove_video_track",
+          "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
           "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
           "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
           "delete_overlay", "generate_narration",
         ]);
-        const runOne = async (tc: ToolCall) => {
-          const meta = TOOL_BY_NAME[tc.name];
-          this.events.onToolStart(tc, this.provider);
-          if (!meta) {
-            this.events.onToolEnd(tc.id, false, `כלי לא ידוע: ${tc.name}`);
-            return { tool_call_id: tc.id, name: tc.name, content: `כלי לא ידוע: ${tc.name}` };
-          }
-          const blocked = this.guardLoop(tc.name);
-          if (blocked) {
-            this.noteTool(tc.name);
-            this.events.onToolEnd(tc.id, false, blocked);
-            return { tool_call_id: tc.id, name: tc.name, content: blocked };
-          }
-          this.noteTool(tc.name);
-          try {
-            const out = await meta.run(tc.arguments, this.ctx, (s) => this.events.onToolStatus(tc.id, s));
-            if (isChunkLoadError(out)) {
-              const formatted = formatToolError(out);
-              this.events.onToolEnd(tc.id, false, formatted);
-              return { tool_call_id: tc.id, name: tc.name, content: formatted };
-            }
-            this.events.onToolEnd(tc.id, true, out);
-            return { tool_call_id: tc.id, name: tc.name, content: out };
-          } catch (e: any) {
-            const msg = formatToolError(e?.message || String(e));
-            this.events.onToolEnd(tc.id, false, msg);
-            return { tool_call_id: tc.id, name: tc.name, content: msg };
-          }
-        };
         const results = toolCalls.some((tc) => MUTATING.has(tc.name))
           ? await (async () => {
               const out = [];
-              for (const tc of toolCalls) out.push(await runOne(tc));
+              for (const tc of toolCalls) out.push(await this.executeTool(tc));
               return out;
             })()
-          : await Promise.all(toolCalls.map(runOne));
+          : await Promise.all(toolCalls.map((tc) => this.executeTool(tc)));
         for (const r of results) {
           this.history.push({ role: "tool", tool_call_id: r.tool_call_id, name: r.name, content: r.content });
         }
