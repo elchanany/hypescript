@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
-    "mtime": 1786213102.1793258,
-    "ast_hash": "d6061a2ead3d6e69ea60c1120f309f99",
+    "mtime": 1786214538.257619,
+    "ast_hash": "13114ba7f49a297656534627f358440a",
     "semantic_hash": ""
   },
   "web/components/Waveform.tsx": {
@@ -305,13 +305,13 @@
     "semantic_hash": ""
   },
   "web/lib/editor/model.test.ts": {
-    "mtime": 1786213163.0006158,
-    "ast_hash": "7124f9a9017baae04ae35e25cfdb0aa1",
+    "mtime": 1786214526.217997,
+    "ast_hash": "f1e1fcb633b79986be87210396358487",
     "semantic_hash": ""
   },
   "web/lib/editor/model.ts": {
-    "mtime": 1786213102.1715314,
-    "ast_hash": "40f6d6ce111edef0be343a7d4899bb5c",
+    "mtime": 1786214526.2039983,
+    "ast_hash": "9bb0950a9e08eab3f87d366c48dd32a6",
     "semantic_hash": ""
   },
   "web/lib/editor/overlay.ts": {
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786214266.4873564,
-    "ast_hash": "5338da7f6dc82855eb6e31b9454c5d7f",
+    "mtime": 1786214618.047493,
+    "ast_hash": "cf87069cb0bc21c38cd628d8b357aa3e",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786214266.4893577,
-    "ast_hash": "815428cc70fc0e9c018f86388300796b",
+    "mtime": 1786214618.048501,
+    "ast_hash": "93699b046d58ad826968e445273d1afd",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -720,13 +720,13 @@
     "semantic_hash": ""
   },
   "docs/EDITOR_FEATURE_MATRIX.md": {
-    "mtime": 1786214266.492357,
-    "ast_hash": "abfa758883a0e3c267ad63844dacb704",
+    "mtime": 1786214618.0504918,
+    "ast_hash": "5cccada2cdb8a84b9acc01786f1151fa",
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786213545.7057612,
-    "ast_hash": "e9804b912e9327e08682f3f529011b4a",
+    "mtime": 1786214618.052492,
+    "ast_hash": "0f3b2277cd1bf4935fa5ac9b980b9fd9",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -1302,6 +1302,16 @@
   "web/lib/editor/colorPresets.ts": {
     "mtime": 1786213446.7969036,
     "ast_hash": "ef516c89d3b2ba46256549c5650d504f",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/previewAudio.test.ts": {
+    "mtime": 1786214526.2149985,
+    "ast_hash": "f4515a3203e3e65beec4504e0bba2f60",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/previewAudio.ts": {
+    "mtime": 1786214526.213997,
+    "ast_hash": "1c8a2897817e76809a96847c21cb71d7",
     "semantic_hash": ""
   }
 }
