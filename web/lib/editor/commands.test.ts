@@ -60,6 +60,7 @@ describe("CommandBus builtins", () => {
     const agentIds = listAgentCommands().map((c) => c.id);
     expect(agentIds).toContain("track.reorder");
     expect(agentIds).toContain("overlay.addText");
+    expect(agentIds).toContain("overlay.addImage");
     expect(agentIds).toContain("overlay.update");
     expect(agentIds).toContain("overlay.delete");
   });
@@ -152,6 +153,15 @@ describe("CommandBus builtins", () => {
     expect(api.overlays[0].start).toBe(0);
     expect(api.overlays[0].end).toBe(0.05);
     expect(api.overlays[0].transform).toMatchObject({ w: 8, opacity: 1 });
+  });
+
+  it("adds image media as a sized overlay through CommandBus", () => {
+    const api = fakeApi([]) as any;
+    api.getMedia = () => [{ id: "image-1", name: "logo.png", kind: "image", file: null, duration: 4, url: "blob:logo" }];
+    expect(runCommand("overlay.addImage", api, { assetId: "image-1", start: 1, end: 5, width: 800, height: 400 }).ok).toBe(true);
+    expect(api.overlays).toHaveLength(1);
+    expect(api.overlays[0]).toMatchObject({ kind: "image", assetId: "image-1", start: 1, end: 5 });
+    expect(api.overlays[0].transform.w / api.overlays[0].transform.h).toBeCloseTo(2, 3);
   });
 
   it("queryProject reports counts", () => {

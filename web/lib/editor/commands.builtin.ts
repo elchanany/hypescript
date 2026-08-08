@@ -1,6 +1,6 @@
 // Register built-in editor commands used by UI + Agent.
 import { addClip, assembledToSource, clipDur, splitClip, trimClip, uid } from "./model";
-import { makeTextOverlay } from "./overlay";
+import { makeImageOverlay, makeTextOverlay } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
@@ -107,6 +107,30 @@ export function ensureBuiltinCommands() {
       const o = makeTextOverlay(canvas.width, canvas.height, api.getOverlays(), text, cur, end);
       api.addOverlay(o);
       api.selectOverlay(o.id);
+    },
+  });
+
+  registerCommand({
+    id: "overlay.addImage",
+    label: "Add image overlay",
+    labelHe: "הוסף תמונה",
+    contexts: ["editor", "agent"],
+    presentation: { target: "asset", icon: "layers", order: 20 },
+    run: (api, args) => {
+      const assetId = String(args?.assetId || "");
+      const asset = api.getMedia().find((item) => item.id === assetId);
+      if (!asset || asset.kind !== "image") throw new Error("קובץ תמונה לא נמצא");
+      const start = args?.start != null ? Math.max(0, Number(args.start)) : api.getPlayhead();
+      const end = args?.end != null ? Math.max(start + 0.05, Number(args.end)) : start + 4;
+      const width = Number(args?.width), height = Number(args?.height);
+      const intrinsic = Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0
+        ? { width, height }
+        : undefined;
+      const canvas = api.getCanvas();
+      const overlay = makeImageOverlay(assetId, canvas.width, canvas.height, api.getOverlays(), start, end, intrinsic);
+      api.addOverlay(overlay);
+      api.selectOverlay(overlay.id);
+      if (api.getPlayhead() < overlay.start || api.getPlayhead() > overlay.end) api.seek(overlay.start);
     },
   });
 
@@ -265,6 +289,7 @@ export function ensureBuiltinCommands() {
       if (!sourceId) throw new Error("חסר sourceId");
       const media = api.getMedia().find((m) => m.id === sourceId);
       if (!media) throw new Error("מקור לא נמצא");
+      if (media.kind === "image") throw new Error("תמונה יש להוסיף כשכבה באמצעות overlay.addImage");
       const tracks = api.getTracks();
       const primary = primaryVideoTrackId(tracks);
       const trackId = String(args?.trackId || primary);
@@ -289,6 +314,7 @@ export function ensureBuiltinCommands() {
       } else {
         api.setClips(addClip(clips, clip));
       }
+      api.selectClip(clip.id);
     },
   });
 

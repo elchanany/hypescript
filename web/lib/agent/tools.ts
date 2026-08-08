@@ -14,7 +14,7 @@ import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants
 import {
   addClip, assembledToSource, Clip, clipDur, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { Overlay, makeTextOverlay } from "@/lib/editor/overlay";
+import { Overlay, makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
@@ -76,14 +76,14 @@ function transcriptOf(ctx: AgentContext, asset: MediaAsset): Word[] | null {
 
 // המקור הראשי (הסרטון הראשון) — עליו מתמללים וחותכים לפי סקריפט כברירת מחדל.
 const mainVideo = (ctx: AgentContext) => firstVideo(ctx.media);
-// איתור מקור לפי אינדקס (1-based) או שם. חשוב: אם הערך מספרי טהור — קודם אינדקס,
+// איתור מקור לפי אינדקס (1-based), id או שם. חשוב: אם הערך מספרי טהור — קודם אינדקס,
 // ולא חיפוש-שם (שמות הקבצים מכילים ספרות מתאריך, אחרת "3" היה תופס שם שגוי).
 function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | undefined {
   if (typeof ref === "number") return ctx.media[ref - 1];
   const s = String(ref).replace(/^@/, "").trim();
   if (/^\d+$/.test(s)) return ctx.media[parseInt(s, 10) - 1];
   const low = s.toLowerCase();
-  return ctx.media.find((m) => m.name.toLowerCase().includes(low));
+  return ctx.media.find((m) => m.id === s) || ctx.media.find((m) => m.name.toLowerCase().includes(low));
 }
 
 export type Reporter = (status: string) => void;
@@ -706,7 +706,7 @@ export const TOOLS: ToolMeta[] = [
     name: "add_clip", label: "הוספת קליפ", color: "#10b981", icon: "➕",
     schema: {
       name: "add_clip",
-      description: "מוסיף קליפ מכל מקור-מדיה (לפי שם או אינדקס) לרצועת וידאו. track=שם/מזהה רצועה (אופציונלי, ברירת מחדל=ראשי).",
+      description: "מוסיף וידאו/אודיו כקליפ לרצועה; מקור תמונה נוסף אוטומטית כשכבת קנבס. source לפי שם, id או אינדקס.",
       parameters: {
         type: "object",
         properties: {
@@ -722,6 +722,16 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, a.source);
       if (!asset) return `לא נמצא מקור "${a.source}". השתמש ב-list_media.`;
+      if (asset.kind === "image") {
+        const start = a.start != null ? Math.max(0, +a.start) : 0;
+        const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+        const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
+        if (commandError === "NO_API") {
+          const canvas = ctx.canvas || defaultCanvasFor();
+          ctx.overlays = [...(ctx.overlays || []), makeImageOverlay(asset.id, canvas.width, canvas.height, ctx.overlays || [], start, end)];
+        } else if (commandError) return `שגיאה: ${commandError}`;
+        return `נוספה שכבת תמונה מ-"${asset.name}". סה״כ ${ctx.overlays.length} שכבות.`;
+      }
       const primary = primaryVideoTrackId(ctx.tracks || []);
       let trackId = primary;
       if (a.track != null && String(a.track).trim()) {
@@ -1041,6 +1051,26 @@ export const TOOLS: ToolMeta[] = [
         const label = o.kind === "text" ? (o.text || "טקסט") : (mediaById(ctx.media, o.assetId || "")?.name || "תמונה");
         return `${i + 1}. [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s @(${Math.round(o.transform.x)},${Math.round(o.transform.y)})`;
       }).join("\n");
+    },
+  },
+  {
+    name: "add_image_overlay", label: "הוספת תמונה", color: "#f59e0b", icon: "🖼️",
+    schema: {
+      name: "add_image_overlay",
+      description: "מוסיף נכס תמונה קיים כשכבה על הקנבס. source יכול להיות שם, id או אינדקס מ-list_media.",
+      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" } }, required: ["source"] },
+    },
+    run: async (a, ctx) => {
+      const asset = resolveAsset(ctx, String(a.source || ""));
+      if (!asset || asset.kind !== "image") return "שגיאה: נכס תמונה לא נמצא.";
+      const start = a.start != null ? Math.max(0, +a.start) : 0;
+      const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
+      if (commandError === "NO_API") {
+        const canvas = ctx.canvas || defaultCanvasFor();
+        ctx.overlays = [...(ctx.overlays || []), makeImageOverlay(asset.id, canvas.width, canvas.height, ctx.overlays || [], start, end)];
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      return `נוספה שכבת תמונה (${asset.name}). סה״כ ${ctx.overlays.length} שכבות.`;
     },
   },
   {

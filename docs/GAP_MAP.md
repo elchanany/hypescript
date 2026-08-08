@@ -56,7 +56,7 @@
 | Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |
-| CommandBus + Query API | PARTIAL | agent clip/track/subtitle/overlay ops, Inspector trim/enabled/volume/subtitle, timeline reorder/delete, overlay UI, caption style ו-guarded media.remove דרך CommandBus; כל ה-command surfaces הקיימים נגזרים מה-Registry; נותרו clip opacity ו-media.add מורכב |
+| CommandBus + Query API | PARTIAL | agent/UI clip/track/subtitle/overlay ops, Inspector/timeline, media-to-timeline/image-overlay, caption style ו-guarded media.remove דרך CommandBus; File probe/object-URL נשאר גבול I/O מחוץ לחוזה JSON; נותר clip opacity |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
@@ -90,7 +90,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — clip/track/subtitle/overlay parity, Inspector/timeline actions, caption style UI ו-guarded asset removal; נותרו clip opacity ו-media.add מורכב
+- **AG-2**: PARTIAL — clip/track/subtitle/overlay parity, Inspector/timeline, media-to-project add, caption style ו-guarded asset removal; נותר clip opacity (Preview+Export), בעוד File probe/object-URL נשארים בכוונה בגבול I/O
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)

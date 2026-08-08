@@ -17,6 +17,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     { id: "audio-1", name: "אודיו", type: "audio", order: 2, height: 56, locked: false, muted: false },
   ];
   let updateCount = 0;
+  const currentMedia: AgentContext["media"] = [];
   let currentSubs: Sub[] = [{ id: "sub-1", start: 0, end: 1, text: "ישן" }];
   let currentOverlays: Overlay[] = [];
   const api: EditorApi = {
@@ -31,7 +32,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
       updateCount += 1;
       current = current.map((clip) => clip.id === id ? { ...clip, ...patch } : clip);
     },
-    getMedia: () => [],
+    getMedia: () => currentMedia,
     getSubs: () => currentSubs,
     setSubs: (next) => { currentSubs = next || []; },
     getTracks: () => currentTracks,
@@ -43,7 +44,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     getPlayhead: () => 0,
   };
   const ctx = {
-    media: [], duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: currentOverlays, tracks: currentTracks,
+    media: currentMedia, duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: currentOverlays, tracks: currentTracks,
     canvas: { width: 1280, height: 720 }, lastRender: null, editorApi: api,
     askUser: async () => "",
   } satisfies AgentContext;
@@ -109,12 +110,15 @@ describe("Agent ↔ UI CommandBus parity", () => {
 
   it("routes overlay add, update, and delete tools through the shared commands", async () => {
     const h = contextWithEditor();
+    h.ctx.media.push({ id: "image-1", name: "logo.png", kind: "image", file: null as any, duration: 4, url: "blob:logo" });
+    await TOOL_BY_NAME.add_image_overlay.run({ source: "image-1", start: 0, end: 2 }, h.ctx, () => undefined);
+    expect(h.overlays()[0]).toMatchObject({ kind: "image", assetId: "image-1", start: 0, end: 2 });
     await TOOL_BY_NAME.add_text_overlay.run({ text: "כותרת", start: 1, end: 3 }, h.ctx, () => undefined);
+    expect(h.overlays()).toHaveLength(2);
+    await TOOL_BY_NAME.update_overlay.run({ index: 2, x: 250, opacity: 2 }, h.ctx, () => undefined);
+    expect(h.overlays()[1].transform).toMatchObject({ x: 250, opacity: 1 });
+    await TOOL_BY_NAME.delete_overlay.run({ index: 2 }, h.ctx, () => undefined);
     expect(h.overlays()).toHaveLength(1);
-    await TOOL_BY_NAME.update_overlay.run({ index: 1, x: 250, opacity: 2 }, h.ctx, () => undefined);
-    expect(h.overlays()[0].transform).toMatchObject({ x: 250, opacity: 1 });
-    await TOOL_BY_NAME.delete_overlay.run({ index: 1 }, h.ctx, () => undefined);
-    expect(h.overlays()).toEqual([]);
     expect(h.ctx._editorDirty).toBe(true);
   });
 });

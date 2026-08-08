@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, addClip, firstVideo, mediaById, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
   audioMuted, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
@@ -12,7 +12,6 @@ import {
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, edlToSubsWithScript, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
-import { makeImageOverlay } from "@/lib/editor/overlay";
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
@@ -337,7 +336,10 @@ export default function EditorPage() {
   };
 
   useEffect(() => {
-    if (main && !clips) setClips([{ id: uid(), sourceId: main.id, start: 0, end: main.duration, trackId: primaryVideoTrackId(tracks) }]);
+    if (main && !clips && editorApiRef.current) {
+      const result = runCommand("clip.add", editorApiRef.current, { sourceId: main.id, trackId: primaryVideoTrackId(tracks) });
+      if (!result.ok) setError(result.error);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [main]);
 
@@ -359,13 +361,14 @@ export default function EditorPage() {
     if (!result.ok) setError(result.error);
   };
   const addMediaClip = (asset: MediaAsset, atIndex?: number) => {
+    const api = editorApiRef.current;
+    if (!api) return;
     if (asset.kind === "image") {
       // image -> canvas overlay (CapCut-style), not a main-track clip
       const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
       const apply = (iw?: number, ih?: number) => {
-        const o = makeImageOverlay(asset.id, canvas.width, canvas.height, overlays, cur, end, iw && ih ? { width: iw, height: ih } : undefined);
-        addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
-        if (cur < o.start || cur > o.end) seek(o.start);
+        const result = runCommand("overlay.addImage", api, { assetId: asset.id, start: cur, end, width: iw, height: ih });
+        if (!result.ok) setError(result.error);
       };
       const img = new Image();
       img.onload = () => apply(img.naturalWidth, img.naturalHeight);
@@ -374,9 +377,8 @@ export default function EditorPage() {
       return;
     }
     const trackId = primaryVideoTrackId(tracks);
-    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration, trackId };
-    setClips((cs) => addClip(cs || [], clip, atIndex));
-    setSelectedId(clip.id);
+    const result = runCommand("clip.add", api, { sourceId: asset.id, trackId, at_index: atIndex });
+    if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
     setSelectedSubId(null);
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
@@ -385,10 +387,11 @@ export default function EditorPage() {
     const asset = mediaById(media, assetId);
     if (!asset) return;
     if (asset.kind === "image") { addMediaClip(asset, atIndex); return; }
+    const api = editorApiRef.current;
+    if (!api) return;
     const tid = trackId || primaryVideoTrackId(tracks);
-    const clip = { id: uid(), sourceId: asset.id, start: 0, end: asset.duration, trackId: tid };
-    setClips((cs) => addClip(cs || [], clip, atIndex));
-    setSelectedId(clip.id);
+    const result = runCommand("clip.add", api, { sourceId: asset.id, trackId: tid, at_index: atIndex });
+    if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
     setSelectedSubId(null);
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
