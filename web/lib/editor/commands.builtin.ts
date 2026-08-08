@@ -352,6 +352,36 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "subtitle.edit",
+    label: "Edit subtitle",
+    labelHe: "ערוך כתובית",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const text = String(args?.text ?? "");
+      const subs = api.getSubs();
+      if (!subs || !api.setSubs || !id) throw new Error("אין כתובית לעריכה");
+      if (!subs.some((sub) => sub.id === id)) throw new Error("כתובית לא נמצאה");
+      api.setSubs(subs.map((sub) => sub.id === id ? { ...sub, text } : sub));
+    },
+  });
+
+  registerCommand({
+    id: "subtitle.delete",
+    label: "Delete subtitle",
+    labelHe: "מחק כתובית",
+    contexts: ["editor", "agent", "context-menu"],
+    presentation: { target: "caption", icon: "trash", order: 10, danger: true },
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const subs = api.getSubs();
+      if (!subs || !api.setSubs || !id) throw new Error("אין כתובית למחיקה");
+      if (!subs.some((sub) => sub.id === id)) throw new Error("כתובית לא נמצאה");
+      api.setSubs(subs.filter((sub) => sub.id !== id));
+    },
+  });
+
+  registerCommand({
     id: "track.rename",
     label: "Rename track",
     labelHe: "שנה שם רצועה",

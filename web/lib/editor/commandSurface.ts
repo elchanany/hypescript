@@ -5,6 +5,7 @@ import { listCommands, type CommandDef, type CommandPermission, type EditorApi }
 export interface CommandSelection {
   clipId: string | null;
   overlayId: string | null;
+  subId?: string | null;
   trackId?: string | null;
 }
 
@@ -18,9 +19,9 @@ function inferArgs(command: CommandDef, api: EditorApi, selection: CommandSelect
   const properties = command.inputSchema.properties || {};
   for (const key of command.inputSchema.required || []) {
     if (key === "id") {
-      const selectedId = command.id.startsWith("overlay.") ? selection.overlayId : selection.clipId;
+      const selectedId = command.id.startsWith("overlay.") ? selection.overlayId : command.id.startsWith("subtitle.") ? selection.subId : selection.clipId;
       if (!selectedId) return null;
-      if (!command.id.startsWith("overlay.")) {
+      if (!command.id.startsWith("overlay.") && !command.id.startsWith("subtitle.")) {
         const selectedClip = api.getClips()?.find((item) => item.id === selectedId);
         if (!selectedClip) return null;
         if (command.id.startsWith("gap.") !== isGapClip(selectedClip)) return null;
@@ -74,6 +75,7 @@ export function listRunnableCommands(
     const target = command.presentation?.target || "any";
     if (target === "any") return true;
     if (target === "overlay") return !!selection.overlayId;
+    if (target === "caption") return !!selection.subId;
     if (target === "track") return !!selectedTrack;
     if (target === "video-track") return selectedTrack?.type === "video";
     if (target === "audio-track") return selectedTrack?.type === "audio";

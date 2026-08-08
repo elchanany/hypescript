@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-2 dynamic Clip/Gap menus על main ב־`7739126`. מקומית נוסף Track context-menu דינמי: lock/mute/height/remove-safe נגזרים מסוג ומצב הרצועה ומה-Registry; rename/reorder לא מזויפים כי דורשים input/variant. tsc, 193/193 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא Caption/Asset context-menu audit. Package C רק אחרי login עובד.
+AG-2 Track context menu על main ב־`5ee7f61`. מקומית UI+Agent subtitle edit/delete עברו ל-CommandBus ונוסף Caption delete context-menu דינמי; right-click בתוך שדה הטקסט שומר את תפריט העריכה הטבעי. tsc, 196/196 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא Asset CommandBus/data-safety audit. Package C רק אחרי login עובד.

@@ -25,6 +25,8 @@ export type CommandId =
   | "clip.setVolume"
   | "clip.duplicate"
   | "caption.setStyle"
+  | "subtitle.edit"
+  | "subtitle.delete"
   | "clip.roll"
   | "clip.slip"
   | "track.addVideo"
@@ -77,7 +79,7 @@ export interface CommandDef {
 }
 
 export interface CommandPresentation {
-  target?: "clip" | "gap" | "overlay" | "track" | "video-track" | "audio-track" | "any";
+  target?: "clip" | "gap" | "overlay" | "caption" | "track" | "video-track" | "audio-track" | "any";
   icon?: "copy" | "scissors" | "eye" | "square-dashed" | "trash" | "type" | "layers" | "lock" | "volume" | "height";
   order?: number;
   danger?: boolean;
@@ -110,13 +112,14 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str }),
   "clip.setEnabled": schema(["id", "enabled"], { id, enabled: bool }), "clip.setVolume": schema(["id", "volume"], { id, volume: num }),
   "clip.duplicate": schema(["id"], { id }), "caption.setStyle": schema(),
+  "subtitle.edit": schema(["id", "text"], { id, text: str }), "subtitle.delete": schema(["id"], { id }),
   "clip.roll": schema(["delta"], { id, leftIndex: num, delta: num }), "clip.slip": schema(["id", "delta"], { id, delta: num }),
   "track.addVideo": schema([], { name: str }), "track.removeVideo": schema(["trackId"], { trackId: id }),
   "track.rename": schema(["trackId", "name"], { trackId: id, name: str }), "track.setLocked": schema(["trackId", "locked"], { trackId: id, locked: bool }),
   "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
   "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
 };
-const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "subtitle.edit", "subtitle.delete", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
 const RESULT_SCHEMA = schema(["ok"], { ok: bool });
 
 const registry = new Map<CommandId, CommandDef>();

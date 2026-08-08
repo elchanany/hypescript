@@ -103,6 +103,17 @@ describe("CommandBus builtins", () => {
     expect(api.style.fontSize).toBe(7);
   });
 
+  it("edits and deletes subtitles through CommandBus", () => {
+    const api = fakeApi([]) as any;
+    api.subs = [{ id: "s1", start: 0, end: 1, text: "ישן" }];
+    api.getSubs = () => api.subs;
+    api.setSubs = (subs: any[]) => { api.subs = subs; };
+    expect(runCommand("subtitle.edit", api, { id: "s1", text: "חדש" }).ok).toBe(true);
+    expect(api.subs[0].text).toBe("חדש");
+    expect(runCommand("subtitle.delete", api, { id: "s1" }).ok).toBe(true);
+    expect(api.subs).toEqual([]);
+  });
+
   it("queryProject reports counts", () => {
     const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
     const q = queryProject(api, { clipId: "a", overlayId: null });

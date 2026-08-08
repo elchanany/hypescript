@@ -1242,7 +1242,10 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, text: String(a.text) } : s));
+      const id = ctx.subs[i].id;
+      const commandError = dispatch(ctx, "subtitle.edit", { id, text: String(a.text) });
+      if (commandError === "NO_API") ctx.subs = ctx.subs.map((s, k) => (k === i ? { ...s, text: String(a.text) } : s));
+      else if (commandError) return `שגיאה: ${commandError}`;
       return `כתובית ${i + 1} עודכנה: "${a.text}"`;
     },
   },
@@ -1262,7 +1265,10 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       if (!ctx.subs?.length) return "אין כתוביות.";
       const i = (a.index | 0) - 1; if (!ctx.subs[i]) return "אינדקס לא תקין.";
-      ctx.subs = ctx.subs.filter((_, k) => k !== i);
+      const id = ctx.subs[i].id;
+      const commandError = dispatch(ctx, "subtitle.delete", { id });
+      if (commandError === "NO_API") ctx.subs = ctx.subs.filter((_, k) => k !== i);
+      else if (commandError) return `שגיאה: ${commandError}`;
       return `נמחקה כתובית ${i + 1}. נשארו ${ctx.subs.length}.`;
     },
   },

@@ -9,6 +9,7 @@ import { Button, IconButton, Section, Toggle } from "@/components/ui";
 export default function CaptionsPanel({
   script, onScript, onAnalyze, analyzing, hasMain, hasWords,
   subs, onGenerate, onImportSrt, onExportSrt, onEditSub, onDelSub,
+  onSubMenu,
   captionStyle, onCaptionStyle,
   burnCaptions, onBurnCaptions,
 }: {
@@ -16,6 +17,7 @@ export default function CaptionsPanel({
   hasMain: boolean; hasWords: boolean;
   subs: Sub[] | null; onGenerate: () => void; onImportSrt: (f: File | null) => void; onExportSrt: () => void;
   onEditSub: (id: string, text: string) => void; onDelSub: (id: string) => void;
+  onSubMenu?: (id: string, x: number, y: number) => void;
   captionStyle: CaptionStyle;
   onCaptionStyle: (patch: Partial<CaptionStyle>) => void;
   burnCaptions: boolean;
@@ -106,7 +108,11 @@ export default function CaptionsPanel({
             {subs && subs.length > 0 ? (
               <div className="sub-list">
                 {subs.map((s, i) => (
-                  <div key={s.id} className="sub-item">
+                  <div key={s.id} className="sub-item" onContextMenu={(event) => {
+                    if (event.target instanceof HTMLInputElement) return;
+                    event.preventDefault();
+                    onSubMenu?.(s.id, event.clientX, event.clientY);
+                  }}>
                     <span className="idx">{i + 1}</span>
                     <span className="tspan">{fmt(s.start)}</span>
                     <input value={s.text} onChange={(e) => onEditSub(s.id, e.target.value)} />

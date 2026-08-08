@@ -65,4 +65,11 @@ describe("dynamic command surface", () => {
     expect(listRunnableCommands(trackApi, { clipId: null, overlayId: null, trackId: "v2" }, "context-menu").map((entry) => entry.command.id))
       .toEqual(["track.setLocked", "track.setHeight", "track.removeVideo"]);
   });
+
+  it("exposes subtitle delete only for a selected caption", () => {
+    expect(listRunnableCommands(api(), { clipId: null, overlayId: null, subId: "s1" }, "context-menu").map((entry) => entry.command.id))
+      .toEqual(["subtitle.delete"]);
+    expect(listRunnableCommands(api(), { clipId: null, overlayId: null }, "context-menu").some((entry) => entry.command.id === "subtitle.delete"))
+      .toBe(false);
+  });
 });

@@ -88,4 +88,5 @@
 | Clip/Gap (duplicate/split/disable/delete/close) | קיים, דינמי מה-Registry |
 | Command menu (Ctrl/Cmd+K) מה-Registry | קיים |
 | Track (lock/mute/height/remove-safe) | קיים, דינמי מה-Registry |
-| Asset / Caption menus מלאים | חסר |
+| Caption delete | קיים, דינמי מה-Registry; עריכה נשארת inline |
+| Asset menu מלא | חסר |

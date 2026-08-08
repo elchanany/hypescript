@@ -3,11 +3,12 @@ import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import type { EditorApi } from "@/lib/editor/commands";
 import type { Clip } from "@/lib/editor/model";
 import type { TrackMeta } from "@/lib/editor/project";
+import type { Sub } from "@/lib/editor/subtitlesEdl";
 import { TOOL_BY_NAME, type AgentContext } from "./tools";
 
 beforeAll(() => ensureBuiltinCommands());
 
-function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; updates: () => number } {
+function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; subs: () => Sub[]; updates: () => number } {
   let current: Clip[] = [{ id: "clip-1", sourceId: "media-1", start: 0, end: 4, enabled: true, volume: 1 }];
   let currentTracks: TrackMeta[] = [
     { id: "video-1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
@@ -15,6 +16,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     { id: "audio-1", name: "אודיו", type: "audio", order: 2, height: 56, locked: false, muted: false },
   ];
   let updateCount = 0;
+  let currentSubs: Sub[] = [{ id: "sub-1", start: 0, end: 1, text: "ישן" }];
   const api: EditorApi = {
     getClips: () => current,
     setClips: (next) => { current = next || []; },
@@ -28,8 +30,8 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
       current = current.map((clip) => clip.id === id ? { ...clip, ...patch } : clip);
     },
     getMedia: () => [],
-    getSubs: () => [],
-    setSubs: () => undefined,
+    getSubs: () => currentSubs,
+    setSubs: (next) => { currentSubs = next || []; },
     getTracks: () => currentTracks,
     setTracks: (next) => { currentTracks = next; },
     getCanvas: () => ({ width: 1280, height: 720 }),
@@ -39,11 +41,11 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     getPlayhead: () => 0,
   };
   const ctx = {
-    media: [], duration: 4, words: null, transcripts: {}, clips: current, subs: [], overlays: [], tracks: currentTracks,
+    media: [], duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: [], tracks: currentTracks,
     canvas: { width: 1280, height: 720 }, lastRender: null, editorApi: api,
     askUser: async () => "",
   } satisfies AgentContext;
-  return { ctx, clips: () => current, tracks: () => currentTracks, updates: () => updateCount };
+  return { ctx, clips: () => current, tracks: () => currentTracks, subs: () => currentSubs, updates: () => updateCount };
 }
 
 describe("Agent ↔ UI CommandBus parity", () => {
@@ -82,6 +84,15 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.tracks().find((t) => t.id === "video-1")?.height).toBe(140);
     expect(h.tracks().find((t) => t.id === "video-1")?.order).toBe(1);
     expect(h.tracks().find((t) => t.id === "video-2")?.order).toBe(0);
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
+  it("routes subtitle edit and delete tools through the shared commands", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.edit_subtitle.run({ index: 1, text: "חדש" }, h.ctx, () => undefined);
+    expect(h.subs()[0].text).toBe("חדש");
+    await TOOL_BY_NAME.delete_subtitle.run({ index: 1 }, h.ctx, () => undefined);
+    expect(h.subs()).toEqual([]);
     expect(h.ctx._editorDirty).toBe(true);
   });
 });

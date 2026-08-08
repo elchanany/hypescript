@@ -101,6 +101,7 @@ export default function EditorPage() {
   const [saving, setSaving] = useState(false);
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [trackMenu, setTrackMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [subMenu, setSubMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [commandMenu, setCommandMenu] = useState<{ x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -511,8 +512,17 @@ export default function EditorPage() {
     if (!file) return;
     file.text().then((t) => { const s = parseSrt(t); if (s.length) setSubs(s); else setError("לא זוהו כתוביות בקובץ."); });
   };
-  const editSub = (id: string, text: string) => setSubs((ss) => ss?.map((s) => (s.id === id ? { ...s, text } : s)) || ss);
-  const delSub = (id: string) => setSubs((ss) => ss?.filter((s) => s.id !== id) || ss);
+  const editSub = (id: string, text: string) => {
+    if (!editorApiRef.current) return;
+    const result = runCommand("subtitle.edit", editorApiRef.current, { id, text });
+    if (!result.ok) setError(result.error);
+  };
+  const delSub = (id: string) => {
+    if (!editorApiRef.current) return;
+    const result = runCommand("subtitle.delete", editorApiRef.current, { id });
+    if (!result.ok) setError(result.error);
+    else if (selectedSubId === id) setSelectedSubId(null);
+  };
 
   const splitAtPlayhead = () => {
     if (!clips?.length || videoLocked(tracks)) return;
@@ -695,6 +705,19 @@ export default function EditorPage() {
         return presentation?.separatorBefore ? [{ sep: true, label: "" } as CtxItem, item] : [item];
       })
     : [];
+  const subMenuItems: CtxItem[] = subMenu && editorApiRef.current
+    ? listRunnableCommands(editorApiRef.current, { clipId: null, overlayId: null, subId: subMenu.id }, "context-menu")
+      .map(({ command, args }) => ({
+        label: command.presentation?.labelHe?.(editorApiRef.current!, args) || command.labelHe,
+        icon: command.presentation?.icon ? COMMAND_ICONS[command.presentation.icon] : undefined,
+        danger: command.presentation?.danger,
+        onClick: () => {
+          const result = runCommand(command.id, editorApiRef.current!, args);
+          if (!result.ok) setError(result.error);
+          else if (command.id === "subtitle.delete" && selectedSubId === subMenu.id) setSelectedSubId(null);
+        },
+      }))
+    : [];
 
   return (
     <div className="editor-root">
@@ -722,6 +745,7 @@ export default function EditorPage() {
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
               hasMain={!!main} hasWords={!!words} subs={subs}
               onGenerate={generateSubs} onImportSrt={importSrt} onExportSrt={exportSrt} onEditSub={editSub} onDelSub={delSub}
+              onSubMenu={(id, x, y) => setSubMenu({ id, x, y })}
               captionStyle={captionStyle}
               burnCaptions={burnCaptions}
               onBurnCaptions={setBurnCaptions}
@@ -844,6 +868,12 @@ export default function EditorPage() {
         y={trackMenu.y}
         items={trackMenuItems.length ? trackMenuItems : [{ label: "אין פעולות זמינות לרצועה", disabled: true }]}
         onClose={() => setTrackMenu(null)}
+      />}
+      {subMenu && <ContextMenu
+        x={subMenu.x}
+        y={subMenu.y}
+        items={subMenuItems.length ? subMenuItems : [{ label: "אין פעולות זמינות לכתובית", disabled: true }]}
+        onClose={() => setSubMenu(null)}
       />}
 
       <NameDialog
