@@ -7,7 +7,8 @@ import { PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/key
 import { Provider } from "@/lib/agent/types";
 import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
 import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
-import type { ProviderStatusInfo } from "@/lib/providers/types";
+import { getProviderApprovals, setProviderBillingApproval } from "@/lib/providers/policy";
+import type { ProviderId, ProviderStatusInfo } from "@/lib/providers/types";
 import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [transcribePref, setTranscribePref] = useState<TranscribeProviderPref>("auto");
   const [transcribeModel, setTranscribeModel] = useState("");
   const [cfg, setCfg] = useState<ApiConfigShape>({});
+  const [billingApprovals, setBillingApprovals] = useState<Partial<Record<ProviderId, boolean>>>({});
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -24,6 +26,8 @@ export default function SettingsPage() {
     if (tp === "auto" || tp === "elevenlabs" || tp === "groq") setTranscribePref(tp);
     setTranscribeModel(localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "");
     fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
+    const approvals = getProviderApprovals().approved;
+    setBillingApprovals(Object.fromEntries(Object.keys(approvals).map((id) => [id, true])));
   }, []);
 
   const save = (p: Provider) => {
@@ -42,6 +46,11 @@ export default function SettingsPage() {
     else localStorage.removeItem(TRANSCRIBE_MODEL_PREF);
   };
 
+  const setBillingApproval = (id: ProviderId, approved: boolean) => {
+    setProviderBillingApproval(id, approved);
+    setBillingApprovals((current) => ({ ...current, [id]: approved }));
+  };
+
   const statuses = getProviderStatuses(flattenApiConfig(cfg));
   const statusById = Object.fromEntries(statuses.map((status) => [status.id, status])) as Record<string, ProviderStatusInfo>;
 
@@ -51,6 +60,16 @@ export default function SettingsPage() {
       : status.status === "configured_unverified"
         ? <span title={status.reasonHe}>◐ מוגדר · לא נבדק</span>
       : <span className="err">— {status.status === "missing_key" ? "חסר מפתח" : "לא זמין"}</span>;
+
+  const BillingApproval = ({ id }: { id: ProviderId }) => {
+    const definition = PROVIDER_REGISTRY.find((item) => item.id === id)!;
+    return (
+      <label className="check" title={definition.billingNoteHe} style={{ fontSize: 12 }}>
+        <input type="checkbox" checked={!!billingApprovals[id]} onChange={(event) => setBillingApproval(id, event.target.checked)} />
+        אישור שימוש במכסה/חיוב חיצוני
+      </label>
+    );
+  };
 
   return (
     <div>
@@ -112,7 +131,7 @@ export default function SettingsPage() {
           return (
             <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
               <span>{p.labelHe} · משתנה <code>{p.envKeys.join(" / ")}</code></span>
-              <Status status={status} />
+              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
             </div>
           );
         })}
@@ -158,7 +177,7 @@ export default function SettingsPage() {
           return (
             <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
               <span>{p.labelHe} · אותו משתנה <code>{p.envKeys.join(" / ")}</code></span>
-              <Status status={status} />
+              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
             </div>
           );
         })}
@@ -178,7 +197,7 @@ export default function SettingsPage() {
                 <input type="radio" name="prov" checked={provider === p.id} onChange={() => save(p.id)} />
                 {p.labelHe}
               </span>
-              <Status status={statusById[p.id]} />
+              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={statusById[p.id]} /><BillingApproval id={p.id} /></span>
             </label>
           ))}
         </div>

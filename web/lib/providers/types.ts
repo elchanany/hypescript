@@ -1,4 +1,5 @@
 export type ProviderKind = "llm" | "transcribe" | "voice";
+export type ProviderBillingRisk = "no_charge" | "metered_external" | "unknown";
 
 /** `ready` is reserved for a successful live probe; an env key alone is unverified. */
 export type ProviderStatus = "ready" | "configured_unverified" | "missing_key" | "unavailable";
@@ -18,6 +19,8 @@ export interface ProviderDefinition {
   kind: ProviderKind;
   envKeys: readonly string[];
   configuredKeys: readonly string[];
+  billingRisk: ProviderBillingRisk;
+  billingNoteHe: string;
   unavailableReasonHe?: string;
 }
 

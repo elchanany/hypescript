@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-PR-1 — Honest provider status. קיום מפתח מסומן `configured_unverified`; `ready` שמור רק ל-live probe מוצלח, בלי לחסום ניסיון שימוש במפתח מוגדר.
+PR-1 — Zero-cost approval. Registry מסווג billing risk; קריאות LLM/STT/TTS חיצוניות נחסמות עד אישור מפורש מקומי לפי ספק, עם כרטיס Chat ו-controls בהגדרות.
 
 ## Branch
 `main`
 
 ## Latest commit
-`2d8e2a0` — Plan checklist + approval-to-Act על main
+`c774c29` — honest configured-vs-verified provider status על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 187/187 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 189/189 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך provider billing policy/Zero-cost approval. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit live health-check מול AG-2 dynamic surfaces. בלי שינוי Supabase/Auth ללא אישור.

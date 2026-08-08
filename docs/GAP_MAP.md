@@ -72,7 +72,7 @@
 |---|---|---|
 | LLM proxy | OK | — |
 | תמלול Groq (proxy) | PARTIAL | מפתח client-side |
-| Provider Registry + policies + Zero-cost | PARTIAL | Registry בסיסי + missing-key + configured-unverified כנים; live health-check, policies ו-Zero-cost חסרים |
+| Provider Registry + policies + Zero-cost | PARTIAL | Registry + configured-unverified + billing-risk classification; LLM/STT/TTS נחסמים עד אישור מפורש מקומי לפי ספק; live health-check ומדיניות server/roles חסרים |
 | Image/Video/Voice/Music/Storage/Search | MISSING | — |
 
 ## 8–9. Templates / Effects / Usage / Admin
@@ -91,7 +91,7 @@
 ### P2 (הבא)
 - **AG-2**: PARTIAL — clip split/trim/move/add + video tracks + enabled/volume + כל פעולות track דרך CommandBus; registry כולל schema/result/permissions/contexts/agentCallable ואימות args; נותר לחבר palette/shortcut/context-menu דינמית ופעולות UI נוספות
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
-- **PR-1**: PARTIAL — Provider Registry מפריד בין מפתח מוגדר לזמינות שנבדקה; live health-check, policies ו-Zero-cost חסרים
+- **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
 
 ### P3

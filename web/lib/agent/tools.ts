@@ -30,6 +30,7 @@ import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
 import { TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
+import { ensureProviderBillingApproval } from "@/lib/providers/policy";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -329,6 +330,7 @@ export const TOOLS: ToolMeta[] = [
       if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
+      await ensureProviderBillingApproval(provider === "elevenlabs" ? "elevenlabs-transcribe" : "groq-transcribe", ctx.askUser);
       const explicitProvider = String(a.provider || "").toLowerCase();
       const wantsSpecific = explicitProvider === "elevenlabs" || explicitProvider === "groq";
 
@@ -522,6 +524,7 @@ export const TOOLS: ToolMeta[] = [
       catch { throw new Error("נפרסה גרסה חדשה — רענן את הדף (Ctrl+Shift+R) ואז נסה שוב."); }
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
+      await ensureProviderBillingApproval(provider === "elevenlabs" ? "elevenlabs-transcribe" : "groq-transcribe", ctx.askUser);
       report(`בונה אודיו זמני מהעריכה…`);
       let extractAssembledAudio: typeof import("@/lib/ffmpeg").extractAssembledAudio;
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
@@ -1379,6 +1382,7 @@ export const TOOLS: ToolMeta[] = [
       const voiceId = String(a.voice_id || "").trim();
       if (!text) return "שגיאה: חסר טקסט.";
       if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices ובחר קול.";
+      await ensureProviderBillingApproval("elevenlabs-voice", ctx.askUser);
       report("יוצר קריינות ב-ElevenLabs…");
       const resp = await fetch("/api/elevenlabs/tts", {
         method: "POST",

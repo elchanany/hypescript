@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-4 Plan approvals על main ב־`2d8e2a0`. מקומית PR-1 מפריד `configured_unverified` מ-`ready`, מעדכן Chat/Settings ובדיקות בלי לבצע probe שעלול לעלות כסף. tsc, 187/187 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא provider billing policy/Zero-cost approval. Package C רק אחרי login עובד.
+PR-1 honest provider status על main ב־`c774c29`. מקומית Registry מסווג billing risk וקריאות LLM/STT/TTS נחסמות עד אישור מפורש מקומי לפי ספק; Chat מציג approval card והגדרות מאפשרות revoke. tsc, 189/189 tests, production build ו־Graphify update עברו. להשלים commit+push; הבא audit live health-check מול AG-2 dynamic surfaces. Package C רק אחרי login עובד.

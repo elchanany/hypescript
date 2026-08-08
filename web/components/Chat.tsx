@@ -8,7 +8,8 @@ import { TrackMeta, defaultTracks } from "@/lib/editor/project";
 import { AgentMode, AgentUsage, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
 import { getProviderStatus, isProviderUsable } from "@/lib/providers/health";
-import { LLM_PROVIDERS } from "@/lib/providers/registry";
+import { LLM_PROVIDERS, PROVIDER_BY_ID } from "@/lib/providers/registry";
+import { isProviderBillingApproved, setProviderBillingApproval } from "@/lib/providers/policy";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
@@ -351,6 +352,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     return runnerRef.current;
   }
 
+  const sendAgentRequest = (text: string, selectedProvider: Provider = provider) => {
+    setItems((p) => [...p, { kind: "user", text, time: now() }]);
+    lastUserPromptRef.current = text;
+    setInput("");
+    setRunning(true);
+    const runner = getRunner();
+    runner.provider = selectedProvider;
+    runner.send(text);
+  };
+
   const submit = () => {
     let text = input.trim();
     if (!text) return;
@@ -374,10 +385,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     if (!configLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק עדיין את סטטוס המפתחות. נסה שוב בעוד רגע.", time: now() }]); return; }
     const status = getProviderStatus(provider, configured);
     if (!isProviderUsable(status)) { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
-    setItems((p) => [...p, { kind: "user", text, time: now() }]);
-    lastUserPromptRef.current = text;
-    setInput(""); setRunning(true);
-    getRunner().send(text);
+    if (!isProviderBillingApproved(provider)) {
+      const definition = PROVIDER_BY_ID[provider];
+      setItems((p) => [...p, {
+        kind: "provider_approval", id: `approval_${Date.now()}`, provider, providerLabel: definition.labelHe,
+        prompt: text, note: definition.billingNoteHe, state: "pending", time: now(),
+      }]);
+      setInput("");
+      return;
+    }
+    sendAgentRequest(text);
   };
 
   const changeProvider = (p: Provider) => {
@@ -421,6 +438,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     changeMode("plan");
     setInput("עדכן את התוכנית הזו כך ש");
     requestAnimationFrame(() => taRef.current?.focus());
+  };
+  const approveProviderUse = (approval: Extract<Item, { kind: "provider_approval" }>) => {
+    if (running || approval.state !== "pending") return;
+    setProviderBillingApproval(approval.provider, true);
+    setProvider(approval.provider);
+    localStorage.setItem(PROVIDER_PREF, approval.provider);
+    setItems((p) => p.map((it) => it.kind === "provider_approval" && it.id === approval.id ? { ...it, state: "approved" as const } : it));
+    sendAgentRequest(approval.prompt, approval.provider);
+  };
+  const declineProviderUse = (approval: Extract<Item, { kind: "provider_approval" }>) => {
+    if (running || approval.state !== "pending") return;
+    setItems((p) => p.map((it) => it.kind === "provider_approval" && it.id === approval.id ? { ...it, state: "declined" as const } : it));
   };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
@@ -590,6 +619,26 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                     </>}
                     {it.state === "approved" && <span className="ctx-chip on"><Check size={12} />אושרה ונשלחה לביצוע</span>}
                     {it.state === "revision" && <span className="ctx-chip muted">ממתינה לעדכון</span>}
+                  </div>
+                </div>
+                <span className="t">{it.time}</span>
+              </div>
+            );
+          }
+          if (it.kind === "provider_approval") {
+            return (
+              <div key={it.id} className="msg2 assistant" role="alert" aria-label="אישור שימוש בספק חיצוני">
+                <div className="b">
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><AlertTriangle size={15} />אישור שימוש ב־{it.providerLabel}</div>
+                  <div>{it.note}</div>
+                  <div style={{ color: "var(--text-muted)", marginTop: 5 }}>לא תישלח קריאה חיצונית לפני אישור.</div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                    {it.state === "pending" && <>
+                      <button className="btn primary sm" onClick={() => approveProviderUse(it)} disabled={running}>מאשר ושולח</button>
+                      <button className="btn sm" onClick={() => declineProviderUse(it)} disabled={running}>ביטול</button>
+                    </>}
+                    {it.state === "approved" && <span className="ctx-chip on"><Check size={12} />אושר</span>}
+                    {it.state === "declined" && <span className="ctx-chip muted">בוטל ללא שליחה</span>}
                   </div>
                 </div>
                 <span className="t">{it.time}</span>

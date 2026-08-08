@@ -8,6 +8,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "llm",
     envKeys: ["DEEPSEEK_API_KEY"],
     configuredKeys: ["deepseek"],
+    billingRisk: "metered_external",
+    billingNoteHe: "השימוש מחויב בחשבון DeepSeek החיצוני לפי תנאיו.",
   },
   {
     id: "openai",
@@ -15,6 +17,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "llm",
     envKeys: ["OPENAI_API_KEY"],
     configuredKeys: ["openai"],
+    billingRisk: "metered_external",
+    billingNoteHe: "השימוש מחויב בחשבון OpenAI החיצוני לפי תנאיו.",
   },
   {
     id: "anthropic",
@@ -22,6 +26,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "llm",
     envKeys: ["ANTHROPIC_API_KEY"],
     configuredKeys: ["anthropic"],
+    billingRisk: "metered_external",
+    billingNoteHe: "השימוש מחויב בחשבון Anthropic החיצוני לפי תנאיו.",
   },
   {
     id: "gemini",
@@ -29,6 +35,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "llm",
     envKeys: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
     configuredKeys: ["gemini"],
+    billingRisk: "unknown",
+    billingNoteHe: "לא ניתן להבטיח שהקריאה נמצאת במכסה חינמית; נדרש אישור.",
   },
   {
     id: "groq-transcribe",
@@ -36,6 +44,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "transcribe",
     envKeys: ["GROQ_API_KEY"],
     configuredKeys: ["groq-transcribe"],
+    billingRisk: "unknown",
+    billingNoteHe: "מכסה או חיוב תלויים בחשבון Groq; לא מניחים שהקריאה חינמית.",
   },
   {
     id: "elevenlabs-transcribe",
@@ -43,6 +53,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "transcribe",
     envKeys: ["ELEVENLABS_API_KEY"],
     configuredKeys: ["elevenlabs-transcribe"],
+    billingRisk: "metered_external",
+    billingNoteHe: "תמלול צורך מכסה בחשבון ElevenLabs החיצוני.",
   },
   {
     id: "elevenlabs-voice",
@@ -50,6 +62,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     kind: "voice",
     envKeys: ["ELEVENLABS_API_KEY"],
     configuredKeys: ["elevenlabs-voice"],
+    billingRisk: "metered_external",
+    billingNoteHe: "יצירת קול צורכת מכסה בחשבון ElevenLabs החיצוני.",
   },
 ] as const;
 

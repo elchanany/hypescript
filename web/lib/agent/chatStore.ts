@@ -1,12 +1,13 @@
 // אחסון שיחות מרובות בפרויקט אחד (מיגרציה שקופה מפורמט ישן {items,history}).
 
-import { ChatMessage } from "./types";
+import { ChatMessage, Provider } from "./types";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export type ChatItem =
   | { kind: "user" | "assistant" | "error"; text: string; time: string }
   | { kind: "quote"; seconds: number; text: string; time: string }
   | { kind: "plan"; id: string; text: string; steps: string[]; state: "pending" | "approved" | "revision"; time: string }
+  | { kind: "provider_approval"; id: string; provider: Provider; providerLabel: string; prompt: string; note: string; state: "pending" | "approved" | "declined"; time: string }
   | { kind: "tool"; id: string; label: string; color: string; status: string; state: "running" | "ok" | "error"; summary: string; time: string; name: string; providerLabel?: string; args?: Record<string, any>; startedAt?: number; durationMs?: number; checkpoint?: EditorSnapshot; restored?: boolean }
   | { kind: "output"; name: string; url: string; mkind: "video" | "srt" | "image" | "audio"; time: string };
 
