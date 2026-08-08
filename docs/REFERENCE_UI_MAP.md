@@ -86,4 +86,5 @@
 | מקום | סטטוס |
 |---|---|
 | Clip (duplicate/split/disable/delete) | חלקי |
+| Command menu (Ctrl/Cmd+K) מה-Registry | קיים |
 | Track / Gap / Asset / Caption menus מלאים | חסר |

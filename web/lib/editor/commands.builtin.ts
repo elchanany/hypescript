@@ -17,6 +17,7 @@ export function ensureBuiltinCommands() {
     id: "clip.delete.ripple",
     label: "Delete clip (ripple)",
     labelHe: "מחק קטע (ריפל)",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -30,6 +31,7 @@ export function ensureBuiltinCommands() {
     id: "clip.delete.leaveGap",
     label: "Delete clip (leave gap)",
     labelHe: "מחק קטע והשאר רווח",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -43,6 +45,7 @@ export function ensureBuiltinCommands() {
     id: "gap.close",
     label: "Close gap",
     labelHe: "סגור רווח",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -58,6 +61,7 @@ export function ensureBuiltinCommands() {
     id: "clip.splitAtPlayhead",
     label: "Split at playhead",
     labelHe: "פצל בראש-הנגן",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api) => {
       const clips = api.getClips();
       if (!clips?.length) throw new Error("אין קליפים");
@@ -73,6 +77,7 @@ export function ensureBuiltinCommands() {
     id: "overlay.delete",
     label: "Delete overlay",
     labelHe: "מחק שכבה",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       if (!id) throw new Error("אין שכבה");
@@ -85,6 +90,7 @@ export function ensureBuiltinCommands() {
     id: "overlay.addText",
     label: "Add text overlay",
     labelHe: "הוסף טקסט",
+    contexts: ["editor", "shortcut"],
     run: (api, args) => {
       const text = String(args?.text || "טקסט חדש");
       const canvas = api.getCanvas();
@@ -101,6 +107,7 @@ export function ensureBuiltinCommands() {
     id: "clip.setEnabled",
     label: "Set clip enabled",
     labelHe: "הפעל/השבת קטע",
+    contexts: ["editor", "agent", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       if (!id) throw new Error("חסר id");
@@ -124,6 +131,7 @@ export function ensureBuiltinCommands() {
     id: "clip.duplicate",
     label: "Duplicate clip",
     labelHe: "שכפל קטע",
+    contexts: ["editor", "shortcut", "context-menu"],
     run: (api, args) => {
       const id = String(args?.id || "");
       const clips = api.getClips();
@@ -305,6 +313,7 @@ export function ensureBuiltinCommands() {
     id: "track.addVideo",
     label: "Add video track",
     labelHe: "הוסף רצועת וידאו",
+    contexts: ["editor", "agent", "shortcut"],
     run: (api, args) => {
       const name = args?.name != null ? String(args.name) : undefined;
       const { tracks } = createVideoTrack(api.getTracks(), name);

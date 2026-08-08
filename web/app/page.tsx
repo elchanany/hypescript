@@ -17,6 +17,7 @@ import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
+import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
@@ -97,6 +98,7 @@ export default function EditorPage() {
   const [snap, setSnap] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [commandMenu, setCommandMenu] = useState<{ x: number; y: number } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -580,7 +582,8 @@ export default function EditorPage() {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const meta = e.ctrlKey || e.metaKey;
-      if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      if (meta && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandMenu({ x: Math.max(12, window.innerWidth / 2 - 150), y: Math.max(12, window.innerHeight / 3) }); }
+      else if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
       else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId || selectedSubId)) { e.preventDefault(); deleteSel(e.shiftKey); }
@@ -659,6 +662,16 @@ export default function EditorPage() {
     { label: "מחק והשאר רווח", icon: SquareDashed, onClick: () => deleteClipById(menuClip.id, true), disabled: vLocked, kbd: "Shift+Delete" },
     { label: "מחק", icon: Trash2, danger: true, onClick: () => deleteClipById(menuClip.id), disabled: vLocked, kbd: "Delete" },
   ] : [];
+  const commandMenuItems: CtxItem[] = commandMenu && editorApiRef.current
+    ? listRunnableCommands(editorApiRef.current, { clipId: selectedId, overlayId: selectedOverlayId }, "shortcut")
+      .map(({ command, args }) => ({
+        label: command.labelHe,
+        onClick: () => {
+          const result = runCommand(command.id, editorApiRef.current!, args);
+          if (!result.ok) setError(result.error);
+        },
+      }))
+    : [];
 
   return (
     <div className="editor-root">
@@ -796,6 +809,12 @@ export default function EditorPage() {
       </div>
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
+      {commandMenu && <ContextMenu
+        x={commandMenu.x}
+        y={commandMenu.y}
+        items={commandMenuItems.length ? commandMenuItems : [{ label: "אין פקודות זמינות לבחירה הנוכחית", disabled: true }]}
+        onClose={() => setCommandMenu(null)}
+      />}
 
       <NameDialog
         open={projDlg === "create"}
