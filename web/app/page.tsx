@@ -123,13 +123,25 @@ export default function EditorPage() {
   if (!editorApiRef.current) {
     editorApiRef.current = {
       getClips: () => clipsRef.current,
-      setClips: (next) => setClips(next),
+      setClips: (next) => { clipsRef.current = next; setClips(next); },
       getOverlays: () => overlaysRef.current,
-      setOverlays: (next) => setOverlays(next),
-      updateOverlay,
-      removeOverlay,
-      addOverlay,
-      updateClip,
+      setOverlays: (next) => { overlaysRef.current = next; setOverlays(next); },
+      updateOverlay: (id, patch) => {
+        overlaysRef.current = overlaysRef.current.map((item) => item.id === id ? { ...item, ...patch } : item);
+        updateOverlay(id, patch);
+      },
+      removeOverlay: (id) => {
+        overlaysRef.current = overlaysRef.current.filter((item) => item.id !== id);
+        removeOverlay(id);
+      },
+      addOverlay: (overlay) => {
+        overlaysRef.current = [...overlaysRef.current, overlay];
+        addOverlay(overlay);
+      },
+      updateClip: (id, patch) => {
+        clipsRef.current = clipsRef.current?.map((item) => item.id === id ? { ...item, ...patch } : item) || null;
+        updateClip(id, patch);
+      },
       getMedia: () => mediaRef.current,
       removeMediaAsset: (id) => setMedia((items) => {
         const asset = items.find((item) => item.id === id);
@@ -137,9 +149,9 @@ export default function EditorPage() {
         return items.filter((item) => item.id !== id);
       }),
       getSubs: () => subsRef.current,
-      setSubs: (next) => setSubs(next),
+      setSubs: (next) => { subsRef.current = next; setSubs(next); },
       getTracks: () => tracksRef.current,
-      setTracks: (next) => setTracks(next),
+      setTracks: (next) => { tracksRef.current = next; setTracks(next); },
       getCanvas: () => canvasRef.current,
       selectClip: (id) => {
         setSelectedId(id);

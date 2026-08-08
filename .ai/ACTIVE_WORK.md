@@ -1,5 +1,13 @@
 # ACTIVE_WORK.md
 
+## 2026-08-09 — stable overlay identity, alpha preview and safe logo geometry
+
+- Fixed the real multi-overlay Agent race: `add_image_overlay` is now one atomic command and never performs a stale second update against “the last overlay”. UI-facing EditorApi refs also advance synchronously across same-tick Agent commands.
+- `list_overlays` exposes stable IDs; update/delete prefer `overlay_id` plus `expected_source`, reject mismatched assets, and refuse locked overlays. Agent rules prohibit touching an already-arranged end card or narration unless explicitly requested.
+- Image natural dimensions are loaded before Agent placement. Shared geometry preserves aspect ratio, adds `fit_canvas`, and clamps UI/Agent move/resize inside the canvas.
+- Removed the Preview checkerboard from transparent PNG overlays; alpha now reveals the underlying video, matching Export.
+- Full verification: 46 files / 259 tests and production build pass. Browser QA confirmed transparent computed background, 3.5%/4.5% safe logo edges, preserved aspect ratio, and that adding a second image leaves the prior overlay geometry unchanged.
+
 ## 2026-08-08 — explicit logo workflow + designed cards
 
 - Image insertion now has two named actions: full-frame timeline image versus timed logo/overlay. Image double-click chooses overlay; each media card also exposes both actions and a direct Agent mention button.

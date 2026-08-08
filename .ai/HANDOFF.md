@@ -1,6 +1,10 @@
 # Goal
 Make the agent reliably turn a Hebrew client brief into a tight, script-grounded promotional cut: no repeated source time, no avoidable pauses, real styled captions, correct fade sequencing, and deferred missing assets requested only when their stage is reached.
 
+## 2026-08-09 overlay safety continuation
+
+The multi-image failure from the real Agent chat is fixed at its state boundary: add is atomic, overlay IDs are stable, source guards prevent cross-image mutation, locked end cards cannot be touched, intrinsic aspect ratio is used, and all geometry is canvas-clamped. Transparent Preview no longer paints a checkerboard. Do not reintroduce index-only overlay mutation or a post-add “update last overlay” step.
+
 ## 2026-08-08 logo/card continuation
 
 The current dirty package directly addresses the editor screenshot failure: full-frame images and logo overlays are distinct, existing image clips can be converted to small logos, newly imported media has a stable direct Agent mention, and overlays/cards have exact geometry, stacking, rounding and fades in both Preview and Export. Three real text-card presets exist: source attribution, speaker card and dedication card. Finish full test/browser/Graphify verification and push `main`; do not regress back to full-frame image insertion for logos.

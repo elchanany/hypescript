@@ -246,6 +246,24 @@ describe("CommandBus builtins", () => {
     expect(api.overlays[0].transform.y).toBeLessThan(1080 / 2);
   });
 
+  it("adds independent image overlays by stable id and clamps later updates", () => {
+    const api = fakeApi([]) as any;
+    api.updateOverlay = (id: string, patch: any) => { api.overlays = api.overlays.map((item: any) => item.id === id ? { ...item, ...patch } : item); };
+    api.getMedia = () => [
+      { id: "logo", name: "logo.png", kind: "image", file: null, duration: 4, url: "blob:logo" },
+      { id: "end", name: "end.png", kind: "image", file: null, duration: 4, url: "blob:end" },
+    ];
+    expect(runCommand("overlay.addImage", api, { assetId: "logo", overlayId: "ov-logo", width: 1000, height: 400, preset: "logo_top_left" }).ok).toBe(true);
+    const logoBefore = structuredClone(api.overlays[0]);
+    expect(runCommand("overlay.addImage", api, { assetId: "end", overlayId: "ov-end", width: 800, height: 1200, preset: "fit_canvas", locked: true }).ok).toBe(true);
+    expect(api.overlays[0]).toEqual(logoBefore);
+    expect(api.overlays[1]).toMatchObject({ id: "ov-end", assetId: "end", locked: true });
+    expect(runCommand("overlay.update", api, { id: "ov-logo", patch: { transform: { ...api.overlays[0].transform, x: -900, y: -900 } } }).ok).toBe(true);
+    expect(api.overlays[0].transform.x - api.overlays[0].transform.w / 2).toBeGreaterThanOrEqual(0);
+    expect(api.overlays[0].transform.y - api.overlays[0].transform.h / 2).toBeGreaterThanOrEqual(0);
+    expect(api.overlays[1]).toMatchObject({ id: "ov-end", assetId: "end", locked: true });
+  });
+
   it("queryProject reports counts", () => {
     const api = fakeApi([{ id: "a", sourceId: "m", start: 0, end: 2 }]);
     const q = queryProject(api, { clipId: "a", overlayId: null });

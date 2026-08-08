@@ -1,7 +1,7 @@
 // Register built-in editor commands used by UI + Agent.
 import { addClip, assembledToSource, clipAudioFades, clipDur, clipVisualFades, splitClip, trimClip, uid, type Clip } from "./model";
 import type { Sub } from "./subtitlesEdl";
-import { makeImageOverlay, makeTextOverlay, makeTitlePopup, type TitlePopupPreset } from "./overlay";
+import { clampOverlayTransform, imageOverlayGeometry, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset, type TitlePopupPreset } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
@@ -133,24 +133,23 @@ export function ensureBuiltinCommands() {
         : undefined;
       const canvas = api.getCanvas();
       const base = makeImageOverlay(assetId, canvas.width, canvas.height, api.getOverlays(), start, end, intrinsic);
-      const preset = String(args?.preset || "center");
-      let w = Number.isFinite(Number(args?.w)) ? Math.max(8, Number(args?.w)) : base.transform.w;
-      let h = Number.isFinite(Number(args?.h)) ? Math.max(8, Number(args?.h)) : base.transform.h;
-      if (preset === "logo_top_left" || preset === "logo_top_right") {
-        const ratio = base.transform.w / Math.max(1, base.transform.h);
-        if (!Number.isFinite(Number(args?.w))) w = canvas.width * 0.16;
-        if (!Number.isFinite(Number(args?.h))) h = w / ratio;
-        if (h > canvas.height * 0.22) { h = canvas.height * 0.22; w = h * ratio; }
-      }
-      const padX = canvas.width * 0.035, padY = canvas.height * 0.045;
-      const x = Number.isFinite(Number(args?.x)) ? Number(args?.x) : preset === "logo_top_left" ? padX + w / 2 : preset === "logo_top_right" ? canvas.width - padX - w / 2 : base.transform.x;
-      const y = Number.isFinite(Number(args?.y)) ? Number(args?.y) : preset.startsWith("logo_") ? padY + h / 2 : base.transform.y;
+      const rawPreset = String(args?.preset || "center");
+      const preset: ImageOverlayPreset = rawPreset === "fit_canvas" || rawPreset === "logo_top_left" || rawPreset === "logo_top_right" ? rawPreset : "center";
+      const geometry = imageOverlayGeometry(canvas.width, canvas.height, intrinsic, preset, {
+        ...(Number.isFinite(Number(args?.x)) ? { x: Number(args?.x) } : {}),
+        ...(Number.isFinite(Number(args?.y)) ? { y: Number(args?.y) } : {}),
+        ...(Number.isFinite(Number(args?.w)) ? { w: Number(args?.w) } : {}),
+        ...(Number.isFinite(Number(args?.h)) ? { h: Number(args?.h) } : {}),
+        ...(Number.isFinite(Number(args?.opacity)) ? { opacity: Number(args?.opacity) } : {}),
+      });
       const overlay = {
         ...base,
+        ...(String(args?.overlayId || "").trim() ? { id: String(args?.overlayId).trim() } : {}),
         borderRadius: Number.isFinite(Number(args?.borderRadius)) ? Math.max(0, Number(args?.borderRadius)) : base.borderRadius,
         fadeIn: Number.isFinite(Number(args?.fadeIn)) ? Math.max(0, Math.min((end - start) / 2, Number(args?.fadeIn))) : base.fadeIn,
         fadeOut: Number.isFinite(Number(args?.fadeOut)) ? Math.max(0, Math.min((end - start) / 2, Number(args?.fadeOut))) : base.fadeOut,
-        transform: { ...base.transform, x, y, w, h, opacity: Number.isFinite(Number(args?.opacity)) ? Math.max(0, Math.min(1, Number(args?.opacity))) : base.transform.opacity },
+        locked: args?.locked === true,
+        transform: geometry,
       };
       api.addOverlay(overlay);
       api.selectOverlay(overlay.id);
@@ -578,14 +577,14 @@ export function ensureBuiltinCommands() {
       if (raw.end != null || (raw.start != null && current.end < start + 0.05)) patch.end = end;
       if (raw.transform) {
         const transform = raw.transform;
-        patch.transform = {
+        patch.transform = clampOverlayTransform({
           x: Number.isFinite(Number(transform.x)) ? Number(transform.x) : current.transform.x,
           y: Number.isFinite(Number(transform.y)) ? Number(transform.y) : current.transform.y,
           w: Math.max(8, Number.isFinite(Number(transform.w)) ? Number(transform.w) : current.transform.w),
           h: Math.max(8, Number.isFinite(Number(transform.h)) ? Number(transform.h) : current.transform.h),
           rotation: Number.isFinite(Number(transform.rotation)) ? Number(transform.rotation) : current.transform.rotation,
           opacity: Math.max(0, Math.min(1, Number.isFinite(Number(transform.opacity)) ? Number(transform.opacity) : current.transform.opacity)),
-        };
+        }, api.getCanvas().width, api.getCanvas().height);
       }
       api.updateOverlay(id, patch);
     },

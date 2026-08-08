@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset, mediaById } from "@/lib/editor/model";
-import { Overlay, overlayVisibleAt } from "@/lib/editor/overlay";
+import { clampOverlayTransform, Overlay, overlayVisibleAt } from "@/lib/editor/overlay";
 import { CanvasSize, rotatePoint } from "@/lib/editor/canvasCoords";
 import { RotateCw } from "lucide-react";
 
@@ -77,7 +77,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
         x = snap(x, [canvas.width / 2, canvas.width * 0.1, canvas.width * 0.9]);
         y = snap(y, [canvas.height / 2, canvas.height * 0.1, canvas.height * 0.9]);
       }
-      onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, x, y } } : o)));
+      onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: clampOverlayTransform({ ...o.transform, x, y }, canvas.width, canvas.height) } : o)));
       return;
     }
     // pointer in project coords
@@ -105,7 +105,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
     const dragged = { x: sx * w / 2, y: sy * h / 2 };
     const centerLocal = { x: (dragged.x + opposite.x) / 2, y: (dragged.y + opposite.y) / 2 };
     const centerWorld = rotatePoint(d.s.x + centerLocal.x, d.s.y + centerLocal.y, d.s.x, d.s.y, d.s.rotation);
-    onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, x: centerWorld.x, y: centerWorld.y, w, h } } : o)));
+    onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: clampOverlayTransform({ ...o.transform, x: centerWorld.x, y: centerWorld.y, w, h }, canvas.width, canvas.height) } : o)));
   };
   const onPointerUp = () => {
     window.removeEventListener("pointermove", onPointerMove);
@@ -154,7 +154,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
             onPointerDown={(e) => startDrag(e, o, "move")}
             onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); onEditText(o.id, o.text || ""); } }}>
             {o.kind === "image" && asset ? (
-              // checkerboard behind semi-transparent / dark images so they're never "invisible"
+              // Transparent pixels must reveal the actual video, never an editor checkerboard.
               <div className="ov-img-wrap" style={{ borderRadius: `${(o.borderRadius || 0) * scale}px`, overflow: "hidden" }}><img src={asset.url} alt="" draggable={false} /></div>
             ) : o.kind === "text" ? (
               <div className="ov-text" style={{ color: o.color || "#fff", background: o.background || "transparent", border: o.borderWidth ? `${o.borderWidth * scale}px solid ${o.borderColor || "transparent"}` : undefined, borderRadius: `${(o.borderRadius || 0) * scale}px`, padding: `${Math.max(4, (o.fontSize || 48) * 0.18) * scale}px`, whiteSpace: "pre-line", fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>

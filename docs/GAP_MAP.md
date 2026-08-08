@@ -47,6 +47,8 @@
 | Text element (add/edit/style) | PARTIAL | style מלא/אנימציה חסרים |
 | Image/Logo overlay | OK | — |
 | Logo placement/resize/stack/round/fade | OK | פעולות נפרדות מתמונה מלאה; UI+Agent+Preview+Export |
+| Multi-overlay identity/protection | OK | stable ID + expected-source guard + locked overlays; add אטומי |
+| PNG alpha + safe bounds/aspect | OK | ללא checkerboard ב-Preview; יחס טבעי ו-clamp משותף |
 | Source/speaker/dedication popup cards | OK | שלושה presets אמיתיים עם טקסט רב-שורי, מסגרת ורקע |
 | Stickers/Shapes | MISSING | — |
 

@@ -125,7 +125,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.replaceAll": schema(["clips"], { clips: arr }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num, preset: str }),
-  "overlay.addImage": schema(["assetId"], { assetId: id, start: num, end: num, width: num, height: num, preset: str, x: num, y: num, w: num, h: num, borderRadius: num, opacity: num, fadeIn: num, fadeOut: num }),
+  "overlay.addImage": schema(["assetId"], { assetId: id, overlayId: id, start: num, end: num, width: num, height: num, preset: str, x: num, y: num, w: num, h: num, borderRadius: num, opacity: num, fadeIn: num, fadeOut: num, locked: bool }),
   "overlay.update": schema(["id", "patch"], { id, patch: obj }),
   "media.remove": schema(["id"], { id }),
   "clip.setEnabled": schema(["id", "enabled"], { id, enabled: bool }), "clip.setVolume": schema(["id", "volume"], { id, volume: num }), "clip.setAudioFades": schema(["id"], { id, fadeIn: num, fadeOut: num }), "clip.setOpacity": schema(["id", "opacity"], { id, opacity: num }), "clip.setColorAdjustments": schema(["id"], { id, contrast: num, saturation: num }), "clip.setVisualFades": schema(["id"], { id, fadeIn: num, fadeOut: num }), "clip.setFlip": schema(["id"], { id, flipX: bool, flipY: bool }),

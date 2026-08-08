@@ -14,7 +14,7 @@ import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants
 import {
   addClip, assembledToSource, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup } from "@/lib/editor/overlay";
+import { clampOverlayTransform, imageOverlayGeometry, Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
@@ -93,6 +93,33 @@ function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | und
   if (/^\d+$/.test(s)) return ctx.media[parseInt(s, 10) - 1];
   const low = s.toLowerCase();
   return ctx.media.find((m) => m.id === s) || ctx.media.find((m) => m.name.toLowerCase().includes(low));
+}
+
+async function imageDimensions(asset: MediaAsset): Promise<{ width: number; height: number } | undefined> {
+  if (typeof Image === "undefined" || !asset.url) return undefined;
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => resolve(undefined), 3000);
+    img.onload = () => { window.clearTimeout(timer); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+    img.onerror = () => { window.clearTimeout(timer); resolve(undefined); };
+    img.src = asset.url;
+  });
+}
+
+function overlayTarget(args: any, ctx: AgentContext): { overlay: Overlay; index: number } | string {
+  const overlays = ctx.overlays || [];
+  const requestedId = String(args.overlay_id || "").trim();
+  const index = requestedId ? overlays.findIndex((item) => item.id === requestedId) : (args.index | 0) - 1;
+  const overlay = overlays[index];
+  if (!overlay) return requestedId ? `שגיאה: שכבה id=${requestedId} לא נמצאה.` : "שגיאה: אינדקס שכבה לא תקין.";
+  if (args.expected_source != null) {
+    const expected = resolveAsset(ctx, String(args.expected_source));
+    if (!expected || overlay.kind !== "image" || overlay.assetId !== expected.id) {
+      const actual = overlay.kind === "image" ? mediaById(ctx.media, overlay.assetId || "")?.name || overlay.assetId : "טקסט";
+      return `שגיאת הגנה: היעד הוא ${actual}, לא ${String(args.expected_source)}. לא בוצע שינוי.`;
+    }
+  }
+  return { overlay, index };
 }
 
 export type Reporter = (status: string) => void;
@@ -1273,7 +1300,7 @@ export const TOOLS: ToolMeta[] = [
       if (!ovs.length) return "אין שכבות.";
       return ovs.map((o, i) => {
         const label = o.kind === "text" ? (o.text || "טקסט") : (mediaById(ctx.media, o.assetId || "")?.name || "תמונה");
-        return `${i + 1}. [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s · x=${Math.round(o.transform.x)}, y=${Math.round(o.transform.y)}, w=${Math.round(o.transform.w)}, h=${Math.round(o.transform.h)}, z=${o.zIndex}, round=${Math.round(o.borderRadius || 0)}, fade=${(o.fadeIn || 0).toFixed(2)}/${(o.fadeOut || 0).toFixed(2)}s`;
+        return `${i + 1}. id=${o.id} [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s · x=${Math.round(o.transform.x)}, y=${Math.round(o.transform.y)}, w=${Math.round(o.transform.w)}, h=${Math.round(o.transform.h)}, z=${o.zIndex}, round=${Math.round(o.borderRadius || 0)}, fade=${(o.fadeIn || 0).toFixed(2)}/${(o.fadeOut || 0).toFixed(2)}s${o.locked ? " · מוגנת" : ""}`;
       }).join("\n");
     },
   },
@@ -1281,8 +1308,8 @@ export const TOOLS: ToolMeta[] = [
     name: "add_image_overlay", label: "הוספת תמונה", color: "#f59e0b", icon: "🖼️",
     schema: {
       name: "add_image_overlay",
-      description: "מוסיף תמונה כלוגו/שכבה מעל הווידאו (לא כקליפ מלא). ללוגו קטן השתמש preset=logo_top_left או logo_top_right. אפשר גם לתת x/y/w/h ועיגול.",
-      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["center", "logo_top_left", "logo_top_right"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, border_radius: { type: "number" }, opacity: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } }, required: ["source"] },
+      description: "מוסיף תמונה אטומית כשכבה חדשה בלי לשנות שכבות קיימות. ללוגו השתמש logo_top_left/right; לתמונת סיום מלאה השתמש fit_canvas.",
+      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["center", "fit_canvas", "logo_top_left", "logo_top_right"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, border_radius: { type: "number" }, opacity: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" }, locked: { type: "boolean" } }, required: ["source"] },
     },
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, String(a.source || ""));
@@ -1290,30 +1317,32 @@ export const TOOLS: ToolMeta[] = [
       const start = a.start != null ? Math.max(0, +a.start) : 0;
       const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       const canvas = ctx.canvas || defaultCanvasFor();
-      const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
+      const intrinsic = await imageDimensions(asset);
+      const rawPreset = String(a.preset || "center");
+      const preset: ImageOverlayPreset = rawPreset === "fit_canvas" || rawPreset === "logo_top_left" || rawPreset === "logo_top_right" ? rawPreset : "center";
+      const transform = imageOverlayGeometry(canvas.width, canvas.height, intrinsic, preset, {
+        ...(a.x != null ? { x: +a.x } : {}), ...(a.y != null ? { y: +a.y } : {}),
+        ...(a.w != null ? { w: +a.w } : {}), ...(a.h != null ? { h: +a.h } : {}),
+        ...(a.opacity != null ? { opacity: +a.opacity } : {}),
+      });
+      const overlayId = uid("ov");
+      const commandError = dispatch(ctx, "overlay.addImage", {
+        assetId: asset.id, overlayId, start, end, preset,
+        width: intrinsic?.width, height: intrinsic?.height,
+        x: transform.x, y: transform.y, w: transform.w, h: transform.h, opacity: transform.opacity,
+        borderRadius: a.border_radius, fadeIn: a.fade_in, fadeOut: a.fade_out, locked: a.locked === true,
+      });
       if (commandError === "NO_API") {
-        ctx.overlays = [...(ctx.overlays || []), makeImageOverlay(asset.id, canvas.width, canvas.height, ctx.overlays || [], start, end)];
+        const overlay = makeImageOverlay(asset.id, canvas.width, canvas.height, ctx.overlays || [], start, end, intrinsic);
+        ctx.overlays = [...(ctx.overlays || []), {
+          ...overlay, id: overlayId, transform,
+          borderRadius: a.border_radius != null ? Math.max(0, +a.border_radius) : undefined,
+          fadeIn: a.fade_in != null ? Math.max(0, Math.min((end - start) / 2, +a.fade_in)) : undefined,
+          fadeOut: a.fade_out != null ? Math.max(0, Math.min((end - start) / 2, +a.fade_out)) : undefined,
+          locked: a.locked === true,
+        }];
       } else if (commandError) return `שגיאה: ${commandError}`;
-      const o = ctx.overlays[ctx.overlays.length - 1];
-      const preset = String(a.preset || "center");
-      let w = a.w != null ? Math.max(8, +a.w) : o.transform.w;
-      let h = a.h != null ? Math.max(8, +a.h) : o.transform.h;
-      if (preset.startsWith("logo_")) {
-        const ratio = o.transform.w / Math.max(1, o.transform.h);
-        w = a.w != null ? w : canvas.width * 0.16; h = a.h != null ? h : w / ratio;
-        if (h > canvas.height * 0.22) { h = canvas.height * 0.22; w = h * ratio; }
-      }
-      const padX = canvas.width * 0.035, padY = canvas.height * 0.045;
-      const x = a.x != null ? +a.x : preset === "logo_top_left" ? padX + w / 2 : preset === "logo_top_right" ? canvas.width - padX - w / 2 : o.transform.x;
-      const y = a.y != null ? +a.y : preset.startsWith("logo_") ? padY + h / 2 : o.transform.y;
-      const patch: Partial<Overlay> = { transform: { ...o.transform, x, y, w, h, opacity: a.opacity != null ? Math.max(0, Math.min(1, +a.opacity)) : o.transform.opacity } };
-      if (a.border_radius != null) patch.borderRadius = Math.max(0, +a.border_radius);
-      if (a.fade_in != null) patch.fadeIn = Math.max(0, Math.min((end - start) / 2, +a.fade_in));
-      if (a.fade_out != null) patch.fadeOut = Math.max(0, Math.min((end - start) / 2, +a.fade_out));
-      const updateError = dispatch(ctx, "overlay.update", { id: o.id, patch });
-      if (updateError === "NO_API") ctx.overlays = ctx.overlays.map((item) => item.id === o.id ? { ...item, ...patch } : item);
-      else if (updateError) return `שגיאה: ${updateError}`;
-      return `נוספה שכבת תמונה מעל הווידאו: ${asset.name}. מיקום x=${Math.round(x)}, y=${Math.round(y)}, גודל ${Math.round(w)}×${Math.round(h)}, זמן ${start.toFixed(1)}–${end.toFixed(1)}s. השתמש ב-list_overlays לאימות.`;
+      return `נוספה שכבת תמונה חדשה בלבד: id=${overlayId}, ${asset.name}. מיקום x=${Math.round(transform.x)}, y=${Math.round(transform.y)}, גודל ${Math.round(transform.w)}×${Math.round(transform.h)}, זמן ${start.toFixed(1)}–${end.toFixed(1)}s${a.locked ? ", מוגנת משינויים" : ""}. השתמש ב-list_overlays ואמת לפי id ושם.`;
     },
   },
   {
@@ -1362,45 +1391,47 @@ export const TOOLS: ToolMeta[] = [
     name: "delete_overlay", label: "מחיקת שכבה", color: "#ef4444", icon: "🗑️",
     schema: {
       name: "delete_overlay",
-      description: "מוחק שכבה לפי אינדקס 1-based מ-list_overlays.",
-      parameters: { type: "object", properties: { index: { type: "number" } }, required: ["index"] },
+      description: "מוחק שכבה לפי overlay_id יציב (מומלץ) או אינדקס. expected_source מגן ממחיקת תמונה אחרת.",
+      parameters: { type: "object", properties: { overlay_id: { type: "string" }, index: { type: "number" }, expected_source: { type: "string" } } },
     },
     run: async (a, ctx) => {
-      const ovs = ctx.overlays || [];
-      const i = (a.index | 0) - 1;
-      if (!ovs[i]) return "אינדקס שכבה לא תקין.";
-      const commandError = dispatch(ctx, "overlay.delete", { id: ovs[i].id });
-      if (commandError === "NO_API") ctx.overlays = ovs.filter((_, k) => k !== i);
+      const target = overlayTarget(a, ctx); if (typeof target === "string") return target;
+      const { overlay, index } = target;
+      if (overlay.locked) return `שגיאת הגנה: שכבה id=${overlay.id} מוגנת. בטל הגנה במפורש לפני מחיקה.`;
+      const before = (ctx.overlays || []).length;
+      const commandError = dispatch(ctx, "overlay.delete", { id: overlay.id });
+      if (commandError === "NO_API") ctx.overlays = (ctx.overlays || []).filter((_, k) => k !== index);
       else if (commandError) return `שגיאה: ${commandError}`;
-      return `שכבה נמחקה. נותרו ${ctx.overlays.length}.`;
+      return `נמחקה רק שכבה id=${overlay.id}. נותרו ${Math.max(0, before - 1)} שכבות.`;
     },
   },
   {
     name: "update_overlay", label: "עדכון שכבה", color: "#f59e0b", icon: "✏️",
     schema: {
       name: "update_overlay",
-      description: "מעדכן שכבה (טקסט/זמן/מיקום/גודל/סיבוב/שקיפות).",
+      description: "מעדכן שכבה לפי overlay_id יציב (מומלץ) או אינדקס. expected_source מונע שינוי תמונה אחרת.",
       parameters: {
         type: "object",
         properties: {
-          index: { type: "number" }, text: { type: "string" }, start: { type: "number" }, end: { type: "number" },
+          overlay_id: { type: "string" }, index: { type: "number" }, expected_source: { type: "string" }, text: { type: "string" }, start: { type: "number" }, end: { type: "number" },
           x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
-          rotation: { type: "number" }, opacity: { type: "number" }, color: { type: "string" }, background: { type: "string" }, border_radius: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, font_size: { type: "number" }, z_index: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" },
+          rotation: { type: "number" }, opacity: { type: "number" }, color: { type: "string" }, background: { type: "string" }, border_radius: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, font_size: { type: "number" }, z_index: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" }, locked: { type: "boolean" },
         },
-        required: ["index"],
       },
     },
     run: async (a, ctx) => {
       const ovs = ctx.overlays || [];
-      const i = (a.index | 0) - 1;
-      const o = ovs[i]; if (!o) return "אינדקס שכבה לא תקין.";
-      const t = { ...o.transform };
+      const target = overlayTarget(a, ctx); if (typeof target === "string") return target;
+      const { overlay: o, index: i } = target;
+      if (o.locked && a.locked !== false) return `שגיאת הגנה: שכבה id=${o.id} מוגנת. מותר רק locked=false עד ביטול ההגנה.`;
+      let t = { ...o.transform };
       if (a.x != null) t.x = +a.x;
       if (a.y != null) t.y = +a.y;
       if (a.w != null) t.w = Math.max(8, +a.w);
       if (a.h != null) t.h = Math.max(8, +a.h);
       if (a.rotation != null) t.rotation = +a.rotation;
       if (a.opacity != null) t.opacity = Math.max(0, Math.min(1, +a.opacity));
+      t = clampOverlayTransform(t, ctx.canvas?.width || defaultCanvasFor().width, ctx.canvas?.height || defaultCanvasFor().height);
       const patch: Partial<Overlay> = { transform: t };
       if (a.text != null) patch.text = String(a.text);
       if (a.color != null) patch.color = String(a.color);
@@ -1409,6 +1440,7 @@ export const TOOLS: ToolMeta[] = [
       if (a.border_color != null) patch.borderColor = String(a.border_color);
       if (a.border_width != null) patch.borderWidth = Math.max(0, +a.border_width);
       if (a.z_index != null) patch.zIndex = Math.max(0, Math.round(+a.z_index));
+      if (a.locked != null) patch.locked = a.locked === true;
       if (a.font_size != null) patch.fontSize = Math.max(8, +a.font_size);
       if (a.start != null) patch.start = Math.max(0, +a.start);
       if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
@@ -1418,8 +1450,8 @@ export const TOOLS: ToolMeta[] = [
       const commandError = dispatch(ctx, "overlay.update", { id: o.id, patch });
       if (commandError === "NO_API") ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
       else if (commandError) return `שגיאה: ${commandError}`;
-      const updated = ctx.overlays[i];
-      return `שכבה ${a.index} עודכנה: x=${Math.round(updated.transform.x)}, y=${Math.round(updated.transform.y)}, w=${Math.round(updated.transform.w)}, h=${Math.round(updated.transform.h)}, z=${updated.zIndex}, round=${Math.round(updated.borderRadius || 0)}. השינוי נראה מיד ב-Preview ונשמר לייצוא.`;
+      const updated = { ...o, ...patch, transform: t };
+      return `שכבה id=${o.id} עודכנה בלבד: x=${Math.round(updated.transform.x)}, y=${Math.round(updated.transform.y)}, w=${Math.round(updated.transform.w)}, h=${Math.round(updated.transform.h)}, z=${updated.zIndex}, round=${Math.round(updated.borderRadius || 0)}. אמת ב-list_overlays לפי אותו id ושם.`;
     },
   },
   {
@@ -1853,9 +1885,12 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 16. בריף לקוח כולל שלושה סוגים: (א) טקסט שנאמר ושצריך להישאר — נכנס ל-keep_by_script ולכתוביות; (ב) הוראות עריכה כגון fade — אינן כתוביות; (ג) טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script, ויש ליצור אותו רק בשלב האאוטרו עם הנכסים המתאימים.
 17. אין חזרות גבול: פלט אוטומטי חייב להיות רציף בזמן-מקור. אם קליפ מסתיים ב-29.8, הקליפ הבא מאותו מקור/רצועה מתחיל ב-29.8 או מאוחר יותר — לעולם לא 29.7/29.8 מחדש. דווח הצלחה רק אחרי list_clips ובדיקת הגבולות.
 18. אם המשתמש מבקש fade בנקודת המעבר לסיום, החל set_clip_audio_fades(fade_out=...) על הקליפ האחרון של התוכן המדובר לפני בקשת נכסי האאוטרו.
-19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו מעל הסרטון: add_image_overlay(preset="logo_top_left" או "logo_top_right", start,end). אל תוסיף לוגו כקליפ. אחרי הוספה/שינוי חובה list_overlays ולדווח למשתמש x/y/w/h/z כדי שיוכל לראות ולתקן.
+19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו מעל הסרטון: add_image_overlay(preset="logo_top_left" או "logo_top_right", start,end). תמונת סיום כשכבה מלאה: preset="fit_canvas". אל תנחש x/y. הכלי טוען יחס תמונה ושומר אותה בתוך הקנבס.
 20. לכרטיס מעוצב: add_text_overlay עם source_popup ל"מתוך שיעור", speaker_card לשם דובר ותפקיד, dedication_card להקדשה רב-שורתית. הגדר start/end מדויקים, קרא list_overlays, ואל תטען שעוצב לפני שהכלי הצליח.
 21. תוצרי render_video, export_subtitles, capture_frame ו-generate_narration חוזרים ככרטיסי קובץ בצ'אט עם תצוגה/הורדה. אחרי יצירת תוצר, אמור למשתמש להשתמש בכרטיס המצורף; אל תמציא נתיב או קישור.
+22. זהות שכבות: אחרי list_overlays השתמש תמיד ב-overlay_id וב-expected_source לעדכון/מחיקה, לעולם לא באינדקס בלבד. אחרי שינוי אמת שה-id ושם הקובץ זהים. אם אינם זהים — עצור; אל תמחק ותבנה מחדש בלולאה.
+23. שמירת עבודה קיימת: אם המשתמש אומר שתמונת סיום/קריינות/שכבה כבר מסודרת, אסור לשנות או למחוק אותה. גע רק בנכס שביקש, לפי id+expected_source. אם לא ברור איזה נכס הוא הלוגו — ask_user פעם אחת. אל "תנקה הכל" ואל תשחזר שכבות אחרות.
+24. שכבה מוגנת אינה ניתנת לשינוי/מחיקה. אפשר ליצור תמונת סיום עם locked=true, ולבטל הגנה רק כשהמשתמש ביקש לערוך אותה במפורש.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -1865,7 +1900,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.
 - add_video_track / list_tracks / move_clip_to_track / remove_video_track: רצועות וידאו למונטאז'.
 - add_clip: וידאו/תמונה מלאה/אודיו בזמן מדויק באמצעות timeline_start; placement="overlay" לתמונה כשכבה.
-- add_image_overlay(preset="logo_top_left|logo_top_right"): לוגו קטן מעל הווידאו; update_overlay שולט x/y/w/h/round/z.
+- add_image_overlay(preset="logo_top_left|logo_top_right|fit_canvas"): מוסיף שכבה אטומית חדשה בלבד ומחזיר overlay_id. update_overlay/delete_overlay חייבים overlay_id+expected_source.
 - add_text_overlay(preset="source_popup|speaker_card|dedication_card"): כרטיס מעוצב שנשמר גם בייצוא.
 - move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).

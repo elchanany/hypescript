@@ -97,6 +97,16 @@
 - **בחירה:** token של נכס הוא `@media:<assetId>` בעוד שם הקובץ נשאר תווית למשתמש.
 - **סיבה:** שמות עם רווחים נשברו ב-composer וקבצים חדשים לא היו קלים לציטוט.
 - **השלכה:** כל כרטיס מדיה מספק כפתור @ ישיר; resolver מקבל את ה-token היציב וגם חיפוש שמי ישן לתאימות.
+
+## D-020 — שכבות סוכן מזוהות לפי ID ונוצרות אטומית
+- **בחירה:** הוספת שכבת תמונה היא CommandBus יחיד עם `overlayId`, preset, גאומטריה, fade והגנה; עדכון/מחיקה משתמשים ב-`overlay_id` וב-`expected_source`, לא באינדקס משתנה.
+- **סיבה:** snapshot React ישן גרם לעדכון השני שאחרי add לפגוע בשכבה הקודמת, בעוד דיווחי delete/update הציגו state ישן והובילו את המודל ללולאות מחיקה ובנייה מחדש.
+- **השלכה:** שכבה חדשה אינה משנה קיימות; mismatch בשם הנכס נכשל סגור; שכבה נעולה מוגנת; רשימת שכבות מציגה ID קבוע.
+
+## D-021 — שקיפות וגאומטריית תמונה זהות לתוצר
+- **בחירה:** Preview אינו מצייר checkerboard בתוך הסרטון; PNG alpha חושף את הווידאו. UI/Agent/CommandBus חולקים חישוב יחס-מקור ו-clamp לקנבס; `fit_canvas` מכיל תמונת סיום בלי crop.
+- **סיבה:** checkerboard עיצובי נראה כתוכן סופי, ומידות fallback ריבועיות חתכו לוגו רחב או אפשרו מרכז מחוץ לקנבס.
+- **השלכה:** לוגו נשמר כולו בגבולות וביחס הנכון; Export ממשיך להשתמש באלפא המקורית; הזזה/resize אינם יכולים להשאיר שכבה חצויה מחוץ לפריים.
 # 2026-08-08 — media placement and Preview/Export parity
 
 - An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.

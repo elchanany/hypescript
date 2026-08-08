@@ -7,6 +7,7 @@
 import { uid } from "./model";
 
 export type OverlayKind = "image" | "text";
+export type ImageOverlayPreset = "center" | "fit_canvas" | "logo_top_left" | "logo_top_right";
 
 // Single transform source of truth. position = element CENTER, in project px.
 export interface VisualTransform {
@@ -47,19 +48,54 @@ export const overlayVisibleAt = (o: Overlay, t: number): boolean =>
 export const nextZ = (overlays: Overlay[]): number =>
   overlays.reduce((m, o) => Math.max(m, o.zIndex), 0) + 1;
 
+/** Keep an unrotated overlay fully inside the project canvas. */
+export function clampOverlayTransform(transform: VisualTransform, canvasW: number, canvasH: number, margin = 0): VisualTransform {
+  const usableW = Math.max(8, canvasW - margin * 2);
+  const usableH = Math.max(8, canvasH - margin * 2);
+  const rawW = Math.max(8, Number.isFinite(transform.w) ? transform.w : 8);
+  const rawH = Math.max(8, Number.isFinite(transform.h) ? transform.h : 8);
+  const scale = Math.min(1, usableW / rawW, usableH / rawH);
+  const w = rawW * scale;
+  const h = rawH * scale;
+  return {
+    ...transform,
+    w,
+    h,
+    x: Math.max(margin + w / 2, Math.min(canvasW - margin - w / 2, transform.x)),
+    y: Math.max(margin + h / 2, Math.min(canvasH - margin - h / 2, transform.y)),
+    opacity: Math.max(0, Math.min(1, transform.opacity)),
+  };
+}
+
+/** Canonical geometry shared by UI, CommandBus and Agent image presets. */
+export function imageOverlayGeometry(
+  canvasW: number,
+  canvasH: number,
+  intrinsic: { width: number; height: number } | undefined,
+  preset: ImageOverlayPreset = "center",
+  overrides: Partial<Pick<VisualTransform, "x" | "y" | "w" | "h" | "opacity">> = {},
+): VisualTransform {
+  const ratio = intrinsic && intrinsic.width > 0 && intrinsic.height > 0 ? intrinsic.width / intrinsic.height : 1;
+  let w = preset === "fit_canvas" ? canvasW : preset.startsWith("logo_") ? canvasW * 0.16 : canvasW * 0.4;
+  let h = w / ratio;
+  const maxH = preset === "fit_canvas" ? canvasH : preset.startsWith("logo_") ? canvasH * 0.22 : canvasH * 0.7;
+  if (h > maxH) { h = maxH; w = h * ratio; }
+  if (overrides.w != null) w = Math.max(8, overrides.w);
+  if (overrides.h != null) h = Math.max(8, overrides.h);
+  const padX = canvasW * 0.035;
+  const padY = canvasH * 0.045;
+  const x = overrides.x ?? (preset === "logo_top_left" ? padX + w / 2 : preset === "logo_top_right" ? canvasW - padX - w / 2 : canvasW / 2);
+  const y = overrides.y ?? (preset.startsWith("logo_") ? padY + h / 2 : canvasH / 2);
+  return clampOverlayTransform({ x, y, w, h, rotation: 0, opacity: overrides.opacity ?? 1 }, canvasW, canvasH, preset.startsWith("logo_") ? Math.min(padX, padY) : 0);
+}
+
 export function makeImageOverlay(
   assetId: string, canvasW: number, canvasH: number, overlays: Overlay[],
   start = 0, end = 4, intrinsic?: { width: number; height: number },
 ): Overlay {
-  // Fit image into ~40% of canvas width, preserving intrinsic aspect (fallback 1:1).
-  const ar = (intrinsic && intrinsic.width > 0 && intrinsic.height > 0)
-    ? intrinsic.width / intrinsic.height
-    : 1;
-  const w = Math.round(canvasW * 0.4);
-  const h = Math.round(w / ar);
   return {
     id: uid("ov"), kind: "image", assetId, start, end, zIndex: nextZ(overlays),
-    transform: { x: canvasW / 2, y: canvasH / 2, w, h, rotation: 0, opacity: 1 },
+    transform: imageOverlayGeometry(canvasW, canvasH, intrinsic, "center"),
   };
 }
 

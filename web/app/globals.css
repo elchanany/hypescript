@@ -373,13 +373,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .ov-box { position: absolute; pointer-events: auto; cursor: move; user-select: none; }
 .ov-box .ov-img-wrap {
   width: 100%; height: 100%; display: grid; place-items: center;
-  background:
-    linear-gradient(45deg, #2a2f38 25%, transparent 25%),
-    linear-gradient(-45deg, #2a2f38 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #2a2f38 75%),
-    linear-gradient(-45deg, transparent 75%, #2a2f38 75%);
-  background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-  background-color: #1a1e26;
+  background: transparent;
 }
 .ov-box img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
 .ov-box .ov-text { width: 100%; height: 100%; display: flex; align-items: center; text-align: center; direction: rtl; line-height: 1.2; overflow: hidden; word-break: break-word; text-shadow: 0 2px 6px rgba(0,0,0,.55); pointer-events: none; }
