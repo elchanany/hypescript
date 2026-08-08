@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Overlay mutation parity. add/update/delete של הסוכן וה-UI עוברים דרך CommandBus; גרירת preview נשארת transaction רציף כדי לשמור Undo יחיד. TX-1 animation לא מסומן כי export עדיין סטטי.
+AG-2 — Inspector/timeline parity. clip trim/enabled/volume, subtitle edit/retime/delete ו-timeline reorder עוברים דרך CommandBus. Clip opacity נשאר פער מפורש כי אינו מחובר ל-Preview/Export.
 
 ## Branch
 `main`
 
 ## Latest commit
-`b279664` — subtitle completion + caption style parity על main
+`1f6039a` — overlay parity + post-commit Graphify sync על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 202/202 tests, production build ו־Graphify update (1592 nodes / 3391 edges) עברו
+מוכן ל־commit · tsc נקי, 202/202 tests, production build ו־Graphify update (1592 nodes / 3389 edges) עברו
 
 ## Exact continuation point
-commit+push; אחר כך audit של יתר פעולות UI מול CommandBus ו-TX-1 export animation design. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך media.add parity או clip opacity Preview+Export. בלי שינוי Supabase/Auth ללא אישור.

@@ -11,4 +11,4 @@ Vercel → `NEXT_PUBLIC_SUPABASE_URL` + Publishable/anon (not Secret) → Redepl
 Dashboard project cards / timeline zoom merges.
 
 ## Next
-AG-2 subtitle completion על main ב־`b279664`. מקומית overlay add/update/delete של הסוכן וה-UI עוברים דרך CommandBus; preview drag נשאר transaction רציף ל-Undo יחיד. TX-1 animation נשאר חסר ביושר כי export caption PNG סטטי. tsc, 202/202 tests, production build ו־Graphify update (1592/3391) עברו; להשלים commit+push, ואז audit יתר פעולות UI ו-media.add מול export-animation design. Package C רק אחרי login עובד.
+Overlay parity על main ב־`4b55d2e` ו-Graphify sync ב־`1f6039a`. מקומית Inspector clip trim/enabled/volume, subtitle edit/retime, keyboard delete ו-timeline reorder עוברים דרך CommandBus. Clip opacity נשאר פער מפורש: נשמר במודל אך לא ב-Preview/Export. tsc, 202/202 tests, production build ו־Graphify update (1592/3389) עברו; להשלים commit+push, ואז media.add parity או opacity render path. Package C רק אחרי login עובד.

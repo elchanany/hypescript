@@ -18,7 +18,7 @@ import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
-import { flattenVideoTracks, moveClipOnTrack, projectDuration } from "@/lib/editor/tracks";
+import { flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
@@ -436,8 +436,36 @@ export default function EditorPage() {
       if (s && (cur < s.start - 1e-3 || cur > s.end + 1e-3)) seek(s.start + 0.01);
     }
   };
-  const updateSub = (id: string, patch: Partial<Sub>) => {
-    setSubs((ss) => ss?.map((s) => (s.id === id ? { ...s, ...patch } : s)) || ss);
+  const updateClipFromInspector = (id: string, patch: Partial<Clip>) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume"; args: Record<string, unknown> }> = [];
+    if (patch.start != null || patch.end != null) commands.push({ id: "clip.trim", args: { id, ...patch } });
+    if (patch.enabled != null) commands.push({ id: "clip.setEnabled", args: { id, enabled: patch.enabled } });
+    if (patch.volume != null) commands.push({ id: "clip.setVolume", args: { id, volume: patch.volume } });
+    for (const command of commands) {
+      const result = runCommand(command.id, api, command.args);
+      if (!result.ok) { setError(result.error); return; }
+    }
+    // Clip opacity is persisted but not yet honored by Preview/Export, so keep it
+    // outside the advertised command surface until that full path is implemented.
+    if (patch.opacity != null) updateClip(id, { opacity: patch.opacity });
+  };
+  const updateSubFromInspector = (sub: Sub, patch: Partial<Sub>) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    if (patch.text != null) {
+      const result = runCommand("subtitle.edit", api, { id: sub.id, text: patch.text });
+      if (!result.ok) { setError(result.error); return; }
+    }
+    if (patch.start != null || patch.end != null) {
+      const result = runCommand("subtitle.retime", api, {
+        id: sub.id,
+        start: patch.start ?? sub.start,
+        end: patch.end ?? sub.end,
+      });
+      if (!result.ok) setError(result.error);
+    }
   };
   const onCanvasDetected = (w: number, h: number) => {
     // only auto-set once from the first video if still at the default 1920×1080
@@ -552,8 +580,8 @@ export default function EditorPage() {
       return;
     }
     if (selectedSubId) {
-      setSubs((ss) => ss?.filter((s) => s.id !== selectedSubId) || ss);
-      setSelectedSubId(null);
+      const res = runCommand("subtitle.delete", editorApiRef.current!, { id: selectedSubId });
+      if (!res.ok) setError(res.error); else setSelectedSubId(null);
       return;
     }
     if (selectedId) deleteClipById(selectedId, leaveGap);
@@ -824,13 +852,13 @@ export default function EditorPage() {
               assetDuration={selectedClip ? mediaById(media, selectedClip.sourceId)?.duration || duration : 0}
               trackName={inspectorTrackName}
               timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
-              onUpdate={(patch) => selectedClip && updateClip(selectedClip.id, patch)}
+              onUpdate={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)}
               onUpdateOverlay={(patch) => {
                 if (!selectedOverlay || !editorApiRef.current) return;
                 const result = runCommand("overlay.update", editorApiRef.current, { id: selectedOverlay.id, patch });
                 if (!result.ok) setError(result.error);
               }}
-              onUpdateSub={(patch) => selectedSub && updateSub(selectedSub.id, patch)}
+              onUpdateSub={(patch) => selectedSub && updateSubFromInspector(selectedSub, patch)}
               canvas={canvas}
               captionStyle={captionStyle}
               onCaptionStyle={(patch) => {
@@ -870,7 +898,11 @@ export default function EditorPage() {
                   return clip && isGapClip(clip) ? trimGap(c, id, e - s) : trimClip(c, id, s, e, duration);
                 })}
                 onTrimEnd={commitTransaction}
-                onReorder={(id, to) => setClips((c) => (c ? moveClipOnTrack(c, id, to, primaryVideoTrackId(tracks)) : c))}
+                onReorder={(id, to) => {
+                  if (!editorApiRef.current) return;
+                  const result = runCommand("clip.move", editorApiRef.current, { id, to_index: to });
+                  if (!result.ok) setError(result.error);
+                }}
                 onClipMenu={(id, x, y) => setClipMenu({ id, x, y })}
                 onTrackMenu={(id, x, y) => setTrackMenu({ id, x, y })}
                 onDropMedia={dropMediaOnTimeline}

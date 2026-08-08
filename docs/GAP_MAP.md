@@ -20,6 +20,7 @@
 | Preview (וידאו יחיד) | OK | — |
 | Caption overlay בנגן | PARTIAL | טקסט בלבד |
 | PreviewCompositor (image/logo/text) | OK | stickers חסר; Preview+Export |
+| Clip opacity | UI · !PREVIEW · !EXPORT | נשמר במודל אך עדיין לא מיושם בנגן או בגרף FFmpeg; לא נחשף כפקודת סוכן |
 | Project coordinates | OK | — |
 | בחירה/Bounding box/drag/resize/rotate | OK | — |
 | Inspector transform sync | OK | — |
@@ -55,7 +56,7 @@
 | Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |
-| CommandBus + Query API | PARTIAL | agent clip/track/subtitle/overlay ops, overlay add/edit/delete UI, caption style UI ו-guarded media.remove דרך CommandBus; כל ה-command surfaces הקיימים נגזרים מה-Registry; נותרו פעולות UI נוספות ו-media.add מורכב |
+| CommandBus + Query API | PARTIAL | agent clip/track/subtitle/overlay ops, Inspector trim/enabled/volume/subtitle, timeline reorder/delete, overlay UI, caption style ו-guarded media.remove דרך CommandBus; כל ה-command surfaces הקיימים נגזרים מה-Registry; נותרו clip opacity ו-media.add מורכב |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
@@ -89,7 +90,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — clip/track/subtitle/overlay parity (add/edit/delete/retime/clear), caption style UI ו-guarded asset removal; נותרו פעולות UI נוספות ו-media.add מורכב
+- **AG-2**: PARTIAL — clip/track/subtitle/overlay parity, Inspector/timeline actions, caption style UI ו-guarded asset removal; נותרו clip opacity ו-media.add מורכב
 - **AG-4**: PARTIAL — Tool activity כולל provider, duration, exact retry, token usage, checkpoint restore ו"בטל"; Plan checklist + approval-to-Act הושלמו; נותר rate-card כספי מאומת
 - **PR-1**: PARTIAL — Provider Registry מפריד configured/verified ומסווג billing risk; LLM/STT/TTS fail-closed עד אישור ספק מפורש; live health-check + server/roles policy חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)
