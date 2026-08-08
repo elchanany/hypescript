@@ -4,7 +4,16 @@
 // מפתחות (משתני סביבה ב-Vercel): DEEPSEEK_API_KEY, OPENAI_API_KEY,
 // ANTHROPIC_API_KEY, GEMINI_API_KEY (או GOOGLE_API_KEY).
 
-import { AgentResponse, ChatMessage, ContentPart, Provider, ToolSchema } from "./types";
+import { AgentResponse, AgentUsage, ChatMessage, ContentPart, Provider, ToolSchema } from "./types";
+
+export function normalizeProviderUsage(provider: Provider, data: any): AgentUsage | undefined {
+  const raw = provider === "anthropic" ? data?.usage : provider === "gemini" ? data?.usageMetadata : data?.usage;
+  if (!raw) return undefined;
+  const inputTokens = Number(provider === "anthropic" ? raw.input_tokens : provider === "gemini" ? raw.promptTokenCount : raw.prompt_tokens) || 0;
+  const outputTokens = Number(provider === "anthropic" ? raw.output_tokens : provider === "gemini" ? raw.candidatesTokenCount : raw.completion_tokens) || 0;
+  const totalTokens = Number(provider === "gemini" ? raw.totalTokenCount : raw.total_tokens) || inputTokens + outputTokens;
+  return { inputTokens, outputTokens, totalTokens };
+}
 
 function parseDataUrl(url: string): { mime: string; data: string } {
   const m = url.match(/^data:([^;]+);base64,(.*)$/);
@@ -129,7 +138,7 @@ async function callOpenAICompat(
   const toolCalls = (msg.tool_calls || []).map((tc: any) => ({
     id: tc.id, name: tc.function.name, arguments: safeParse(tc.function.arguments),
   }));
-  return { content: msg.content || null, tool_calls: toolCalls };
+  return { content: msg.content || null, tool_calls: toolCalls, usage: normalizeProviderUsage(provider as Provider, data), model: data.model || model };
 }
 
 // --------------------------------------------------------------------------- #
@@ -170,7 +179,7 @@ async function callAnthropic(
     if (block.type === "text") content = (content || "") + block.text;
     else if (block.type === "tool_use") toolCalls.push({ id: block.id, name: block.name, arguments: block.input || {} });
   }
-  return { content, tool_calls: toolCalls };
+  return { content, tool_calls: toolCalls, usage: normalizeProviderUsage("anthropic", data), model: data.model || model };
 }
 
 // --------------------------------------------------------------------------- #
@@ -212,7 +221,7 @@ async function callGemini(
     if (p.text) content = (content || "") + p.text;
     else if (p.functionCall) toolCalls.push({ id: `gem_${i++}`, name: p.functionCall.name, arguments: p.functionCall.args || {} });
   }
-  return { content, tool_calls: toolCalls };
+  return { content, tool_calls: toolCalls, usage: normalizeProviderUsage("gemini", data), model };
 }
 
 function safeParse(s: string): Record<string, any> {

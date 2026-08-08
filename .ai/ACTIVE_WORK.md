@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-4 — Tool activity reliability. כרטיס כלי שומר args+duration; "נסה שוב" מריץ את אותה קריאה בדיוק ושומר assistant/tool history תקין; כלי track מסווגים כמוטציות סדרתיות.
+AG-4 — Usage telemetry. מתאמי DeepSeek/OpenAI/Anthropic/Gemini מנרמלים input/output/total tokens; runtime מעביר אותם והצ'אט מציג סך session. אין המרת כסף בלי rate card מאומת.
 
 ## Branch
 `main`
 
 ## Latest commit
-`7450f59` — validated command contracts על main
+`0e4b30d` — exact retry + tool durations על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 177/177 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 181/181 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-commit+push; אחר כך AG-4 checkpoints או cost telemetry לפי audit. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך AG-4 checkpoints. בלי שינוי Supabase/Auth ללא אישור.

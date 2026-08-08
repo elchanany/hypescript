@@ -36,6 +36,14 @@ export interface ToolSchema {
 export interface AgentResponse {
   content: string | null;
   tool_calls: ToolCall[];
+  usage?: AgentUsage;
+  model?: string;
+}
+
+export interface AgentUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
 }
 
 export const PROVIDER_LABELS: Record<Provider, string> = {

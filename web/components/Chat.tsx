@@ -5,7 +5,7 @@ import { AgentRunner } from "@/lib/agent/runtime";
 import { AgentContext, TOOL_BY_NAME } from "@/lib/agent/tools";
 import { EditorApi } from "@/lib/editor/commands";
 import { TrackMeta, defaultTracks } from "@/lib/editor/project";
-import { AgentMode, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
+import { AgentMode, AgentUsage, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
 import { getProviderStatus } from "@/lib/providers/health";
 import { LLM_PROVIDERS } from "@/lib/providers/registry";
@@ -128,6 +128,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
+  const [usage, setUsage] = useState<AgentUsage>({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [configLoaded, setConfigLoaded] = useState(false);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
@@ -337,6 +338,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         },
         onError: (msg) => setItems((p) => [...p, { kind: "error", text: msg, time: now() }]),
         onDone: () => setRunning(false),
+        onUsage: (next) => setUsage((prev) => ({ inputTokens: prev.inputTokens + next.inputTokens, outputTokens: prev.outputTokens + next.outputTokens, totalTokens: prev.totalTokens + next.totalTokens })),
       });
       if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }
@@ -449,6 +451,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
               );
             })}
           </select>
+          {usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
               onClick={onToggleDock} aria-label="החלף צד עגינה">

@@ -1,7 +1,7 @@
 // לולאת הסוכן (צד-לקוח): שולחת שיחה+כלים ל-/api/agent, מבצעת את קריאות הכלים
 // (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
 
-import { AgentMode, ChatMessage, Provider, ToolCall } from "./types";
+import { AgentMode, AgentUsage, ChatMessage, Provider, ToolCall } from "./types";
 import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS } from "./tools";
 import { repairToolMessages } from "./normalize";
 
@@ -12,6 +12,7 @@ export interface AgentEvents {
   onToolEnd: (id: string, ok: boolean, summary: string) => void;
   onError: (msg: string) => void;
   onDone: () => void;
+  onUsage?: (usage: AgentUsage, provider: Provider, model?: string) => void;
 }
 
 const MAX_ITERS = 40;
@@ -217,6 +218,7 @@ export class AgentRunner {
             }
             break;
           }
+          if (data.usage) this.events.onUsage?.(data.usage, this.provider, data.model);
           if (!resp.ok) {
             this.events.onError(formatLlmError(resp.status, data.error || data.message || JSON.stringify(data).slice(0, 200)));
             break;
