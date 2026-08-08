@@ -32,6 +32,7 @@ import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/trac
 import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
+import { colorPreset } from "@/lib/editor/colorPresets";
 
 export interface AgentContext {
   media: MediaAsset[];
@@ -1136,14 +1137,20 @@ export const TOOLS: ToolMeta[] = [
     name: "set_clip_color", label: "תיקוני צבע", color: "#8b5cf6", icon: "◉",
     schema: {
       name: "set_clip_color",
-      description: "מעדכן ניגודיות ורוויה של קליפ עם Preview ו-Export. index הוא 1-based; contrast=0.5..2, saturation=0..3.",
-      parameters: { type: "object", properties: { index: { type: "number" }, contrast: { type: "number" }, saturation: { type: "number" } }, required: ["index"] },
+      description: "מעדכן ניגודיות ורוויה של קליפ עם Preview ו-Export. index הוא 1-based; preset=neutral|crisp|vivid|muted|mono, או contrast=0.5..2 ו-saturation=0..3.",
+      parameters: { type: "object", properties: { index: { type: "number" }, preset: { type: "string" }, contrast: { type: "number" }, saturation: { type: "number" } }, required: ["index"] },
     },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const i = (a.index | 0) - 1; const clip = ctx.clips![i];
       if (!clip || isGapClip(clip)) return "אינדקס קליפ לא תקין.";
       const args: Record<string, number | string> = { id: clip.id };
+      if (a.preset != null) {
+        const preset = colorPreset(String(a.preset));
+        if (!preset) return "preset לא מוכר. השתמש ב-neutral/crisp/vivid/muted/mono.";
+        args.contrast = preset.contrast;
+        args.saturation = preset.saturation;
+      }
       if (a.contrast != null) {
         if (!Number.isFinite(+a.contrast)) return "contrast לא תקין.";
         args.contrast = +a.contrast;

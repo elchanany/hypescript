@@ -77,3 +77,8 @@
 - **בחירה:** תיקוני הצבע הראשונים הם contrast (0.5..2) ו-saturation (0..3), שממופים ישירות ל-CSS ול-FFmpeg `eq`. Brightness לא נכלל כי הסקאלה האדיטיבית של FFmpeg אינה שקולה ל-multiplier של CSS.
 - **סיבה:** פילטר שמופיע רק בתצוגה או רק בייצוא מפר את חוזה המוצר; parity חשוב יותר ממספר סליידרים.
 - **השלכה:** השדות אופציונליים עם default 1, עוברים split/Undo/CommandBus/Agent, ומופעלים לפני yuv conversion. Presets, keyframes ויתר effects נשארים P3 עתידי.
+
+## D-016 — Presets הם נתונים, לא מסלול אפקט נוסף
+- **בחירה:** neutral/crisp/vivid/muted/mono מוגדרים ברג'יסטרי אחד כזוגות contrast/saturation; Inspector וה-Agent פותרים מאותו registry.
+- **סיבה:** preset אינו צריך לייצר state או render path נפרד, אחרת Preview/Export ו-UI/Agent יכולים לסטות.
+- **השלכה:** `custom` מחושב לתצוגה בלבד; בחירת preset כותבת את שני הערכים הקנוניים ומיד משתמשת בצינור הצבע הקיים.

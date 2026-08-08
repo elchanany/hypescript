@@ -88,6 +88,12 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("set_clip_color resolves a shared preset before dispatch", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.set_clip_color.run({ index: 1, preset: "mono" }, h.ctx, () => undefined);
+    expect(h.clips()[0]).toMatchObject({ contrast: 1.05, saturation: 0 });
+  });
+
   it("routes rename/lock/mute track tools through the shared commands", async () => {
     const h = contextWithEditor();
     await TOOL_BY_NAME.rename_track.run({ track: "video-1", name: "B-roll" }, h.ctx, () => undefined);

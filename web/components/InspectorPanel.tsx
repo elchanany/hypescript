@@ -12,6 +12,7 @@ import { CaptionBg, CaptionPosition, CaptionStyle, DEFAULT_CAPTION_STYLE } from 
 import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "lucide-react";
 import { Section, Toggle } from "@/components/ui";
+import { CLIP_COLOR_PRESETS, matchingColorPreset } from "@/lib/editor/colorPresets";
 
 export type InspectorFocus = "project" | "video" | "audio" | "caption" | "overlay";
 
@@ -255,6 +256,16 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       <input type="range" min={0} max={1} step={0.01} value={clipOpacity(clip)}
         onChange={(e) => p.onUpdate({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
         style={{ width: "100%", marginTop: 4 }} />
+      <div className="prop-input"><label className="k" htmlFor={`color-preset-${clip.id}`}>Preset</label>
+        <select id={`color-preset-${clip.id}`} value={matchingColorPreset(clipContrast(clip), clipSaturation(clip))}
+          onChange={(e) => {
+            const preset = CLIP_COLOR_PRESETS.find((item) => item.id === e.target.value);
+            if (preset) p.onUpdate({ contrast: preset.contrast, saturation: preset.saturation });
+          }} style={{ flex: 1 }}>
+          <option value="custom" disabled>מותאם אישית</option>
+          {CLIP_COLOR_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.labelHe}</option>)}
+        </select>
+      </div>
       <div className="prop"><span className="k">ניגודיות</span><span className="v mono">{Math.round(clipContrast(clip) * 100)}%</span></div>
       <input type="range" min={0.5} max={2} step={0.05} value={clipContrast(clip)}
         onChange={(e) => p.onUpdate({ contrast: +e.target.value })} style={{ width: "100%", marginTop: 4 }} />
