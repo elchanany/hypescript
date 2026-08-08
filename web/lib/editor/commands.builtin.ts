@@ -480,6 +480,23 @@ export function ensureBuiltinCommands() {
   });
 
   registerCommand({
+    id: "clip.setFlip",
+    label: "Flip clip",
+    labelHe: "היפוך קטע",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clip = api.getClips()?.find((item) => item.id === id);
+      if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
+      if (args?.flipX == null && args?.flipY == null) throw new Error("חסר כיוון היפוך");
+      api.updateClip(id, {
+        flipX: args?.flipX == null ? clip.flipX === true : args.flipX === true,
+        flipY: args?.flipY == null ? clip.flipY === true : args.flipY === true,
+      });
+    },
+  });
+
+  registerCommand({
     id: "overlay.update",
     label: "Update overlay",
     labelHe: "עדכן שכבה",

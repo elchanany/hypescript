@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-P3 bounded linear visual fade-to/from-black with Preview+Export parity; dedicated browser upload retry remains.
+P3 per-clip horizontal/vertical flip with exact Preview+Export parity; browser upload retry remains for the latest visual effects.
 
 ## Branch
 `main`
 
 ## Latest commit
-`359b301` — chore(graphify): sync clip audio fades
+`7d289bc` — chore(graphify): sync visual fades
 
 ## Status
-Audio fades are on main (`0d7215b`). Dirty visual-fade package adds normalized fade-to/from-black to Model, Inspector, Undo/Redo, CommandBus, Agent, rAF Preview opacity and FFmpeg `fade`; multi-track flattening preserves it. Web 45 files/241 tests, production build and native 20-cut render pass. The dedicated browser page loaded, but the in-app file chooser timed out twice; the same rAF path was browser-proven for audio fades, while visual upload QA remains unproven.
+Visual fades are on main (`92c4c4d`). Dirty flip package adds independent horizontal/vertical axes to Model, Inspector, Undo/Redo, CommandBus, Agent, CSS Preview transform, FFmpeg `hflip`/`vflip`, split inheritance and multi-track preservation. Web 45 files/244 tests, production build and native 20-cut render pass. Dedicated browser upload for the latest visual effects is still blocked by the in-app chooser timeout.
 
 ## Exact continuation point
-Graphify + commit/push visual fades, then retry dedicated browser visual QA before the next P3 package. No Supabase/Auth changes without explicit permission.
+Graphify + commit/push clip flip, then retry dedicated browser visual QA before the next P3 package. No Supabase/Auth changes without explicit permission.

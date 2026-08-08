@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
 import { audioFadeFactor, edgeFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
 import { Sub } from "@/lib/editor/subtitlesEdl";
@@ -172,6 +172,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
   const activeOpacity = (edl?.[idx.current] ? clipOpacity(edl[idx.current]) : 1) * activeVisualFactor;
   const activeContrast = edl?.[idx.current] ? clipContrast(edl[idx.current]) : 1;
   const activeSaturation = edl?.[idx.current] ? clipSaturation(edl[idx.current]) : 1;
+  const activeTransform = `scaleX(${edl?.[idx.current] && clipFlipX(edl[idx.current]) ? -1 : 1}) scaleY(${edl?.[idx.current] && clipFlipY(edl[idx.current]) ? -1 : 1})`;
 
   const clearGapClock = () => { if (gapRaf.current != null) { cancelAnimationFrame(gapRaf.current); gapRaf.current = null; } };
 
@@ -292,7 +293,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview({ me
               onClick={() => { onSelectOverlay?.(null); toggle(); }}
               data-preview-audio-gain={activeAudioGain.toFixed(3)}
               data-preview-visual-factor={activeVisualFactor.toFixed(3)}
-              style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})` }} />
+              style={{ visibility: inGap ? "hidden" : undefined, opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />
             {inGap && <div className="pv-gap" aria-hidden />}
             {(() => {
               const list = subs || [];

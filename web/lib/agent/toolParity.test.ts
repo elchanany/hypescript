@@ -85,6 +85,13 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.clips()[0]).toMatchObject({ visualFadeIn: 2, visualFadeOut: 2 });
   });
 
+  it("set_clip_flip dispatches both axes through the shared command", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.set_clip_flip.run({ index: 1, horizontal: true, vertical: true }, h.ctx, () => undefined);
+    expect(result).toContain("אופקי כן");
+    expect(h.clips()[0]).toMatchObject({ flipX: true, flipY: true });
+  });
+
   it("set_clip_opacity dispatches clip.setOpacity and uses command clamping", async () => {
     const h = contextWithEditor();
     const result = await TOOL_BY_NAME.set_clip_opacity.run({ index: 1, opacity: -3 }, h.ctx, () => undefined);

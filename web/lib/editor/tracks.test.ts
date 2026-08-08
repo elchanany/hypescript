@@ -74,9 +74,9 @@ describe("multi-track helpers", () => {
   it("preserves color and audio fades while flattening cutaway tracks", () => {
     const { tracks } = createVideoTrack(defaultTracks(), "B");
     const styled: Clip[] = [
-      { id: "a", sourceId: "src", start: 0, end: 2, trackId: "trk_video", contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75, visualFadeIn: 0.25, visualFadeOut: 0.4 },
+      { id: "a", sourceId: "src", start: 0, end: 2, trackId: "trk_video", contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75, visualFadeIn: 0.25, visualFadeOut: 0.4, flipX: true, flipY: true },
     ];
     const flat = flattenVideoTracks(styled, tracks);
-    expect(flat[0]).toMatchObject({ contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75, visualFadeIn: 0.25, visualFadeOut: 0.4 });
+    expect(flat[0]).toMatchObject({ contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75, visualFadeIn: 0.25, visualFadeOut: 0.4, flipX: true, flipY: true });
   });
 });

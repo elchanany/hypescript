@@ -4,7 +4,7 @@
 // clip properties (video/audio). Sub selected -> caption properties.
 // Overlay selected -> transform + text/image properties.
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
-import { Clip, clipAudioFades, clipContrast, clipEnabled, clipOpacity, clipSaturation, clipVisualFades, clipVolume } from "@/lib/editor/model";
+import { Clip, clipAudioFades, clipContrast, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
@@ -285,6 +285,8 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       <div className="prop-input"><label className="k" htmlFor={`visual-fade-out-${clip.id}`}>Fade out חזותי (שנ׳)</label>
         <input id={`visual-fade-out-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipVisualFades(clip).fadeOut.toFixed(2)}
           onChange={(e) => p.onUpdate({ visualFadeOut: +e.target.value })} /></div>
+      <label className="prop"><span className="k">היפוך אופקי</span><input type="checkbox" checked={clipFlipX(clip)} onChange={(e) => p.onUpdate({ flipX: e.target.checked })} /></label>
+      <label className="prop"><span className="k">היפוך אנכי</span><input type="checkbox" checked={clipFlipY(clip)} onChange={(e) => p.onUpdate({ flipY: e.target.checked })} /></label>
     </Section>
   );
 

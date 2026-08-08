@@ -1215,6 +1215,30 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "set_clip_flip", label: "היפוך קטע", color: "#8b5cf6", icon: "↔",
+    schema: {
+      name: "set_clip_flip",
+      description: "הופך קליפ אופקית ו/או אנכית ב-Preview וב-Export. אפשר לשנות כיוון אחד בלי לשנות את השני.",
+      parameters: { type: "object", properties: { index: { type: "number" }, horizontal: { type: "boolean" }, vertical: { type: "boolean" } }, required: ["index"] },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const i = (a.index | 0) - 1; const clip = ctx.clips![i];
+      if (!clip || isGapClip(clip)) return "אינדקס קליפ לא תקין.";
+      if (a.horizontal == null && a.vertical == null) return "צריך horizontal או vertical.";
+      const commandError = dispatch(ctx, "clip.setFlip", { id: clip.id, flipX: a.horizontal, flipY: a.vertical });
+      if (commandError === "NO_API") {
+        setClips(ctx, ctx.clips!.map((item, index) => index === i ? {
+          ...item,
+          flipX: a.horizontal == null ? item.flipX === true : a.horizontal === true,
+          flipY: a.vertical == null ? item.flipY === true : a.vertical === true,
+        } : item));
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      const updated = ctx.clips![i];
+      return `היפוך קטע ${a.index}: אופקי ${updated.flipX ? "כן" : "לא"}, אנכי ${updated.flipY ? "כן" : "לא"}.`;
+    },
+  },
+  {
     name: "list_overlays", label: "רשימת שכבות", color: "#64748b", icon: "🧩",
     schema: { name: "list_overlays", description: "מחזיר את שכבות התמונה/טקסט על הקנבס.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {

@@ -442,7 +442,7 @@ export default function EditorPage() {
   const updateClipFromInspector = (id: string, patch: Partial<Clip>) => {
     const api = editorApiRef.current;
     if (!api) return;
-    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume" | "clip.setAudioFades" | "clip.setOpacity" | "clip.setColorAdjustments" | "clip.setVisualFades"; args: Record<string, unknown> }> = [];
+    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume" | "clip.setAudioFades" | "clip.setOpacity" | "clip.setColorAdjustments" | "clip.setVisualFades" | "clip.setFlip"; args: Record<string, unknown> }> = [];
     if (patch.start != null || patch.end != null) commands.push({ id: "clip.trim", args: { id, ...patch } });
     if (patch.enabled != null) commands.push({ id: "clip.setEnabled", args: { id, enabled: patch.enabled } });
     if (patch.volume != null) commands.push({ id: "clip.setVolume", args: { id, volume: patch.volume } });
@@ -455,6 +455,7 @@ export default function EditorPage() {
       });
     }
     if (patch.visualFadeIn != null || patch.visualFadeOut != null) commands.push({ id: "clip.setVisualFades", args: { id, fadeIn: patch.visualFadeIn, fadeOut: patch.visualFadeOut } });
+    if (patch.flipX != null || patch.flipY != null) commands.push({ id: "clip.setFlip", args: { id, flipX: patch.flipX, flipY: patch.flipY } });
     for (const command of commands) {
       const result = runCommand(command.id, api, command.args);
       if (!result.ok) { setError(result.error); return; }

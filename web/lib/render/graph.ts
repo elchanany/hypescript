@@ -6,7 +6,7 @@
 // This is engine-agnostic: the exact same filter string runs on ffmpeg.wasm today
 // and on native FFmpeg (LocalNativeRenderBackend) later — so the join fix is shared.
 
-import { Clip, MediaAsset, clipAudioFades, clipContrast, clipDur, clipEnabled, clipOpacity, clipSaturation, clipVisualFades, clipVolume, mediaById } from "@/lib/editor/model";
+import { Clip, MediaAsset, clipAudioFades, clipContrast, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume, mediaById } from "@/lib/editor/model";
 import { isGapClip } from "@/lib/editor/timelineOps";
 
 export interface RenderTarget { w: number; h: number; fps: number; }
@@ -27,7 +27,7 @@ const ext = (name?: string) => ((name || "").toLowerCase().match(/\.([a-z0-9]+)$
 // Per-segment video chain: cut -> reset PTS -> CFR fps -> fit target -> pixfmt ->
 // force EXACTLY `frames` frames (kills the extra boundary frame the fps resampler emits
 // on non-frame-aligned cuts) -> re-zero PTS -> timebase.
-function vChain(w: number, h: number, fps: number, frames: number, opacity = 1, contrast = 1, saturation = 1, fadeIn = 0, fadeOut = 0): string {
+function vChain(w: number, h: number, fps: number, frames: number, opacity = 1, contrast = 1, saturation = 1, fadeIn = 0, fadeOut = 0, flipX = false, flipY = false): string {
   const alpha = Math.max(0, Math.min(1, opacity));
   const opacityFilter = alpha < 0.9995
     ? `format=rgb24,colorchannelmixer=rr=${alpha.toFixed(3)}:gg=${alpha.toFixed(3)}:bb=${alpha.toFixed(3)},`
@@ -38,8 +38,9 @@ function vChain(w: number, h: number, fps: number, frames: number, opacity = 1, 
   const duration = frames / fps;
   const fadeFilter = `${fadeIn > 0 ? `fade=t=in:st=0:d=${fadeIn.toFixed(3)},` : ""}`
     + `${fadeOut > 0 ? `fade=t=out:st=${Math.max(0, duration - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)},` : ""}`;
+  const flipFilter = `${flipX ? "hflip," : ""}${flipY ? "vflip," : ""}`;
   return `setpts=PTS-STARTPTS,fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,`
-    + `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,${colorFilter}${fadeFilter}${opacityFilter}format=yuv420p,`
+    + `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,${flipFilter}${colorFilter}${fadeFilter}${opacityFilter}format=yuv420p,`
     + `trim=end_frame=${frames},setpts=PTS-STARTPTS,settb=1/${fps}`;
 }
 // Per-segment audio chain: cut -> reset PTS -> async resample (fills/aligns timestamps
@@ -118,7 +119,7 @@ export function buildConcatGraph(
       const { fadeIn, fadeOut } = clipAudioFades({ ...c, end: c.start + duration });
       const visualFades = clipVisualFades({ ...c, end: c.start + duration });
       parts.push(
-        `[${idx}:v]trim=start=${s}:end=${e},${vChain(w, h, fps, frames, clipOpacity(c), clipContrast(c), clipSaturation(c), visualFades.fadeIn, visualFades.fadeOut)}[v${n}];`
+        `[${idx}:v]trim=start=${s}:end=${e},${vChain(w, h, fps, frames, clipOpacity(c), clipContrast(c), clipSaturation(c), visualFades.fadeIn, visualFades.fadeOut, clipFlipX(c), clipFlipY(c))}[v${n}];`
         + `[${idx}:a]atrim=start=${s}:end=${e},${aChain(vol, duration, fadeIn, fadeOut)}[a${n}];`,
       );
     } else {
@@ -129,7 +130,7 @@ export function buildConcatGraph(
       const vin = ic++; inputArgs.push("-loop", "1", "-t", dur, "-i", fn);
       const ain = ic++; inputArgs.push("-f", "lavfi", "-t", dur, "-i", `anullsrc=channel_layout=stereo:sample_rate=${SR}`);
       const visualFades = clipVisualFades({ ...c, end: c.start + imgFrames / fps });
-      parts.push(`[${vin}:v]${vChain(w, h, fps, imgFrames, clipOpacity(c), clipContrast(c), clipSaturation(c), visualFades.fadeIn, visualFades.fadeOut)}[v${n}];[${ain}:a]${aChain(muteGain)}[a${n}];`);
+      parts.push(`[${vin}:v]${vChain(w, h, fps, imgFrames, clipOpacity(c), clipContrast(c), clipSaturation(c), visualFades.fadeIn, visualFades.fadeOut, clipFlipX(c), clipFlipY(c))}[v${n}];[${ain}:a]${aChain(muteGain)}[a${n}];`);
     }
     labels.push(`[v${n}][a${n}]`);
   });

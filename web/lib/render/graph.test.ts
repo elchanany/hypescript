@@ -84,6 +84,12 @@ describe("export render graph — single continuous stream, no per-clip encode",
     expect(graph.filterComplex).toContain("fade=t=in:st=0:d=1.000,fade=t=out:st=3.500:d=0.500");
   });
 
+  it("applies horizontal and vertical clip flips before color effects", () => {
+    const flipped = { ...clip("a", 0, 1), flipX: true, flipY: true };
+    const graph = buildConcatGraph([flipped], [vid("a")], { w: 640, h: 360, fps: 25 });
+    expect(graph.filterComplex).toContain("setsar=1,hflip,vflip,");
+  });
+
   it("inserts black lavfi segments for gap clips without dropping neighbors", () => {
     const withGap: Clip[] = [clip("a", 0, 1), { id: "g1", sourceId: "__gap__", start: 0, end: 0.5 }, clip("b", 0, 1)];
     const g = buildConcatGraph(withGap, media, { w: 640, h: 360, fps: 30 });

@@ -53,9 +53,10 @@ describe("splitClip (linked A/V)", () => {
   });
 
   it("inherits color adjustments on the right half", () => {
-    const src: Clip[] = [{ id: "a", sourceId: "v", start: 0, end: 10, contrast: 1.4, saturation: 0.6 }];
+    const src: Clip[] = [{ id: "a", sourceId: "v", start: 0, end: 10, contrast: 1.4, saturation: 0.6, flipX: true, flipY: true }];
     const r = splitClip(src, "a", 4);
     expect(r[1]).toMatchObject({ contrast: 1.4, saturation: 0.6 });
+    expect(r[1]).toMatchObject({ flipX: true, flipY: true });
     expect(clipContrast({ ...r[1], contrast: 9 })).toBe(2);
     expect(clipSaturation({ ...r[1], saturation: -1 })).toBe(0);
   });

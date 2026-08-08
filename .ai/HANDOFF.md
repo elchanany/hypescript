@@ -2,13 +2,13 @@
 Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
 
 # Current State
-- main ב־`359b301`; audio fades landed in `0d7215b` and Graphify synced.
-- Dirty visual-fade package: normalized linear fade-to/from-black spans Model, Inspector, Undo/Redo, CommandBus, Agent, rAF Preview opacity and FFmpeg `fade`. Web 45 files/241 tests, type-check/build and native render pass. Dedicated browser upload failed in the in-app chooser, so visual browser QA is pending.
+- main ב־`7d289bc`; visual fades landed in `92c4c4d` and Graphify synced.
+- Dirty flip package: independent horizontal/vertical axes span Model, Inspector, Undo/Redo, CommandBus, Agent, CSS Preview transform and FFmpeg `hflip`/`vflip`. Web 45 files/244 tests, type-check/build and native render pass. Dedicated browser upload remains blocked by the in-app chooser timeout.
 - v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
 
 # Active Files
 - Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: the same Preview/Inspector/model/commands/tracks/render/agent seam, extended with `visualFadeIn`/`visualFadeOut`.
+- Current package: the same Preview/Inspector/model/commands/tracks/render/agent seam, extended with `flipX`/`flipY`.
 - Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
 
 # Changes Made
@@ -23,14 +23,15 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - `60c5357`: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
 - `2f3d0ed`: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume feeds FFmpeg Export.
 - `0d7215b`: combined audio fade lengths normalize to clip duration; Preview gain updates every animation frame; export uses `afade`; track flattening preserves fade/color metadata.
-- Dirty visual fades: the same bounded edge factor drives Preview opacity and FFmpeg fade-to-black; native render is proven, dedicated browser upload is pending after chooser timeouts.
+- `92c4c4d`: the same bounded edge factor drives Preview opacity and FFmpeg fade-to-black; native render is proven, dedicated browser upload is pending after chooser timeouts.
+- Dirty flip: CSS `scaleX/scaleY` and FFmpeg `hflip/vflip` share independent booleans; native 20-cut render exercises both axes.
 - Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
 
 # Failed Attempts
 - Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
 
 # Tests and Verification
-- 45 test files / 241 tests — passed; production build/type-check pass.
+- 45 test files / 244 tests — passed; production build/type-check pass.
 - `npx tsc --noEmit` clean; production Next build passed.
 - Native render integration: `durationDelta=0`, `audioDrift=0`.
 - Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
@@ -44,7 +45,7 @@ Build an honest per-time-span media understanding foundation: speech/audio event
 - Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
 
 # Exact Next Steps
-1. Graphify + commit/push bounded visual fades.
+1. Graphify + commit/push clip flip.
 2. Retry dedicated visual browser QA; then select the next local P3 effect/template.
 3. Package C only after working login.
 4. Query API audit + media-generated I/O boundary later; Package C only after working login.

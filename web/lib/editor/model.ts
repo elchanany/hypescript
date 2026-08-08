@@ -25,6 +25,8 @@ export interface Clip {
   fadeOut?: number; // seconds, linear audio fade to clip end
   visualFadeIn?: number; // seconds, linear fade from black
   visualFadeOut?: number; // seconds, linear fade to black
+  flipX?: boolean;
+  flipY?: boolean;
   enabled?: boolean; // false = מדולג ברינדור/נגן (ברירת מחדל true)
   opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
   contrast?: number; // 0.5..2 (ברירת מחדל 1)
@@ -32,6 +34,8 @@ export interface Clip {
 }
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
+export const clipFlipX = (c: Clip): boolean => c.flipX === true;
+export const clipFlipY = (c: Clip): boolean => c.flipY === true;
 export const clipVolume = (c: Clip): number => Number.isFinite(c.volume) ? Math.max(0, Math.min(2, c.volume!)) : 1;
 function normalizeFades(duration: number, rawIn: number | undefined, rawOut: number | undefined): { fadeIn: number; fadeOut: number } {
   let fadeIn = Number.isFinite(rawIn) ? Math.max(0, Math.min(duration, rawIn!)) : 0;
@@ -132,6 +136,8 @@ export function splitClip(clips: Clip[], id: string, atSource: number): Clip[] {
   if (c.fadeOut != null) right.fadeOut = c.fadeOut;
   if (c.visualFadeIn != null) right.visualFadeIn = c.visualFadeIn;
   if (c.visualFadeOut != null) right.visualFadeOut = c.visualFadeOut;
+  if (c.flipX != null) right.flipX = c.flipX;
+  if (c.flipY != null) right.flipY = c.flipY;
   if (c.enabled != null) right.enabled = c.enabled;
   if (c.opacity != null) right.opacity = c.opacity;
   if (c.contrast != null) right.contrast = c.contrast;
