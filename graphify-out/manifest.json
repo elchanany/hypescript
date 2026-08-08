@@ -535,18 +535,18 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786198566.3825848,
-    "ast_hash": "cdc93c27aa3eedce4160dc82fef0c1dd",
+    "mtime": 1786208202.8873808,
+    "ast_hash": "451ba5624f462aaf16f122d9a7f448c9",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786198496.4189363,
-    "ast_hash": "fdb5462de7bd7afa3b1f5ac8349472ef",
+    "mtime": 1786208212.7306073,
+    "ast_hash": "c84ce27333d61982affebb2a11c11591",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786198566.3875875,
-    "ast_hash": "4b012b3e427daa126b7ddbec73ceb104",
+    "mtime": 1786208303.5184226,
+    "ast_hash": "1941c68a868e7975b0d9a0d1ab9023d3",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786198496.4049623,
-    "ast_hash": "d9afec459a08c2912ad45eea0165c2de",
+    "mtime": 1786208227.7275283,
+    "ast_hash": "b00c858a11aa65b2b96a38ffee2813f4",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
