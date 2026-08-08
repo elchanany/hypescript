@@ -59,7 +59,9 @@ describe("CommandBus builtins", () => {
     }
     const agentIds = listAgentCommands().map((c) => c.id);
     expect(agentIds).toContain("track.reorder");
-    expect(agentIds).not.toContain("overlay.delete");
+    expect(agentIds).toContain("overlay.addText");
+    expect(agentIds).toContain("overlay.update");
+    expect(agentIds).toContain("overlay.delete");
   });
 
   it("rejects invalid arguments before mutation", () => {
@@ -138,6 +140,18 @@ describe("CommandBus builtins", () => {
     api.clips = [];
     expect(runCommand("media.remove", api, { id: "m" }).ok).toBe(true);
     expect(media).toEqual([]);
+  });
+
+  it("adds and normalizes overlay updates through CommandBus", () => {
+    const api = fakeApi([]) as any;
+    api.updateOverlay = (id: string, patch: any) => { api.overlays = api.overlays.map((item: any) => item.id === id ? { ...item, ...patch } : item); };
+    expect(runCommand("overlay.addText", api, { text: "כותרת", start: 2, end: 3 }).ok).toBe(true);
+    const id = api.overlays[0].id;
+    expect(api.overlays[0]).toMatchObject({ text: "כותרת", start: 2, end: 3 });
+    expect(runCommand("overlay.update", api, { id, patch: { start: -4, end: -1, transform: { ...api.overlays[0].transform, w: 1, opacity: 5 } } }).ok).toBe(true);
+    expect(api.overlays[0].start).toBe(0);
+    expect(api.overlays[0].end).toBe(0.05);
+    expect(api.overlays[0].transform).toMatchObject({ w: 8, opacity: 1 });
   });
 
   it("queryProject reports counts", () => {

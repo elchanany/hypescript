@@ -21,6 +21,7 @@ export type CommandId =
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
+  | "overlay.update"
   | "media.remove"
   | "clip.setEnabled"
   | "clip.setVolume"
@@ -98,7 +99,7 @@ export type CommandPermission = "project.read" | "project.write" | "project.expo
 export type CommandContext = "editor" | "agent" | "shortcut" | "context-menu";
 export interface CommandSchema {
   type: "object";
-  properties?: Record<string, { type: "string" | "number" | "boolean" }>;
+  properties?: Record<string, { type: "string" | "number" | "boolean" | "object" }>;
   required?: string[];
   additionalProperties?: boolean;
 }
@@ -106,14 +107,14 @@ export interface CommandSchema {
 type CommandRegistration = Omit<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable"> &
   Partial<Pick<CommandDef, "inputSchema" | "resultSchema" | "permissions" | "contexts" | "agentCallable">>;
 const schema = (required: string[] = [], properties: CommandSchema["properties"] = {}): CommandSchema => ({ type: "object", properties, required, additionalProperties: true });
-const id = { type: "string" as const }, num = { type: "number" as const }, bool = { type: "boolean" as const }, str = { type: "string" as const };
+const id = { type: "string" as const }, num = { type: "number" as const }, bool = { type: "boolean" as const }, str = { type: "string" as const }, obj = { type: "object" as const };
 const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.delete.ripple": schema(["id"], { id }), "clip.delete.leaveGap": schema(["id"], { id }),
   "clip.splitAtPlayhead": schema(), "clip.split": schema(["id", "at_source"], { id, at_source: num }),
   "clip.trim": schema(["id"], { id, start: num, end: num }), "clip.move": schema(["id", "to_index"], { id, to_index: num }),
   "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
-  "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str }),
+  "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num }), "overlay.update": schema(["id", "patch"], { id, patch: obj }),
   "media.remove": schema(["id"], { id }),
   "clip.setEnabled": schema(["id", "enabled"], { id, enabled: bool }), "clip.setVolume": schema(["id", "volume"], { id, volume: num }),
   "clip.duplicate": schema(["id"], { id }), "caption.setStyle": schema(),
@@ -125,7 +126,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
   "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
 };
-const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "overlay.addText", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
 const RESULT_SCHEMA = schema(["ok"], { ok: bool });
 
 const registry = new Map<CommandId, CommandDef>();

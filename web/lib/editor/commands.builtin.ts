@@ -81,7 +81,7 @@ export function ensureBuiltinCommands() {
     id: "overlay.delete",
     label: "Delete overlay",
     labelHe: "מחק שכבה",
-    contexts: ["editor", "shortcut", "context-menu"],
+    contexts: ["editor", "agent", "shortcut", "context-menu"],
     presentation: { target: "overlay", icon: "trash", order: 60, danger: true, shortcut: "Delete" },
     run: (api, args) => {
       const id = String(args?.id || "");
@@ -95,14 +95,15 @@ export function ensureBuiltinCommands() {
     id: "overlay.addText",
     label: "Add text overlay",
     labelHe: "הוסף טקסט",
-    contexts: ["editor", "shortcut"],
+    contexts: ["editor", "agent", "shortcut"],
     presentation: { target: "any", icon: "type", order: 80 },
     run: (api, args) => {
       const text = String(args?.text || "טקסט חדש");
       const canvas = api.getCanvas();
-      const cur = api.getPlayhead();
+      const cur = args?.start != null ? Math.max(0, Number(args.start)) : api.getPlayhead();
       const clips = api.getClips();
-      const end = Math.max(cur + 4, clips ? clips.reduce((s, c) => s + clipDur(c), 0) : 4);
+      const fallbackEnd = Math.max(cur + 4, clips ? clips.reduce((s, c) => s + clipDur(c), 0) : 4);
+      const end = args?.end != null ? Math.max(cur + 0.05, Number(args.end)) : fallbackEnd;
       const o = makeTextOverlay(canvas.width, canvas.height, api.getOverlays(), text, cur, end);
       api.addOverlay(o);
       api.selectOverlay(o.id);
@@ -348,6 +349,43 @@ export function ensureBuiltinCommands() {
         api.setClips(clips.map((c) => (clipTrackId(c, trackId) === trackId ? { ...c, trackId: primary } : c)));
       }
       api.setTracks(next);
+    },
+  });
+
+  registerCommand({
+    id: "overlay.update",
+    label: "Update overlay",
+    labelHe: "עדכן שכבה",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const current = api.getOverlays().find((overlay) => overlay.id === id);
+      if (!current) throw new Error("שכבה לא נמצאה");
+      const raw = (args?.patch && typeof args.patch === "object" ? args.patch : {}) as Partial<typeof current>;
+      const patch: Partial<typeof current> = {};
+      if (raw.text != null) patch.text = String(raw.text);
+      if (raw.color != null) patch.color = String(raw.color);
+      if (raw.fontSize != null) patch.fontSize = Math.max(8, Number(raw.fontSize));
+      if (raw.bold != null) patch.bold = !!raw.bold;
+      if (raw.align === "start" || raw.align === "center" || raw.align === "end") patch.align = raw.align;
+      if (raw.locked != null) patch.locked = !!raw.locked;
+      if (raw.hidden != null) patch.hidden = !!raw.hidden;
+      const start = raw.start != null ? Math.max(0, Number(raw.start)) : current.start;
+      const end = raw.end != null ? Math.max(start + 0.05, Number(raw.end)) : Math.max(start + 0.05, current.end);
+      if (raw.start != null) patch.start = start;
+      if (raw.end != null || (raw.start != null && current.end < start + 0.05)) patch.end = end;
+      if (raw.transform) {
+        const transform = raw.transform;
+        patch.transform = {
+          x: Number.isFinite(Number(transform.x)) ? Number(transform.x) : current.transform.x,
+          y: Number.isFinite(Number(transform.y)) ? Number(transform.y) : current.transform.y,
+          w: Math.max(8, Number.isFinite(Number(transform.w)) ? Number(transform.w) : current.transform.w),
+          h: Math.max(8, Number.isFinite(Number(transform.h)) ? Number(transform.h) : current.transform.h),
+          rotation: Number.isFinite(Number(transform.rotation)) ? Number(transform.rotation) : current.transform.rotation,
+          opacity: Math.max(0, Math.min(1, Number.isFinite(Number(transform.opacity)) ? Number(transform.opacity) : current.transform.opacity)),
+        };
+      }
+      api.updateOverlay(id, patch);
     },
   });
 

@@ -1054,8 +1054,13 @@ export const TOOLS: ToolMeta[] = [
       const canvas = ctx.canvas || defaultCanvasFor();
       const start = a.start != null ? +a.start : 0;
       const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
-      const o = makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
-      ctx.overlays = [...(ctx.overlays || []), o];
+      let o: Overlay;
+      const commandError = dispatch(ctx, "overlay.addText", { text: String(a.text || "טקסט חדש"), start, end });
+      if (commandError === "NO_API") {
+        o = makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
+        ctx.overlays = [...(ctx.overlays || []), o];
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      else o = ctx.overlays[ctx.overlays.length - 1];
       return `נוספה שכבת טקסט (${o.id}). סה״כ ${ctx.overlays.length} שכבות.`;
     },
   },
@@ -1070,7 +1075,9 @@ export const TOOLS: ToolMeta[] = [
       const ovs = ctx.overlays || [];
       const i = (a.index | 0) - 1;
       if (!ovs[i]) return "אינדקס שכבה לא תקין.";
-      ctx.overlays = ovs.filter((_, k) => k !== i);
+      const commandError = dispatch(ctx, "overlay.delete", { id: ovs[i].id });
+      if (commandError === "NO_API") ctx.overlays = ovs.filter((_, k) => k !== i);
+      else if (commandError) return `שגיאה: ${commandError}`;
       return `שכבה נמחקה. נותרו ${ctx.overlays.length}.`;
     },
   },
@@ -1104,7 +1111,9 @@ export const TOOLS: ToolMeta[] = [
       if (a.text != null) patch.text = String(a.text);
       if (a.start != null) patch.start = Math.max(0, +a.start);
       if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
-      ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
+      const commandError = dispatch(ctx, "overlay.update", { id: o.id, patch });
+      if (commandError === "NO_API") ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
+      else if (commandError) return `שגיאה: ${commandError}`;
       return `שכבה ${a.index} עודכנה.`;
     },
   },

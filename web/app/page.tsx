@@ -12,7 +12,7 @@ import {
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
 import { Sub, edlToSubs, edlToSubsWithScript, parseSrt, subsToSrt } from "@/lib/editor/subtitlesEdl";
-import { makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay";
+import { makeImageOverlay } from "@/lib/editor/overlay";
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
@@ -398,9 +398,12 @@ export default function EditorPage() {
     setTracks(next);
   };
   const addTextOverlay = () => {
-    const end = Math.max(cur + 4, (clips ? totalDur(clips) : duration) || 4);
-    const o = makeTextOverlay(canvas.width, canvas.height, overlays, "טקסט חדש", cur, end);
-    addOverlay(o); setSelectedOverlayId(o.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+    if (!editorApiRef.current) return;
+    const result = runCommand("overlay.addText", editorApiRef.current, { text: "טקסט חדש", start: cur });
+    if (!result.ok) { setError(result.error); return; }
+    const created = editorApiRef.current.getOverlays().at(-1);
+    if (created) setSelectedOverlayId(created.id);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
   const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
     setSelectedId(id);
@@ -822,7 +825,11 @@ export default function EditorPage() {
               trackName={inspectorTrackName}
               timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
               onUpdate={(patch) => selectedClip && updateClip(selectedClip.id, patch)}
-              onUpdateOverlay={(patch) => selectedOverlay && updateOverlay(selectedOverlay.id, patch)}
+              onUpdateOverlay={(patch) => {
+                if (!selectedOverlay || !editorApiRef.current) return;
+                const result = runCommand("overlay.update", editorApiRef.current, { id: selectedOverlay.id, patch });
+                if (!result.ok) setError(result.error);
+              }}
               onUpdateSub={(patch) => selectedSub && updateSub(selectedSub.id, patch)}
               canvas={canvas}
               captionStyle={captionStyle}
@@ -960,7 +967,10 @@ export default function EditorPage() {
         confirmLabel="שמור"
         onClose={() => setNameDlg({ kind: "none" })}
         onSubmit={(text) => {
-          if (nameDlg.kind === "overlayText") updateOverlay(nameDlg.id, { text });
+          if (nameDlg.kind === "overlayText" && editorApiRef.current) {
+            const result = runCommand("overlay.update", editorApiRef.current, { id: nameDlg.id, patch: { text } });
+            if (!result.ok) setError(result.error);
+          }
           setNameDlg({ kind: "none" });
           toast.success("הטקסט עודכן");
         }}

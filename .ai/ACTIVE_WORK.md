@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-AG-2 — Subtitle completion + caption style parity. retime/clear של הסוכן ו-caption style מה-UI עוברים דרך CommandBus; TX-1 animation לא מסומן כי export עדיין סטטי.
+AG-2 — Overlay mutation parity. add/update/delete של הסוכן וה-UI עוברים דרך CommandBus; גרירת preview נשארת transaction רציף כדי לשמור Undo יחיד. TX-1 animation לא מסומן כי export עדיין סטטי.
 
 ## Branch
 `main`
 
 ## Latest commit
-`b5af02d` — guarded media.remove + Asset menu על main
+`b279664` — subtitle completion + caption style parity על main
 
 ## Status
-מוכן ל־commit · tsc נקי, 200/200 tests, production build ו־Graphify update עברו
+מוכן ל־commit · tsc נקי, 202/202 tests, production build ו־Graphify update (1592 nodes / 3391 edges) עברו
 
 ## Exact continuation point
-commit+push; אחר כך audit overlay mutation parity מול TX-1 export animation design. בלי שינוי Supabase/Auth ללא אישור.
+commit+push; אחר כך audit של יתר פעולות UI מול CommandBus ו-TX-1 export animation design. בלי שינוי Supabase/Auth ללא אישור.

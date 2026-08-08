@@ -4,11 +4,12 @@ import type { EditorApi } from "@/lib/editor/commands";
 import type { Clip } from "@/lib/editor/model";
 import type { TrackMeta } from "@/lib/editor/project";
 import type { Sub } from "@/lib/editor/subtitlesEdl";
+import type { Overlay } from "@/lib/editor/overlay";
 import { TOOL_BY_NAME, type AgentContext } from "./tools";
 
 beforeAll(() => ensureBuiltinCommands());
 
-function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; subs: () => Sub[]; updates: () => number } {
+function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; subs: () => Sub[]; overlays: () => Overlay[]; updates: () => number } {
   let current: Clip[] = [{ id: "clip-1", sourceId: "media-1", start: 0, end: 4, enabled: true, volume: 1 }];
   let currentTracks: TrackMeta[] = [
     { id: "video-1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
@@ -17,14 +18,15 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
   ];
   let updateCount = 0;
   let currentSubs: Sub[] = [{ id: "sub-1", start: 0, end: 1, text: "ישן" }];
+  let currentOverlays: Overlay[] = [];
   const api: EditorApi = {
     getClips: () => current,
     setClips: (next) => { current = next || []; },
-    getOverlays: () => [],
-    setOverlays: () => undefined,
-    updateOverlay: () => undefined,
-    removeOverlay: () => undefined,
-    addOverlay: () => undefined,
+    getOverlays: () => currentOverlays,
+    setOverlays: (next) => { currentOverlays = next; },
+    updateOverlay: (id, patch) => { currentOverlays = currentOverlays.map((overlay) => overlay.id === id ? { ...overlay, ...patch } : overlay); },
+    removeOverlay: (id) => { currentOverlays = currentOverlays.filter((overlay) => overlay.id !== id); },
+    addOverlay: (overlay) => { currentOverlays = [...currentOverlays, overlay]; },
     updateClip: (id, patch) => {
       updateCount += 1;
       current = current.map((clip) => clip.id === id ? { ...clip, ...patch } : clip);
@@ -41,11 +43,11 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     getPlayhead: () => 0,
   };
   const ctx = {
-    media: [], duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: [], tracks: currentTracks,
+    media: [], duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: currentOverlays, tracks: currentTracks,
     canvas: { width: 1280, height: 720 }, lastRender: null, editorApi: api,
     askUser: async () => "",
   } satisfies AgentContext;
-  return { ctx, clips: () => current, tracks: () => currentTracks, subs: () => currentSubs, updates: () => updateCount };
+  return { ctx, clips: () => current, tracks: () => currentTracks, subs: () => currentSubs, overlays: () => currentOverlays, updates: () => updateCount };
 }
 
 describe("Agent ↔ UI CommandBus parity", () => {
@@ -102,6 +104,17 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.subs()[0]).toMatchObject({ start: 0, end: 0.2 });
     await TOOL_BY_NAME.clear_subtitles.run({}, h.ctx, () => undefined);
     expect(h.subs()).toEqual([]);
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
+  it("routes overlay add, update, and delete tools through the shared commands", async () => {
+    const h = contextWithEditor();
+    await TOOL_BY_NAME.add_text_overlay.run({ text: "כותרת", start: 1, end: 3 }, h.ctx, () => undefined);
+    expect(h.overlays()).toHaveLength(1);
+    await TOOL_BY_NAME.update_overlay.run({ index: 1, x: 250, opacity: 2 }, h.ctx, () => undefined);
+    expect(h.overlays()[0].transform).toMatchObject({ x: 250, opacity: 1 });
+    await TOOL_BY_NAME.delete_overlay.run({ index: 1 }, h.ctx, () => undefined);
+    expect(h.overlays()).toEqual([]);
     expect(h.ctx._editorDirty).toBe(true);
   });
 });
