@@ -1,17 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-אין משימה פתוחה — PR #32 ממוזג ל־`main`.
+AG-2 — איחוד פעולות Agent/UI דרך CommandBus. `set_clip_enabled` ו־`set_clip_volume` הועברו ל־`clip.setEnabled`/`clip.setVolume` עם בדיקות parity.
 
 ## Branch
 `main`
 
 ## Latest commit
-`65a2528` — Merge PR #32  
-`17b6c9f` — continuity אחרי המיזוג
+`b23f978` — main לפני לולאת AG-2 המקומית
 
 ## Status
-הושלם · ב־`main`
+מוכן ל־commit · tsc נקי, 171/171 tests, production build ו־Graphify update עברו
 
 ## Exact continuation point
-אימות ידני אופציונלי; GAP_MAP: AG-2 המשך / intro-outro / preview. בלי Auth/Supabase בלי אישור.
+commit+push ל־main; אחר כך להמשיך AG-2 לפעולות track rename/lock/mute דרך CommandBus. בלי שינוי Supabase/Auth ללא אישור.

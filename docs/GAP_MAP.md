@@ -89,7 +89,7 @@
 - **CV-1…CV-7** ✅ · **TL-1** ✅ · **TX-1** PARTIAL (style+burn-in ✅; animation חסר)
 
 ### P2 (הבא)
-- **AG-2**: PARTIAL — clip split/trim/move/add + video tracks דרך CommandBus מהסוכן; עוד פעולות UI לאיחוד
+- **AG-2**: PARTIAL — clip split/trim/move/add + video tracks + enabled/volume דרך CommandBus מהסוכן; עוד פעולות רצועה/UI לאיחוד
 - **AG-4**: PARTIAL — Tool activity בסיסי (provider label, Retry prompt, "בטל"); cost/checkpoints/retry מלא חסרים
 - **PR-1**: PARTIAL — Provider Registry בסיסי וכנה; policies/health-check/Zero-cost חסרים
 - **AU-1**: Auth/Dashboard — **רק אחרי אישור מפורש** (Supabase = שירות חדש)

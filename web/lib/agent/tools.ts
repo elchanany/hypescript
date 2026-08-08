@@ -928,7 +928,12 @@ export const TOOLS: ToolMeta[] = [
       const err = requireClips(ctx); if (err) return err;
       const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
       if (isGapClip(c)) return "לא ניתן להשבית רווח — מחק/סגור אותו.";
-      setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, enabled: !!a.enabled } : x)));
+      const commandError = dispatch(ctx, "clip.setEnabled", { id: c.id, enabled: !!a.enabled });
+      if (commandError === "NO_API") {
+        setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, enabled: !!a.enabled } : x)));
+      } else if (commandError) {
+        return `שגיאה: ${commandError}`;
+      }
       return `קטע ${a.index}: ${a.enabled ? "פעיל" : "מושבת"}.`;
     },
   },
@@ -944,7 +949,12 @@ export const TOOLS: ToolMeta[] = [
       const i = (a.index | 0) - 1; const c = ctx.clips![i]; if (!c) return "אינדקס לא תקין.";
       if (isGapClip(c)) return "לרווח אין עוצמה.";
       const volume = Math.max(0, Math.min(2, +a.volume));
-      setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, volume } : x)));
+      const commandError = dispatch(ctx, "clip.setVolume", { id: c.id, volume });
+      if (commandError === "NO_API") {
+        setClips(ctx, ctx.clips!.map((x, k) => (k === i ? { ...x, volume } : x)));
+      } else if (commandError) {
+        return `שגיאה: ${commandError}`;
+      }
       return `עוצמת קטע ${a.index}: ${Math.round(volume * 100)}%.`;
     },
   },

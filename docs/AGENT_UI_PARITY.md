@@ -19,8 +19,8 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 | טרים | ✔(drag) | `trim_clip` | ✔ `trimClip` | `TRIM_CLIP` | ✔ | ripple/roll חסר |
 | הזזה/סדר | ✔(drag) | `move_clip` | ✔ `moveClip` | `MOVE_CLIP` | ✔ | |
 | מחיקה | ✔(Del/menu) | `delete_clip` | ✔ `removeClip` | `DELETE_CLIP` | ✔ | Gap semantics חסר |
-| השבתת קליפ | ✔(menu/inspector) | ✖ | ✔ `enabled` | `DISABLE_CLIP` | ✔ | להוסיף כלי-סוכן |
-| עוצמת קליפ | ✔(inspector) | ✖ | ✔ `volume` | `SET_CLIP_VOLUME` | ✔ | להוסיף כלי-סוכן |
+| השבתת קליפ | ✔(menu/inspector) | ✔ `set_clip_enabled` | ✔ `clip.setEnabled` | `clip.setEnabled` | ✔ | UI+Agent דרך אותו CommandBus; fallback רק ללא EditorApi |
+| עוצמת קליפ | ✔(inspector) | ✔ `set_clip_volume` | ✔ `clip.setVolume` | `clip.setVolume` | ✔ | UI+Agent דרך אותו CommandBus; clamp מרכזי 0..2 |
 | ניתוח אודיו | ✖ | `analyze_audio` | ✔ | query | n/a | |
 | הסרת שתיקות | ✖(UI) | `remove_silence` | ✔ | `REMOVE_SILENCE` | ✔ | UI חסר |
 | צילום פריים | ✔(preview) | `capture_frame` | ✔ | — | n/a | |
@@ -36,6 +36,6 @@ UI ✔/✖ · Agent ✔/✖ · Shared-core ✔ (אותה פונקציה טהור
 ## פערי Parity מיידיים (לחבילה הבאה)
 1. **CommandBus + Command registry** עם `inputSchema/resultSchema/permissions/contexts/agentCallable` — מקור אחד ל-UI/Agent/palette/shortcut/context-menu.
 2. **Query API** (`getSelection/getActiveClip/getSelectedRange/getVisibleElementsAtTime/...`) לסוכן.
-3. כלים חסרים לסוכן: `disable_clip`, `set_clip_volume`, פעולות רצועה.
+3. פעולות רצועה נוספות לסוכן ול-CommandBus (rename/lock/mute/height/reorder).
 4. פעולות ידניות חסרות ב-UI: `remove_segments`/`remove_silence` (כפתורים/תפריט).
 5. Message normalizer + idempotency + repair (DeepSeek reasoning) — בדיקות פר-ספק.
