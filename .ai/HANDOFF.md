@@ -1,6 +1,10 @@
 # Goal
 Make the agent reliably turn a Hebrew client brief into a tight, script-grounded promotional cut: no repeated source time, no avoidable pauses, real styled captions, correct fade sequencing, and deferred missing assets requested only when their stage is reached.
 
+## 2026-08-08 logo/card continuation
+
+The current dirty package directly addresses the editor screenshot failure: full-frame images and logo overlays are distinct, existing image clips can be converted to small logos, newly imported media has a stable direct Agent mention, and overlays/cards have exact geometry, stacking, rounding and fades in both Preview and Export. Three real text-card presets exist: source attribution, speaker card and dedication card. Finish full test/browser/Graphify verification and push `main`; do not regress back to full-frame image insertion for logos.
+
 ## 2026-08-08 continuation
 
 The mixed-media/UI parity package is implemented but not yet committed at this note: full-frame images and standalone audio are first-class timeline clips, Preview and Export share standalone-audio fades/volume, captions edit/move directly on canvas, overlaps are unmistakable, custom right-click covers blank editor/Preview surfaces, and tooltips cover buttons mounted later. The Agent now distinguishes a full-frame image from a logo overlay, supports exact `timeline_start`, generates the real `source_popup` preset, and renders the audio track. Finish with full tests/build, Graphify update/query, direct `main` push, then Graphify-only push if output changes.

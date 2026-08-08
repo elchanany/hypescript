@@ -183,12 +183,18 @@ describe("Agent ↔ UI CommandBus parity", () => {
   it("routes overlay add, update, and delete tools through the shared commands", async () => {
     const h = contextWithEditor();
     h.ctx.media.push({ id: "image-1", name: "logo.png", kind: "image", file: null as any, duration: 4, url: "blob:logo" });
-    await TOOL_BY_NAME.add_image_overlay.run({ source: "image-1", start: 0, end: 2 }, h.ctx, () => undefined);
+    const logoResult = await TOOL_BY_NAME.add_image_overlay.run({ source: "@media:image-1", start: 0, end: 2, preset: "logo_top_left", border_radius: 18 }, h.ctx, () => undefined);
     expect(h.overlays()[0]).toMatchObject({ kind: "image", assetId: "image-1", start: 0, end: 2 });
-    await TOOL_BY_NAME.add_text_overlay.run({ text: "כותרת", start: 1, end: 3 }, h.ctx, () => undefined);
+    expect(h.overlays()[0].transform.w).toBeLessThan(1280 * 0.2);
+    expect(h.overlays()[0].transform.x).toBeLessThan(1280 * 0.2);
+    expect(h.overlays()[0].borderRadius).toBe(18);
+    expect(logoResult).toContain("מיקום x=");
+    await TOOL_BY_NAME.add_text_overlay.run({ text: "לעילוי נשמת\nפלוני בן פלונית", start: 1, end: 3, preset: "dedication_card" }, h.ctx, () => undefined);
     expect(h.overlays()).toHaveLength(2);
-    await TOOL_BY_NAME.update_overlay.run({ index: 2, x: 250, opacity: 2 }, h.ctx, () => undefined);
+    expect(h.overlays()[1]).toMatchObject({ borderColor: "#d6ad55", background: "rgba(13,25,48,0.94)" });
+    await TOOL_BY_NAME.update_overlay.run({ index: 2, x: 250, opacity: 2, z_index: 8, border_radius: 24 }, h.ctx, () => undefined);
     expect(h.overlays()[1].transform).toMatchObject({ x: 250, opacity: 1 });
+    expect(h.overlays()[1]).toMatchObject({ zIndex: 8, borderRadius: 24 });
     await TOOL_BY_NAME.delete_overlay.run({ index: 2 }, h.ctx, () => undefined);
     expect(h.overlays()).toHaveLength(1);
     expect(h.ctx._editorDirty).toBe(true);

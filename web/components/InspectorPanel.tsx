@@ -28,6 +28,7 @@ interface Props {
   trackName: string;
   timelineStart: number;
   onUpdate: (patch: Partial<Clip>) => void;
+  onConvertImageClipToOverlay?: () => void;
   onUpdateOverlay?: (patch: Partial<Overlay>) => void;
   onUpdateSub?: (patch: Partial<Sub>) => void;
   canvas?: CanvasSize;
@@ -164,6 +165,14 @@ function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
   const setT = (patch: Partial<Overlay["transform"]>) => onUpdate({ transform: { ...t, ...patch } });
   const cw = canvas?.width || 1920;
   const ch = canvas?.height || 1080;
+  const placeLogo = (side: "left" | "right") => {
+    const ratio = t.w / Math.max(1, t.h);
+    let w = cw * 0.16;
+    let h = w / ratio;
+    if (h > ch * 0.22) { h = ch * 0.22; w = h * ratio; }
+    const padX = cw * 0.035, padY = ch * 0.045;
+    onUpdate({ transform: { ...t, w, h, x: side === "left" ? padX + w / 2 : cw - padX - w / 2, y: padY + h / 2, rotation: 0 } });
+  };
 
   return (
     <>
@@ -209,6 +218,42 @@ function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
         <input type="range" min={0} max={1} step={0.01} value={t.opacity}
           onChange={(e) => setT({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
           style={{ width: "100%", marginTop: 4 }} />
+        {overlay.kind === "image" && <>
+          <div className="prop"><span className="k">מיקום לוגו מהיר</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            <button type="button" className="btn sm" onClick={() => placeLogo("left")} data-tip="הקטן והצב בפינה שמאלית עליונה">↖ שמאל עליון</button>
+            <button type="button" className="btn sm" onClick={() => placeLogo("right")} data-tip="הקטן והצב בפינה ימנית עליונה">ימין עליון ↗</button>
+          </div>
+        </>}
+      </Section>
+
+      <Section title="מראה וסדר שכבות">
+        <div className="prop"><span className="k">עיגול פינות</span><span className="v mono">{Math.round(overlay.borderRadius || 0)}px</span></div>
+        <input type="range" min={0} max={Math.max(1, Math.min(t.w, t.h) / 2)} step={1} value={Math.min(overlay.borderRadius || 0, Math.min(t.w, t.h) / 2)}
+          onChange={(e) => onUpdate({ borderRadius: +e.target.value })} style={{ width: "100%" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6 }}>
+          <button type="button" className="btn sm" onClick={() => onUpdate({ borderRadius: 0 })}>ללא עיגול</button>
+          <button type="button" className="btn sm" onClick={() => onUpdate({ borderRadius: Math.min(t.w, t.h) / 2 })}>עגול מלא</button>
+        </div>
+        <div className="prop"><span className="k">סדר שכבה</span><span className="v mono">{overlay.zIndex}</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          <button type="button" className="btn sm" onClick={() => onUpdate({ zIndex: Math.max(0, overlay.zIndex - 1) })}>שלח אחורה</button>
+          <button type="button" className="btn sm" onClick={() => onUpdate({ zIndex: overlay.zIndex + 1 })}>הבא קדימה</button>
+        </div>
+        <div className="prop-input" style={{ marginTop: 8 }}><span className="k">Fade in (שנ׳)</span>
+          <input type="number" min={0} max={(overlay.end - overlay.start) / 2} step={0.05} value={num(overlay.fadeIn || 0, 2)}
+            onChange={(e) => onUpdate({ fadeIn: Math.max(0, Math.min((overlay.end - overlay.start) / 2, +e.target.value)) })} /></div>
+        <div className="prop-input"><span className="k">Fade out (שנ׳)</span>
+          <input type="number" min={0} max={(overlay.end - overlay.start) / 2} step={0.05} value={num(overlay.fadeOut || 0, 2)}
+            onChange={(e) => onUpdate({ fadeOut: Math.max(0, Math.min((overlay.end - overlay.start) / 2, +e.target.value)) })} /></div>
+        {overlay.kind === "text" && <div className="prop-input" style={{ marginTop: 8 }}><span className="k">רקע</span>
+          <input type="text" value={overlay.background || "transparent"} onChange={(e) => onUpdate({ background: e.target.value })} placeholder="rgba(8,12,20,.82)" /></div>}
+        {overlay.kind === "text" && <>
+          <div className="prop-input"><span className="k">צבע מסגרת</span>
+            <input type="color" value={overlay.borderColor?.startsWith("#") ? overlay.borderColor : "#ffffff"} onChange={(e) => onUpdate({ borderColor: e.target.value })} /></div>
+          <div className="prop-input"><span className="k">עובי מסגרת</span>
+            <input type="number" min={0} max={40} step={1} value={overlay.borderWidth || 0} onChange={(e) => onUpdate({ borderWidth: Math.max(0, +e.target.value) })} /></div>
+        </>}
       </Section>
 
       {overlay.kind === "text" && (
@@ -296,6 +341,8 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
         <div className="prop"><span className="k">קובץ</span><span className="v" title={p.assetName}>{p.assetName}</span></div>
         <div className="prop"><span className="k">סוג</span><span className="v">{KIND[p.assetKind]}</span></div>
         <div className="prop"><span className="k">רצועה</span><span className="v">{p.trackName}</span></div>
+        {p.assetKind === "image" && p.onConvertImageClipToOverlay &&
+          <button type="button" className="btn primary sm" onClick={p.onConvertImageClipToOverlay} data-tip="הסר את קליפ התמונה מהרצועה והפוך אותו ללוגו קטן מעל הסרטון">הפוך ללוגו קטן מעל הווידאו</button>}
         <div className="prop">
           <span className="k">פעיל</span>
           <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>

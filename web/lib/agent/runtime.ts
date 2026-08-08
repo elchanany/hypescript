@@ -218,7 +218,7 @@ export class AgentRunner {
         this.history = repairToolMessages(this.history);
         const media = this.ctx.media || [];
         const mediaNote = media.length
-          ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s)`).join("\n")
+          ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s, id=${m.id}, mention=@media:${m.id})`).join("\n")
           : "עדיין לא נטענה מדיה.";
         const ctrl = new AbortController();
         this.currentAbort = ctrl;

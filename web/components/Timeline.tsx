@@ -615,13 +615,13 @@ export default function Timeline(p: Props) {
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
                         onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
-                        title={`${short} · ${clipDur(c).toFixed(1)}s`}>
+                        title={`${short} · ${asset?.kind === "image" ? "תמונה מלאה ברצועה — לא לוגו" : "קליפ וידאו"} · ${clipDur(c).toFixed(1)}s`}>
                         <div className="clip-fill" style={{ background: colorOf(c.sourceId) }} />
                         {asset?.kind === "video" && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
                         {asset?.kind === "image" && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
                         <span className="clip-accent" style={{ background: colorOf(c.sourceId) }} />
                         {!tLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "video", track.id)} />}
-                        <span className="clip-label"><span>{short || `קטע ${i + 1}`}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
+                        <span className="clip-label"><span>{asset?.kind === "image" ? `תמונה מלאה · ${short}` : (short || `קטע ${i + 1}`)}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
                         {!tLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "video", track.id)} />}
                       </div>
                     );

@@ -89,12 +89,23 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
       onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, rotation: deg } } : o)));
       return;
     }
-    // corner resize — symmetric around center, in the element's local (un-rotated) frame
+    // Corner resize anchored at the opposite corner. Images preserve aspect ratio
+    // by default (Shift allows free distortion), matching familiar video editors.
     const local = rotatePoint(projX, projY, d.s.x, d.s.y, -d.s.rotation);
-    let w = Math.max(8, Math.abs(local.x - d.s.x) * 2);
-    let h = Math.max(8, Math.abs(local.y - d.s.y) * 2);
-    if (e.shiftKey) { const k = Math.max(w / d.s.w, h / d.s.h); w = d.s.w * k; h = d.s.h * k; }
-    onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, w, h } } : o)));
+    const sx = d.mode === "ne" || d.mode === "se" ? 1 : -1;
+    const sy = d.mode === "se" || d.mode === "sw" ? 1 : -1;
+    const opposite = { x: -sx * d.s.w / 2, y: -sy * d.s.h / 2 };
+    let w = Math.max(8, Math.abs((local.x - d.s.x) - opposite.x));
+    let h = Math.max(8, Math.abs((local.y - d.s.y) - opposite.y));
+    const current = overlays.find((o) => o.id === d.id);
+    if (current?.kind === "image" && !e.shiftKey) {
+      const ratio = d.s.w / Math.max(1, d.s.h);
+      if (w / Math.max(1, h) > ratio) h = w / ratio; else w = h * ratio;
+    }
+    const dragged = { x: sx * w / 2, y: sy * h / 2 };
+    const centerLocal = { x: (dragged.x + opposite.x) / 2, y: (dragged.y + opposite.y) / 2 };
+    const centerWorld = rotatePoint(d.s.x + centerLocal.x, d.s.y + centerLocal.y, d.s.x, d.s.y, d.s.rotation);
+    onLive((prev) => prev.map((o) => (o.id === d.id ? { ...o, transform: { ...o.transform, x: centerWorld.x, y: centerWorld.y, w, h } } : o)));
   };
   const onPointerUp = () => {
     window.removeEventListener("pointermove", onPointerMove);
@@ -126,13 +137,17 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
         const { x, y, w, h, rotation, opacity } = o.transform;
         const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
         const sel = o.id === selectedId;
+        const localTime = Math.max(0, currentTime - o.start);
+        const duration = Math.max(0.001, o.end - o.start);
+        const fadeInFactor = (o.fadeIn || 0) > 0 ? Math.min(1, localTime / (o.fadeIn || 1)) : 1;
+        const fadeOutFactor = (o.fadeOut || 0) > 0 ? Math.min(1, Math.max(0, duration - localTime) / (o.fadeOut || 1)) : 1;
         const style: React.CSSProperties = {
           left: `${(x / canvas.width) * 100}%`,
           top: `${(y / canvas.height) * 100}%`,
           width: `${(w / canvas.width) * 100}%`,
           height: `${(h / canvas.height) * 100}%`,
           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-          opacity,
+          opacity: opacity * Math.min(fadeInFactor, fadeOutFactor),
         };
         return (
           <div key={o.id} className={`ov-box ${sel ? "sel" : ""} ${o.locked ? "locked" : ""}`} style={style}
@@ -140,9 +155,9 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
             onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); onEditText(o.id, o.text || ""); } }}>
             {o.kind === "image" && asset ? (
               // checkerboard behind semi-transparent / dark images so they're never "invisible"
-              <div className="ov-img-wrap"><img src={asset.url} alt="" draggable={false} /></div>
+              <div className="ov-img-wrap" style={{ borderRadius: `${(o.borderRadius || 0) * scale}px`, overflow: "hidden" }}><img src={asset.url} alt="" draggable={false} /></div>
             ) : o.kind === "text" ? (
-              <div className="ov-text" style={{ color: o.color || "#fff", background: o.background || "transparent", borderRadius: `${(o.borderRadius || 0) * scale}px`, padding: `${Math.max(4, (o.fontSize || 48) * 0.18) * scale}px`, fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>
+              <div className="ov-text" style={{ color: o.color || "#fff", background: o.background || "transparent", border: o.borderWidth ? `${o.borderWidth * scale}px solid ${o.borderColor || "transparent"}` : undefined, borderRadius: `${(o.borderRadius || 0) * scale}px`, padding: `${Math.max(4, (o.fontSize || 48) * 0.18) * scale}px`, whiteSpace: "pre-line", fontSize: `${(o.fontSize || 48) * scale}px`, fontWeight: o.bold ? 700 : 500, justifyContent: o.align === "start" ? "flex-start" : o.align === "end" ? "flex-end" : "center" }}>
                 {o.text || ""}
               </div>
             ) : (
@@ -151,6 +166,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
 
             {sel && !o.locked && (
               <>
+                <span className="ov-layer-badge">שכבה {visible.findIndex((item) => item.id === o.id) + 1}/{visible.length} · מעל הווידאו</span>
                 {CORNERS.map((c) => (
                   <span key={c.h} className="ov-handle" style={{ left: `${c.cx * 100}%`, top: `${c.cy * 100}%`, cursor: c.cursor }}
                     onPointerDown={(e) => startDrag(e, o, c.h)} />

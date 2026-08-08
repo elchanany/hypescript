@@ -116,6 +116,9 @@ interface ChatProps {
   quoteSink?: MutableRefObject<((seconds: number) => void) | null>;
   /** ציטוט שממתין עד שתיבת הצ'אט נטענת (כשהפאנל היה סגור) */
   pendingQuoteRef?: MutableRefObject<number | null>;
+  /** גשר מפאנל המדיה להכנסת אזכור קובץ יציב לתיבת ההודעה */
+  mentionSink?: MutableRefObject<((asset: MediaAsset) => void) | null>;
+  pendingMentionRef?: MutableRefObject<MediaAsset | null>;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -124,7 +127,7 @@ const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -174,14 +177,15 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   // ישויות זמינות ל-@mention (נבנות מהפרויקט האמיתי — ללא Mock)
   const mentionItems = useMemo(() => {
-    const out: { token: string; label: string; icon: LucideIcon; hint?: string }[] = [
+    const out: { token: string; label: string; icon: LucideIcon; hint?: string }[] = [];
+    for (const m of [...media].reverse()) out.push({ token: `@media:${m.id}`, label: m.name, icon: KIND_ICON[m.kind], hint: m.kind });
+    out.push(
       { token: "@project", label: "הפרויקט כולו", icon: Layers },
       { token: "@playhead", label: `ראש-הנגן (${fmtTc(playhead)})`, icon: MapPin },
-    ];
+    );
     if (selectionLabel) out.push({ token: "@selection", label: `הבחירה (${selectionLabel})`, icon: SquareDashedMousePointer });
     if (clips?.length) out.push({ token: "@timeline", label: `הציר (${clips.length} קטעים)`, icon: Film });
     if (subs?.length) out.push({ token: "@captions", label: `כתוביות (${subs.length})`, icon: Captions });
-    for (const m of media) out.push({ token: `@${m.name}`, label: m.name, icon: KIND_ICON[m.kind], hint: m.kind });
     return out;
   }, [media, clips, subs, selectionLabel, playhead]);
 
@@ -304,6 +308,17 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     }, 0);
   }, []);
 
+  const insertMediaMention = useCallback((asset: MediaAsset) => {
+    const token = `@media:${asset.id}`;
+    setInput((value) => `${value}${value && !/\s$/.test(value) ? " " : ""}${token} `);
+    setPop(null);
+    setTimeout(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length;
+    }, 0);
+  }, []);
+
   useEffect(() => {
     if (!quoteSink) return;
     quoteSink.current = insertQuote;
@@ -317,6 +332,17 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       if (quoteSink.current === insertQuote) quoteSink.current = null;
     };
   }, [quoteSink, pendingQuoteRef, insertQuote]);
+
+  useEffect(() => {
+    if (!mentionSink) return;
+    mentionSink.current = insertMediaMention;
+    if (pendingMentionRef?.current) {
+      const asset = pendingMentionRef.current;
+      pendingMentionRef.current = null;
+      insertMediaMention(asset);
+    }
+    return () => { if (mentionSink.current === insertMediaMention) mentionSink.current = null; };
+  }, [mentionSink, pendingMentionRef, insertMediaMention]);
 
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {

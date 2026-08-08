@@ -17,6 +17,8 @@ export interface OverlayBurnSpec {
   h: number; // height in target px
   rotation: number; // degrees clockwise
   opacity: number; // 0..1
+  fadeIn?: number;
+  fadeOut?: number;
 }
 
 /** Scale a project-space overlay into export-target pixel space. */
@@ -25,6 +27,7 @@ export function projectOverlayToTarget(o: Overlay, canvas: CanvasSize, target: R
   const sx = target.w / Math.max(1, canvas.width);
   const sy = target.h / Math.max(1, canvas.height);
   const t = o.transform;
+  const duration = o.end - o.start;
   return {
     filename: "", // filled by caller
     start: o.start,
@@ -35,6 +38,8 @@ export function projectOverlayToTarget(o: Overlay, canvas: CanvasSize, target: R
     h: Math.max(2, t.h * sy),
     rotation: t.rotation || 0,
     opacity: Math.max(0, Math.min(1, t.opacity ?? 1)),
+    fadeIn: Math.max(0, Math.min(duration / 2, o.fadeIn || 0)),
+    fadeOut: Math.max(0, Math.min(duration / 2, o.fadeOut || 0)),
   };
 }
 
@@ -77,6 +82,10 @@ export function appendOverlayBurns(graph: RenderGraph, specs: OverlayBurnSpec[],
     const e = o.end.toFixed(3);
 
     let prep = `[${idx}:v]scale=${w}:${h}:flags=bicubic,format=rgba,colorchannelmixer=aa=${op}`;
+    const fadeIn = Math.max(0, o.fadeIn || 0);
+    const fadeOut = Math.max(0, o.fadeOut || 0);
+    if (fadeIn > 0) prep += `,fade=t=in:st=${s}:d=${fadeIn.toFixed(3)}:alpha=1`;
+    if (fadeOut > 0) prep += `,fade=t=out:st=${Math.max(o.start, o.end - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}:alpha=1`;
     if (Math.abs(o.rotation) > 0.01) {
       const rad = (o.rotation * Math.PI) / 180;
       prep += `,rotate=${rad.toFixed(6)}:c=none:ow=rotw(iw):oh=roth(ih)`;

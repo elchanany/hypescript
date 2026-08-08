@@ -1,7 +1,7 @@
 // Register built-in editor commands used by UI + Agent.
 import { addClip, assembledToSource, clipAudioFades, clipDur, clipVisualFades, splitClip, trimClip, uid, type Clip } from "./model";
 import type { Sub } from "./subtitlesEdl";
-import { makeImageOverlay, makeTextOverlay } from "./overlay";
+import { makeImageOverlay, makeTextOverlay, makeTitlePopup, type TitlePopupPreset } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
@@ -105,7 +105,11 @@ export function ensureBuiltinCommands() {
       const clips = api.getClips();
       const fallbackEnd = Math.max(cur + 4, clips ? clips.reduce((s, c) => s + clipDur(c), 0) : 4);
       const end = args?.end != null ? Math.max(cur + 0.05, Number(args.end)) : fallbackEnd;
-      const o = makeTextOverlay(canvas.width, canvas.height, api.getOverlays(), text, cur, end);
+      const preset = String(args?.preset || "plain");
+      const isPopup = preset === "source_popup" || preset === "speaker_card" || preset === "dedication_card";
+      const o = isPopup
+        ? makeTitlePopup(canvas.width, canvas.height, api.getOverlays(), text, cur, end, preset as TitlePopupPreset)
+        : makeTextOverlay(canvas.width, canvas.height, api.getOverlays(), text, cur, end);
       api.addOverlay(o);
       api.selectOverlay(o.id);
     },
@@ -128,7 +132,26 @@ export function ensureBuiltinCommands() {
         ? { width, height }
         : undefined;
       const canvas = api.getCanvas();
-      const overlay = makeImageOverlay(assetId, canvas.width, canvas.height, api.getOverlays(), start, end, intrinsic);
+      const base = makeImageOverlay(assetId, canvas.width, canvas.height, api.getOverlays(), start, end, intrinsic);
+      const preset = String(args?.preset || "center");
+      let w = Number.isFinite(Number(args?.w)) ? Math.max(8, Number(args?.w)) : base.transform.w;
+      let h = Number.isFinite(Number(args?.h)) ? Math.max(8, Number(args?.h)) : base.transform.h;
+      if (preset === "logo_top_left" || preset === "logo_top_right") {
+        const ratio = base.transform.w / Math.max(1, base.transform.h);
+        if (!Number.isFinite(Number(args?.w))) w = canvas.width * 0.16;
+        if (!Number.isFinite(Number(args?.h))) h = w / ratio;
+        if (h > canvas.height * 0.22) { h = canvas.height * 0.22; w = h * ratio; }
+      }
+      const padX = canvas.width * 0.035, padY = canvas.height * 0.045;
+      const x = Number.isFinite(Number(args?.x)) ? Number(args?.x) : preset === "logo_top_left" ? padX + w / 2 : preset === "logo_top_right" ? canvas.width - padX - w / 2 : base.transform.x;
+      const y = Number.isFinite(Number(args?.y)) ? Number(args?.y) : preset.startsWith("logo_") ? padY + h / 2 : base.transform.y;
+      const overlay = {
+        ...base,
+        borderRadius: Number.isFinite(Number(args?.borderRadius)) ? Math.max(0, Number(args?.borderRadius)) : base.borderRadius,
+        fadeIn: Number.isFinite(Number(args?.fadeIn)) ? Math.max(0, Math.min((end - start) / 2, Number(args?.fadeIn))) : base.fadeIn,
+        fadeOut: Number.isFinite(Number(args?.fadeOut)) ? Math.max(0, Math.min((end - start) / 2, Number(args?.fadeOut))) : base.fadeOut,
+        transform: { ...base.transform, x, y, w, h, opacity: Number.isFinite(Number(args?.opacity)) ? Math.max(0, Math.min(1, Number(args?.opacity))) : base.transform.opacity },
+      };
       api.addOverlay(overlay);
       api.selectOverlay(overlay.id);
       if (api.getPlayhead() < overlay.start || api.getPlayhead() > overlay.end) api.seek(overlay.start);
@@ -542,6 +565,11 @@ export function ensureBuiltinCommands() {
       if (raw.align === "start" || raw.align === "center" || raw.align === "end") patch.align = raw.align;
       if (raw.background != null) patch.background = String(raw.background);
       if (raw.borderRadius != null) patch.borderRadius = Math.max(0, Number(raw.borderRadius));
+      if (raw.borderColor != null) patch.borderColor = String(raw.borderColor);
+      if (raw.borderWidth != null) patch.borderWidth = Math.max(0, Number(raw.borderWidth));
+      if (raw.fadeIn != null) patch.fadeIn = Math.max(0, Number(raw.fadeIn));
+      if (raw.fadeOut != null) patch.fadeOut = Math.max(0, Number(raw.fadeOut));
+      if (raw.zIndex != null) patch.zIndex = Math.max(0, Math.round(Number(raw.zIndex)));
       if (raw.locked != null) patch.locked = !!raw.locked;
       if (raw.hidden != null) patch.hidden = !!raw.hidden;
       const start = raw.start != null ? Math.max(0, Number(raw.start)) : current.start;

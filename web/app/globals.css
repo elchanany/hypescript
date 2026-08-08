@@ -386,7 +386,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .ov-box .ov-missing { width: 100%; height: 100%; display: grid; place-items: center; background: var(--danger-tint); color: var(--danger); font-size: 12px; }
 .ov-box.sel { outline: 1.5px solid var(--accent); outline-offset: 0; }
 .ov-box.locked { cursor: default; }
-.ov-handle { position: absolute; width: 11px; height: 11px; background: #fff; border: 1.5px solid var(--accent); border-radius: 2px; transform: translate(-50%, -50%); pointer-events: auto; z-index: 2; }
+.ov-handle { position: absolute; width: 16px; height: 16px; background: #fff; border: 2px solid var(--accent); border-radius: 4px; transform: translate(-50%, -50%); pointer-events: auto; z-index: 4; box-shadow: 0 1px 5px rgba(0,0,0,.65); }
+.ov-layer-badge { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%) rotate(0deg); white-space: nowrap; background: rgba(8,12,20,.94); color: #e7faff; border: 1px solid var(--accent); border-radius: 999px; padding: 3px 8px; font-size: 10px; line-height: 1.2; pointer-events: none; z-index: 5; }
 .ov-rot { position: absolute; left: 50%; top: 0; transform: translate(-50%, -170%); width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; cursor: grab; pointer-events: auto; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
 .ov-rot::before { content: ""; position: absolute; left: 50%; top: 100%; width: 1.5px; height: 12px; background: var(--accent); transform: translateX(-50%); }
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
-import { Film, Image as ImageIcon, Music, Plus, Trash2, Upload, LayoutGrid, List } from "lucide-react";
+import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List } from "lucide-react";
 import { IconButton } from "@/components/ui";
 
 const KIND_ICON = { video: Film, image: ImageIcon, audio: Music } as const;
@@ -41,11 +41,13 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 }
 
 export default function MediaPanel({
-  media, mainId, onUpload, onAddClip, onRemove, onAssetMenu,
+  media, mainId, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onAssetMenu,
 }: {
   media: MediaAsset[]; mainId?: string;
   onUpload: (files: FileList | File[] | null) => void;
   onAddClip: (asset: MediaAsset) => void;
+  onAddOverlay: (asset: MediaAsset) => void;
+  onMention: (asset: MediaAsset) => void;
   onRemove: (id: string) => void;
   onAssetMenu?: (id: string, x: number, y: number) => void;
 }) {
@@ -139,13 +141,15 @@ export default function MediaPanel({
                 onDragStart={(e) => startMediaDrag(e, m)}
                 onDragEnd={endMediaDrag}
                 onClick={() => setSel(m.id)}
-                onDoubleClick={() => onAddClip(m)}
+                onDoubleClick={() => m.kind === "image" ? onAddOverlay(m) : onAddClip(m)}
                 onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                 title={`${m.name} — גרור לציר הזמן`}>
                 <CellThumb asset={m} />
                 {m.id === mainId && <span className="cell-badge">ראשי</span>}
                 <div className="cell-actions">
-                  <IconButton icon={Plus} tip="הוסף לציר" tipPos="down" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                  {m.kind === "image" && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="down" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
+                  <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="down" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                  <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="down" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
                   <IconButton icon={Trash2} tip="הסר" tipPos="down" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                 </div>
                 <span className="cell-name">{m.name}</span>
@@ -163,7 +167,7 @@ export default function MediaPanel({
                   onDragStart={(e) => startMediaDrag(e, m)}
                   onDragEnd={endMediaDrag}
                   onClick={() => setSel(m.id)}
-                  onDoubleClick={() => onAddClip(m)}
+                  onDoubleClick={() => m.kind === "image" ? onAddOverlay(m) : onAddClip(m)}
                   onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                   title={`${m.name} — גרור לציר הזמן`}>
                   <div className="media-thumb"><Icon size={16} strokeWidth={1.5} /></div>
@@ -173,7 +177,9 @@ export default function MediaPanel({
                   </div>
                   {m.id === mainId && <span className="media-badge">ראשי</span>}
                   <div className="media-actions">
-                    <IconButton icon={Plus} tip="הוסף לציר" tipPos="left" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                    {m.kind === "image" && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="left" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
+                    <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="left" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                    <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="left" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
                     <IconButton icon={Trash2} tip="הסר" tipPos="left" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                   </div>
                 </div>

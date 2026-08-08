@@ -18,7 +18,7 @@ import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
-import { makeTitlePopup } from "@/lib/editor/overlay";
+import { TitlePopupPreset } from "@/lib/editor/overlay";
 import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
@@ -109,6 +109,8 @@ export default function EditorPage() {
   const previewRef = useRef<PreviewHandle>(null);
   const quoteSink = useRef<((seconds: number) => void) | null>(null);
   const pendingQuoteRef = useRef<number | null>(null);
+  const mentionSink = useRef<((asset: MediaAsset) => void) | null>(null);
+  const pendingMentionRef = useRef<MediaAsset | null>(null);
   const clipsRef = useRef<Clip[] | null>(clips); clipsRef.current = clips;
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
   const mediaRef = useRef(media); mediaRef.current = media;
@@ -177,6 +179,13 @@ export default function EditorPage() {
       if (n < 60) requestAnimationFrame(() => tryInsert(n + 1));
     };
     tryInsert();
+  };
+
+  const mentionMedia = (asset: MediaAsset) => {
+    setChatOpen(true);
+    localStorage.setItem("hs_chatOpen", "1");
+    if (mentionSink.current) mentionSink.current(asset);
+    else pendingMentionRef.current = asset;
   };
 
   const main = useMemo(() => firstVideo(media), [media]);
@@ -366,13 +375,40 @@ export default function EditorPage() {
     if (!api) return;
     const end = Math.max(cur + 4, totalEdited || 4);
     const apply = (iw?: number, ih?: number) => {
-      const result = runCommand("overlay.addImage", api, { assetId: asset.id, start: cur, end, width: iw, height: ih });
+      const result = runCommand("overlay.addImage", api, { assetId: asset.id, start: cur, end, width: iw, height: ih, preset: "logo_top_left" });
       if (!result.ok) setError(result.error);
     };
     const img = new Image();
     img.onload = () => apply(img.naturalWidth, img.naturalHeight);
     img.onerror = () => apply();
     img.src = asset.url;
+  };
+  const convertSelectedImageClipToLogo = async () => {
+    const api = editorApiRef.current;
+    const clip = clips?.find((item) => item.id === selectedId);
+    const asset = clip ? mediaById(media, clip.sourceId) : null;
+    if (!api || !clip || !asset || asset.kind !== "image") return;
+    const trackId = clip.trackId || primaryVideoTrackId(tracks);
+    const trackClips = clipsOnTrack(clips || [], trackId, primaryVideoTrackId(tracks));
+    const trackIndex = trackClips.findIndex((item) => item.id === clip.id);
+    const start = assembledStart(trackClips, Math.max(0, trackIndex));
+    const end = start + Math.max(0.1, clip.end - clip.start);
+    const intrinsic = await new Promise<{ width?: number; height?: number }>((resolve) => {
+      const img = new Image(); img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight }); img.onerror = () => resolve({}); img.src = asset.url;
+    });
+    const added = runCommand("overlay.addImage", api, { assetId: asset.id, start, end, ...intrinsic });
+    if (!added.ok) { setError(added.error); return; }
+    const created = api.getOverlays().at(-1);
+    if (!created) return;
+    const ratio = created.transform.w / Math.max(1, created.transform.h);
+    let w = canvas.width * 0.16, h = w / ratio;
+    if (h > canvas.height * 0.22) { h = canvas.height * 0.22; w = h * ratio; }
+    const styled = runCommand("overlay.update", api, { id: created.id, patch: { transform: { ...created.transform, w, h, x: canvas.width * 0.035 + w / 2, y: canvas.height * 0.045 + h / 2, rotation: 0 } } });
+    if (!styled.ok) { setError(styled.error); return; }
+    const removed = runCommand("clip.delete.ripple", api, { id: clip.id });
+    if (!removed.ok) { setError(removed.error); return; }
+    selectOverlay(created.id); seek(start);
+    toast.success("התמונה הומרה ללוגו", "אפשר לגרור ולהקטין על הסרטון או להשתמש ב-X/Y/רוחב/גובה בצד.");
   };
   const addMediaClip = (asset: MediaAsset, atIndex?: number) => {
     const api = editorApiRef.current;
@@ -417,18 +453,14 @@ export default function EditorPage() {
     if (created) setSelectedOverlayId(created.id);
     setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
-  const addSourcePopup = () => {
+  const addStyledPopup = (presetName: TitlePopupPreset) => {
     const api = editorApiRef.current;
     if (!api) return;
     const end = Math.max(cur + 3.5, cur + 0.1);
-    const result = runCommand("overlay.addText", api, { text: "מתוך שיעור של…", start: cur, end });
+    const text = presetName === "speaker_card" ? "שם הדובר\nתפקיד או שם השיעור" : presetName === "dedication_card" ? "השיעור הוקדש לעילוי נשמת\nשם בן/בת שם" : "מתוך שיעור של…";
+    const result = runCommand("overlay.addText", api, { text, start: cur, end, preset: presetName });
     if (!result.ok) { setError(result.error); return; }
-    const created = api.getOverlays().at(-1);
-    if (!created) return;
-    const preset = makeTitlePopup(canvas.width, canvas.height, api.getOverlays(), created.text || "מתוך שיעור של…", cur, end);
-    const styled = runCommand("overlay.update", api, { id: created.id, patch: { fontSize: preset.fontSize, background: preset.background, borderRadius: preset.borderRadius, transform: preset.transform } });
-    if (!styled.ok) { setError(styled.error); return; }
-    setSelectedOverlayId(created.id); setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
   const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
     setSelectedId(id);
@@ -740,7 +772,8 @@ export default function EditorPage() {
             if (tr?.length) setTracks(tr);
           }}
           playhead={cur} selectionLabel={agentSelLabel} dockSide={dockSide} onToggleDock={toggleDockSide}
-          quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef} />
+          quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef}
+          mentionSink={mentionSink} pendingMentionRef={pendingMentionRef} />
       </aside>
       {dockSide === "left" && dockHandle}
     </>
@@ -848,10 +881,10 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }}>
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onRemove={removeMedia}
+            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
-            <TextPanel onAddText={addTextOverlay} onAddSourcePopup={addSourcePopup} />
+            <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
           ) : (
             <CaptionsPanel
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
@@ -914,6 +947,7 @@ export default function EditorPage() {
               trackName={inspectorTrackName}
               timelineStart={selectedIndex >= 0 && clips ? assembledStart(clips, selectedIndex) : 0}
               onUpdate={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)}
+              onConvertImageClipToOverlay={selectedClip && mediaById(media, selectedClip.sourceId)?.kind === "image" ? convertSelectedImageClipToLogo : undefined}
               onUpdateOverlay={(patch) => {
                 if (!selectedOverlay || !editorApiRef.current) return;
                 const result = runCommand("overlay.update", editorApiRef.current, { id: selectedOverlay.id, patch });

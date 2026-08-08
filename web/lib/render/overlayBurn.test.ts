@@ -45,6 +45,15 @@ describe("overlay burn-in (post-concat)", () => {
     expect(g.filterComplex).toContain("rotate=");
   });
 
+  it("burns overlay fade-in and fade-out into the exported alpha channel", () => {
+    const g = appendOverlayBurns(base, [{
+      filename: "card.png", start: 0.5, end: 3, x: 300, y: 200, w: 500, h: 180,
+      rotation: 0, opacity: 1, fadeIn: 0.25, fadeOut: 0.4,
+    }], 4);
+    expect(g.filterComplex).toContain("fade=t=in:st=0.500:d=0.250:alpha=1");
+    expect(g.filterComplex).toContain("fade=t=out:st=2.600:d=0.400:alpha=1");
+  });
+
   it("projectOverlayToTarget scales canvas → target and skips hidden", () => {
     const o: Overlay = {
       id: "ov1", kind: "image", assetId: "img", start: 0, end: 4, zIndex: 1,

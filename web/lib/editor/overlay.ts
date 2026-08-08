@@ -29,6 +29,10 @@ export interface Overlay {
   align?: "start" | "center" | "end";
   background?: string;
   borderRadius?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  fadeIn?: number;
+  fadeOut?: number;
   start: number;         // timeline (assembled) seconds
   end: number;
   transform: VisualTransform;
@@ -70,14 +74,27 @@ export function makeTextOverlay(canvasW: number, canvasH: number, overlays: Over
   };
 }
 
-export function makeTitlePopup(canvasW: number, canvasH: number, overlays: Overlay[], text: string, start = 0, end = 4): Overlay {
+export type TitlePopupPreset = "source_popup" | "speaker_card" | "dedication_card";
+export function makeTitlePopup(canvasW: number, canvasH: number, overlays: Overlay[], text: string, start = 0, end = 4, preset: TitlePopupPreset = "source_popup"): Overlay {
   const base = makeTextOverlay(canvasW, canvasH, overlays, text, start, end);
+  const speaker = preset === "speaker_card";
+  const dedication = preset === "dedication_card";
   return {
     ...base,
-    fontSize: Math.round(canvasH * 0.052),
-    background: "rgba(8,12,20,0.82)",
+    fontSize: Math.round(canvasH * (dedication ? 0.045 : 0.052)),
+    background: dedication ? "rgba(13,25,48,0.94)" : speaker ? "rgba(4,20,35,0.90)" : "rgba(8,12,20,0.82)",
     borderRadius: Math.round(canvasH * 0.025),
-    transform: { ...base.transform, x: canvasW / 2, y: Math.round(canvasH * 0.78), w: Math.round(canvasW * 0.78), h: Math.round(canvasH * 0.13) },
+    borderColor: dedication ? "#d6ad55" : speaker ? "#16d9e3" : "rgba(255,255,255,0.20)",
+    borderWidth: Math.max(2, Math.round(canvasH * 0.003)),
+    fadeIn: 0.22,
+    fadeOut: 0.22,
+    transform: {
+      ...base.transform,
+      x: speaker ? Math.round(canvasW * 0.67) : canvasW / 2,
+      y: dedication ? Math.round(canvasH * 0.3) : Math.round(canvasH * 0.78),
+      w: Math.round(canvasW * (speaker ? 0.54 : 0.78)),
+      h: Math.round(canvasH * (dedication ? 0.19 : speaker ? 0.16 : 0.13)),
+    },
   };
 }
 

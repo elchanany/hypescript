@@ -46,6 +46,8 @@
 | כתוביות: style/position/animation/scope | PARTIAL | style+position+bg + burn-in בייצוא; animation חסר |
 | Text element (add/edit/style) | PARTIAL | style מלא/אנימציה חסרים |
 | Image/Logo overlay | OK | — |
+| Logo placement/resize/stack/round/fade | OK | פעולות נפרדות מתמונה מלאה; UI+Agent+Preview+Export |
+| Source/speaker/dedication popup cards | OK | שלושה presets אמיתיים עם טקסט רב-שורי, מסגרת ורקע |
 | Stickers/Shapes | MISSING | — |
 
 ## 5. Agent workspace
@@ -53,6 +55,7 @@
 |---|---|---|
 | Docked panel + Ask/Plan/Act (enforced) | OK | — |
 | Slash `/` + `@mentions` + context chips | OK | — |
+| Newly imported media mentions | OK | `@media:<id>` יציב + כפתור @ בכל כרטיס מדיה |
 | Tool activity rows | PARTIAL | provider + exact retry + duration + token usage + checkpoint restore אטומי לכל כלי mutating + "בטל"; rate-card כספי חסר |
 | DeepSeek tool_calls protocol | OK | normalize.ts |
 | Plan checklist / approval cards / checkpoints | OK | Plan מחזיר checklist; אישור מפורש מעביר ל-Act ומבצע את אותה תוכנית; בקשת שינוי נשארת ללא כלים; checkpoint+restore אטומי לכל כלי mutating |

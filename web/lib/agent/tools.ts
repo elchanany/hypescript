@@ -89,7 +89,7 @@ const mainVideo = (ctx: AgentContext) => firstVideo(ctx.media);
 // ולא חיפוש-שם (שמות הקבצים מכילים ספרות מתאריך, אחרת "3" היה תופס שם שגוי).
 function resolveAsset(ctx: AgentContext, ref: string | number): MediaAsset | undefined {
   if (typeof ref === "number") return ctx.media[ref - 1];
-  const s = String(ref).replace(/^@/, "").trim();
+  const s = String(ref).replace(/^@/, "").replace(/^media:/, "").trim();
   if (/^\d+$/.test(s)) return ctx.media[parseInt(s, 10) - 1];
   const low = s.toLowerCase();
   return ctx.media.find((m) => m.id === s) || ctx.media.find((m) => m.name.toLowerCase().includes(low));
@@ -1273,7 +1273,7 @@ export const TOOLS: ToolMeta[] = [
       if (!ovs.length) return "אין שכבות.";
       return ovs.map((o, i) => {
         const label = o.kind === "text" ? (o.text || "טקסט") : (mediaById(ctx.media, o.assetId || "")?.name || "תמונה");
-        return `${i + 1}. [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s @(${Math.round(o.transform.x)},${Math.round(o.transform.y)})`;
+        return `${i + 1}. [${o.kind}] ${label} ${o.start.toFixed(1)}–${o.end.toFixed(1)}s · x=${Math.round(o.transform.x)}, y=${Math.round(o.transform.y)}, w=${Math.round(o.transform.w)}, h=${Math.round(o.transform.h)}, z=${o.zIndex}, round=${Math.round(o.borderRadius || 0)}, fade=${(o.fadeIn || 0).toFixed(2)}/${(o.fadeOut || 0).toFixed(2)}s`;
       }).join("\n");
     },
   },
@@ -1281,56 +1281,81 @@ export const TOOLS: ToolMeta[] = [
     name: "add_image_overlay", label: "הוספת תמונה", color: "#f59e0b", icon: "🖼️",
     schema: {
       name: "add_image_overlay",
-      description: "מוסיף נכס תמונה קיים כשכבה על הקנבס. source יכול להיות שם, id או אינדקס מ-list_media.",
-      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" } }, required: ["source"] },
+      description: "מוסיף תמונה כלוגו/שכבה מעל הווידאו (לא כקליפ מלא). ללוגו קטן השתמש preset=logo_top_left או logo_top_right. אפשר גם לתת x/y/w/h ועיגול.",
+      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["center", "logo_top_left", "logo_top_right"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, border_radius: { type: "number" }, opacity: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } }, required: ["source"] },
     },
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, String(a.source || ""));
       if (!asset || asset.kind !== "image") return "שגיאה: נכס תמונה לא נמצא.";
       const start = a.start != null ? Math.max(0, +a.start) : 0;
       const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      const canvas = ctx.canvas || defaultCanvasFor();
       const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
       if (commandError === "NO_API") {
-        const canvas = ctx.canvas || defaultCanvasFor();
         ctx.overlays = [...(ctx.overlays || []), makeImageOverlay(asset.id, canvas.width, canvas.height, ctx.overlays || [], start, end)];
       } else if (commandError) return `שגיאה: ${commandError}`;
-      return `נוספה שכבת תמונה (${asset.name}). סה״כ ${ctx.overlays.length} שכבות.`;
+      const o = ctx.overlays[ctx.overlays.length - 1];
+      const preset = String(a.preset || "center");
+      let w = a.w != null ? Math.max(8, +a.w) : o.transform.w;
+      let h = a.h != null ? Math.max(8, +a.h) : o.transform.h;
+      if (preset.startsWith("logo_")) {
+        const ratio = o.transform.w / Math.max(1, o.transform.h);
+        w = a.w != null ? w : canvas.width * 0.16; h = a.h != null ? h : w / ratio;
+        if (h > canvas.height * 0.22) { h = canvas.height * 0.22; w = h * ratio; }
+      }
+      const padX = canvas.width * 0.035, padY = canvas.height * 0.045;
+      const x = a.x != null ? +a.x : preset === "logo_top_left" ? padX + w / 2 : preset === "logo_top_right" ? canvas.width - padX - w / 2 : o.transform.x;
+      const y = a.y != null ? +a.y : preset.startsWith("logo_") ? padY + h / 2 : o.transform.y;
+      const patch: Partial<Overlay> = { transform: { ...o.transform, x, y, w, h, opacity: a.opacity != null ? Math.max(0, Math.min(1, +a.opacity)) : o.transform.opacity } };
+      if (a.border_radius != null) patch.borderRadius = Math.max(0, +a.border_radius);
+      if (a.fade_in != null) patch.fadeIn = Math.max(0, Math.min((end - start) / 2, +a.fade_in));
+      if (a.fade_out != null) patch.fadeOut = Math.max(0, Math.min((end - start) / 2, +a.fade_out));
+      const updateError = dispatch(ctx, "overlay.update", { id: o.id, patch });
+      if (updateError === "NO_API") ctx.overlays = ctx.overlays.map((item) => item.id === o.id ? { ...item, ...patch } : item);
+      else if (updateError) return `שגיאה: ${updateError}`;
+      return `נוספה שכבת תמונה מעל הווידאו: ${asset.name}. מיקום x=${Math.round(x)}, y=${Math.round(y)}, גודל ${Math.round(w)}×${Math.round(h)}, זמן ${start.toFixed(1)}–${end.toFixed(1)}s. השתמש ב-list_overlays לאימות.`;
     },
   },
   {
     name: "add_text_overlay", label: "הוספת טקסט", color: "#f59e0b", icon: "Ｔ",
     schema: {
       name: "add_text_overlay",
-      description: "מוסיף שכבת טקסט או פופ-אפ פתיחה מעוצב על הקנבס בזמן מדויק. preset=source_popup מתאים ל-'מתוך שיעור של…' ומיוצא בדיוק כמו בתצוגה.",
-      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["plain", "source_popup"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, color: { type: "string" }, background: { type: "string" }, font_size: { type: "number" } } },
+      description: "מוסיף שכבת טקסט או כרטיס CapCut-style אמיתי: source_popup, speaker_card או dedication_card. כל הסגנונות מופיעים ב-Preview ובייצוא.",
+      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["plain", "source_popup", "speaker_card", "dedication_card"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, color: { type: "string" }, background: { type: "string" }, font_size: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, border_radius: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } } },
     },
     run: async (a, ctx) => {
       const canvas = ctx.canvas || defaultCanvasFor();
       const start = a.start != null ? +a.start : 0;
       const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       let o: Overlay;
-      const popup = String(a.preset || "plain") === "source_popup";
-      const commandError = dispatch(ctx, "overlay.addText", { text: String(a.text || "טקסט חדש"), start, end });
+      const presetName = String(a.preset || "plain");
+      const popup = presetName === "source_popup" || presetName === "speaker_card" || presetName === "dedication_card";
+      const commandError = dispatch(ctx, "overlay.addText", { text: String(a.text || "טקסט חדש"), start, end, preset: presetName });
       if (commandError === "NO_API") {
         o = popup
-          ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end)
+          ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end, presetName as "source_popup" | "speaker_card" | "dedication_card")
           : makeTextOverlay(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end);
         ctx.overlays = [...(ctx.overlays || []), o];
       } else if (commandError) return `שגיאה: ${commandError}`;
       else o = ctx.overlays[ctx.overlays.length - 1];
-      const preset = popup ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end) : o;
+      const preset = popup ? makeTitlePopup(canvas.width, canvas.height, ctx.overlays || [], String(a.text || "טקסט חדש"), start, end, presetName as "source_popup" | "speaker_card" | "dedication_card") : o;
       const transform = { ...o.transform, ...(popup ? preset.transform : {}), ...(a.x != null ? { x: +a.x } : {}), ...(a.y != null ? { y: +a.y } : {}), ...(a.w != null ? { w: +a.w } : {}), ...(a.h != null ? { h: +a.h } : {}) };
       const patch: Partial<Overlay> = { transform };
-      if (popup) { patch.background = preset.background; patch.borderRadius = preset.borderRadius; patch.fontSize = preset.fontSize; }
+      if (popup) { patch.background = preset.background; patch.borderRadius = preset.borderRadius; patch.borderColor = preset.borderColor; patch.borderWidth = preset.borderWidth; patch.fontSize = preset.fontSize; patch.fadeIn = preset.fadeIn; patch.fadeOut = preset.fadeOut; }
       if (a.color != null) patch.color = String(a.color);
       if (a.background != null) patch.background = String(a.background);
       if (a.font_size != null) patch.fontSize = Math.max(8, +a.font_size);
+      if (a.border_color != null) patch.borderColor = String(a.border_color);
+      if (a.border_width != null) patch.borderWidth = Math.max(0, +a.border_width);
+      if (a.border_radius != null) patch.borderRadius = Math.max(0, +a.border_radius);
+      if (a.fade_in != null) patch.fadeIn = Math.max(0, Math.min((end - start) / 2, +a.fade_in));
+      if (a.fade_out != null) patch.fadeOut = Math.max(0, Math.min((end - start) / 2, +a.fade_out));
       if (Object.keys(patch).length) {
         const updateError = dispatch(ctx, "overlay.update", { id: o.id, patch });
         if (updateError === "NO_API") ctx.overlays = ctx.overlays.map((item) => item.id === o.id ? { ...item, ...patch } : item);
         else if (updateError) return `שגיאה: ${updateError}`;
       }
-      return `נוספה שכבת טקסט (${o.id}). סה״כ ${ctx.overlays.length} שכבות.`;
+      return `נוספה שכבת טקסט (${presetName}, ${o.id}) בזמן ${start.toFixed(1)}–${end.toFixed(1)}s, מיקום x=${Math.round(transform.x)}, y=${Math.round(transform.y)}, גודל ${Math.round(transform.w)}×${Math.round(transform.h)}. השתמש ב-list_overlays לאימות.`;
     },
   },
   {
@@ -1360,7 +1385,7 @@ export const TOOLS: ToolMeta[] = [
         properties: {
           index: { type: "number" }, text: { type: "string" }, start: { type: "number" }, end: { type: "number" },
           x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" },
-          rotation: { type: "number" }, opacity: { type: "number" }, color: { type: "string" }, background: { type: "string" }, border_radius: { type: "number" }, font_size: { type: "number" },
+          rotation: { type: "number" }, opacity: { type: "number" }, color: { type: "string" }, background: { type: "string" }, border_radius: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, font_size: { type: "number" }, z_index: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" },
         },
         required: ["index"],
       },
@@ -1381,13 +1406,20 @@ export const TOOLS: ToolMeta[] = [
       if (a.color != null) patch.color = String(a.color);
       if (a.background != null) patch.background = String(a.background);
       if (a.border_radius != null) patch.borderRadius = Math.max(0, +a.border_radius);
+      if (a.border_color != null) patch.borderColor = String(a.border_color);
+      if (a.border_width != null) patch.borderWidth = Math.max(0, +a.border_width);
+      if (a.z_index != null) patch.zIndex = Math.max(0, Math.round(+a.z_index));
       if (a.font_size != null) patch.fontSize = Math.max(8, +a.font_size);
       if (a.start != null) patch.start = Math.max(0, +a.start);
       if (a.end != null) patch.end = Math.max((patch.start ?? o.start) + 0.05, +a.end);
+      const nextDuration = (patch.end ?? o.end) - (patch.start ?? o.start);
+      if (a.fade_in != null) patch.fadeIn = Math.max(0, Math.min(nextDuration / 2, +a.fade_in));
+      if (a.fade_out != null) patch.fadeOut = Math.max(0, Math.min(nextDuration / 2, +a.fade_out));
       const commandError = dispatch(ctx, "overlay.update", { id: o.id, patch });
       if (commandError === "NO_API") ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
       else if (commandError) return `שגיאה: ${commandError}`;
-      return `שכבה ${a.index} עודכנה.`;
+      const updated = ctx.overlays[i];
+      return `שכבה ${a.index} עודכנה: x=${Math.round(updated.transform.x)}, y=${Math.round(updated.transform.y)}, w=${Math.round(updated.transform.w)}, h=${Math.round(updated.transform.h)}, z=${updated.zIndex}, round=${Math.round(updated.borderRadius || 0)}. השינוי נראה מיד ב-Preview ונשמר לייצוא.`;
     },
   },
   {
@@ -1821,8 +1853,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 16. בריף לקוח כולל שלושה סוגים: (א) טקסט שנאמר ושצריך להישאר — נכנס ל-keep_by_script ולכתוביות; (ב) הוראות עריכה כגון fade — אינן כתוביות; (ג) טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script, ויש ליצור אותו רק בשלב האאוטרו עם הנכסים המתאימים.
 17. אין חזרות גבול: פלט אוטומטי חייב להיות רציף בזמן-מקור. אם קליפ מסתיים ב-29.8, הקליפ הבא מאותו מקור/רצועה מתחיל ב-29.8 או מאוחר יותר — לעולם לא 29.7/29.8 מחדש. דווח הצלחה רק אחרי list_clips ובדיקת הגבולות.
 18. אם המשתמש מבקש fade בנקודת המעבר לסיום, החל set_clip_audio_fades(fade_out=...) על הקליפ האחרון של התוכן המדובר לפני בקשת נכסי האאוטרו.
-19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו/תמונה מעל הסרטון: add_image_overlay(start,end) ואז update_overlay למיקום וגודל. אודיו עצמאי: add_clip(timeline_start=...) לרצועת האודיו ואז set_clip_volume/set_clip_audio_fades. אל תחליף בין קליפ מלא לשכבה.
-20. לפתיח מעוצב כגון "מתוך שיעור של...": add_text_overlay(preset="source_popup", start=..., end=...). זהו אלמנט Preview+Export אמיתי, לא הבטחה טקסטואלית.
+19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו מעל הסרטון: add_image_overlay(preset="logo_top_left" או "logo_top_right", start,end). אל תוסיף לוגו כקליפ. אחרי הוספה/שינוי חובה list_overlays ולדווח למשתמש x/y/w/h/z כדי שיוכל לראות ולתקן.
+20. לכרטיס מעוצב: add_text_overlay עם source_popup ל"מתוך שיעור", speaker_card לשם דובר ותפקיד, dedication_card להקדשה רב-שורתית. הגדר start/end מדויקים, קרא list_overlays, ואל תטען שעוצב לפני שהכלי הצליח.
 21. תוצרי render_video, export_subtitles, capture_frame ו-generate_narration חוזרים ככרטיסי קובץ בצ'אט עם תצוגה/הורדה. אחרי יצירת תוצר, אמור למשתמש להשתמש בכרטיס המצורף; אל תמציא נתיב או קישור.
 
 כלים חשובים:
@@ -1833,7 +1865,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.
 - add_video_track / list_tracks / move_clip_to_track / remove_video_track: רצועות וידאו למונטאז'.
 - add_clip: וידאו/תמונה מלאה/אודיו בזמן מדויק באמצעות timeline_start; placement="overlay" לתמונה כשכבה.
-- add_text_overlay(preset="source_popup"): פופ-אפ פתיחה מעוצב שנשמר גם בייצוא.
+- add_image_overlay(preset="logo_top_left|logo_top_right"): לוגו קטן מעל הווידאו; update_overlay שולט x/y/w/h/round/z.
+- add_text_overlay(preset="source_popup|speaker_card|dedication_card"): כרטיס מעוצב שנשמר גם בייצוא.
 - move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).

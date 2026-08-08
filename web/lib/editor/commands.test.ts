@@ -217,19 +217,33 @@ describe("CommandBus builtins", () => {
     expect(runCommand("overlay.addText", api, { text: "כותרת", start: 2, end: 3 }).ok).toBe(true);
     const id = api.overlays[0].id;
     expect(api.overlays[0]).toMatchObject({ text: "כותרת", start: 2, end: 3 });
-    expect(runCommand("overlay.update", api, { id, patch: { start: -4, end: -1, transform: { ...api.overlays[0].transform, w: 1, opacity: 5 } } }).ok).toBe(true);
+    expect(runCommand("overlay.update", api, { id, patch: { start: -4, end: -1, zIndex: 7, borderRadius: 22, borderColor: "#00ffff", borderWidth: 3, transform: { ...api.overlays[0].transform, w: 1, opacity: 5 } } }).ok).toBe(true);
     expect(api.overlays[0].start).toBe(0);
     expect(api.overlays[0].end).toBe(0.05);
     expect(api.overlays[0].transform).toMatchObject({ w: 8, opacity: 1 });
+    expect(api.overlays[0]).toMatchObject({ zIndex: 7, borderRadius: 22, borderColor: "#00ffff", borderWidth: 3 });
+  });
+
+  it("creates a styled dedication card atomically", () => {
+    const api = fakeApi([]) as any;
+    expect(runCommand("overlay.addText", api, { text: "לעילוי נשמת\nפלוני בן פלונית", start: 0, end: 4, preset: "dedication_card" }).ok).toBe(true);
+    expect(api.overlays[0]).toMatchObject({
+      kind: "text", background: "rgba(13,25,48,0.94)", borderColor: "#d6ad55", fadeIn: 0.22, fadeOut: 0.22,
+    });
+    expect(api.overlays[0].borderRadius).toBeGreaterThan(0);
+    expect(api.overlays[0].transform.y).toBeLessThan(1080 / 2);
   });
 
   it("adds image media as a sized overlay through CommandBus", () => {
     const api = fakeApi([]) as any;
     api.getMedia = () => [{ id: "image-1", name: "logo.png", kind: "image", file: null, duration: 4, url: "blob:logo" }];
-    expect(runCommand("overlay.addImage", api, { assetId: "image-1", start: 1, end: 5, width: 800, height: 400 }).ok).toBe(true);
+    expect(runCommand("overlay.addImage", api, { assetId: "image-1", start: 1, end: 5, width: 800, height: 400, preset: "logo_top_left" }).ok).toBe(true);
     expect(api.overlays).toHaveLength(1);
     expect(api.overlays[0]).toMatchObject({ kind: "image", assetId: "image-1", start: 1, end: 5 });
     expect(api.overlays[0].transform.w / api.overlays[0].transform.h).toBeCloseTo(2, 3);
+    expect(api.overlays[0].transform.w).toBeLessThan(1920 * 0.2);
+    expect(api.overlays[0].transform.x).toBeLessThan(1920 / 2);
+    expect(api.overlays[0].transform.y).toBeLessThan(1080 / 2);
   });
 
   it("queryProject reports counts", () => {

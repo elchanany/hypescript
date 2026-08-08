@@ -33,7 +33,16 @@ export function useEditor() {
   const touch = useCallback(() => force((v) => v + 1), []);
 
   const now = (): EditorSnapshot => ({ clips: clipsRef.current, subs: subsRef.current, tracks: tracksRef.current, overlays: overlaysRef.current });
-  const apply = (s: EditorSnapshot) => { setClipsRaw(s.clips); setSubsRaw(s.subs); setTracksRaw(s.tracks); setOverlaysRaw(s.overlays || []); };
+  const apply = (s: EditorSnapshot) => {
+    // Keep the imperative EditorApi coherent across several commands in the
+    // same tick (Agent workflows and convert-to-logo both do this). React state
+    // commits later, so the refs must advance synchronously with the snapshot.
+    clipsRef.current = s.clips;
+    subsRef.current = s.subs;
+    tracksRef.current = s.tracks;
+    overlaysRef.current = s.overlays || [];
+    setClipsRaw(s.clips); setSubsRaw(s.subs); setTracksRaw(s.tracks); setOverlaysRaw(s.overlays || []);
+  };
 
   const commit = useCallback((next: EditorSnapshot) => {
     hist.current.push(now());
@@ -77,6 +86,7 @@ export function useEditor() {
   // עדכון חי בזמן גרירה/שינוי-גודל (ללא History; commitTransaction סוגר ל-Undo אחד)
   const setOverlaysLive = useCallback((u: Updater<Overlay[]>) => {
     const next = typeof u === "function" ? (u as any)(overlaysRef.current) : u;
+    overlaysRef.current = next;
     setOverlaysRaw(next);
   }, []);
 
