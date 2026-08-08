@@ -1,16 +1,16 @@
 # ACTIVE_WORK.md
 
 ## Current task
-P3 per-clip horizontal/vertical flip with exact Preview+Export parity; browser upload retry remains for the latest visual effects.
+Agent/client-brief reliability: tight Hebrew speech cutting, zero repeated source-time boundaries, caption styling, and deferred-asset sequencing.
 
 ## Branch
 `main`
 
 ## Latest commit
-`7d289bc` — chore(graphify): sync visual fades
+`f2442e3` — chore(graphify): sync clip flip controls
 
 ## Status
-Visual fades are on main (`92c4c4d`). Dirty flip package adds independent horizontal/vertical axes to Model, Inspector, Undo/Redo, CommandBus, Agent, CSS Preview transform, FFmpeg `hflip`/`vflip`, split inheritance and multi-track preservation. Web 45 files/244 tests, production build and native 20-cut render pass. Dedicated browser upload for the latest visual effects is still blocked by the in-app chooser timeout.
+Dirty agent/core package replaces dB-first silence cutting with word-timestamp `tight` pacing (0.22s gap, 0.04s handles), removes explicit audio events/fillers, normalizes every automatic same-source/track boundary, and adds real Agent caption-style control. SYSTEM_PROMPT compiles client briefs into spoken keep text, edit instructions, deferred CTA assets, boundary verification and final fade. Web 45 files/251 tests, type-check and production build pass; local 8 tests pass.
 
 ## Exact continuation point
-Graphify + commit/push clip flip, then retry dedicated browser visual QA before the next P3 package. No Supabase/Auth changes without explicit permission.
+Run Graphify update, commit/push the agent/core package, then validate the workflow against a real uploaded lecture when source media is available. Do not claim acoustic breath classification without provider `audio_event`; no Supabase/Auth changes without explicit permission.

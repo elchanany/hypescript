@@ -1,6 +1,6 @@
 // הסרת שתיקות/נשימות + מהססים — פורט של editing.py.
 
-import { KeepInterval, Word, intervalDuration } from "./models";
+import { isSpeechWord, KeepInterval, Word, intervalDuration } from "./models";
 import { normalizeHebrew } from "./align";
 
 export const DEFAULT_FILLERS = new Set(
@@ -48,6 +48,12 @@ export function buildKeepIntervals(
   let removedSince = false;
 
   for (const { w, keep } of pairs) {
+    if (!isSpeechWord(w)) {
+      // Explicit provider audio events (breath/cough/etc.) are never retained as
+      // speech. Spacing tokens are structural and do not force a cut.
+      if (w.type === "audio_event") removedSince = true;
+      continue;
+    }
     if (!keep) {
       removedSince = true;
       continue;

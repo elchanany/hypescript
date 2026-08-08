@@ -18,7 +18,16 @@ import { Overlay, makeImageOverlay, makeTextOverlay } from "@/lib/editor/overlay
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { scriptToClips } from "@/lib/editor/scriptClips";
-import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange, snapSpeechToWords } from "@/lib/editor/clipFilter";
+import {
+  deleteClipRange,
+  deleteClipsAt,
+  intersectClipsWithSpeech,
+  keepSourceRange,
+  normalizeGeneratedCuts,
+  snapSpeechToWords,
+  tightSpeechFromWords,
+} from "@/lib/editor/clipFilter";
+import { DEFAULT_FILLERS } from "@/lib/editing";
 import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import {
   assembleTranscript,
@@ -646,17 +655,19 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
-    name: "remove_silence", label: "הסרת שתיקות (עוצמה)", color: "#f59e0b", icon: "🤫",
+    name: "remove_silence", label: "הידוק דיבור", color: "#f59e0b", icon: "🤫",
     schema: {
       name: "remove_silence",
-      description: "מסיר נשימות/שתיקות לפי עוצמת סאונד. חשוב: אם כבר יש קליפים מ-keep_by_script — ברירת המחדל היא within_existing=true (חותך שתיקות *בתוך* הבחירה בלבד, לא מחליף את כל ה-EDL בסרטון המלא). replace_all=true מחליף את כל הציר.",
+      description: "מהדק דיבור לפי חותמות-מילה: מסיר מרווחים לא-מדוברים ונשימות שסומנו כאירוע שמע. pacing=tight מיועד ל-TikTok/פרסומת. בלי תמלול יש fallback זהיר לפי עוצמה. אחרי keep_by_script ברירת המחדל היא חיתוך בתוך הבחירה בלבד.",
       parameters: {
         type: "object",
         properties: {
           source: { type: "string" },
-          threshold_db: { type: "number", description: "סף עוצמה (dB). ברירת מחדל: רצפת-רעש+8" },
-          min_silence: { type: "number", description: "אורך שקט מינימלי לחיתוך (שנ'), ברירת מחדל 0.35" },
-          padding: { type: "number", description: "ריפוד בכל צד (שנ'), ברירת מחדל 0.08" },
+          pacing: { type: "string", enum: ["tight", "natural"], description: "tight=קצב TikTok/פרסומת (ברירת מחדל); natural=שומר יותר מרווח נשימה" },
+          threshold_db: { type: "number", description: "רק ל-fallback ללא תמלול: סף עוצמה (dB)" },
+          min_silence: { type: "number", description: "פער מינימלי לחיתוך: tight=0.22s, natural=0.4s" },
+          padding: { type: "number", description: "שוליים בכל צד: tight=0.04s, natural=0.1s" },
+          remove_fillers: { type: "boolean", description: "מסיר אה/אמ/היסוסים נפוצים; ברירת מחדל true ב-tight" },
           within_existing: { type: "boolean", description: "true=חתוך רק בתוך הקליפים הקיימים (מומלץ אחרי keep_by_script)" },
           replace_all: { type: "boolean", description: "true=החלף את כל ה-EDL בקטעי דיבור מכל הסרטון (זהיר — מוחק בחירה קודמת)" },
         },
@@ -665,31 +676,43 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset || asset.kind !== "video") return "אין סרטון.";
-      report("מנתח עוצמת סאונד…");
-      const prof = await analyzeAudio(asset.file);
-      // ריפוד גדול יותר + snap למילים — מונע חיתוך מילת פתיחה רכה ("שלום")
-      const padding = a.padding != null ? +a.padding : 0.12;
-      const thr = a.threshold_db != null ? +a.threshold_db : prof.floorDb + 8;
-      const sil = findSilences(prof, thr, a.min_silence != null ? +a.min_silence : 0.35);
       const dur = asset.duration;
-      const raw: Array<[number, number]> = [];
-      let prev = 0;
-      for (const [s, e] of sil) { if (s - prev > 0.05) raw.push([prev, s]); prev = e; }
-      if (dur - prev > 0.05) raw.push([prev, dur]);
-      if (!raw.length) return "לא זוהו קטעי דיבור מעל הסף.";
-      const padded = raw.map(([s, e]) => ({ start: Math.max(0, s - padding), end: Math.min(dur, e + padding) }));
-      let speech: Clip[] = [{ id: uid(), sourceId: asset.id, start: padded[0].start, end: padded[0].end }];
-      for (const k of padded.slice(1)) {
-        const last = speech[speech.length - 1];
-        if (k.start <= last.end + 1e-3) last.end = Math.max(last.end, k.end);
-        else speech.push({ id: uid(), sourceId: asset.id, start: k.start, end: k.end });
-      }
       const words = transcriptOf(ctx, asset);
-      speech = snapSpeechToWords(speech, words, { maxSnapSec: 0.5, padSec: 0.03 }).map((c) => ({
-        ...c,
-        start: Math.max(0, c.start),
-        end: Math.min(dur, c.end),
-      }));
+      const pacing = String(a.pacing || "tight") === "natural" ? "natural" : "tight";
+      const minSilence = a.min_silence != null ? +a.min_silence : pacing === "tight" ? 0.22 : 0.4;
+      const padding = a.padding != null ? +a.padding : pacing === "tight" ? 0.04 : 0.1;
+      let speech: Clip[];
+      let method: string;
+      let thr: number | null = null;
+      if (words?.length) {
+        report(`מהדק דיבור לפי חותמות מילים (${pacing})…`);
+        const removeFillers = a.remove_fillers == null ? pacing === "tight" : a.remove_fillers === true;
+        const cutWords = removeFillers
+          ? words.map((word) => isSpeechWord(word) && DEFAULT_FILLERS.has(normalizeHebrew(word.text))
+            ? { ...word, type: "audio_event" as const }
+            : word)
+          : words;
+        speech = tightSpeechFromWords(cutWords, asset.id, dur, { minGapSec: minSilence, paddingSec: padding });
+        method = `חותמות-מילה/${pacing}${removeFillers ? "+מהססים" : ""}`;
+      } else {
+        report("אין תמלול — מנתח עוצמת סאונד בזהירות…");
+        const prof = await analyzeAudio(asset.file);
+        thr = a.threshold_db != null ? +a.threshold_db : prof.floorDb + 8;
+        const sil = findSilences(prof, thr, Math.max(0.25, minSilence));
+        const raw: Array<[number, number]> = [];
+        let prev = 0;
+        for (const [s, e] of sil) { if (s - prev > 0.05) raw.push([prev, s]); prev = e; }
+        if (dur - prev > 0.05) raw.push([prev, dur]);
+        speech = raw.map(([start, end]) => ({ id: uid(), sourceId: asset.id, start, end }));
+        speech = snapSpeechToWords(speech, null, { maxSnapSec: 0.5, padSec: padding });
+        method = `עוצמה ${thr.toFixed(0)}dB (fallback)`;
+      }
+      speech = normalizeGeneratedCuts(speech.map((clip) => ({
+        ...clip,
+        start: Math.max(0, clip.start),
+        end: Math.min(dur, clip.end),
+      })));
+      if (!speech.length) return "לא זוהו קטעי דיבור לשמירה.";
       const hasEdl = !!(ctx.clips && ctx.clips.length);
       const replaceAll = a.replace_all === true;
       // כשיש EDL — תמיד within אלא אם replace_all=true במפורש
@@ -699,7 +722,7 @@ export const TOOLS: ToolMeta[] = [
         merged = intersectClipsWithSpeech(ctx.clips!, speech, asset.id);
         if (!merged.length) return "לא נשאר דיבור בתוך הקליפים הקיימים. בדוק טווחים או הרץ עם replace_all=true בזהירות.";
         setClips(ctx, merged);
-        return `הוסרו שתיקות *בתוך הבחירה הקיימת* מ-"${asset.name}" (סף ${thr.toFixed(0)}dB). ${clipsSummary(merged)}`;
+        return `הודק הדיבור *בתוך הבחירה הקיימת* ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(2)}s). ${clipsSummary(merged)}`;
       }
       if (hasEdl && replaceAll) {
         // אזהרה מפורשת כשמחליפים בחירה קיימת
@@ -708,7 +731,7 @@ export const TOOLS: ToolMeta[] = [
       setClips(ctx, merged);
       const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
       const warn = hasEdl && replaceAll ? " (הוחלף EDL קודם — replace_all)" : "";
-      return `הוסרו שתיקות/נשימות לפי עוצמה מ-"${asset.name}" (סף ${thr.toFixed(0)}dB): ${merged.length} קטעי דיבור, הוסרו ${removed.toFixed(1)}s.${warn} ${clipsSummary(merged)}`;
+      return `הודק הדיבור ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(2)}s): ${merged.length} קטעים, הוסרו ${removed.toFixed(1)}s.${warn} ${clipsSummary(merged)}`;
     },
   },
   {
@@ -1476,6 +1499,35 @@ export const TOOLS: ToolMeta[] = [
     run: async (_a, ctx) => ctx.subs?.length ? ctx.subs.map((s, i) => `${i + 1}. [${s.start.toFixed(1)}–${s.end.toFixed(1)}] ${s.text}`).join("\n") : "אין כתוביות. הרץ generate_subtitles.",
   },
   {
+    name: "set_caption_style", label: "עיצוב כתוביות", color: "#8b5cf6", icon: "✨",
+    schema: {
+      name: "set_caption_style",
+      description: "מגדיר עיצוב כתוביות אמיתי בתצוגה המקדימה ובצריבה לייצוא. לפרסומת עברית מומלץ: bold=true, bg=box או soft, position=bottom, font_size=5.5.",
+      parameters: {
+        type: "object",
+        properties: {
+          font_size: { type: "number", description: "אחוז מהצלע הקצרה, 2..12" },
+          color: { type: "string", description: "צבע hex כגון #ffffff" },
+          bold: { type: "boolean" },
+          position: { type: "string", enum: ["bottom", "center", "top"] },
+          bg: { type: "string", enum: ["none", "soft", "box"] },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const patch: Record<string, unknown> = {};
+      if (a.font_size != null) patch.fontSize = +a.font_size;
+      if (a.color != null) patch.color = String(a.color);
+      if (a.bold != null) patch.bold = a.bold === true;
+      if (a.position != null) patch.position = String(a.position);
+      if (a.bg != null) patch.bg = String(a.bg);
+      const commandError = dispatch(ctx, "caption.setStyle", patch);
+      if (commandError === "NO_API") return "עיצוב כתוביות אינו זמין בלי עורך פעיל.";
+      if (commandError) return `שגיאה: ${commandError}`;
+      return "עיצוב הכתוביות עודכן בתצוגה המקדימה ובייצוא.";
+    },
+  },
+  {
     name: "edit_subtitle", label: "עריכת כתובית", color: "#a855f7", icon: "✏️",
     schema: { name: "edit_subtitle", description: "משנה טקסט של כתובית אחת. לתיקון המוני/סנכרון — clear_subtitles + generate_subtitles(script), לא לולאת edit.", parameters: { type: "object", properties: { index: { type: "number", description: "מספר הכתובית (1-based)" }, text: { type: "string" } }, required: ["index", "text"] } },
     run: async (a, ctx) => {
@@ -1727,22 +1779,26 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 ═══ חוקי ברזל (אל תשבור) ═══
 1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות ארוכות — תכנן בראש ובצע.
 2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = חסום אוטומטית.
-3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון.
-4. סדר מומלץ כשיש טקסט מהמשתמש: transcribe_video (ElevenLabs אם ביקשו) → keep_by_script(script=הטקסט הנקי) → remove_silence (within_existing) → transcribe_timeline (remap) → generate_subtitles(script=אותו טקסט) → list_subtitles קצר → render בסוף.
+3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון. לבקשת TikTok/פרסומת/"אין שנייה מיותרת" השתמש pacing="tight".
+4. סדר מחייב כשיש טקסט מאושר: transcribe_video → keep_by_script(script=הטקסט הנקי, append=false) → remove_silence(within_existing=true,pacing="tight") → transcribe_timeline(remap) → generate_subtitles(script=אותו טקסט) → set_caption_style → list_subtitles קצר → render רק בסוף.
 5. תמלול ASR משובש לעיתים. הטקסט שהמשתמש כתב הוא מקור האמת. לעולם אל תשאיר בכתוביות זבל ASR — העבר script ל-generate_subtitles.
 6. כתוביות משובשות/חסרות/לא מסונכרנות: clear_subtitles + generate_subtitles(script=...) פעם אחת. אסור לולאת edit_subtitle (נחסם אחרי 4).
 7. שגיאת "Loading chunk … failed" / chunk: בקש מיד Ctrl+Shift+R. אל תנסה שוב ושוב בלי רענון.
 8. אל תקרא את אותו תמלול פעמיים. אל תריץ list_clips אחרי כל פעולה קטנה.
 9. אם keep_by_script מחזיר קליפ "קופץ" לזמן רחוק — keep_source_range או delete_clips, לא עשרות מחיקות.
-10. חסר נכס (תמונה/סאונד בהמשך) — ask_user / חכה; אל תמציא.
+10. חסר נכס עתידי (למשל תמונת/סאונד סיום) אינו עוצר שלבים עצמאיים. בצע קודם חיתוך, הידוק, כתוביות ו-fade שכבר אפשריים; רק כשמגיעים בפועל לשלב הנכס קרא ask_user פעם אחת. אל תמציא נכס ואל תשאל מוקדם אם המשתמש אמר "אביא אחר כך".
 11. קריינות/תמלול בתשלום: אל תריץ מיותר. חסר מפתח — הפנה להגדרות.
 12. אחרי חיתוך — transcribe_timeline או get_transcript(timeline=true). אל תסתמך על זמני מקור לכתוביות.
 13. ספק 503 / "too busy" / Failed to fetch: עצור, דווח למשתמש בקצרה, אל תמשיך בלולאה.
 14. אל תחתוך מילות פתיחה/סיום — remove_silence כבר מריפד ומיישר למילים; אם חסרה מילה בהתחלה, הרחב עם trim_clip/add_clip לפי find_in_transcript.
+15. "תמחק הכל / נתחיל מחדש" פירושו לא להשתמש ב-append ולא להשאיר כתוביות ישנות: keep_by_script מחליף את ה-EDL, ואז clear_subtitles לפני generate_subtitles. אל תמחק מדיה מקורית.
+16. בריף לקוח כולל שלושה סוגים: (א) טקסט שנאמר ושצריך להישאר — נכנס ל-keep_by_script ולכתוביות; (ב) הוראות עריכה כגון fade — אינן כתוביות; (ג) טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script, ויש ליצור אותו רק בשלב האאוטרו עם הנכסים המתאימים.
+17. אין חזרות גבול: פלט אוטומטי חייב להיות רציף בזמן-מקור. אם קליפ מסתיים ב-29.8, הקליפ הבא מאותו מקור/רצועה מתחיל ב-29.8 או מאוחר יותר — לעולם לא 29.7/29.8 מחדש. דווח הצלחה רק אחרי list_clips ובדיקת הגבולות.
+18. אם המשתמש מבקש fade בנקודת המעבר לסיום, החל set_clip_audio_fades(fade_out=...) על הקליפ האחרון של התוכן המדובר לפני בקשת נכסי האאוטרו.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
-- remove_silence: נשימות/שתיקות לפי עוצמה. within_existing כשיש כבר EDL.
+- remove_silence: הידוק לפי חותמות-מילה ואירועי שמע מפורשים; pacing=tight לפרסומת/TikTok. עוצמה היא fallback בלבד.
 - keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
 - delete_clips / clear_clips: מחיקות המוניות.
 - trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.
@@ -1750,16 +1806,17 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
+- set_caption_style: עיצוב כתוביות אמיתי ב-Preview ובייצוא; אל תבטיח "יפות" בלי לקרוא לו.
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
 - render_video רק בסוף / כשמבקשים.
 
-זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within) → transcribe_timeline → generate_subtitles(script) → render.`;
+זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → render.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
 export const MODE_PROMPTS: Record<import("./types").AgentMode, string> = {
   ask: `\n\nמצב נוכחי: ASK (קריאה בלבד). אין לך כלים במצב זה ואינך יכול לשנות את הפרויקט. ענה על שאלות, הסבר את הפרויקט/התמלול/הציר, והצע צעדים. אם המשתמש מבקש לבצע עריכה — הסבר בקצרה מה צריך לעשות והצע לעבור למצב Act.`,
-  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). אין לך כלים ואינך משנה דבר. החזר תוכנית עריכה קצרה וברורה כ-checklist ב-Markdown, פעולה אחת בכל שורה בפורמט \"- [ ] ...\": מה יישאר, מה יימחק, אילו קטעים/כתוביות/נכסים יושפעו, משך צפוי, ואילו החלטות דורשות אישור. אל תטען שביצעת — רק תכנן. ממשק המשתמש יציג כפתור אישור שמעביר ל-Act, לכן אל תטען שהתוכנית אושרה.`,
+  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). אין לך כלים ואינך משנה דבר. החזר תוכנית עריכה קצרה וברורה כ-checklist ב-Markdown, פעולה אחת בכל שורה בפורמט \"- [ ] ...\". הפרד במפורש בין טקסט מדובר שיישאר, הוראות עריכה, טקסט CTA חדש לאאוטרו, ונכסים חסרים שנדחים לסוף. כשמבקשים קצב TikTok/פרסומת, כלול pacing=tight ובדיקת אפס חפיפות בגבולות. כשנאמר \"אביא אחר כך\", אל תהפוך את הנכס החסר לחסם לשלבים הקודמים. ציין מה יימחק, אילו כתוביות/נכסים יושפעו, ואילו החלטות באמת דורשות אישור. אל תטען שביצעת — רק תכנן. ממשק המשתמש יציג כפתור אישור שמעביר ל-Act, לכן אל תטען שהתוכנית אושרה.`,
   act: ``,
 };

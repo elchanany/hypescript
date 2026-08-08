@@ -114,9 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="פיצול אוטומטי של אודיו ארוך מזה (שנ') לפני העלאה לענן")
 
     e = p.add_argument_group("עריכה")
-    e.add_argument("--silence-threshold", type=float, default=0.4,
-                   help="סף (שנ') שמעליו רווח בין מילים נחשב פאוזה ונחתך")
-    e.add_argument("--padding", type=float, default=0.1,
+    e.add_argument("--silence-threshold", type=float, default=0.22,
+                   help="סף (שנ') שמעליו רווח בין מילים נחשב פאוזה ונחתך (ברירת מחדל הדוקה)")
+    e.add_argument("--padding", type=float, default=0.04,
                    help="ריפוד (שנ') שנשמר בכל צד של חיתוך")
     e.add_argument("--no-silence-removal", action="store_true",
                    help="אל תסיר שתיקות (שימושי אם רק רוצים כתוביות)")

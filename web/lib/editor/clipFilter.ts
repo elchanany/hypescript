@@ -3,6 +3,71 @@
 import { speechWords, Word } from "@/lib/models";
 import { Clip, uid } from "./model";
 
+export const TIGHT_SPEECH_GAP_SEC = 0.22;
+export const TIGHT_CUT_PADDING_SEC = 0.04;
+
+/**
+ * Normalizes only machine-generated cuts. Manual timeline edits may repeat source
+ * ranges intentionally, so callers must opt into this invariant.
+ *
+ * Consecutive clips on the same source/track may touch, but never replay the
+ * same source time. A fully covered or tiny remainder is dropped.
+ */
+export function normalizeGeneratedCuts(clips: Clip[], minClipSec = 0.05): Clip[] {
+  const out: Clip[] = [];
+  for (const raw of clips) {
+    if (!Number.isFinite(raw.start) || !Number.isFinite(raw.end) || raw.end <= raw.start) continue;
+    const clip = { ...raw };
+    const previous = out[out.length - 1];
+    if (
+      previous
+      && previous.sourceId === clip.sourceId
+      && (previous.trackId || "") === (clip.trackId || "")
+      && clip.start < previous.end
+    ) {
+      clip.start = previous.end;
+    }
+    if (clip.end - clip.start >= minClipSec) out.push(clip);
+  }
+  return out;
+}
+
+/** Builds aggressive word-timestamp speech islands for short-form pacing. */
+export function tightSpeechFromWords(
+  words: Word[],
+  sourceId: string,
+  duration: number,
+  opts?: { minGapSec?: number; paddingSec?: number },
+): Clip[] {
+  const minGap = Math.max(0.08, opts?.minGapSec ?? TIGHT_SPEECH_GAP_SEC);
+  const padding = Math.max(0, Math.min(minGap / 2 - 0.001, opts?.paddingSec ?? TIGHT_CUT_PADDING_SEC));
+  const list = speechWords(words)
+    .filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+  if (!list.length) return [];
+  const events = words
+    .filter((word) => word.type === "audio_event" && Number.isFinite(word.start) && Number.isFinite(word.end))
+    .sort((a, b) => a.start - b.start);
+
+  const clips: Clip[] = [];
+  let start = Math.max(0, list[0].start - padding);
+  let end = list[0].end;
+  for (const word of list.slice(1)) {
+    const gap = word.start - end;
+    const event = events.find((item) => item.start >= end - 0.01 && item.end <= word.start + 0.01);
+    if (gap > minGap || event) {
+      const previousEnd = event ? Math.min(event.start, end + padding) : end + padding;
+      clips.push({ id: uid(), sourceId, start, end: Math.min(duration, previousEnd) });
+      start = Math.max(0, event ? Math.max(event.end, word.start - padding) : word.start - padding);
+      end = word.end;
+    } else {
+      end = Math.max(end, word.end);
+    }
+  }
+  clips.push({ id: uid(), sourceId, start, end: Math.min(duration, end + padding) });
+  return normalizeGeneratedCuts(clips);
+}
+
 /** משאיר רק חפיפה עם [start,end] בזמן-מקור (ומקצץ גבולות). מקורות אחרים נשארים כמו שהם אם sourceId ניתן. */
 export function keepSourceRange(clips: Clip[], start: number, end: number, sourceId?: string): Clip[] {
   if (!(end > start)) return [];
@@ -49,10 +114,10 @@ export function intersectClipsWithSpeech(clips: Clip[], speech: Clip[], sourceId
       if (s.sourceId !== sourceId) continue;
       const start = Math.max(c.start, s.start);
       const end = Math.min(c.end, s.end);
-      if (end - start > 0.05) out.push({ id: uid(), sourceId, start, end });
+      if (end - start > 0.05) out.push({ ...c, id: uid(), sourceId, start, end });
     }
   }
-  return out;
+  return normalizeGeneratedCuts(out);
 }
 
 /**

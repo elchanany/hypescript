@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { deleteClipRange, deleteClipsAt, intersectClipsWithSpeech, keepSourceRange, snapSpeechToWords } from "./clipFilter";
+import {
+  deleteClipRange,
+  deleteClipsAt,
+  intersectClipsWithSpeech,
+  keepSourceRange,
+  normalizeGeneratedCuts,
+  snapSpeechToWords,
+  tightSpeechFromWords,
+} from "./clipFilter";
 import { Clip } from "./model";
 
 const c = (id: string, start: number, end: number, sourceId = "v1"): Clip => ({ id, sourceId, start, end });
@@ -30,6 +38,58 @@ describe("intersectClipsWithSpeech", () => {
     expect(r).toHaveLength(2);
     expect(r[0]).toMatchObject({ start: 1, end: 3 });
     expect(r[1]).toMatchObject({ start: 5, end: 7 });
+  });
+
+  it("cannot reintroduce repeated source time from overlapping EDL selections", () => {
+    const selected = [c("first", 20, 29.8), c("second", 29.7, 35)];
+    const speech = [c("speech", 20, 35)];
+    const result = intersectClipsWithSpeech(selected, speech, "v1");
+    expect(result.map((clip) => [clip.start, clip.end])).toEqual([
+      [20, 29.8],
+      [29.8, 35],
+    ]);
+  });
+});
+
+describe("normalizeGeneratedCuts", () => {
+  it("clamps 29.7 after 29.8 without changing intentional cross-track overlap", () => {
+    const sameTrack = normalizeGeneratedCuts([c("a", 10, 29.8), c("b", 29.7, 31)]);
+    expect(sameTrack[1].start).toBe(29.8);
+
+    const crossTrack = normalizeGeneratedCuts([
+      { ...c("a", 10, 29.8), trackId: "v1" },
+      { ...c("b", 29.7, 31), trackId: "v2" },
+    ]);
+    expect(crossTrack[1].start).toBe(29.7);
+  });
+
+  it("drops a generated range fully covered by the previous clip", () => {
+    expect(normalizeGeneratedCuts([c("a", 10, 20), c("b", 19.9, 19.95)])).toHaveLength(1);
+  });
+});
+
+describe("tightSpeechFromWords", () => {
+  it("cuts a 230ms non-speech gap with short handles for promotional pacing", () => {
+    const result = tightSpeechFromWords([
+      { text: "שלום", start: 1, end: 1.4 },
+      { text: "וברכה", start: 1.63, end: 2 },
+    ], "v1", 5);
+    expect(result).toHaveLength(2);
+    expect(result[0].start).toBeCloseTo(0.96, 6);
+    expect(result[0].end).toBeCloseTo(1.44, 6);
+    expect(result[1].start).toBeCloseTo(1.59, 6);
+    expect(result[1].end).toBeCloseTo(2.04, 6);
+  });
+
+  it("cuts explicit provider audio events even when the gap is short", () => {
+    const result = tightSpeechFromWords([
+      { text: "שלום", start: 1, end: 1.4, type: "word" },
+      { text: "(breath)", start: 1.42, end: 1.5, type: "audio_event" },
+      { text: "וברכה", start: 1.52, end: 1.9, type: "word" },
+    ], "v1", 5);
+    expect(result).toHaveLength(2);
+    expect(result[0].end).toBeLessThanOrEqual(1.42);
+    expect(result[1].start).toBeGreaterThanOrEqual(1.5);
   });
 });
 

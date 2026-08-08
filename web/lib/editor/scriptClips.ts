@@ -6,6 +6,7 @@
 import { speechWords, Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import { Clip, uid } from "./model";
+import { normalizeGeneratedCuts } from "./clipFilter";
 
 export interface ScriptToClipsOpts {
   /** כמה טוקני ASR מותר לפספס בין התאמות (ברירת מחדל 3) */
@@ -126,5 +127,5 @@ export function scriptToClips(
   }
 
   // מסננים שברי קליפים זעירים (שיבושי התאמה כמו 0.3s באמצע)
-  return clips.filter((c) => c.end - c.start >= minClipSec);
+  return normalizeGeneratedCuts(clips, minClipSec);
 }

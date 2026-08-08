@@ -1,51 +1,43 @@
 # Goal
-Build an honest per-time-span media understanding foundation: speech/audio events and gaps first, energy evidence later. Preserve script-as-ground-truth timing alignment and improve Hebrew caption grouping. Do not claim semantic cough/breath/laugh understanding beyond provider `audio_event` evidence.
+Make the agent reliably turn a Hebrew client brief into a tight, script-grounded promotional cut: no repeated source time, no avoidable pauses, real styled captions, correct fade sequencing, and deferred missing assets requested only when their stage is reached.
 
 # Current State
-- main ב־`7d289bc`; visual fades landed in `92c4c4d` and Graphify synced.
-- Dirty flip package: independent horizontal/vertical axes span Model, Inspector, Undo/Redo, CommandBus, Agent, CSS Preview transform and FFmpeg `hflip`/`vflip`. Web 45 files/244 tests, type-check/build and native render pass. Dedicated browser upload remains blocked by the in-app chooser timeout.
-- v0.3.0: CommandBus + Query API PARTIAL; CapCut-class editor foundations on main.
+- `main` at `f2442e3`; flip package and Graphify sync are pushed.
+- Dirty client-brief package spans word-timestamp tight cutting, explicit event/filler boundaries, generated-cut normalization after script and EDL intersection, Agent caption styling, and strict brief sequencing.
+- v0.3.0 CommandBus + Query API remain PARTIAL; no Auth/Supabase changes.
 
 # Active Files
-- Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`, `.ai/HANDOFF.md`.
-- Current package: the same Preview/Inspector/model/commands/tracks/render/agent seam, extended with `flipX`/`flipY`.
-- Next package edge: another local P3 capability with Preview+Export; transitions/keyframes remain larger unfinished systems. Package C remains blocked on working login.
+- `web/lib/editor/clipFilter.ts` + tests: generated-cut invariant and tight word islands.
+- `web/lib/agent/tools.ts` + `toolParity.test.ts`: tool behavior, caption styling and agent operating rules.
+- `web/lib/editing.ts` and `local/hypescript/editing.py`: synchronized explicit audio-event boundary behavior.
+- `local/hypescript/cli.py`, `gui.py`, README and `local/tests/test_editing.py`: tight defaults and parity proof.
+- Continuity: `.ai/ACTIVE_WORK.md`, `.ai/DECISIONS.md`, `docs/GAP_MAP.md`.
 
 # Changes Made
-- `d3bc7b1`: `scriptToClips` clamps tolerated ASR overlap (≤~150ms) to the previous clip end and skips remainders shorter than `minClipSec`; `snapSpeechToWords` re-merges touching/overlapping same-source segments after snap+pad — no double-played boundary syllables.
-- `7c61179`: `setClips` → `clip.replaceAll`; `setSubs` → `subtitle.replaceAll`; atomic collection-validated commits across bulk agent tools.
-- `071ed3d`: semantic package preserves only direct evidence; transcript absence never becomes silence and dB evidence no longer claims breath/cough/chair semantics.
-- `75337e7`: soft budget caption orphans rebalance from 3+1 to 2+2 when both sides fit; hard pause/punctuation boundaries never rebalance.
-- `b11ab15`: contiguous equal-level energy windows merge with duration-weighted dB; source discontinuities, edit gaps and different relative levels remain separate.
-- `b6ba1fa`: `ToolRunResult = string | ToolOutcome`; artifacts never enter JSON/history and identical Blob references are de-duplicated per tool completion.
-- `2dd41c8`: contrast 0.5..2 and saturation 0..3; defaults 1, split inheritance, CSS `contrast/saturate`, FFmpeg `eq=contrast:saturation` before yuv conversion.
-- `c60cfb2`: shared id/Hebrew-label lookup and exact value matching; `custom` is display-only and cannot be selected as a fake preset.
-- `60c5357`: `updateClipFromInspector` now dispatches contrast/saturation through the existing `clip.setColorAdjustments` CommandBus command instead of silently dropping those patches.
-- `2f3d0ed`: active per-clip gain is applied in Preview through Web Audio; the same normalized clip volume feeds FFmpeg Export.
-- `0d7215b`: combined audio fade lengths normalize to clip duration; Preview gain updates every animation frame; export uses `afade`; track flattening preserves fade/color metadata.
-- `92c4c4d`: the same bounded edge factor drives Preview opacity and FFmpeg fade-to-black; native render is proven, dedicated browser upload is pending after chooser timeouts.
-- Dirty flip: CSS `scaleX/scaleY` and FFmpeg `hflip/vflip` share independent booleans; native 20-cut render exercises both axes.
-- Docs updated: D-010 decision added; GAP_MAP notes bug fix + missing/partial semantic understanding; HANDOFF/ACTIVE_WORK refreshed.
+- `normalizeGeneratedCuts`: adjacent machine-generated clips on the same source/track may touch but cannot replay the same source time. A 29.8 end followed by 29.7 start becomes 29.8; covered/tiny remainders drop. Manual repeats and cross-track overlap remain legal.
+- `tightSpeechFromWords`: default 0.22s gap and 0.04s handles for promotional pacing. Explicit provider `audio_event` forces a removable boundary.
+- `remove_silence`: word timestamps first; dB only as a no-transcript fallback. Tight mode converts default fillers to removable boundaries and stays within an existing script selection.
+- `set_caption_style`: Agent can now apply real project caption style through CommandBus, shared by Preview and Export.
+- Agent brief compiler rules distinguish spoken keep text, edit instructions, new CTA text and deferred assets. It must verify clip boundaries, apply the final spoken clip fade, and request later assets only when their stage is reached.
+- local CLI/GUI defaults changed from 0.4/0.1 to 0.22/0.04; explicit audio events are excluded and split speech in both cores.
 
 # Failed Attempts
-- Double-played boundary syllables at generated cut edges were reproduced and fixed in `d3bc7b1`. Global cut normalization was rejected (D-010) so intentional manual repeats stay possible.
+- First focused test command used the repository root although npm lives under `web/`, and Python lacked `PYTHONPATH=local`. Corrected commands passed; this was command context, not a product defect.
 
 # Tests and Verification
-- 45 test files / 244 tests — passed; production build/type-check pass.
-- `npx tsc --noEmit` clean; production Next build passed.
-- Native render integration: `durationDelta=0`, `audioDrift=0`.
-- Browser QA: upload/select real MP4, select monochrome, observe Preview CSS filter and Inspector values, then reset to neutral.
-- Fade browser QA: 1.0s/0.5s values, gain `0.000` at start and `0.841` at 0.849s, Undo/Redo 0↔0.5s; native 20-cut render includes real `afade` with zero drift.
-- Graphify update at `d3bc7b1`: 1596 nodes / 3403 edges.
+- Web: 45 files / 251 tests passed.
+- `npx tsc --noEmit` passed.
+- Local: 8 unittest tests passed with `PYTHONPATH=local`.
+- Existing native FFmpeg integration still reports 20 cuts, `durationDelta=0`, `audioDriftSec=0`, 312/312 frames and max video gap 0.0333s.
+- Production Next build passed after the package and documentation changes.
 
 # Open Risks
-- **Auth**: bad production Supabase publishable/anon key → `Invalid API key` on Vercel; fix env + redeploy (only auth risk).
-- Semantic event understanding (cough/breath/laugh) is missing/partial — must not overclaim beyond provider `audio_event`.
-- PiP/alpha between tracks stays a future compositor; Query API now includes active clip/source/gap/overlay/caption context but broader generated-media I/O remains.
-- Algorithm changes must land in both `web/lib` and `local/hypescript` (RULES §3).
+- Without a real lecture file in the repository, acoustic/client acceptance is not yet browser-verified. Unit tests prove timing invariants, not perceived edit quality.
+- “Breath” is only semantic when the transcription provider emits `audio_event`; otherwise the engine removes non-speech gaps based on word timing. dB never identifies sound type.
+- Extremely inaccurate word timestamps can still require manual trim or a better STT model.
+- Auth production key remains a separate known risk and is outside current permission.
 
 # Exact Next Steps
-1. Graphify + commit/push clip flip.
-2. Retry dedicated visual browser QA; then select the next local P3 effect/template.
-3. Package C only after working login.
-4. Query API audit + media-generated I/O boundary later; Package C only after working login.
+1. `graphify update .`, commit/push product changes, then commit/push Graphify hook output if dirtied.
+2. With real lecture media: Act-mode acceptance test of script → tight cut → remap → subtitles/style → boundary audit → fade → ask for outro assets.
+3. Continue improving agent/core behavior before peripheral effects; no Auth/Supabase without explicit permission.

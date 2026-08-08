@@ -218,9 +218,9 @@ class HypescriptGUI:
         self.burn_subs = tk.BooleanVar(value=False)
         ttk.Checkbutton(c, text="צרוב כתוביות בתוך הווידאו", variable=self.burn_subs).pack(anchor="e")
 
-        self.threshold = tk.DoubleVar(value=0.4)
+        self.threshold = tk.DoubleVar(value=0.22)
         self._spin_row(c, "סף שתיקה (שנ')", self.threshold, 0.1, 2.0, 0.05)
-        self.padding = tk.DoubleVar(value=0.1)
+        self.padding = tk.DoubleVar(value=0.04)
         self._spin_row(c, "ריפוד (שנ')", self.padding, 0.0, 1.0, 0.05)
         self.max_chars = tk.IntVar(value=42)
         self._spin_row(c, "מקס' תווים בכתובית", self.max_chars, 20, 80, 1)

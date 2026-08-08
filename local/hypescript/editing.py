@@ -13,7 +13,7 @@ import logging
 import re
 from typing import List, Optional, Tuple
 
-from .models import KeepInterval, Word
+from .models import KeepInterval, Word, is_speech_word
 
 log = logging.getLogger("hypescript")
 
@@ -52,6 +52,12 @@ def build_keep_intervals(
     removed_since = False
 
     for w, keep in pairs:
+        if not is_speech_word(w):
+            # Explicit provider audio events are removable boundaries. Spacing
+            # tokens are structural and must not split otherwise continuous speech.
+            if w.type == "audio_event":
+                removed_since = True
+            continue
         if not keep:
             removed_since = True
             continue

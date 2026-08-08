@@ -5,7 +5,8 @@ import type { Clip } from "@/lib/editor/model";
 import type { TrackMeta } from "@/lib/editor/project";
 import type { Sub } from "@/lib/editor/subtitlesEdl";
 import type { Overlay } from "@/lib/editor/overlay";
-import { TOOL_BY_NAME, type AgentContext } from "./tools";
+import type { CaptionStyle } from "@/lib/editor/captionStyle";
+import { SYSTEM_PROMPT, TOOL_BY_NAME, type AgentContext } from "./tools";
 
 beforeAll(() => ensureBuiltinCommands());
 
@@ -20,6 +21,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
   const currentMedia: AgentContext["media"] = [];
   let currentSubs: Sub[] = [{ id: "sub-1", start: 0, end: 1, text: "ישן" }];
   let currentOverlays: Overlay[] = [];
+  let currentCaptionStyle: CaptionStyle = { fontSize: 4.5, color: "#ffffff", bold: true, position: "bottom", bg: "soft" };
   const api: EditorApi = {
     getClips: () => current,
     setClips: (next) => { current = next || []; },
@@ -42,6 +44,8 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     selectOverlay: () => undefined,
     seek: () => undefined,
     getPlayhead: () => 0,
+    getCaptionStyle: () => currentCaptionStyle,
+    setCaptionStyle: (next) => { currentCaptionStyle = next; },
   };
   const ctx = {
     media: currentMedia, duration: 4, words: null, transcripts: {}, clips: current, subs: currentSubs, overlays: currentOverlays, tracks: currentTracks,
@@ -154,6 +158,18 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("styles captions through the shared Preview+Export command", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.set_caption_style.run({
+      font_size: 5.5, color: "#ffd84d", bold: true, position: "bottom", bg: "box",
+    }, h.ctx, () => undefined);
+    expect(result).toContain("עודכן");
+    expect(h.ctx.editorApi?.getCaptionStyle?.()).toEqual({
+      fontSize: 5.5, color: "#ffd84d", bold: true, position: "bottom", bg: "box",
+    });
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
   it("routes bulk clip and subtitle replacement through atomic commands", async () => {
     const h = contextWithEditor();
     await TOOL_BY_NAME.clear_clips.run({}, h.ctx, () => undefined);
@@ -188,5 +204,15 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(result).toContain("דיבור מתמלול: שלום");
     expect(result).toContain("אירוע שסומן במפורש בידי ספק התמלול: [cough]");
     expect(result).toContain("לא הוסקו נשימה, שיעול או צחוק");
+  });
+});
+
+describe("client brief operating rules", () => {
+  it("requires tight script-first editing, boundary verification, deferred assets, captions, and fade", () => {
+    expect(SYSTEM_PROMPT).toContain('remove_silence(within_existing=true,pacing="tight")');
+    expect(SYSTEM_PROMPT).toContain("לעולם לא 29.7/29.8 מחדש");
+    expect(SYSTEM_PROMPT).toContain("אל תשאל מוקדם");
+    expect(SYSTEM_PROMPT).toContain("set_caption_style");
+    expect(SYSTEM_PROMPT).toContain("set_clip_audio_fades");
   });
 });
