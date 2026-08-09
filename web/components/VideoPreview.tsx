@@ -51,15 +51,21 @@ function download(blob: Blob, name: string) {
 
 const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(props, ref) {
   const { media, clips, tracks, subs, selectedSubId, onSelectSub, onEditSub, onCaptionPosition, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle } = props;
-  const mediaRef = useRef<HTMLVideoElement>(null);
+  const mediaARef = useRef<HTMLVideoElement>(null);
+  const mediaBRef = useRef<HTMLVideoElement>(null);
+  const mediaRefs = [mediaARef, mediaBRef] as const;
   const extraAudioRef = useRef<HTMLAudioElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  const videoRafRef = useRef<number | null>(null);
   const idx = useRef(0);
-  const loaded = useRef<string | null>(null);
+  const activeSlotRef = useRef<0 | 1>(0);
+  const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
+  const loaded = useRef<[string | null, string | null]>([null, null]);
+  const prepared = useRef<{ slot: 0 | 1; index: number; sourceId: string; t: number } | null>(null);
   const extraLoaded = useRef<string | null>(null);
-  const pending = useRef<{ t: number; play: boolean } | null>(null);
+  const pending = useRef<Array<{ t: number; play: boolean } | null>>([null, null]);
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
@@ -107,7 +113,13 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const activeSaturation = activeClip ? clipSaturation(activeClip) : 1;
   const activeTransform = `scaleX(${activeClip && clipFlipX(activeClip) ? -1 : 1}) scaleY(${activeClip && clipFlipY(activeClip) ? -1 : 1})`;
 
-  const clearClock = () => { if (rafRef.current != null) cancelAnimationFrame(rafRef.current); rafRef.current = null; };
+  const activeMedia = () => mediaRefs[activeSlotRef.current].current;
+  const clearClock = () => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    if (videoRafRef.current != null) cancelAnimationFrame(videoRafRef.current);
+    rafRef.current = null;
+    videoRafRef.current = null;
+  };
   const syncExtraAudio = (assembled: number, shouldPlay: boolean) => {
     const el = extraAudioRef.current;
     if (!el || !audioClips.length) return;
@@ -135,7 +147,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   };
 
   const runTimed = (index: number, from: number, play: boolean, kind: "gap" | "image") => {
-    clearClock(); mediaRef.current?.pause(); idx.current = index; loaded.current = null; setActiveKind(kind);
+    clearClock(); activeMedia()?.pause(); idx.current = index; setActiveKind(kind);
     const clip = edl[index];
     const asset = kind === "image" ? byId(clip.sourceId) : null;
     setActiveImageUrl(asset?.url || null);
@@ -154,31 +166,77 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  const prepareNext = (fromIndex: number) => {
+    let nextIndex = fromIndex;
+    while (nextIndex < edl.length && !clipEnabled(edl[nextIndex])) nextIndex++;
+    const clip = edl[nextIndex];
+    const asset = clip ? byId(clip.sourceId) : null;
+    if (!clip || !asset || (asset.kind !== "video" && asset.kind !== "audio") || isGapClip(clip)) {
+      prepared.current = null;
+      return;
+    }
+    const slot = (activeSlotRef.current === 0 ? 1 : 0) as 0 | 1;
+    const el = mediaRefs[slot].current;
+    if (!el) return;
+    const target = clip.start;
+    prepared.current = { slot, index: nextIndex, sourceId: asset.id, t: target };
+    el.muted = true;
+    pending.current[slot] = { t: target, play: false };
+    if (loaded.current[slot] !== asset.id) {
+      loaded.current[slot] = asset.id;
+      el.src = asset.url;
+      el.load();
+    } else {
+      el.currentTime = target;
+    }
+  };
+
   const ensureMedia = (sourceId: string, sourceTime: number, play: boolean) => {
-    const el = mediaRef.current, asset = byId(sourceId);
+    const slot = activeSlotRef.current;
+    const el = mediaRefs[slot].current, asset = byId(sourceId);
     if (!el || !asset || (asset.kind !== "video" && asset.kind !== "audio")) return;
     clearClock(); setActiveImageUrl(null); setActiveKind(asset.kind);
-    if (loaded.current === sourceId) {
+    el.muted = false;
+    if (loaded.current[slot] === sourceId) {
       el.currentTime = sourceTime;
       if (play) void el.play(); else el.pause();
-      setPlaying(play); syncExtraAudio(t, play); return;
+      setPlaying(play); syncExtraAudio(t, play); prepareNext(idx.current + 1); return;
     }
-    loaded.current = sourceId; pending.current = { t: sourceTime, play }; el.src = asset.url; el.load();
+    loaded.current[slot] = sourceId; pending.current[slot] = { t: sourceTime, play }; el.src = asset.url; el.load();
   };
 
   const advanceFrom = (index: number, play: boolean) => {
     let i = index;
     while (i < edl.length && !clipEnabled(edl[i])) i++;
     idx.current = i;
-    if (i >= edl.length) { clearClock(); mediaRef.current?.pause(); extraAudioRef.current?.pause(); setPlaying(false); publishTime(total, false); return; }
+    if (i >= edl.length) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); publishTime(total, false); return; }
     const clip = edl[i], asset = byId(clip.sourceId), from = assembledStart(edl, i);
     if (isGapClip(clip) || !asset) runTimed(i, from, play, "gap");
     else if (asset.kind === "image") runTimed(i, from, play, "image");
-    else ensureMedia(clip.sourceId, clip.start + 0.001, play);
+    else {
+      const ready = prepared.current;
+      const preloaded = ready && ready.index === i && ready.sourceId === clip.sourceId
+        ? mediaRefs[ready.slot].current : null;
+      if (preloaded && preloaded.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const old = activeMedia();
+        old?.pause();
+        if (old) old.muted = true;
+        activeSlotRef.current = ready!.slot;
+        setActiveSlot(ready!.slot);
+        preloaded.muted = false;
+        idx.current = i;
+        setActiveImageUrl(null);
+        setActiveKind(asset.kind);
+        publishTime(from, play);
+        if (play) void preloaded.play().catch(() => undefined); else preloaded.pause();
+        prepared.current = null;
+        prepareNext(i + 1);
+      } else ensureMedia(clip.sourceId, clip.start, play);
+    }
   };
 
   const seekTo = (assembled: number) => {
-    const next = Math.max(0, Math.min(total, assembled)); clearClock(); setPlaying(false); mediaRef.current?.pause();
+    const next = Math.max(0, Math.min(total, assembled)); clearClock(); setPlaying(false); activeMedia()?.pause();
     if (!edl.length) { publishTime(next, false); return; }
     const { index, source } = assembledToSource(edl, Math.min(next, Math.max(0, total - 0.0001)));
     idx.current = Math.max(0, index);
@@ -191,7 +249,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
 
   const toggle = () => {
     if (!edl.length) return;
-    if (playing) { clearClock(); mediaRef.current?.pause(); extraAudioRef.current?.pause(); setPlaying(false); return; }
+    if (playing) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); return; }
     if (t >= total - 0.001) { idx.current = 0; advanceFrom(0, true); return; }
     const clip = edl[idx.current], start = assembledStart(edl, idx.current), asset = byId(clip?.sourceId || "");
     if (!clip || isGapClip(clip) || !asset) runTimed(idx.current, Math.max(start, t), true, "gap");
@@ -209,25 +267,42 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   useEffect(() => { seekTo(Math.min(t, total)); }, [edl, audioClips]);
   useEffect(() => { syncExtraAudio(t, playing); }, [vol, audioMuted]);
 
-  const onLoaded = () => {
-    const el = mediaRef.current, p = pending.current;
+  const onLoaded = (slot: 0 | 1) => {
+    const el = mediaRefs[slot].current, p = pending.current[slot];
     if (!el) return;
-    if (el.videoWidth && el.videoHeight) onCanvasDetected?.(el.videoWidth, el.videoHeight);
-    if (p) { el.currentTime = p.t; if (p.play) void el.play(); else el.pause(); setPlaying(p.play); pending.current = null; }
+    if (slot === activeSlotRef.current && el.videoWidth && el.videoHeight) onCanvasDetected?.(el.videoWidth, el.videoHeight);
+    if (p) {
+      el.currentTime = p.t;
+      if (p.play) void el.play(); else el.pause();
+      if (slot === activeSlotRef.current) setPlaying(p.play);
+      pending.current[slot] = null;
+      if (slot === activeSlotRef.current) prepareNext(idx.current + 1);
+    }
   };
-  const onTimeUpdate = () => {
-    const el = mediaRef.current, clip = edl[idx.current]; if (!el || !clip || activeKind === "gap" || activeKind === "image") return;
-    if (el.currentTime >= clip.end - 0.03) { advanceFrom(idx.current + 1, true); return; }
+  const syncVideoTime = (slot: 0 | 1) => {
+    if (slot !== activeSlotRef.current) return;
+    const el = mediaRefs[slot].current, clip = edl[idx.current]; if (!el || !clip || activeKind === "gap" || activeKind === "image") return;
+    if (el.currentTime >= clip.end - FRAME / 2) { advanceFrom(idx.current + 1, true); return; }
     const assembled = assembledStart(edl, idx.current) + Math.max(0, Math.min(clipDur(clip), el.currentTime - clip.start));
     const fades = clipAudioFades(clip);
     el.volume = Math.min(1, previewAudioGain(vol, clipVolume(clip), !!audioMuted, audioFadeFactor(el.currentTime - clip.start, clipDur(clip), fades.fadeIn, fades.fadeOut)));
     publishTime(assembled, true);
   };
+  const startVideoClock = (slot: 0 | 1) => {
+    if (slot !== activeSlotRef.current) return;
+    if (videoRafRef.current != null) cancelAnimationFrame(videoRafRef.current);
+    const tick = () => {
+      if (slot !== activeSlotRef.current || mediaRefs[slot].current?.paused) { videoRafRef.current = null; return; }
+      syncVideoTime(slot);
+      videoRafRef.current = requestAnimationFrame(tick);
+    };
+    videoRafRef.current = requestAnimationFrame(tick);
+  };
   const step = (dir: -1 | 1) => { if (playing) toggle(); seekTo(t + dir * FRAME); };
   const box = displayRect(stageSize.w, stageSize.h, canvas);
   const quotePlace = () => onCopyPosition?.(t);
   const capture = () => {
-    const el = mediaRef.current; if (!el || activeKind !== "video" || !el.videoWidth) return;
+    const el = activeMedia(); if (!el || activeKind !== "video" || !el.videoWidth) return;
     const c = document.createElement("canvas"); c.width = el.videoWidth; c.height = el.videoHeight;
     c.getContext("2d")?.drawImage(el, 0, 0); c.toBlob((b) => b && download(b, `frame_${t.toFixed(1)}s.png`), "image/png");
   };
@@ -253,10 +328,12 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   return <div className="preview2">
     <div className="pv-stage" ref={stageRef} onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}>
       {hasPlayable ? <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
-        <video ref={mediaRef} onTimeUpdate={onTimeUpdate} onLoadedData={onLoaded} onDurationChange={onLoaded}
-          onPlay={() => { setPlaying(true); syncExtraAudio(t, true); }} onPause={() => setPlaying(false)}
+        {([0, 1] as const).map((slot) => <video key={slot} ref={mediaRefs[slot]} preload="auto"
+          onTimeUpdate={() => syncVideoTime(slot)} onLoadedData={() => onLoaded(slot)} onDurationChange={() => onLoaded(slot)}
+          onPlay={() => { if (slot !== activeSlotRef.current) return; setPlaying(true); syncExtraAudio(t, true); startVideoClock(slot); }}
+          onPause={() => { if (slot === activeSlotRef.current) setPlaying(false); }}
           onClick={() => { onSelectOverlay?.(null); onSelectSub?.(null); toggle(); }}
-          style={{ visibility: activeKind === "video" ? "visible" : "hidden", opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />
+          style={{ visibility: activeKind === "video" && activeSlot === slot ? "visible" : "hidden", opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />)}
         <audio ref={extraAudioRef} onEnded={() => syncExtraAudio(t, playing)} />
         {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />}
         {activeKind === "audio" && <div className="pv-audio-only"><Music size={46} /><span>אודיו מתנגן</span></div>}

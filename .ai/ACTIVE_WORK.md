@@ -1,5 +1,13 @@
 # ACTIVE_WORK.md
 
+## 2026-08-10 — gapless tight-cut pipeline
+
+- Replaced transcript-only tight cutting with a hybrid: word timestamps protect speech, 20ms RMS windows place cuts in measured quiet valleys, and explicit provider `audio_event` still forces removal without inventing semantic labels from dB.
+- Tight defaults are now 0.14s gap / 0.025s handles in web and local. Automatic results are repaired around whole spoken words and fail closed unless QA reports zero repeated source time, zero clipped words and zero invalid clips.
+- Preview now keeps two media elements, preloads/seeks the next clip off-screen, swaps at the boundary, and observes playback each animation frame instead of relying on coarse `timeupdate` events.
+- Export and local render use six-decimal half-open source ends and never extend a trim to the rounded CFR endpoint.
+- Verification: web 47 files / 300 tests; local 9 tests; production build passed; native 20-cut content test proved 0 duration/audio drift, one-frame packet cadence, no silent joins, and the correct next-source tone after every join. Browser UI was auth-blocked, so real-session listening remains the acceptance step.
+
 ## 2026-08-09 — composited timeline frame capture (export-parity, opt-in)
 
 - `main` ab2dcf1 + 58f39c6: `capture_frame` can now render an export-parity composited frame of the edited timeline. Explicit `timeline=true` (with an edited timeline) selects it; `timeline=false`, an explicit `source`, or an omitted `timeline` always stay on the fast raw source frame.
@@ -36,13 +44,13 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Approved local-first organization/brand kit: logos, colors picker, writing guidelines and reference images, selectable across projects and exposed safely to the agent; no new cloud service while the production Supabase auth key is broken.
+Finish/publish the gapless tight-cut package, then validate it by listening on the user's real lecture project. The approved local-first brand kit remains the next roadmap package afterward.
 
 ## Branch
 `main`
 
-## Latest commit
-`58f39c6` — fix(agent): make composited capture opt in
+## Latest package
+Gapless tight-cut pipeline (hybrid word+waveform cutting, mandatory QA, preloaded preview joins, exact render edges).
 
 ## Status
 Merged: client-brief tight cutting, overlay safety, logo/card parity, and export-parity composited frame capture (opt-in `timeline=true`). Web 47 files / 296 tests, `tsc` clean, production build passes; native export `durationDelta=0`/`audioDrift=0`; graphify 1722 nodes / 3847 edges. Composited capture is browser-untested and slower by design.

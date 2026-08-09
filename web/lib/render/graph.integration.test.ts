@@ -23,6 +23,22 @@ function vPackets(f: string) {
   let max = 0; for (let i = 1; i < pts.length; i++) max = Math.max(max, pts[i] - pts[i - 1]);
   return { count: pts.length, maxDelta: max, last: pts[pts.length - 1] };
 }
+function pcmMono(f: string): Int16Array {
+  const raw = execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-i", f, "-f", "s16le", "-ac", "1", "-ar", "44100", "pipe:1"], { maxBuffer: 8 * 1024 * 1024 });
+  return new Int16Array(raw.buffer, raw.byteOffset, Math.floor(raw.byteLength / 2));
+}
+function rms(samples: Int16Array, startSec: number, endSec: number) {
+  const a = Math.max(0, Math.floor(startSec * 44100)), b = Math.min(samples.length, Math.ceil(endSec * 44100));
+  let power = 0;
+  for (let i = a; i < b; i++) power += samples[i] * samples[i];
+  return Math.sqrt(power / Math.max(1, b - a));
+}
+function zeroCrossings(samples: Int16Array, startSec: number, endSec: number) {
+  const a = Math.max(1, Math.floor(startSec * 44100)), b = Math.min(samples.length, Math.ceil(endSec * 44100));
+  let n = 0;
+  for (let i = a; i < b; i++) if ((samples[i - 1] < 0) !== (samples[i] < 0)) n++;
+  return n / Math.max(0.001, endSec - startSec);
+}
 
 const asset = (id: string): MediaAsset => ({ id, name: `${id}.mp4`, kind: "video", duration: 6, file: { name: `${id}.mp4` } as File, url: "" });
 const clip = (sourceId: string, start: number, end: number): Clip => ({ id: `c_${sourceId}_${start}_${end}`, sourceId, start, end });
@@ -69,6 +85,7 @@ describe.skipIf(!FF)("export integration — native FFmpeg render + ffprobe join
     const outDur = fmtDur(out);
     const v = vstream(out), a = astream(out), vp = vPackets(out);
     const audioDrift = Math.abs(parseFloat(a.duration) - parseFloat(v.duration));
+    const pcm = pcmMono(out);
     const report = {
       segments: clips.length, sumDur: +sumDur.toFixed(3), outDur: +outDur.toFixed(3),
       durationDelta: +(outDur - sumDur).toFixed(3), fps: `${v.avg_frame_rate} (r=${v.r_frame_rate})`,
@@ -93,5 +110,20 @@ describe.skipIf(!FF)("export integration — native FFmpeg render + ffprobe join
     expect(Math.abs(vp.count - outDur * FPS)).toBeLessThan(5);
     // 5) no video stall at any join (no held frame beyond ~1 frame)
     expect(vp.maxDelta).toBeLessThan(2.2 * TOL_FRAME);
+    // 6) content-level join check: no silence/freeze between clips and the tone
+    // after every join belongs to the NEXT source (A=440Hz, B=660Hz).
+    let assembled = 0;
+    for (let i = 0; i < clips.length; i++) {
+      const segDur = snap(clips[i]);
+      if (i > 0) {
+        expect(rms(pcm, assembled - 0.012, assembled + 0.012)).toBeGreaterThan(1000);
+      }
+      const from = assembled + Math.min(0.06, segDur * 0.2);
+      const to = Math.min(assembled + segDur - 0.03, from + 0.10);
+      const crossingsPerSec = zeroCrossings(pcm, from, to);
+      const expected = clips[i].sourceId === "a" ? 880 : 1320;
+      expect(Math.abs(crossingsPerSec - expected)).toBeLessThan(230);
+      assembled += segDur;
+    }
   }, 240000);
 });

@@ -98,7 +98,10 @@ export function buildConcatGraph(
 
   usable.forEach((c, n) => {
     const frames = Math.max(1, Math.round((c.end - c.start) * fps));
-    const s = c.start.toFixed(3), e = (c.start + frames / fps).toFixed(3);
+    // Never extend the source range to satisfy CFR rounding. Extending `end`
+    // reintroduces discarded speech/breath at every join. Video is frame-locked
+    // downstream; audio stays sample-accurate at the requested half-open edge.
+    const s = c.start.toFixed(6), e = c.end.toFixed(6);
 
     if (isGapClip(c)) {
       // black video + silent audio for the gap duration (frame-quantized)

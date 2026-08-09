@@ -1,10 +1,44 @@
 // פעולות סינון/מחיקה המוניות על EDL — כדי שהסוכן לא ימחק עשרות קליפים אחד-אחד.
 
 import { speechWords, Word } from "@/lib/models";
+import type { EnergyProfile } from "@/lib/audio";
 import { Clip, uid } from "./model";
 
-export const TIGHT_SPEECH_GAP_SEC = 0.22;
-export const TIGHT_CUT_PADDING_SEC = 0.04;
+export const TIGHT_SPEECH_GAP_SEC = 0.14;
+export const TIGHT_CUT_PADDING_SEC = 0.025;
+
+export interface TightSpeechOpts {
+  minGapSec?: number;
+  paddingSec?: number;
+  energy?: EnergyProfile | null;
+  energyThresholdDb?: number;
+  minQuietSec?: number;
+}
+
+function quietRunBetween(
+  energy: EnergyProfile | null | undefined,
+  start: number,
+  end: number,
+  thresholdDb: number,
+  minQuietSec: number,
+): [number, number] | null {
+  if (!energy || end <= start) return null;
+  const from = Math.max(0, Math.floor(start / energy.hop));
+  const to = Math.min(energy.db.length, Math.ceil(end / energy.hop));
+  let run = -1;
+  let best: [number, number] | null = null;
+  for (let i = from; i <= to; i++) {
+    const quiet = i < to && energy.db[i] <= thresholdDb;
+    if (quiet && run < 0) run = i;
+    if ((!quiet || i === to) && run >= 0) {
+      const a = Math.max(start, run * energy.hop);
+      const b = Math.min(end, i * energy.hop);
+      if (b - a >= minQuietSec && (!best || b - a > best[1] - best[0])) best = [a, b];
+      run = -1;
+    }
+  }
+  return best;
+}
 
 /**
  * Normalizes only machine-generated cuts. Manual timeline edits may repeat source
@@ -37,10 +71,12 @@ export function tightSpeechFromWords(
   words: Word[],
   sourceId: string,
   duration: number,
-  opts?: { minGapSec?: number; paddingSec?: number },
+  opts: TightSpeechOpts = {},
 ): Clip[] {
-  const minGap = Math.max(0.08, opts?.minGapSec ?? TIGHT_SPEECH_GAP_SEC);
-  const padding = Math.max(0, Math.min(minGap / 2 - 0.001, opts?.paddingSec ?? TIGHT_CUT_PADDING_SEC));
+  const minGap = Math.max(0.08, opts.minGapSec ?? TIGHT_SPEECH_GAP_SEC);
+  const padding = Math.max(0, Math.min(minGap / 2 - 0.001, opts.paddingSec ?? TIGHT_CUT_PADDING_SEC));
+  const energyThreshold = opts.energyThresholdDb ?? ((opts.energy?.floorDb ?? -60) + 10);
+  const minQuiet = Math.max(opts.energy?.hop ?? 0.02, opts.minQuietSec ?? 0.06);
   const list = speechWords(words)
     .filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start)
     .sort((a, b) => a.start - b.start || a.end - b.end);
@@ -56,9 +92,14 @@ export function tightSpeechFromWords(
     const gap = word.start - end;
     const event = events.find((item) => item.start >= end - 0.01 && item.end <= word.start + 0.01);
     if (gap > minGap || event) {
-      const previousEnd = event ? Math.min(event.start, end + padding) : end + padding;
+      const quiet = event ? null : quietRunBetween(opts.energy, end, word.start, energyThreshold, minQuiet);
+      const previousEnd = event
+        ? Math.min(event.start, end + padding)
+        : quiet ? Math.min(word.start, quiet[0] + padding) : end + padding;
       clips.push({ id: uid(), sourceId, start, end: Math.min(duration, previousEnd) });
-      start = Math.max(0, event ? Math.max(event.end, word.start - padding) : word.start - padding);
+      start = Math.max(0, event
+        ? Math.max(event.end, word.start - padding)
+        : quiet ? Math.max(end, quiet[1] - padding) : word.start - padding);
       end = word.end;
     } else {
       end = Math.max(end, word.end);
@@ -66,6 +107,55 @@ export function tightSpeechFromWords(
   }
   clips.push({ id: uid(), sourceId, start, end: Math.min(duration, end + padding) });
   return normalizeGeneratedCuts(clips);
+}
+
+/**
+ * Expands a generated clip when its edge crosses a spoken word. ASR boundaries can
+ * drift by tens of milliseconds; a jump cut may remove silence, never a phoneme.
+ */
+export function protectSpokenWordEdges(clips: Clip[], words: Word[], sourceId: string, guardSec = 0.02): Clip[] {
+  const spoken = speechWords(words);
+  const expanded = clips.map((clip) => {
+    if (clip.sourceId !== sourceId) return { ...clip };
+    let start = clip.start;
+    let end = clip.end;
+    for (const word of spoken) {
+      const midpoint = (word.start + word.end) / 2;
+      if (midpoint >= clip.start && midpoint <= clip.end) {
+        start = Math.min(start, Math.max(0, word.start - guardSec));
+        end = Math.max(end, word.end + guardSec);
+      }
+    }
+    return { ...clip, start, end };
+  });
+  return mergeOverlappingSameSource(expanded);
+}
+
+export interface CutQualityReport {
+  repeatedSourceSec: number;
+  clippedWords: Word[];
+  invalidClips: number;
+}
+
+/** Deterministic QA used by the agent after every automatic cut pass. */
+export function auditCutQuality(clips: Clip[], words: Word[], sourceId: string): CutQualityReport {
+  let repeatedSourceSec = 0;
+  let invalidClips = 0;
+  let previous: Clip | null = null;
+  for (const clip of clips) {
+    if (!Number.isFinite(clip.start) || !Number.isFinite(clip.end) || clip.end <= clip.start) invalidClips++;
+    if (previous && previous.sourceId === sourceId && clip.sourceId === sourceId && clip.start < previous.end) {
+      repeatedSourceSec += Math.max(0, Math.min(previous.end, clip.end) - clip.start);
+    }
+    previous = clip;
+  }
+  const relevant = clips.filter((clip) => clip.sourceId === sourceId);
+  const clippedWords = speechWords(words).filter((word) => {
+    const midpoint = (word.start + word.end) / 2;
+    const owner = relevant.find((clip) => midpoint >= clip.start && midpoint <= clip.end);
+    return !!owner && (word.start < owner.start - 1e-6 || word.end > owner.end + 1e-6);
+  });
+  return { repeatedSourceSec, clippedWords, invalidClips };
 }
 
 /** משאיר רק חפיפה עם [start,end] בזמן-מקור (ומקצץ גבולות). מקורות אחרים נשארים כמו שהם אם sourceId ניתן. */

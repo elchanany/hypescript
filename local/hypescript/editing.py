@@ -28,6 +28,9 @@ def build_keep_intervals(
     threshold: float,
     padding: float,
     keep_mask: Optional[List[bool]] = None,
+    energy: Optional[dict] = None,
+    energy_threshold_db: Optional[float] = None,
+    min_quiet: float = 0.06,
 ) -> List[KeepInterval]:
     """בונה קטעים לשמירה מתוך המילים.
 
@@ -51,6 +54,30 @@ def build_keep_intervals(
     cur_end: float = 0.0
     removed_since = False
 
+    def quiet_run(start: float, end: float) -> Optional[Tuple[float, float]]:
+        if not energy or end <= start:
+            return None
+        hop = float(energy.get("hop", 0.02))
+        db = energy.get("db", [])
+        threshold_db = energy_threshold_db
+        if threshold_db is None:
+            threshold_db = float(energy.get("floor_db", -60.0)) + 10.0
+        first = max(0, int(start / hop))
+        last = min(len(db), int(end / hop) + 1)
+        run = -1
+        best: Optional[Tuple[float, float]] = None
+        for index in range(first, last + 1):
+            quiet = index < last and db[index] <= threshold_db
+            if quiet and run < 0:
+                run = index
+            if (not quiet or index == last) and run >= 0:
+                a = max(start, run * hop)
+                b = min(end, index * hop)
+                if b - a >= max(hop, min_quiet) and (best is None or b - a > best[1] - best[0]):
+                    best = (a, b)
+                run = -1
+        return best
+
     for w, keep in pairs:
         if not is_speech_word(w):
             # Explicit provider audio events are removable boundaries. Spacing
@@ -67,8 +94,11 @@ def build_keep_intervals(
             continue
         gap = w.start - cur_end
         if removed_since or gap > threshold:
-            intervals.append(KeepInterval(cur_start, min(duration, cur_end + padding)))
-            cur_start, cur_end = max(0.0, w.start - padding), w.end
+            valley = None if removed_since else quiet_run(cur_end, w.start)
+            previous_end = min(w.start, valley[0] + padding) if valley else cur_end + padding
+            intervals.append(KeepInterval(cur_start, min(duration, previous_end)))
+            next_start = max(cur_end, valley[1] - padding) if valley else w.start - padding
+            cur_start, cur_end = max(0.0, next_start), w.end
         else:
             cur_end = max(cur_end, w.end)
         removed_since = False

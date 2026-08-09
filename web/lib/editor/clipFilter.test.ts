@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   deleteClipRange,
   deleteClipsAt,
+  auditCutQuality,
   intersectClipsWithSpeech,
   keepSourceRange,
   normalizeGeneratedCuts,
+  protectSpokenWordEdges,
   snapSpeechToWords,
   tightSpeechFromWords,
 } from "./clipFilter";
@@ -69,16 +71,30 @@ describe("normalizeGeneratedCuts", () => {
 });
 
 describe("tightSpeechFromWords", () => {
+  it("places a jump cut inside the measured quiet valley instead of trusting coarse ASR edges", () => {
+    const db = new Float32Array(100).fill(-12);
+    // 1.40-1.58 is the measured valley (20ms hops).
+    for (let i = 70; i < 79; i++) db[i] = -55;
+    const energy = { hop: 0.02, db, duration: 2, floorDb: -55, peakDb: -12 };
+    const result = tightSpeechFromWords([
+      { text: "מילה", start: 1.0, end: 1.3 },
+      { text: "הבאה", start: 1.7, end: 1.95 },
+    ], "v1", 2, { minGapSec: 0.14, paddingSec: 0.02, energy, energyThresholdDb: -40, minQuietSec: 0.04 });
+    expect(result).toHaveLength(2);
+    expect(result[0].end).toBeCloseTo(1.42, 6);
+    expect(result[1].start).toBeCloseTo(1.56, 6);
+  });
+
   it("cuts a 230ms non-speech gap with short handles for promotional pacing", () => {
     const result = tightSpeechFromWords([
       { text: "שלום", start: 1, end: 1.4 },
       { text: "וברכה", start: 1.63, end: 2 },
     ], "v1", 5);
     expect(result).toHaveLength(2);
-    expect(result[0].start).toBeCloseTo(0.96, 6);
-    expect(result[0].end).toBeCloseTo(1.44, 6);
-    expect(result[1].start).toBeCloseTo(1.59, 6);
-    expect(result[1].end).toBeCloseTo(2.04, 6);
+    expect(result[0].start).toBeCloseTo(0.975, 6);
+    expect(result[0].end).toBeCloseTo(1.425, 6);
+    expect(result[1].start).toBeCloseTo(1.605, 6);
+    expect(result[1].end).toBeCloseTo(2.025, 6);
   });
 
   it("cuts explicit provider audio events even when the gap is short", () => {
@@ -90,6 +106,20 @@ describe("tightSpeechFromWords", () => {
     expect(result).toHaveLength(2);
     expect(result[0].end).toBeLessThanOrEqual(1.42);
     expect(result[1].start).toBeGreaterThanOrEqual(1.5);
+  });
+});
+
+describe("cut quality guard", () => {
+  it("expands a drifting edge to keep the whole spoken word and reports no clipping", () => {
+    const words = [{ text: "שלום", start: 1, end: 1.4 }];
+    const repaired = protectSpokenWordEdges([c("a", 1.1, 2)], words, "v1", 0.02);
+    expect(repaired[0].start).toBeCloseTo(0.98, 6);
+    expect(auditCutQuality(repaired, words, "v1")).toEqual({ repeatedSourceSec: 0, clippedWords: [], invalidClips: 0 });
+  });
+
+  it("measures repeated source time at an accidental 29.8/29.7 join", () => {
+    const report = auditCutQuality([c("a", 20, 29.8), c("b", 29.7, 35)], [], "v1");
+    expect(report.repeatedSourceSec).toBeCloseTo(0.1, 6);
   });
 });
 

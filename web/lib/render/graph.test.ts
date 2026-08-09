@@ -60,6 +60,15 @@ describe("export render graph — single continuous stream, no per-clip encode",
     expect(muted.filterComplex).toContain("volume=0.000");
   });
 
+  it("never extends a requested source end while rounding output frames", () => {
+    const odd = clip("a", 29.7, 29.801);
+    const graph = buildConcatGraph([odd], [vid("a")], { w: 640, h: 360, fps: 30 });
+    expect(graph.filterComplex).toContain("trim=start=29.700000:end=29.801000");
+    expect(graph.filterComplex).toContain("atrim=start=29.700000:end=29.801000");
+    expect(graph.filterComplex).not.toContain("end=29.800");
+    expect(graph.filterComplex).not.toContain("end=29.833");
+  });
+
   it("applies normalized linear clip-edge fades after gain", () => {
     const faded = { ...clip("a", 0, 4), fadeIn: 1, fadeOut: 2 };
     const graph = buildConcatGraph([faded], [vid("a")], { w: 640, h: 360, fps: 25 });

@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import shutil
 import subprocess
 import tempfile
+from array import array
 from typing import List, Optional
 
 from .models import KeepInterval
@@ -153,6 +155,29 @@ def extract_audio(input_path: str, out_path: str, *, compressed: bool) -> str:
     return out_path
 
 
+def analyze_audio_energy(input_path: str, *, hop: float = 0.02) -> dict:
+    """Measure mono PCM RMS windows for hybrid word+waveform cut placement."""
+    sample_rate = 16000
+    cmd = [
+        ffmpeg_path(), "-v", "error", "-i", input_path, "-vn",
+        "-ac", "1", "-ar", str(sample_rate), "-f", "s16le", "pipe:1",
+    ]
+    out = subprocess.run(cmd, capture_output=True)
+    if out.returncode != 0:
+        raise RuntimeError("FFmpeg לא הצליח למדוד את גל הקול.")
+    samples = array("h")
+    samples.frombytes(out.stdout)
+    window = max(1, int(sample_rate * hop))
+    db: List[float] = []
+    for start in range(0, len(samples) - window + 1, window):
+        power = sum(float(v) * float(v) for v in samples[start:start + window]) / window
+        db.append(20 * math.log10(math.sqrt(power) / 32768.0 + 1e-9))
+    ordered = sorted(db)
+    floor_db = ordered[int(len(ordered) * 0.15)] if ordered else -60.0
+    peak_db = ordered[int(len(ordered) * 0.95)] if ordered else -10.0
+    return {"hop": hop, "db": db, "floor_db": floor_db, "peak_db": peak_db}
+
+
 # --------------------------------------------------------------------------- #
 # חיתוך + הרכבה מחדש
 # --------------------------------------------------------------------------- #
@@ -180,11 +205,11 @@ def render_cut(
         concat_inputs: List[str] = []
         for i, iv in enumerate(keeps):
             lines.append(
-                f"[0:v]trim=start={iv.start:.3f}:end={iv.end:.3f},"
+                f"[0:v]trim=start={iv.start:.6f}:end={iv.end:.6f},"
                 f"setpts=PTS-STARTPTS[v{i}];"
             )
             lines.append(
-                f"[0:a]atrim=start={iv.start:.3f}:end={iv.end:.3f},"
+                f"[0:a]atrim=start={iv.start:.6f}:end={iv.end:.6f},"
                 f"asetpts=PTS-STARTPTS[a{i}];"
             )
             concat_inputs.append(f"[v{i}][a{i}]")

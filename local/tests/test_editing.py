@@ -5,6 +5,20 @@ from hypescript.models import Word
 
 
 class TightEditingTests(unittest.TestCase):
+    def test_measured_quiet_valley_places_cut_inside_waveform_gap(self):
+        db = [-12.0] * 100
+        for index in range(70, 79):
+            db[index] = -55.0
+        keeps = build_keep_intervals(
+            [Word("מילה", 1.0, 1.3), Word("הבאה", 1.7, 1.95)],
+            2.0, threshold=0.14, padding=0.02,
+            energy={"hop": 0.02, "db": db, "floor_db": -55.0},
+            energy_threshold_db=-40.0, min_quiet=0.04,
+        )
+        self.assertEqual([(round(item.start, 2), round(item.end, 2)) for item in keeps], [
+            (0.98, 1.42), (1.56, 1.97),
+        ])
+
     def test_tight_defaults_shape_removes_short_non_speech_gap(self):
         keeps = build_keep_intervals(
             [

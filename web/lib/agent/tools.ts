@@ -22,8 +22,10 @@ import {
   deleteClipRange,
   deleteClipsAt,
   intersectClipsWithSpeech,
+  auditCutQuality,
   keepSourceRange,
   normalizeGeneratedCuts,
+  protectSpokenWordEdges,
   snapSpeechToWords,
   tightSpeechFromWords,
 } from "@/lib/editor/clipFilter";
@@ -705,15 +707,15 @@ export const TOOLS: ToolMeta[] = [
     name: "remove_silence", label: "הידוק דיבור", color: "#f59e0b", icon: "🤫",
     schema: {
       name: "remove_silence",
-      description: "מהדק דיבור לפי חותמות-מילה: מסיר מרווחים לא-מדוברים ונשימות שסומנו כאירוע שמע. pacing=tight מיועד ל-TikTok/פרסומת. בלי תמלול יש fallback זהיר לפי עוצמה. אחרי keep_by_script ברירת המחדל היא חיתוך בתוך הבחירה בלבד.",
+      description: "מהדק דיבור בשילוב חותמות-מילה וגל-קול: המילים מגינות על הדיבור וה-RMS ממקם את הקאט בעמק השקט; נשימות שסומנו כאירוע שמע מוסרות במפורש. pacing=tight מיועד ל-TikTok/פרסומת. בלי תמלול יש fallback זהיר לפי עוצמה. אחרי keep_by_script ברירת המחדל היא חיתוך בתוך הבחירה בלבד.",
       parameters: {
         type: "object",
         properties: {
           source: { type: "string" },
           pacing: { type: "string", enum: ["tight", "natural"], description: "tight=קצב TikTok/פרסומת (ברירת מחדל); natural=שומר יותר מרווח נשימה" },
           threshold_db: { type: "number", description: "רק ל-fallback ללא תמלול: סף עוצמה (dB)" },
-          min_silence: { type: "number", description: "פער מינימלי לחיתוך: tight=0.22s, natural=0.4s" },
-          padding: { type: "number", description: "שוליים בכל צד: tight=0.04s, natural=0.1s" },
+          min_silence: { type: "number", description: "פער מינימלי לחיתוך: tight=0.14s, natural=0.4s" },
+          padding: { type: "number", description: "שוליים בכל צד: tight=0.025s, natural=0.1s" },
           remove_fillers: { type: "boolean", description: "מסיר אה/אמ/היסוסים נפוצים; ברירת מחדל true ב-tight" },
           within_existing: { type: "boolean", description: "true=חתוך רק בתוך הקליפים הקיימים (מומלץ אחרי keep_by_script)" },
           replace_all: { type: "boolean", description: "true=החלף את כל ה-EDL בקטעי דיבור מכל הסרטון (זהיר — מוחק בחירה קודמת)" },
@@ -726,21 +728,30 @@ export const TOOLS: ToolMeta[] = [
       const dur = asset.duration;
       const words = transcriptOf(ctx, asset);
       const pacing = String(a.pacing || "tight") === "natural" ? "natural" : "tight";
-      const minSilence = a.min_silence != null ? +a.min_silence : pacing === "tight" ? 0.22 : 0.4;
-      const padding = a.padding != null ? +a.padding : pacing === "tight" ? 0.04 : 0.1;
+      const minSilence = a.min_silence != null ? +a.min_silence : pacing === "tight" ? 0.14 : 0.4;
+      const padding = a.padding != null ? +a.padding : pacing === "tight" ? 0.025 : 0.1;
       let speech: Clip[];
       let method: string;
       let thr: number | null = null;
       if (words?.length) {
-        report(`מהדק דיבור לפי חותמות מילים (${pacing})…`);
+        report(`מודד את גל הקול ומגן על גבולות המילים (${pacing})…`);
         const removeFillers = a.remove_fillers == null ? pacing === "tight" : a.remove_fillers === true;
         const cutWords = removeFillers
           ? words.map((word) => isSpeechWord(word) && DEFAULT_FILLERS.has(normalizeHebrew(word.text))
             ? { ...word, type: "audio_event" as const }
             : word)
           : words;
-        speech = tightSpeechFromWords(cutWords, asset.id, dur, { minGapSec: minSilence, paddingSec: padding });
-        method = `חותמות-מילה/${pacing}${removeFillers ? "+מהססים" : ""}`;
+        let energy = null;
+        try { energy = await analyzeAudio(asset.file); } catch { /* word-safe fallback */ }
+        speech = tightSpeechFromWords(cutWords, asset.id, dur, {
+          minGapSec: minSilence,
+          paddingSec: padding,
+          energy,
+          energyThresholdDb: energy ? energy.floorDb + (pacing === "tight" ? 12 : 8) : undefined,
+          minQuietSec: pacing === "tight" ? 0.04 : 0.08,
+        });
+        speech = protectSpokenWordEdges(speech, cutWords, asset.id, 0.02);
+        method = `חותמות-מילה+גל-קול/${pacing}${removeFillers ? "+מהססים" : ""}`;
       } else {
         report("אין תמלול — מנתח עוצמת סאונד בזהירות…");
         const prof = await analyzeAudio(asset.file);
@@ -767,18 +778,28 @@ export const TOOLS: ToolMeta[] = [
       let merged: Clip[];
       if (within && hasEdl) {
         merged = intersectClipsWithSpeech(ctx.clips!, speech, asset.id);
+        merged = protectSpokenWordEdges(merged, words || [], asset.id, 0.02);
+        merged = normalizeGeneratedCuts(merged);
         if (!merged.length) return "לא נשאר דיבור בתוך הקליפים הקיימים. בדוק טווחים או הרץ עם replace_all=true בזהירות.";
+        const qa = auditCutQuality(merged, words || [], asset.id);
+        if (qa.repeatedSourceSec > 1e-6 || qa.invalidClips || qa.clippedWords.length) {
+          throw new Error(`בדיקת איכות החיתוך נכשלה: חזרה ${qa.repeatedSourceSec.toFixed(3)}s, מילים חתוכות ${qa.clippedWords.length}, קליפים לא תקינים ${qa.invalidClips}.`);
+        }
         setClips(ctx, merged);
-        return `הודק הדיבור *בתוך הבחירה הקיימת* ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(2)}s). ${clipsSummary(merged)}`;
+        return `הודק הדיבור *בתוך הבחירה הקיימת* ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(3)}s). QA: אפס חפיפת מקור, אפס מילים חתוכות. ${clipsSummary(merged)}`;
       }
       if (hasEdl && replaceAll) {
         // אזהרה מפורשת כשמחליפים בחירה קיימת
       }
       merged = speech;
+      const qa = auditCutQuality(merged, words || [], asset.id);
+      if (qa.repeatedSourceSec > 1e-6 || qa.invalidClips || qa.clippedWords.length) {
+        throw new Error(`בדיקת איכות החיתוך נכשלה: חזרה ${qa.repeatedSourceSec.toFixed(3)}s, מילים חתוכות ${qa.clippedWords.length}, קליפים לא תקינים ${qa.invalidClips}.`);
+      }
       setClips(ctx, merged);
       const removed = dur - merged.reduce((s, k) => s + (k.end - k.start), 0);
       const warn = hasEdl && replaceAll ? " (הוחלף EDL קודם — replace_all)" : "";
-      return `הודק הדיבור ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(2)}s): ${merged.length} קטעים, הוסרו ${removed.toFixed(1)}s.${warn} ${clipsSummary(merged)}`;
+      return `הודק הדיבור ב-"${asset.name}" (${method}; פער ${minSilence.toFixed(2)}s; שוליים ${padding.toFixed(3)}s): ${merged.length} קטעים, הוסרו ${removed.toFixed(1)}s. QA: אפס חפיפת מקור, אפס מילים חתוכות.${warn} ${clipsSummary(merged)}`;
     },
   },
   {
@@ -1917,7 +1938,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 ═══ חוקי ברזל (אל תשבור) ═══
 1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות ארוכות — תכנן בראש ובצע.
 2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = חסום אוטומטית.
-3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון. לבקשת TikTok/פרסומת/"אין שנייה מיותרת" השתמש pacing="tight".
+3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון. לבקשת TikTok/פרסומת/"אין שנייה מיותרת" השתמש pacing="tight". הכלי משלב חותמות מילים עם גל הקול ומריץ QA מחייב: אפס חפיפת מקור ואפס מילים חתוכות; אם QA נכשל אין להמשיך לרנדר.
 4. סדר מחייב כשיש טקסט מאושר: transcribe_video → keep_by_script(script=הטקסט הנקי, append=false) → remove_silence(within_existing=true,pacing="tight") → transcribe_timeline(remap) → generate_subtitles(script=אותו טקסט) → set_caption_style → list_subtitles קצר → render רק בסוף.
 5. תמלול ASR משובש לעיתים. הטקסט שהמשתמש כתב הוא מקור האמת. לעולם אל תשאיר בכתוביות זבל ASR — העבר script ל-generate_subtitles.
 6. כתוביות משובשות/חסרות/לא מסונכרנות: clear_subtitles + generate_subtitles(script=...) פעם אחת. אסור לולאת edit_subtitle (נחסם אחרי 4).
@@ -1943,7 +1964,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
-- remove_silence: הידוק לפי חותמות-מילה ואירועי שמע מפורשים; pacing=tight לפרסומת/TikTok. עוצמה היא fallback בלבד.
+- remove_silence: הידוק היברידי — חותמות-מילה מגינות על דיבור, RMS ממקם את החיתוך בעמק השקט, ואירועי שמע מפורשים מוסרים; pacing=tight לפרסומת/TikTok. עוצמה לבדה אינה מסווגת נשימה.
 - keep_source_range(start,end): השאר רק טווח מקור (במקום למחוק 70 קליפים).
 - delete_clips / clear_clips: מחיקות המוניות.
 - trim_clip: אפשר רק start או רק end — משנה כמה זמן הקטע יופיע.

@@ -106,7 +106,7 @@
 - Audio: clip volume and bounded linear clip-edge fades have Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; envelopes/range-volume/keyframes remain
 - Templates / Effects / Transitions (רק עם Preview+Export)
 - Organizations / Brand: אושר כחבילה מקומית (לוגו, בוחר צבעים, קווים מנחים לכתיבה, תמונות רפרנס) לבחירה בין פרויקטים וחשיפה בטוחה לסוכן; IndexedDB מקומי בשלב ראשון, סנכרון ענן אחרי auth תקין — Usage / Credits חסרים
-- Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; `remove_silence` משתמש בחותמות-מילה במצב tight ‏(0.22s/0.04s), מסיר audio_event מפורש ומהססים נפוצים, ו-dB נשאר fallback בלבד. local משתמש באותם גבולות ברירת מחדל. אין להסיק סוג אירוע מהיעדר תמלול או מ-dB בלבד
+- Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; `remove_silence` משלב חותמות-מילה להגנת דיבור עם עמקי RMS למיקום חיתוך במצב tight ‏(0.14s/0.025s), מסיר audio_event מפורש ומהססים נפוצים ומריץ QA ללא overlap/מילה חתוכה. local שומר parity. אין להסיק סוג אירוע מהיעדר תמלול או מ-dB בלבד
 # 2026-08-08 closed gaps
 
 - CLOSED: image-only/audio-only Preview and mixed-media continuation.

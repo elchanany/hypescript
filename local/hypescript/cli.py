@@ -114,9 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="פיצול אוטומטי של אודיו ארוך מזה (שנ') לפני העלאה לענן")
 
     e = p.add_argument_group("עריכה")
-    e.add_argument("--silence-threshold", type=float, default=0.22,
+    e.add_argument("--silence-threshold", type=float, default=0.14,
                    help="סף (שנ') שמעליו רווח בין מילים נחשב פאוזה ונחתך (ברירת מחדל הדוקה)")
-    e.add_argument("--padding", type=float, default=0.04,
+    e.add_argument("--padding", type=float, default=0.025,
                    help="ריפוד (שנ') שנשמר בכל צד של חיתוך")
     e.add_argument("--no-silence-removal", action="store_true",
                    help="אל תסיר שתיקות (שימושי אם רק רוצים כתוביות)")
@@ -313,10 +313,18 @@ def run(cfg: Config) -> int:
         if cfg.no_silence_removal and not cfg.script and not cfg.remove_fillers:
             keeps = editing.whole_video(duration)
         else:
+            energy = None
+            try:
+                energy = media.analyze_audio_energy(audio_path)
+            except Exception as exc:
+                log.warning("מדידת גל הקול נכשלה; ממשיך בגבולות מילים מוגנים: %s", exc)
             keeps = editing.build_keep_intervals(
                 words, duration,
                 threshold=cfg.silence_threshold, padding=cfg.padding,
                 keep_mask=mask,
+                energy=energy,
+                energy_threshold_db=(energy["floor_db"] + 12.0) if energy else None,
+                min_quiet=0.04,
             )
         if not keeps:
             raise RuntimeError("לא נותרו קטעים לשמור.")
