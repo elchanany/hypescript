@@ -956,17 +956,21 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "list_clips", label: "רשימת קליפים", color: "#64748b", icon: "📋",
-    schema: { name: "list_clips", description: "מחזיר את רשימת הקליפים (אינדקס 1-based גלובלי, רצועה, טווח מקור, משך). רווחים מסומנים כ-[רווח].", parameters: { type: "object", properties: {} } },
+    schema: { name: "list_clips", description: "מחזיר ID יציב, רצועה, טווח מקור והטווח המדויק על הציר הערוך. השתמש ב-clip_id כדי להצמיד תמונת סיום/שכבה לקליפ בלי לנחש זמנים.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const primary = primaryVideoTrackId(ctx.tracks || []);
       const tName = (id: string) => ctx.tracks?.find((t) => t.id === id)?.name || id;
+      const elapsed = new Map<string, number>();
       return ctx.clips!.map((c, i) => {
         const tid = clipTrackId(c, primary);
+        const timelineStart = elapsed.get(tid) || 0;
+        const timelineEnd = timelineStart + clipDur(c);
+        elapsed.set(tid, timelineEnd);
         const en = c.enabled === false ? " (מושבת)" : "";
-        if (isGapClip(c)) return `${i + 1}. [${tName(tid)}] [רווח] ${clipDur(c).toFixed(2)}s`;
+        if (isGapClip(c)) return `${i + 1}. id=${c.id} [${tName(tid)}] [רווח] ציר ${timelineStart.toFixed(3)}–${timelineEnd.toFixed(3)}s (${clipDur(c).toFixed(3)}s)`;
         const name = mediaById(ctx.media, c.sourceId)?.name || c.sourceId;
-        return `${i + 1}. [${tName(tid)}] ${name} ${c.start.toFixed(2)}–${c.end.toFixed(2)}s (${clipDur(c).toFixed(2)}s)${en}`;
+        return `${i + 1}. id=${c.id} [${tName(tid)}] ${name} · מקור ${c.start.toFixed(3)}–${c.end.toFixed(3)}s · ציר ${timelineStart.toFixed(3)}–${timelineEnd.toFixed(3)}s (${clipDur(c).toFixed(3)}s)${en}`;
       }).join("\n");
     },
   },
@@ -1377,14 +1381,26 @@ export const TOOLS: ToolMeta[] = [
     name: "add_image_overlay", label: "הוספת תמונה", color: "#f59e0b", icon: "🖼️",
     schema: {
       name: "add_image_overlay",
-      description: "מוסיף תמונה אטומית כשכבה חדשה בלי לשנות שכבות קיימות. ללוגו השתמש logo_top_left/right; לתמונת סיום מלאה השתמש fit_canvas.",
-      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["center", "fit_canvas", "logo_top_left", "logo_top_right"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, border_radius: { type: "number" }, opacity: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" }, locked: { type: "boolean" } }, required: ["source"] },
+      description: "מוסיף תמונה אטומית בלי לשנות שכבות קיימות. לתמונת סיום העבר match_clip_id של קליפ הקריינות: הכלי יעתיק את טווח הציר המדויק ואסור להעביר start/end יחד איתו. ללוגו השתמש logo_top_left/right; לתמונת סיום מלאה fit_canvas.",
+      parameters: { type: "object", properties: { source: { type: "string" }, start: { type: "number" }, end: { type: "number" }, match_clip_id: { type: "string", description: "ID יציב מ-list_clips; מצמיד את השכבה בדיוק לטווח הקליפ על הרצועה" }, preset: { type: "string", enum: ["center", "fit_canvas", "logo_top_left", "logo_top_right"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, border_radius: { type: "number" }, opacity: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" }, locked: { type: "boolean" } }, required: ["source"] },
     },
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, String(a.source || ""));
       if (!asset || asset.kind !== "image") return "שגיאה: נכס תמונה לא נמצא.";
-      const start = a.start != null ? Math.max(0, +a.start) : 0;
-      const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      let start = a.start != null ? Math.max(0, +a.start) : 0;
+      let end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      if (a.match_clip_id != null) {
+        if (a.start != null || a.end != null) return "שגיאה: match_clip_id קובע זמן מדויק; אין להעביר איתו start/end.";
+        const matchId = String(a.match_clip_id);
+        const target = (ctx.clips || []).find((clip) => clip.id === matchId);
+        if (!target) return `שגיאה: קליפ id=${matchId} לא נמצא. קרא list_clips פעם אחת והשתמש ב-ID שהוחזר.`;
+        const primary = primaryVideoTrackId(ctx.tracks || []);
+        const tid = clipTrackId(target, primary);
+        const trackClips = clipsOnTrack(ctx.clips || [], tid, primary);
+        const position = trackClips.findIndex((clip) => clip.id === matchId);
+        start = trackClips.slice(0, position).reduce((sum, clip) => sum + clipDur(clip), 0);
+        end = start + clipDur(target);
+      }
       const canvas = ctx.canvas || defaultCanvasFor();
       const intrinsic = await imageDimensions(asset);
       const rawPreset = String(a.preset || "center");
@@ -1411,7 +1427,7 @@ export const TOOLS: ToolMeta[] = [
           locked: a.locked === true,
         }];
       } else if (commandError) return `שגיאה: ${commandError}`;
-      return `נוספה שכבת תמונה חדשה בלבד: id=${overlayId}, ${asset.name}. מיקום x=${Math.round(transform.x)}, y=${Math.round(transform.y)}, גודל ${Math.round(transform.w)}×${Math.round(transform.h)}, זמן ${start.toFixed(1)}–${end.toFixed(1)}s${a.locked ? ", מוגנת משינויים" : ""}. השתמש ב-list_overlays ואמת לפי id ושם.`;
+      return `נוספה שכבת תמונה אחת: id=${overlayId}, ${asset.name}; x=${Math.round(transform.x)}, y=${Math.round(transform.y)}, ${Math.round(transform.w)}×${Math.round(transform.h)}; ציר ${start.toFixed(3)}–${end.toFixed(3)}s${a.match_clip_id ? ` (מותאם לקליפ ${a.match_clip_id})` : ""}${a.locked ? ", מוגנת" : ""}.`;
     },
   },
   {
@@ -1467,11 +1483,10 @@ export const TOOLS: ToolMeta[] = [
       const target = overlayTarget(a, ctx); if (typeof target === "string") return target;
       const { overlay, index } = target;
       if (overlay.locked) return `שגיאת הגנה: שכבה id=${overlay.id} מוגנת. בטל הגנה במפורש לפני מחיקה.`;
-      const before = (ctx.overlays || []).length;
       const commandError = dispatch(ctx, "overlay.delete", { id: overlay.id });
       if (commandError === "NO_API") ctx.overlays = (ctx.overlays || []).filter((_, k) => k !== index);
       else if (commandError) return `שגיאה: ${commandError}`;
-      return `נמחקה רק שכבה id=${overlay.id}. נותרו ${Math.max(0, before - 1)} שכבות.`;
+      return `נמחקה שכבה id=${overlay.id}. נותרו ${(ctx.overlays || []).length} שכבות.`;
     },
   },
   {
@@ -1520,7 +1535,7 @@ export const TOOLS: ToolMeta[] = [
       if (commandError === "NO_API") ctx.overlays = ovs.map((x, k) => (k === i ? { ...x, ...patch, transform: t } : x));
       else if (commandError) return `שגיאה: ${commandError}`;
       const updated = { ...o, ...patch, transform: t };
-      return `שכבה id=${o.id} עודכנה בלבד: x=${Math.round(updated.transform.x)}, y=${Math.round(updated.transform.y)}, w=${Math.round(updated.transform.w)}, h=${Math.round(updated.transform.h)}, z=${updated.zIndex}, round=${Math.round(updated.borderRadius || 0)}. אמת ב-list_overlays לפי אותו id ושם.`;
+      return `שכבה id=${o.id} עודכנה: x=${Math.round(updated.transform.x)}, y=${Math.round(updated.transform.y)}, ${Math.round(updated.transform.w)}×${Math.round(updated.transform.h)}, z=${updated.zIndex}.`;
     },
   },
   {
@@ -1936,7 +1951,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - שאלות למשתמש: העדף ask_user; בטקסט חופשי אפשר להתחיל ב-"שאלה:".
 
 ═══ חוקי ברזל (אל תשבור) ═══
-1. ענה בעברית, קצר. משפט-שניים ואז פעולה. אסור כתיבת מסות התלבטות ארוכות — תכנן בראש ובצע.
+1. ענה בעברית ובקיצור קיצוני: לכל היותר משפט מצב אחד לפני כלים ומשפט סיום אחד. תכנן בראש ובצע; אל תספר ניסיונות, ניחושים או שרשרת מחשבה.
 2. אל תמחק קליפים בלולאה. אם צריך להסיר רבים: delete_clips (indices או from_index+to_index) או keep_source_range או clear_clips. מעל 3 מחיקות בודדות = חסום אוטומטית.
 3. remove_silence אחרי keep_by_script: תמיד within_existing (ברירת מחדל כשיש EDL). אסור replace_all אחרי בחירה לפי סקריפט — זה מוחק את העבודה ויוצר 90+ קליפים מכל הסרטון. לבקשת TikTok/פרסומת/"אין שנייה מיותרת" השתמש pacing="tight". הכלי משלב חותמות מילים עם גל הקול ומריץ QA מחייב: אפס חפיפת מקור ואפס מילים חתוכות; אם QA נכשל אין להמשיך לרנדר.
 4. סדר מחייב כשיש טקסט מאושר: transcribe_video → keep_by_script(script=הטקסט הנקי, append=false) → remove_silence(within_existing=true,pacing="tight") → transcribe_timeline(remap) → generate_subtitles(script=אותו טקסט) → set_caption_style → list_subtitles קצר → render רק בסוף.
@@ -1954,13 +1969,14 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 16. בריף לקוח כולל שלושה סוגים: (א) טקסט שנאמר ושצריך להישאר — נכנס ל-keep_by_script ולכתוביות; (ב) הוראות עריכה כגון fade — אינן כתוביות; (ג) טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script, ויש ליצור אותו רק בשלב האאוטרו עם הנכסים המתאימים.
 17. אין חזרות גבול: פלט אוטומטי חייב להיות רציף בזמן-מקור. אם קליפ מסתיים ב-29.8, הקליפ הבא מאותו מקור/רצועה מתחיל ב-29.8 או מאוחר יותר — לעולם לא 29.7/29.8 מחדש. דווח הצלחה רק אחרי list_clips ובדיקת הגבולות.
 18. אם המשתמש מבקש fade בנקודת המעבר לסיום, החל set_clip_audio_fades(fade_out=...) על הקליפ האחרון של התוכן המדובר לפני בקשת נכסי האאוטרו.
-19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו מעל הסרטון: add_image_overlay(preset="logo_top_left" או "logo_top_right", start,end). תמונת סיום כשכבה מלאה: preset="fit_canvas". אל תנחש x/y. הכלי טוען יחס תמונה ושומר אותה בתוך הקנבס.
+19. תמונה כרקע/קטע מלא: add_clip(placement="timeline", timeline_start=...). לוגו מעל הסרטון: add_image_overlay(preset="logo_top_left" או "logo_top_right", start,end); ברירת המחדל קריאה במובייל, אל תקטין ידנית בלי בקשה. תמונת סיום: list_clips פעם אחת ואז add_image_overlay(preset="fit_canvas", match_clip_id=ID של קליפ הקריינות, locked=true). אסור לנחש או לעגל start/end ואסור לנחש x/y.
 20. לכרטיס מעוצב: add_text_overlay עם source_popup ל"מתוך שיעור", speaker_card לשם דובר ותפקיד, dedication_card להקדשה רב-שורתית. הגדר start/end מדויקים, קרא list_overlays, ואל תטען שעוצב לפני שהכלי הצליח.
 21. תוצרי render_video, export_subtitles, capture_frame ו-generate_narration חוזרים ככרטיסי קובץ בצ'אט עם תצוגה/הורדה. אחרי יצירת תוצר, אמור למשתמש להשתמש בכרטיס המצורף; אל תמציא נתיב או קישור.
 22. זהות שכבות: אחרי list_overlays השתמש תמיד ב-overlay_id וב-expected_source לעדכון/מחיקה, לעולם לא באינדקס בלבד. אחרי שינוי אמת שה-id ושם הקובץ זהים. אם אינם זהים — עצור; אל תמחק ותבנה מחדש בלולאה.
 23. שמירת עבודה קיימת: אם המשתמש אומר שתמונת סיום/קריינות/שכבה כבר מסודרת, אסור לשנות או למחוק אותה. גע רק בנכס שביקש, לפי id+expected_source. אם לא ברור איזה נכס הוא הלוגו — ask_user פעם אחת. אל "תנקה הכל" ואל תשחזר שכבות אחרות.
 24. שכבה מוגנת אינה ניתנת לשינוי/מחיקה. אפשר ליצור תמונת סיום עם locked=true, ולבטל הגנה רק כשהמשתמש ביקש לערוך אותה במפורש.
 25. אחרי שינוי מיקום/סגנון ויזואלי משמעותי (אובריי, cutaway, כתוביות) — אמת מול הפלט בפועל עם capture_frame(timeline=true, at_seconds=הנקודה שהשתנתה). לא אחרי כל עריכה קטנה ולא שוב באותה נקודה.
+26. שכבות תמונה: הוסף פעם אחת, אמת פעם אחת. אם add_image_overlay הצליח והחזיר id — אסור למחוק ולבנות מחדש בגלל ספק. לכל היותר update_overlay אחד לאותו id; אם התוצאה עדיין לא תקינה, עצור ודווח.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.

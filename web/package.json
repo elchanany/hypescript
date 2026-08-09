@@ -4,13 +4,17 @@
   "private": true,
   "description": "hypescript web — עריכת שיעורי וידאו בעברית בדפדפן (חיתוך לפי סקריפט, הסרת נשימות, כתוביות)",
   "scripts": {
+    "prepare:ffmpeg": "node scripts/prepare-ffmpeg.mjs",
+    "predev": "npm run prepare:ffmpeg",
     "dev": "next dev",
+    "prebuild": "npm run prepare:ffmpeg",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run"
   },
   "dependencies": {
+    "@ffmpeg/core": "0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
     "@supabase/ssr": "^0.12.4",

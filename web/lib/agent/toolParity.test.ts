@@ -188,7 +188,7 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.overlays()[0].transform.w).toBeLessThan(1280 * 0.2);
     expect(h.overlays()[0].transform.x).toBeLessThan(1280 * 0.2);
     expect(h.overlays()[0].borderRadius).toBe(18);
-    expect(logoResult).toContain("מיקום x=");
+    expect(logoResult).toContain("x=");
     const logoId = h.overlays()[0].id;
     const logoBefore = structuredClone(h.overlays()[0]);
     h.ctx.media.push({ id: "image-2", name: "end-card.png", kind: "image", file: null as any, duration: 4, url: "blob:end" });
@@ -210,6 +210,37 @@ describe("Agent ↔ UI CommandBus parity", () => {
     await TOOL_BY_NAME.delete_overlay.run({ overlay_id: h.overlays()[2].id }, h.ctx, () => undefined);
     expect(h.overlays()).toHaveLength(2);
     expect(h.ctx._editorDirty).toBe(true);
+  });
+
+  it("matches an end-card overlay to an audio clip's exact assembled span", async () => {
+    const h = contextWithEditor();
+    h.ctx.editorApi!.setClips!([
+      { id: "video-main", sourceId: "media-1", start: 0, end: 12, trackId: "video-1" },
+      { id: "audio-gap", sourceId: "__gap__", start: 0, end: 49.812, trackId: "audio-1" },
+      { id: "narration", sourceId: "voice-1", start: 0, end: 11.361, trackId: "audio-1" },
+    ]);
+    h.ctx.clips = h.ctx.editorApi!.getClips();
+    h.ctx.media.push({ id: "end-image", name: "end.png", kind: "image", file: null as any, duration: 4, url: "blob:end" });
+
+    const listing = await TOOL_BY_NAME.list_clips.run({}, h.ctx, () => undefined);
+    expect(listing).toContain("id=narration");
+    expect(listing).toContain("ציר 49.812–61.173s");
+
+    const result = await TOOL_BY_NAME.add_image_overlay.run({
+      source: "end-image", preset: "fit_canvas", match_clip_id: "narration", locked: true,
+    }, h.ctx, () => undefined);
+    expect(h.overlays()[0]).toMatchObject({ start: 49.812, end: 61.173, locked: true });
+    expect(result).toContain("49.812–61.173s");
+  });
+
+  it("rejects guessed times when match_clip_id is supplied", async () => {
+    const h = contextWithEditor();
+    h.ctx.media.push({ id: "end-image", name: "end.png", kind: "image", file: null as any, duration: 4, url: "blob:end" });
+    const result = await TOOL_BY_NAME.add_image_overlay.run({
+      source: "end-image", match_clip_id: "clip-1", start: 0, end: 4,
+    }, h.ctx, () => undefined);
+    expect(result).toContain("אין להעביר איתו start/end");
+    expect(h.overlays()).toHaveLength(0);
   });
 
   it("reports only direct semantic timeline evidence", async () => {

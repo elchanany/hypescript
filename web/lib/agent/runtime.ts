@@ -35,11 +35,11 @@ const MUTATING_TOOLS = new Set([
   "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
   "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
   "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
-  "delete_overlay", "generate_narration",
+  "add_image_overlay", "delete_overlay", "generate_narration",
 ]);
 
 /** כלים שאסור להריץ בלולאה — אחרי N קריאות בחלון האחרון נחסמים עם רמז לכלי המוני. */
-const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
+export const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
   delete_clip: {
     limit: 3,
     hint: "נחסם: יותר מדי delete_clip. השתמש ב-delete_clips (indices/from_index+to_index) או keep_source_range או clear_clips.",
@@ -60,6 +60,30 @@ const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
     limit: 3,
     hint: "נחסם: כבר קראת תמלול כמה פעמים. המשך לעריכה (keep_by_script / generate_subtitles).",
   },
+  list_overlays: {
+    limit: 2,
+    hint: "נחסם: כבר אימתת שכבות פעמיים. אל תיכנס ללופ בדיקה; סיים או דווח על הבעיה.",
+  },
+  add_image_overlay: {
+    limit: 2,
+    hint: "נחסם: אין להוסיף שוב ושוב את אותה שכבה. השתמש ב-update_overlay פעם אחת לפי overlay_id או עצור.",
+  },
+  update_overlay: {
+    limit: 3,
+    hint: "נחסם: יותר מדי עדכוני שכבה. עצור ודווח במקום להזיז שכבות בלולאה.",
+  },
+  delete_overlay: {
+    limit: 2,
+    hint: "נחסם: יותר מדי מחיקות שכבה. אל תבנה מחדש קומפוזיציה קיימת.",
+  },
+  capture_frame: {
+    limit: 2,
+    hint: "נחסם: כבר צולמו שני פריימים. אל תרנדר שוב בלי שינוי מהותי.",
+  },
+  render_video: {
+    limit: 1,
+    hint: "נחסם: ניסיון הייצוא כבר בוצע. דווח על הכשל; אל תרנדר בלולאה.",
+  },
 };
 
 const WINDOW = 12;
@@ -68,14 +92,23 @@ function isChunkLoadError(msg: string): boolean {
   return /Loading chunk\s+[\w.-]+\s+failed|ChunkLoadError|error loading dynamically imported module/i.test(msg);
 }
 
-function formatToolError(msg: string): string {
+export function formatToolError(msg: string): string {
   if (isChunkLoadError(msg)) {
     return "שגיאת טעינה (גרסה חדשה בדפדפן / chunk). בקש מהמשתמש לרענן Ctrl+Shift+R — אל תנסה שוב בלי רענון.";
   }
+  if (/מנוע הייצוא המקומי|FFmpeg/i.test(msg)) return `שגיאת ייצוא: ${msg}`;
   if (/Failed to fetch|NetworkError|network/i.test(msg)) {
     return `שגיאת רשת: ${msg}. אם זה חוזר — רענון דף או בדיקת חיבור.`;
   }
   return `שגיאה: ${msg}`;
+}
+
+export function agentLoopGuard(recent: string[], name: string): string | null {
+  const guard = LOOP_GUARDS[name];
+  if (!guard) return null;
+  const window = recent.slice(-WINDOW);
+  const count = window.filter((item) => item === name).length;
+  return count + 1 > guard.limit ? guard.hint : null;
 }
 
 function formatLlmError(status: number, body: string): string {
@@ -121,13 +154,8 @@ export class AgentRunner {
   }
 
   private guardLoop(name: string): string | null {
-    const guard = LOOP_GUARDS[name];
-    if (!guard) return null;
-    const window = this.recentTools.slice(-WINDOW);
-    const count = window.filter((n) => n === name).length;
-    // count כולל את הקריאה הנוכחית שעוד לא נדחפה — בודקים לפני דחיפה
-    if (count + 1 > guard.limit) return guard.hint;
-    return null;
+    // count אינו כולל את הקריאה הנוכחית, שעדיין לא נדחפה.
+    return agentLoopGuard(this.recentTools, name);
   }
 
   private noteTool(name: string) {

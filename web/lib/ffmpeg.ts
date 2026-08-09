@@ -4,7 +4,7 @@
 "use client";
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { fetchFile } from "@ffmpeg/util";
 import { Clip, MediaAsset, clipDur, clipEnabled, mediaById, uid } from "./editor/model";
 import { isGapClip } from "./editor/timelineOps";
 import { Overlay } from "./editor/overlay";
@@ -19,12 +19,23 @@ import { microSeekAt, type MicroEdl } from "./render/timelineFrame";
 
 export type { RenderTarget } from "./render/graph";
 
-const CORE_BASE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+const CORE_BASE = "/ffmpeg";
 
 let ffmpeg: FFmpeg | null = null;
 let loadPromise: Promise<FFmpeg> | null = null;
 
 export type LogFn = (msg: string) => void;
+
+async function localCoreBlobUrl(name: "ffmpeg-core.js" | "ffmpeg-core.wasm", type: string): Promise<string> {
+  const url = `${CORE_BASE}/${name}`;
+  let response: Response;
+  try { response = await fetch(url, { cache: "force-cache" }); }
+  catch (error: any) {
+    throw new Error(`מנוע הייצוא המקומי לא נטען (${name}): ${error?.message || "בקשת הקובץ נכשלה"}. הפעל מחדש את שרת האפליקציה.`);
+  }
+  if (!response.ok) throw new Error(`מנוע הייצוא המקומי חסר (${name}, HTTP ${response.status}). הרץ npm install והפעל מחדש את האפליקציה.`);
+  return URL.createObjectURL(new Blob([await response.arrayBuffer()], { type }));
+}
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -42,8 +53,8 @@ export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
     // ליבה חד-תהליכית — יציבה. עם timeout כדי שלא ייתקע לנצח אם הטעינה נכשלת.
     await withTimeout(
       inst.load({
-        coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+        coreURL: await localCoreBlobUrl("ffmpeg-core.js", "text/javascript"),
+        wasmURL: await localCoreBlobUrl("ffmpeg-core.wasm", "application/wasm"),
       }),
       90000,
       "טעינת מנוע העיבוד",

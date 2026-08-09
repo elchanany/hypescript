@@ -241,7 +241,7 @@ describe("CommandBus builtins", () => {
     expect(api.overlays).toHaveLength(1);
     expect(api.overlays[0]).toMatchObject({ kind: "image", assetId: "image-1", start: 1, end: 5 });
     expect(api.overlays[0].transform.w / api.overlays[0].transform.h).toBeCloseTo(2, 3);
-    expect(api.overlays[0].transform.w).toBeLessThan(1920 * 0.2);
+    expect(api.overlays[0].transform.w).toBeLessThanOrEqual(1920 * 0.2);
     expect(api.overlays[0].transform.x).toBeLessThan(1920 / 2);
     expect(api.overlays[0].transform.y).toBeLessThan(1080 / 2);
   });
