@@ -121,6 +121,12 @@
 - **בחירה:** נכסי ערכת מותג (לוגו/רפרנס) נשארים כ-Blob ב-IndexedDB מקומי ומחוץ להיסטוריית פקודות ה-LLM/JSON. הסוכן מקבל ב-`get_brand_kit` סיכום נטול בינארי בלבד; ייבוא בינארי עובר ב-`use_brand_asset` דרך גבול דפדפן מפורש `EditorApi.addMediaAsset` (לא CommandBus JSON), ואחריו שינויי state נעשים בפקודות רגילות (`overlay.addImage` הקיים ללוגו; `reference_media` רק מייבא). נכס חסר לעולם אינו מומצא; ייבוא כפול נמנע.
 - **סיבה:** Blob אינו חוזה JSON ואינו יכול לעבור בהיסטוריית הספק; שמירה מקומית שומרת פרטיות (RULES) בלי שירות ענן חדש בזמן שמפתח ה-auth בייצור שבור.
 - **השלכה:** אין סנכרון ענן/שירות חדש; ערכה פעילה נבחרת בין פרויקטים; ניקוי object URLs בטוח; כל שינוי state אחרי הייבוא עובר CommandBus רגיל.
+
+## D-025 — מדיה בינארית חיצונית: גבול דפדפן מפורש + אישור חיוב לכל יכולת
+- **בחירה:** מדיה בינארית שנוצרה חיצונית (קריינות ElevenLabs, תמונות OpenAI GPT Image) נכנסת לפרויקט רק דרך גבול המדיה המפורש של הדפדפן (`EditorApi.addMediaAsset`), חוזרת כטוקן יציב `@media:<id>` + artifact, ואישורי החיוב של הספקים הם **לכל יכולת** (LLM לעומת image לעומת voice) — לא משותפים במשתמע.
+- **סיבה:** Blob אינו חוזה JSON ואינו יכול לעבור בהיסטוריית הספק; אישור חיוב ל-LLM אינו אישור ליצירת תמונות/קול בתשלום, ולהפך.
+- **השלכה:** `openai-image` הוא ספק נפרד עם אישור fail-closed משלו (אותו `OPENAI_API_KEY`); `generate_narration`/`generate_image` רושמים את הנכס דרך `registerMediaAsset` (מניעת כפילות, בלי מוטציית מערך) ומחזירים `@media:<id>` + artifact; בריף המותג לתמונה מוגבל לטקסט בלבד ולעולם אינו ממציא לוגו.
+
 # 2026-08-08 — media placement and Preview/Export parity
 
 - An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.

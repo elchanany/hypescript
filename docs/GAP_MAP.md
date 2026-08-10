@@ -65,6 +65,7 @@
 | CommandBus + Query API | PARTIAL | פעולות UI וכלי agent יחידניים וב־bulk עוברים דרך פקודות מאומתות, כולל clip/subtitle replace אטומי; File probe/object-URL נשאר גבול I/O; נותר Query API עשיר יותר |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | אימות ויזואלי (capture_frame) | OK | ברירת מחדל = פריים גולמי מהמקור (מהיר); `timeline=true` = פריים מורכב שקול לייצוא (opt-in); SYSTEM_PROMPT מגביל לאימות שינוי משמעותי בלי צילומים מיותרים |
+| CTA/אאוטרו flow (קריינות + תמונה/כרטיס + popup) | PARTIAL | `generate_narration` מתמיד אודיו ElevenLabs בפרויקט ומחזיר `@media:<id>` יציב + הנחיית `add_clip` מדויקת (timeline_start = סוף הציר, רצועת אודיו); `generate_image` (openai-image) עם בריף מותג טקסטואלי מוגבל; טקסט CTA חדש מחוץ ל-keep_by_script; נכסי מותג קודם; טווח אודיו/תמונה/כרטיס מדויק; אימות מורכב (`capture_frame(timeline=true)`). חסר: E2E דפדפן חי עם מפתחות אמיתיים |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
 ## 6. Project / Auth / Dashboard
@@ -82,7 +83,8 @@
 | LLM proxy | OK | — |
 | תמלול Groq (proxy) | PARTIAL | מפתח client-side |
 | Provider Registry + policies + Zero-cost | PARTIAL | Registry + configured-unverified + billing-risk classification; LLM/STT/TTS נחסמים עד אישור מפורש מקומי לפי ספק; live health-check ומדיניות server/roles חסרים |
-| Image/Video/Voice/Music/Storage/Search | MISSING | — |
+| Image generation (OpenAI GPT Image) | PARTIAL | ספק `openai-image` נפרד (אותו `OPENAI_API_KEY`) עם אישור חיוב fail-closed לכל יכולת; `/api/openai/images` מאמת פרמטרים allowlisted של gpt-image-1, קורא ל-`images/generations` הרשמי עם `output_format=png` (אין `response_format` נתמך), מפענח `b64_json` ומחזיר PNG עם שגיאות עברית מנוקות מסודות; `generate_image` מצרף בריף מותג טקסטואלי מוגבל בלי המצאת לוגו ורושם את ה-PNG במדיה (`@media:<id>`). חסר: E2E חי עם מפתח OpenAI אמיתי |
+| Video/Voice/Music/Storage/Search | MISSING | — |
 
 ## 8–9. Templates / Effects / Usage / Admin
 | הכל | MISSING | אין להציג בלי Preview+Export אמיתי / דורש אישור |
@@ -125,3 +127,8 @@
 # 2026-08-09 closed gaps
 
 - CLOSED: export-parity composited timeline frame capture for agent visual verification — `capture_frame(timeline=true)`, opt-in; raw source capture remains the fast default.
+
+# 2026-08-10 closed gaps
+
+- CLOSED: generated narration media persists into the project via the browser media boundary (`EditorApi.addMediaAsset`) and returns a stable `@media:<id>` with exact `add_clip` CTA guidance (implementation OK; live-key E2E pending).
+- CLOSED: OpenAI GPT Image generation as a separate `openai-image` provider with per-capability fail-closed billing approval, allowlisted gpt-image-1 params, official `images/generations` + `output_format=png` + `b64_json` decode, and a bounded text-only brand brief that never fabricates a logo (implementation OK; live-key E2E pending).

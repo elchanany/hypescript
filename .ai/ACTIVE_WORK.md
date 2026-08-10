@@ -1,5 +1,14 @@
 # ACTIVE_WORK.md
 
+## 2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261)
+
+- `generate_narration` now persists generated ElevenLabs audio into project media via `EditorApi.addMediaAsset` (no duplicate import, no array mutation) and returns a stable `@media:<id>` plus exact `add_clip` guidance: `timeline_start` = end of the current timeline (max across all tracks), audio track name, and a follow-up card/image exactly spanning the clip (`match_clip_id` from `list_clips`).
+- New `openai-image` provider (kind `image`) reuses `OPENAI_API_KEY` with a distinct fail-closed billing approval (per-capability, not shared with LLM). `/api/openai/images` validates allowlisted gpt-image-1 parameters (model/size/quality/background, prompt ≤4000 chars), calls the official `images/generations` with `output_format=png` (gpt-image-1 has no `response_format`), decodes `data[0].b64_json`, and returns PNG bytes with secret-redacted Hebrew errors. No live key call was made.
+- `generate_image` optionally appends a bounded binary-free brand brief (org/tagline/colors/writing guidelines only — never blobs/URLs/IDs), explicitly instructs not to draw a logo (real logo via `use_brand_asset`), registers the PNG into project media and returns `@media:<id>` + artifact.
+- CTA system flow: new CTA text stays out of `keep_by_script`; brand assets first; exact audio/image/card span; composited verification (`capture_frame(timeline=true)`).
+- Verification: narration branch 51 files / 351 tests + tsc/build pass; image branch 53 files / 381 tests + tsc/build pass (verified on main); native integrations still `durationDelta=0`/`audioDrift=0`; graphify 1851 nodes / 4186 edges; `npm audit` 8 existing vulns remain.
+- Next: live browser E2E with a real lecture + ElevenLabs/OpenAI keys (composited capture/brand UI); fix production Supabase key before cloud org sync. No acoustic-quality claim without real media.
+
 ## 2026-08-10 — local organization/brand kit (main 7ab67e7)
 
 - `/settings/brand` provides local-only IndexedDB organization/brand kits: org/name, tagline, writing guidelines, a normalized color picker palette, and logo/reference images with safe object URL cleanup; an active kit is selectable across projects.
@@ -52,16 +61,16 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Browser E2E the brand UI / `use_brand_asset` and composited capture with real media, then complete the high-level CTA workflow (narration + image + popup) using existing generated media/audio/overlay boundaries and brand context, without fabricating assets.
+Live browser E2E the CTA flow (narration + image + popup) and composited capture with a real lecture and ElevenLabs/OpenAI keys; fix the production Supabase key before any cloud org sync.
 
 ## Branch
 `main`
 
 ## Latest package
-Local organization/brand kit (IndexedDB, binary-free agent summary, browser-only Blob import via `EditorApi.addMediaAsset`, safe logo overlay reuse).
+CTA asset pipeline: persisted narration media (`@media:<id>` + exact `add_clip` guidance) and OpenAI GPT Image generation (`openai-image` provider, per-capability billing approval, bounded text-only brand brief).
 
 ## Status
-Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), and the local organization/brand kit. Web 50 files / 342 tests, `tsc` clean; production build passed in the rebased isolated worktree including `/settings/brand` (primary invocation timed out after 20m — not claimed); native export `durationDelta=0`/`audioDrift=0`; graphify 1806 nodes / 4082 edges. Brand UI and composited capture are browser-untested with real media.
+Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), local organization/brand kit, and the CTA asset pipeline (persisted narration + GPT images). Web 53 files / 381 tests, `tsc` clean; native export `durationDelta=0`/`audioDrift=0`; graphify 1851 nodes / 4186 edges. Live-key browser E2E with real media still pending.
 
 ## Exact continuation point
-Browser E2E the brand UI / `use_brand_asset` and composited capture with real media; then complete the high-level CTA workflow (narration + image + popup) using existing generated media/audio/overlay boundaries and brand context, without fabricating assets. Brand blobs stay local IndexedDB and outside LLM/JSON command history; only summaries reach the LLM, binary import crosses the explicit browser-only EditorApi boundary, then state changes use commands. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
+Live browser E2E the CTA flow (narration + image + popup) and composited capture with a real lecture and ElevenLabs/OpenAI keys; fix the production Supabase key before any cloud org sync. Generated external binary media crosses only the explicit browser-only `EditorApi.addMediaAsset` boundary (never JSON CommandBus); provider billing approvals are per capability (LLM vs image vs voice), not shared implicitly. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
