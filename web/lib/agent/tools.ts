@@ -349,6 +349,59 @@ function ensureTrackId(ctx: AgentContext, clip: Clip): Clip {
   return clip.trackId ? clip : { ...clip, trackId: primary };
 }
 
+export interface RegisteredMedia {
+  asset: MediaAsset;
+  /** true אם נעשה שימוש חוזר בנכס קיים (לפי id או שם+גודל) — בלי ייבוא כפול */
+  reused: boolean;
+}
+
+/**
+ * רושם MediaAsset שנוצר (קריינות/תמונה) בפרויקט דרך גבול המדיה של הדפדפן.
+ * - אם editorApi.addMediaAsset קיים: קורא לו ואז מסנכרן את ctx.media מ-api.getMedia()
+ *   (הגבול בונה אוסף חדש — לעולם לא דוחפים לתוך מערך state).
+ * - אחרת: fallback אימוטאבילי ctx.media = [...ctx.media, asset].
+ * - מניעת כפילות: לפי id, ואם הגיוני — לפי אותו שם קובץ וגודל.
+ * - לעולם לא ממוטט מערכים.
+ */
+export function registerMediaAsset(ctx: AgentContext, asset: MediaAsset): RegisteredMedia {
+  const existing =
+    ctx.media.find((m) => m.id === asset.id) ??
+    (asset.file
+      ? ctx.media.find((m) => m.kind === asset.kind && m.name === asset.name && m.file && m.file.size === asset.file.size)
+      : undefined);
+  if (existing) return { asset: existing, reused: true };
+  const api = ctx.editorApi;
+  if (api?.addMediaAsset) {
+    api.addMediaAsset(asset);
+    ctx.media = api.getMedia() ?? [...ctx.media, asset];
+  } else {
+    ctx.media = [...ctx.media, asset];
+  }
+  return { asset, reused: false };
+}
+
+export interface NarrationResultInfo {
+  asset: MediaAsset;
+  blobSize: number;
+  modelId: string;
+  voiceId: string;
+  /** הזמן המדויק המוצע על הציר (סוף הציר הנוכחי) — להנחיית add_clip */
+  timelineStart: number;
+  /** שם/id רצועת האודיו — להנחיית add_clip */
+  audioTrackName: string;
+}
+
+/** פורמט תוצאת generate_narration — פונקציה טהורה (ניתנת לבדיקה בלי רשת). */
+export function formatNarrationResult(info: NarrationResultInfo): string {
+  const { asset, blobSize, modelId, voiceId, timelineStart, audioTrackName } = info;
+  const kb = (blobSize / 1024).toFixed(0);
+  return (
+    `נוצרה קריינות (${kb}KB, מודל ${modelId}, voice=${voiceId}) ונשמרה במדיה כפריט @media:${asset.id} (${asset.name}, ${asset.duration.toFixed(1)}s). ` +
+    `הוסף אותה לציר: add_clip(source="@media:${asset.id}", timeline_start=${timelineStart.toFixed(3)}, track="${audioTrackName}") — ` +
+    `ואז צרף תמונת/כרטיס סיום בדיוק לטווח הקליפ (match_clip_id מ-list_clips).`
+  );
+}
+
 export const TOOLS: ToolMeta[] = [
   {
     name: "get_video_info", label: "בדיקת אורך", color: "#3b82f6", icon: "⏱️",
@@ -1430,29 +1483,15 @@ export const TOOLS: ToolMeta[] = [
 
       // ייבוא לגבול המדיה (דרך addMediaAsset של הדף — לא JSON), עם מניעת כפילות
       const file = new File([assetMeta.blob], assetMeta.name, { type: assetMeta.mime || assetMeta.blob.type || "application/octet-stream" });
-      const existing = ctx.media.find((m) => m.kind === "image" && m.name === file.name && m.file && m.file.size === file.size);
-      let mediaAsset = existing;
-      if (!mediaAsset) {
-        const asset: MediaAsset = {
-          id: uid("m"),
-          name: file.name,
-          kind: "image",
-          file,
-          duration: 4,
-          url: URL.createObjectURL(file),
-        };
-        const api = ctx.editorApi;
-        if (api?.addMediaAsset) {
-          api.addMediaAsset(asset);
-          // סנכרון מה-API עצמו: getMedia מחזיר את האוסף החדש שהגבול בנה —
-          // לעולם לא דוחפים לתוך המערך הקיים (אסור למוטט props/state).
-          ctx.media = api.getMedia() ?? [...ctx.media, asset];
-        } else {
-          ctx.media = [...ctx.media, asset]; // NO_API fallback — אוסף חדש, בלי push
-        }
-        mediaAsset = asset;
-      }
-      const imported = existing ? `נעשה שימוש חוזר במדיה קיימת @media:${mediaAsset.id} (${mediaAsset.name})` : `יובאה תמונת מותג @media:${mediaAsset.id} (${mediaAsset.name})`;
+      const { asset: mediaAsset, reused } = registerMediaAsset(ctx, {
+        id: uid("m"),
+        name: file.name,
+        kind: "image",
+        file,
+        duration: 4,
+        url: URL.createObjectURL(file),
+      });
+      const imported = reused ? `נעשה שימוש חוזר במדיה קיימת @media:${mediaAsset.id} (${mediaAsset.name})` : `יובאה תמונת מותג @media:${mediaAsset.id} (${mediaAsset.name})`;
 
       if (action === "reference_media") {
         return `${imported}. זמינה לשימוש מאוחר — ציין אותה ב-@media:${mediaAsset.id} או ב-add_image_overlay(source=...).`;
@@ -2030,17 +2069,38 @@ export const TOOLS: ToolMeta[] = [
           audio.src = url;
         });
       } catch { /* ignore */ }
-      const asset = {
+      const narrationAsset: MediaAsset = {
         id: uid("a"),
         name,
-        kind: "audio" as const,
+        kind: "audio",
         file,
         duration: duration || Math.max(1, text.length / 12),
         url,
       };
-      ctx.media = [...ctx.media, asset]; // אוסף חדש — אסור למוטט את מערך ה-state
+      const { asset: registered } = registerMediaAsset(ctx, narrationAsset);
+      // סוף הציר המדויק (מקסימום על פני כל הרצועות — וידאו ואודיו) — הנקודה שבה מתחיל האאוטרו
+      const timelineStart = (() => {
+        const clips = ctx.clips || [];
+        if (!clips.length) return 0;
+        const primary = primaryVideoTrackId(ctx.tracks || []);
+        const ends = new Map<string, number>();
+        for (const c of clips) {
+          const tid = clipTrackId(c, primary);
+          const start = ends.get(tid) ?? 0;
+          ends.set(tid, start + clipDur(c));
+        }
+        return Math.max(0, ...ends.values());
+      })();
+      const audioTrackName = audioTrack(ctx.tracks || [])?.name || audioTrack(ctx.tracks || [])?.id || "אודיו";
       return {
-        text: `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`,
+        text: formatNarrationResult({
+          asset: registered,
+          blobSize: blob.size,
+          modelId,
+          voiceId,
+          timelineStart,
+          audioTrackName,
+        }),
         artifacts: [{ blob, name, kind: "audio" }],
       };
     },
@@ -2070,7 +2130,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - get_transcript: אחרי חיתוך — timeline=true (או ברירת מחדל כשיש קליפים) מחזיר זמנים על הציר הערוך. בלי timeline = מקור גולמי.
 - inspect_timeline_evidence: השתמש להבנת per-time-span מבוססת ראיות. תווית אירוע (כגון שיעול) אמינה רק אם ספק התמלול החזיר audio_event; היעדר מילים אינו ראיה לשקט או נשימה.
 - אחרי עריכת הציר: חובה לרענן הבנה עם transcribe_timeline (mode=remap חינמי) או get_transcript(timeline=true). mode=retranscribe = אודיו זמני + STT מחדש (בתשלום).
-- קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
+- קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר). generate_narration שומר את הקובץ במדיה ומחזיר @media:<id> יציב — הוסף אותו לציר עם add_clip(source="@media:<id>", timeline_start=..., track=רצועת האודיו).
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
 
 ═══ ערכת מותג מקומית (לא חובה) ═══
@@ -2112,6 +2172,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 25. אחרי שינוי מיקום/סגנון ויזואלי משמעותי (אובריי, cutaway, כתוביות) — אמת מול הפלט בפועל עם capture_frame(timeline=true, at_seconds=הנקודה שהשתנתה). לא אחרי כל עריכה קטנה ולא שוב באותה נקודה.
 26. שכבות תמונה: הוסף פעם אחת, אמת פעם אחת. אם add_image_overlay הצליח והחזיר id — אסור למחוק ולבנות מחדש בגלל ספק. לכל היותר update_overlay אחד לאותו id; אם התוצאה עדיין לא תקינה, עצור ודווח.
 27. ערכת מותג: לפני תמונה/כרטיס/CTA/לוגו קרא get_brand_kit כשייתכן שקיימת ערכה פעילה; פעל לפי צבעים והנחיות ניסוח; השתמש בלוגו הקיים דרך use_brand_asset במקום להמציא לוגו. אין ערכה פעילה — המשך בלי מותג, אל תכריח.
+28. רצף CTA/אאוטרו (טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script): קרא get_brand_kit; אם יש לוגו/תמונת ייחוס בערכה — בחר/עשה שימוש חוזר (use_brand_asset / add_image_overlay) בלי להמציא נכס; list_voices רק אם אין voice_id ידוע; generate_narration(text=טקסט ה-CTA, voice_id=...) → הוסף את @media:<id> שהוחזר כקליפ אודיו ב-add_clip(source="@media:<id>", timeline_start=הזמן המדויק, track=רצועת האודיו); צרף תמונת/כרטיס סיום בדיוק לטווח הקריינות (match_clip_id מ-list_clips); אמת פעם אחת עם list_clips/list_overlays ו-capture_frame(timeline=true). לעולם אל תמציא image/logo/voice id — שאל רק כשצריך.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -2129,11 +2190,11 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).
 - set_caption_style: עיצוב כתוביות אמיתי ב-Preview ובייצוא; אל תבטיח "יפות" בלי לקרוא לו.
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
-- list_voices / generate_narration / list_stt_models / transcribe_video(provider,model).
+- list_voices / generate_narration (מחזיר @media:<id> — הוסף עם add_clip) / list_stt_models / transcribe_video(provider,model).
 - capture_frame: ברירת מחדל פריים גולמי מהמקור (מהר). אחרי שינוי ויזואלי משמעותי (אובריי, כתוביות, cutaway, צבע/flip/fades) — צלם capture_frame(timeline=true) פעם אחת כדי לראות את התוצאה בדיוק כמו בייצוא. אל תצלם מורכב אחרי כל שינוי שולי, ואל תצלם שוב את אותה נקודה בלי שינוי — זה רינדור יקר.
 - render_video רק בסוף / כשמבקשים.
 
-זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → render.`;
+זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → CTA/אאוטרו (get_brand_kit → generate_narration → add_clip(@media) → תמונת/כרטיס סיום → capture_frame(timeline=true)) → render.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
