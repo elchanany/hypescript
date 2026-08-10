@@ -114,6 +114,16 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
+        <h2>ערכת מותג</h2>
+        <p style={{ color: "var(--muted)" }}>
+          פרופיל ארגון לשיתוף בין הפרויקטים: צבעים, הנחיות ניסוח, לוגו ותמונות ייחוס — נשמר מקומית במכשיר בלבד, זמין לסוכן.
+        </p>
+        <div className="row">
+          <Link href="/settings/brand" className="btn primary" style={{ textDecoration: "none" }}>ניהול ערכת מותג</Link>
+        </div>
+      </div>
+
+      <div className="card">
         <h2>אודות המוצר</h2>
         <div className="brand-about">
           <BrandLogo variant="icon" size="lg" decorative />

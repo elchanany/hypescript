@@ -39,6 +39,7 @@ import {
 } from "@/lib/editor/assembleTranscript";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
+import { getActiveBrandKit, brandKitPrompt, summarizeBrandKit } from "@/lib/brand/kit";
 import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
@@ -70,6 +71,11 @@ export interface AgentContext {
   editorApi?: EditorApi | null;
   /** מוטציה כבר נכנסה דרך EditorApi — Chat לא יבצע setProject כפול */
   _editorDirty?: boolean;
+  /**
+   * ערכת המותג הפעילה (נקראת מה-IndexedDB על ידי הכלים). מוזרקת בטסטים כדי
+   * לא לדרוש indexedDB; בהיעדרה הכלים קוראים את הערכה הפעילה מהאחסון המקומי.
+   */
+  brandKit?: import("@/lib/brand/kit").BrandKit | null;
   askUser: (question: string, options: string[]) => Promise<string>;
   // תמונות שהסוכן צילם — יצורפו להודעה הבאה כדי שיוכל "לראות" אותן (בספק תומך-ראייה).
   pendingImages?: string[];
@@ -1371,6 +1377,123 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "get_brand_kit", label: "ערכת מותג", color: "#7c3aed", icon: "🎨",
+    schema: {
+      name: "get_brand_kit",
+      description:
+        "קורא את ערכת המותג הפעילה שנשמרה מקומית (הגדרות → מותג): שם הארגון, סלוגן, פלטת צבעים, הנחיות ניסוח ונכסים (לוגו/תמונות ייחוס) עם id/שם/תפקיד. " +
+        "אין כאן קבצים — רק מטא-דאטה. קרא לפני עבודת תמונה/כרטיס/CTA/לוגו אם ייתכן שקיימת ערכה. אם אין ערכה פעילה — המשך כרגיל בלי מותג.",
+      parameters: { type: "object", properties: {} },
+    },
+    run: async (_a, ctx) => {
+      const kit = ctx.brandKit ?? (await getActiveBrandKit());
+      if (!kit) return "אין ערכת מותג פעילה. אפשר ליצור אחת בהגדרות → מותג (נשמר מקומית במכשיר בלבד).";
+      return brandKitPrompt(summarizeBrandKit(kit));
+    },
+  },
+  {
+    name: "use_brand_asset", label: "שימוש בנכס מותג", color: "#7c3aed", icon: "🪧",
+    schema: {
+      name: "use_brand_asset",
+      description:
+        "מייבא נכס מערכת המותג הפעילה לפרויקט דרך גבול המדיה של הדפדפן (File/Blob — לא JSON). " +
+        "asset=id יציב או שם מהכלי get_brand_kit. " +
+        "action=logo_overlay: מייבא את הלוגו ומוסיף אותו מייד כשכבת אובריי דרך פקודת overlay.addImage הקיימת (preset=logo_top_left|logo_top_right|fit_canvas|center, start/end אופציונליים). " +
+        "action=reference_media: רק מייבא את התמונה כמדיה לשימוש מאוחר. אם הנכס כבר קיים במדיה — נעשה בו שימוש חוזר בלי ייבוא כפול. לעולם אל תיצור תחליף אם הנכס חסר — החזר שגיאה.",
+      parameters: {
+        type: "object",
+        properties: {
+          asset: { type: "string", description: "id יציב או שם של נכס בערכה (מתוך get_brand_kit)" },
+          action: { type: "string", enum: ["logo_overlay", "reference_media"], description: "logo_overlay=לוגו כשכבה על הסרטון; reference_media=ייבוא בלבד לשימוש מאוחר" },
+          start: { type: "number", description: "שניית התחלה על הציר (ברירת מחדל 0)" },
+          end: { type: "number", description: "שניית סיום (ברירת מחדל לפי אורך הציר)" },
+          preset: { type: "string", enum: ["logo_top_left", "logo_top_right", "fit_canvas", "center"], description: "רק ל-logo_overlay: מיקום וגודל (ברירת מחדל logo_top_left)" },
+        },
+        required: ["asset", "action"],
+      },
+    },
+    run: async (a, ctx) => {
+      const kit = ctx.brandKit ?? (await getActiveBrandKit());
+      if (!kit) return "שגיאה: אין ערכת מותג פעילה. צור/הפעל ערכה בהגדרות → מותג לפני שימוש בנכס מותג.";
+      const action = String(a.action || "");
+      if (action !== "logo_overlay" && action !== "reference_media") {
+        return "שגיאה: action חייב להיות logo_overlay או reference_media.";
+      }
+      const ref = String(a.asset || "").trim();
+      if (!ref) return "שגיאה: חסר asset — העבר id או שם מהערכה (get_brand_kit).";
+      const assetMeta = kit.assets.find((x) => x.id === ref)
+        ?? kit.assets.find((x) => x.name.toLowerCase().includes(ref.toLowerCase()));
+      if (!assetMeta) {
+        const names = kit.assets.map((x) => `${x.id} (${x.name})`).join(", ");
+        return `שגיאה: נכס "${ref}" לא נמצא בערכה. נכסים זמינים: ${names || "אין"}. לא נוצר תחליף אוטומטי.`;
+      }
+
+      // ייבוא לגבול המדיה (דרך addMediaAsset של הדף — לא JSON), עם מניעת כפילות
+      const file = new File([assetMeta.blob], assetMeta.name, { type: assetMeta.mime || assetMeta.blob.type || "application/octet-stream" });
+      const existing = ctx.media.find((m) => m.kind === "image" && m.name === file.name && m.file && m.file.size === file.size);
+      let mediaAsset = existing;
+      if (!mediaAsset) {
+        const asset: MediaAsset = {
+          id: uid("m"),
+          name: file.name,
+          kind: "image",
+          file,
+          duration: 4,
+          url: URL.createObjectURL(file),
+        };
+        const api = ctx.editorApi;
+        if (api?.addMediaAsset) {
+          api.addMediaAsset(asset);
+          // סנכרון מה-API עצמו: getMedia מחזיר את האוסף החדש שהגבול בנה —
+          // לעולם לא דוחפים לתוך המערך הקיים (אסור למוטט props/state).
+          ctx.media = api.getMedia() ?? [...ctx.media, asset];
+        } else {
+          ctx.media = [...ctx.media, asset]; // NO_API fallback — אוסף חדש, בלי push
+        }
+        mediaAsset = asset;
+      }
+      const imported = existing ? `נעשה שימוש חוזר במדיה קיימת @media:${mediaAsset.id} (${mediaAsset.name})` : `יובאה תמונת מותג @media:${mediaAsset.id} (${mediaAsset.name})`;
+
+      if (action === "reference_media") {
+        return `${imported}. זמינה לשימוש מאוחר — ציין אותה ב-@media:${mediaAsset.id} או ב-add_image_overlay(source=...).`;
+      }
+
+      // logo_overlay: אותה דרך מאומתת של overlay.addImage עם preset/גיאומטריה/בטיחות
+      const canvas = ctx.canvas || defaultCanvasFor();
+      const start = a.start != null ? Math.max(0, +a.start) : 0;
+      const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      const intrinsic = await imageDimensions(mediaAsset);
+      const rawPreset = String(a.preset || "logo_top_left");
+      const preset: ImageOverlayPreset = rawPreset === "logo_top_right" || rawPreset === "fit_canvas" || rawPreset === "center" ? rawPreset : "logo_top_left";
+      const transform = imageOverlayGeometry(canvas.width, canvas.height, intrinsic, preset);
+      const overlayId = uid("ov");
+      const commandError = dispatch(ctx, "overlay.addImage", {
+        assetId: mediaAsset.id,
+        overlayId,
+        start,
+        end,
+        preset,
+        width: intrinsic?.width,
+        height: intrinsic?.height,
+        x: transform.x,
+        y: transform.y,
+        w: transform.w,
+        h: transform.h,
+        opacity: transform.opacity,
+        fadeIn: 0.15,
+        fadeOut: 0.15,
+        locked: true,
+      });
+      if (commandError === "NO_API") {
+        const overlay = makeImageOverlay(mediaAsset.id, canvas.width, canvas.height, ctx.overlays || [], start, end, intrinsic);
+        ctx.overlays = [...(ctx.overlays || []), { ...overlay, id: overlayId, transform, fadeIn: 0.15, fadeOut: 0.15, locked: true }];
+      } else if (commandError) {
+        return `שגיאה: ${commandError}`;
+      }
+      return `${imported}. נוספה שכבת לוגו id=${overlayId} (preset=${preset}, ${Math.round(transform.w)}×${Math.round(transform.h)}px, ${start.toFixed(1)}–${end.toFixed(1)}s, מוגנת). אמת עם list_overlays לפי אותו id.`;
+    },
+  },
+  {
     name: "list_overlays", label: "רשימת שכבות", color: "#64748b", icon: "🧩",
     schema: { name: "list_overlays", description: "מחזיר את שכבות התמונה/טקסט על הקנבס.", parameters: { type: "object", properties: {} } },
     run: async (_a, ctx) => {
@@ -1915,7 +2038,7 @@ export const TOOLS: ToolMeta[] = [
         duration: duration || Math.max(1, text.length / 12),
         url,
       };
-      ctx.media.push(asset);
+      ctx.media = [...ctx.media, asset]; // אוסף חדש — אסור למוטט את מערך ה-state
       return {
         text: `נוצרה קריינות (${(blob.size / 1024).toFixed(0)}KB, מודל ${modelId}, voice=${voiceId}) ונוספה למדיה כפריט #${ctx.media.length}. אפשר להוסיף לציר עם add_clip.`,
         artifacts: [{ blob, name, kind: "audio" }],
@@ -1950,6 +2073,12 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - קריינות: list_voices → הצג למשתמש ובחר (ask_user אם לא ברור) → generate_narration(text, voice_id). מודלי TTS: eleven_v3 (רגשי+תגיות), eleven_multilingual_v2 (ארוך), eleven_flash_v2_5 (מהיר).
 - המפתח ELEVENLABS_API_KEY בשרת בלבד — לעולם אל תבקש מהמשתמש להדביק מפתח בצ'אט.
 
+═══ ערכת מותג מקומית (לא חובה) ═══
+- לפני עבודת תמונה/כרטיס/CTA/לוגו (add_image_overlay, add_text_overlay, end-card, לוגו): קרא get_brand_kit אם ייתכן שקיימת ערכה פעילה.
+- עקבו אחרי פלטת הצבעים והנחיות הניסוח מהערכה; אם יש לוגו בערכה — השתמשו בו (use_brand_asset) במקום להמציא לוגו/צבעים.
+- אין ערכה פעילה = המשך כרגיל בלי מותג; אל תכריח ואל תמציא נכסי מותג מעצמך.
+- use_brand_asset מייבא את הנכס למדיה בעצמו (blob → דפדפן) ואז מוסיף שכבת לוגו דרך overlay.addImage הקיימת. אל תבנה קבצים/URL בעצמך.
+
 ═══ עיצוב תשובות בצ'אט ═══
 - השתמש ב-markdown קל: **מודגש**, קוד קצר בין backticks, ורשימות עם מקף.
 - לבלוק להעתקה (סקריפט/כותרות): עטוף ב-fence של שלושה backticks.
@@ -1982,6 +2111,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 24. שכבה מוגנת אינה ניתנת לשינוי/מחיקה. אפשר ליצור תמונת סיום עם locked=true, ולבטל הגנה רק כשהמשתמש ביקש לערוך אותה במפורש.
 25. אחרי שינוי מיקום/סגנון ויזואלי משמעותי (אובריי, cutaway, כתוביות) — אמת מול הפלט בפועל עם capture_frame(timeline=true, at_seconds=הנקודה שהשתנתה). לא אחרי כל עריכה קטנה ולא שוב באותה נקודה.
 26. שכבות תמונה: הוסף פעם אחת, אמת פעם אחת. אם add_image_overlay הצליח והחזיר id — אסור למחוק ולבנות מחדש בגלל ספק. לכל היותר update_overlay אחד לאותו id; אם התוצאה עדיין לא תקינה, עצור ודווח.
+27. ערכת מותג: לפני תמונה/כרטיס/CTA/לוגו קרא get_brand_kit כשייתכן שקיימת ערכה פעילה; פעל לפי צבעים והנחיות ניסוח; השתמש בלוגו הקיים דרך use_brand_asset במקום להמציא לוגו. אין ערכה פעילה — המשך בלי מותג, אל תכריח.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -1993,6 +2123,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - add_clip: וידאו/תמונה מלאה/אודיו בזמן מדויק באמצעות timeline_start; placement="overlay" לתמונה כשכבה.
 - add_image_overlay(preset="logo_top_left|logo_top_right|fit_canvas"): מוסיף שכבה אטומית חדשה בלבד ומחזיר overlay_id. update_overlay/delete_overlay חייבים overlay_id+expected_source.
 - add_text_overlay(preset="source_popup|speaker_card|dedication_card"): כרטיס מעוצב שנשמר גם בייצוא.
+- get_brand_kit: ערכת מותג פעילה (צבעים, הנחיות ניסוח, נכסים עם id) — לפני עבודת לוגו/כרטיס/CTA. use_brand_asset: ייבוא נכס מותג למדיה + לוגו כשכבה.
 - move_clip: סדר בתוך אותה רצועה; בין רצועות — move_clip_to_track.
 - transcribe_timeline: תמלול/מיפוי על הציר הערוך אחרי חיתוך (remap או retranscribe).
 - generate_subtitles עם script=טקסט נקי מהמשתמש (חשיפה לפי קצב דיבור).

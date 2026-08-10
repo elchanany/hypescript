@@ -1,16 +1,17 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import type { EditorApi } from "@/lib/editor/commands";
-import type { Clip } from "@/lib/editor/model";
+import type { Clip, MediaAsset } from "@/lib/editor/model";
 import type { TrackMeta } from "@/lib/editor/project";
 import type { Sub } from "@/lib/editor/subtitlesEdl";
 import type { Overlay } from "@/lib/editor/overlay";
 import type { CaptionStyle } from "@/lib/editor/captionStyle";
+import type { BrandKit } from "@/lib/brand/kit";
 import { SYSTEM_PROMPT, TOOL_BY_NAME, captureFrameMode, type AgentContext } from "./tools";
 
 beforeAll(() => ensureBuiltinCommands());
 
-function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; subs: () => Sub[]; overlays: () => Overlay[]; updates: () => number } {
+function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: () => TrackMeta[]; subs: () => Sub[]; overlays: () => Overlay[]; updates: () => number; media: () => MediaAsset[] } {
   let current: Clip[] = [{ id: "clip-1", sourceId: "media-1", start: 0, end: 4, enabled: true, volume: 1 }];
   let currentTracks: TrackMeta[] = [
     { id: "video-1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
@@ -18,7 +19,9 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     { id: "audio-1", name: "אודיו", type: "audio", order: 2, height: 56, locked: false, muted: false },
   ];
   let updateCount = 0;
-  const currentMedia: AgentContext["media"] = [];
+  // מדמה את הרף/state של הדף: addMediaAsset מחליף את האוסף (לא דוחף לתוכו),
+  // ו-getMedia מחזיר את האוסף החדש — בדיוק כמו הממשק האמיתי בדף.
+  let currentMedia: AgentContext["media"] = [];
   let currentSubs: Sub[] = [{ id: "sub-1", start: 0, end: 1, text: "ישן" }];
   let currentOverlays: Overlay[] = [];
   let currentCaptionStyle: CaptionStyle = { fontSize: 4.5, color: "#ffffff", bold: true, position: "bottom", bg: "soft" };
@@ -35,6 +38,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
       current = current.map((clip) => clip.id === id ? { ...clip, ...patch } : clip);
     },
     getMedia: () => currentMedia,
+    addMediaAsset: (asset) => { currentMedia = [...currentMedia, asset]; },
     getSubs: () => currentSubs,
     setSubs: (next) => { currentSubs = next || []; },
     getTracks: () => currentTracks,
@@ -52,7 +56,7 @@ function contextWithEditor(): { ctx: AgentContext; clips: () => Clip[]; tracks: 
     canvas: { width: 1280, height: 720 }, lastRender: null, editorApi: api,
     askUser: async () => "",
   } satisfies AgentContext;
-  return { ctx, clips: () => current, tracks: () => currentTracks, subs: () => currentSubs, overlays: () => currentOverlays, updates: () => updateCount };
+  return { ctx, clips: () => current, tracks: () => currentTracks, subs: () => currentSubs, overlays: () => currentOverlays, updates: () => updateCount, media: () => currentMedia };
 }
 
 describe("Agent ↔ UI CommandBus parity", () => {
@@ -324,5 +328,114 @@ describe("client brief operating rules", () => {
     expect(SYSTEM_PROMPT).toContain("set_clip_audio_fades");
     expect(SYSTEM_PROMPT).toContain("overlay_id+expected_source");
     expect(SYSTEM_PROMPT).toContain("אסור לשנות או למחוק אותה");
+  });
+
+  it("instructs the agent to consult the local brand kit before image/card/CTA/logo work", () => {
+    expect(SYSTEM_PROMPT).toContain("get_brand_kit");
+    expect(SYSTEM_PROMPT).toContain("use_brand_asset");
+    expect(SYSTEM_PROMPT).toContain("אין ערכה פעילה");
+    expect(SYSTEM_PROMPT).toContain("במקום להמציא לוגו");
+  });
+});
+
+describe("brand kit agent tools", () => {
+  const brandKitWithLogo = (): BrandKit => ({
+    version: 1,
+    id: "kit-1",
+    organization: "עמותת המבחן",
+    tagline: "שיעורים בכל שבוע",
+    writingGuidelines: "לכתוב בעברית פשוטה",
+    colors: ["#1a2b3c", "#ffcc00"],
+    assets: [
+      { id: "ba-logo", name: "logo.png", role: "logo", mime: "image/png", width: 400, height: 120, blob: new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }) },
+      { id: "ba-ref", name: "cover.jpg", role: "reference", mime: "image/jpeg", blob: new Blob([new Uint8Array([4, 5, 6])], { type: "image/jpeg" }) },
+    ],
+    createdAt: 1,
+    updatedAt: 1,
+  });
+
+  it("get_brand_kit returns a binary-free summary for the active kit", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = brandKitWithLogo();
+    const result = await TOOL_BY_NAME.get_brand_kit.run({}, h.ctx, () => undefined);
+    expect(result).toContain("עמותת המבחן");
+    expect(result).toContain("#1a2b3c");
+    expect(result).toContain("לכתוב בעברית פשוטה");
+    expect(result).toContain("id=ba-logo");
+    expect(result).toContain("logo.png");
+    expect(result).not.toContain("data:");
+    expect(result).not.toContain("blob:");
+  });
+
+  it("get_brand_kit reports when no active kit exists (never fabricates)", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = null;
+    const result = await TOOL_BY_NAME.get_brand_kit.run({}, h.ctx, () => undefined);
+    expect(result).toContain("אין ערכת מותג");
+  });
+
+  it("use_brand_asset imports a logo through addMediaAsset and adds an overlay via the shared command", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = brandKitWithLogo();
+    const originalMedia = h.ctx.media;
+    const result = await TOOL_BY_NAME.use_brand_asset.run({ asset: "ba-logo", action: "logo_overlay" }, h.ctx, () => undefined);
+    expect(result).toContain("logo.png");
+    expect(result).toContain("id=ov");
+    // גבול המדיה החזיר אוסף חדש (getMedia), והקשר הסוכן סונכרן ממנו — בלי מוטציה.
+    expect(h.media()).toHaveLength(1);
+    expect(h.media()[0].name).toBe("logo.png");
+    expect(h.media()[0].kind).toBe("image");
+    expect(h.media()[0].file instanceof File).toBe(true);
+    expect(h.ctx.media).not.toBe(originalMedia); // אוסף חדש, לא אותו מערך
+    expect(h.ctx.media).toBe(h.media()); // מסונכרן מ-api.getMedia()
+    expect(originalMedia.filter((m) => m.name === "logo.png")).toHaveLength(0); // המקורי לא שונה
+    expect(h.ctx.media.some((m) => m.name === "logo.png")).toBe(true); // נראה לסוכן
+    // overlay.addImage ראה את הייבוא דרך getMedia (אחרת היה נכשל ב"קובץ תמונה לא נמצא")
+    const overlay = h.overlays()[0];
+    expect(overlay.kind).toBe("image");
+    expect(overlay.assetId).toBe(h.media()[0].id);
+    expect(overlay.locked).toBe(true);
+    expect(overlay.transform.w).toBeLessThan(1280 * 0.2); // מידות לוגו
+    expect(overlay.transform.x).toBeLessThan(1280 * 0.2); // פינה שמאלית-עליונה
+    expect(h.ctx._editorDirty).toBe(true);
+  });
+
+  it("use_brand_asset avoids duplicate media import on reuse", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = brandKitWithLogo();
+    await TOOL_BY_NAME.use_brand_asset.run({ asset: "ba-logo", action: "logo_overlay" }, h.ctx, () => undefined);
+    const before = h.media().length;
+    const second = await TOOL_BY_NAME.use_brand_asset.run({ asset: "logo.png", action: "logo_overlay", start: 2, end: 5 }, h.ctx, () => undefined);
+    expect(h.media()).toHaveLength(before); // אין ייבוא כפול
+    expect(second).toContain("שימוש חוזר");
+    expect(h.overlays()).toHaveLength(2);
+  });
+
+  it("use_brand_asset returns a clear error for a missing asset — no substitute", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = brandKitWithLogo();
+    const result = await TOOL_BY_NAME.use_brand_asset.run({ asset: "ba-missing", action: "logo_overlay" }, h.ctx, () => undefined);
+    expect(result).toContain("לא נמצא");
+    expect(result).toContain("לא נוצר תחליף");
+    expect(h.media()).toHaveLength(0);
+    expect(h.overlays()).toHaveLength(0);
+  });
+
+  it("use_brand_asset reference_media imports the image without adding an overlay", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = brandKitWithLogo();
+    const result = await TOOL_BY_NAME.use_brand_asset.run({ asset: "ba-ref", action: "reference_media" }, h.ctx, () => undefined);
+    expect(result).toContain("@media:");
+    expect(h.media()).toHaveLength(1);
+    expect(h.media()[0].name).toBe("cover.jpg");
+    expect(h.overlays()).toHaveLength(0);
+  });
+
+  it("use_brand_asset errors when no active kit exists", async () => {
+    const h = contextWithEditor();
+    h.ctx.brandKit = null;
+    const result = await TOOL_BY_NAME.use_brand_asset.run({ asset: "ba-logo", action: "logo_overlay" }, h.ctx, () => undefined);
+    expect(result).toContain("אין ערכת מותג פעילה");
+    expect(h.media()).toHaveLength(0);
   });
 });

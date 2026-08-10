@@ -168,6 +168,17 @@ export default function EditorPage() {
         if (asset) URL.revokeObjectURL(asset.url);
         return items.filter((item) => item.id !== id);
       }),
+      // Browser-only I/O: assets imported from a brand kit / agent land here so
+      // they persist (media → kvSet effect) and appear in the media panel.
+      // נגזר את האוסף הבא באופן סינכרוני מ-mediaRef.current ומעדכנים אותו לפני
+      // setMedia — כך getMedia רואה את המערך החדש מייד, בלי למוטט את מערך ה-state.
+      addMediaAsset: (asset) => {
+        const next = mediaRef.current.some((item) => item.id === asset.id)
+          ? mediaRef.current
+          : [...mediaRef.current, asset];
+        mediaRef.current = next;
+        setMedia(next);
+      },
       getSubs: () => subsRef.current,
       setSubs: (next) => { subsRef.current = next; setSubs(next); },
       getTracks: () => tracksRef.current,

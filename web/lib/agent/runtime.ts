@@ -35,7 +35,7 @@ const MUTATING_TOOLS = new Set([
   "rename_track", "set_track_locked", "set_track_muted", "set_track_height", "reorder_track",
   "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
   "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
-  "add_image_overlay", "delete_overlay", "generate_narration",
+"add_image_overlay", "delete_overlay", "generate_narration", "use_brand_asset",
 ]);
 
 /** כלים שאסור להריץ בלולאה — אחרי N קריאות בחלון האחרון נחסמים עם רמז לכלי המוני. */

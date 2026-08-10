@@ -62,6 +62,13 @@ export interface EditorApi {
   updateClip(id: string, patch: Partial<Clip>): void;
   getMedia(): MediaAsset[];
   removeMediaAsset?: (id: string) => void;
+  /**
+   * Browser-only media I/O boundary: import a File/Blob-backed MediaAsset into
+   * project media. Implemented by the page via mediaRef + setMedia (NOT a JSON
+   * CommandBus command — File/Blob is not serializable). All subsequent
+   * mutations (clips/overlays) must still go through commands.
+   */
+  addMediaAsset?: (asset: MediaAsset) => void;
   getSubs(): Sub[] | null;
   setSubs?(subs: Sub[] | null): void;
   getTracks(): TrackMeta[];
