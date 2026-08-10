@@ -107,7 +107,7 @@
 - Filters: PARTIAL — contrast+saturation presets, bounded fade-to/from-black and horizontal/vertical flip have Inspector/Undo/CommandBus/Agent/Preview/Export; brightness and generic keyframes are missing
 - Audio: clip volume and bounded linear clip-edge fades have Model/Inspector/Undo/CommandBus/Agent/Preview(Web Audio)/Export parity; envelopes/range-volume/keyframes remain
 - Templates / Effects / Transitions (רק עם Preview+Export)
-- Organizations / Brand: אושר כחבילה מקומית (לוגו, בוחר צבעים, קווים מנחים לכתיבה, תמונות רפרנס) לבחירה בין פרויקטים וחשיפה בטוחה לסוכן; IndexedDB מקומי בשלב ראשון, סנכרון ענן אחרי auth תקין — Usage / Credits חסרים
+- Organizations / Brand: PARTIAL — ערכת מותג מקומית ב-IndexedDB (`/settings/brand`): org/name, tagline, קווים מנחים לכתיבה, פלטת צבעים מנורמלת, לוגו/תמונות רפרנס עם ניקוי object URLs בטוח וערכה פעילה בין פרויקטים. סוכן: `get_brand_kit` (סיכום נטול בינארי) + `use_brand_asset` (ייבוא Blob דרך `EditorApi.addMediaAsset` בלבד, לוגו דרך `overlay.addImage` הקיים, רפרנס לייבוא בלבד, בלי המצאת נכסים/ייבוא כפול). סנכרון ענן/ארגונים/roles/RLS חסרים — אחרי auth תקין — Usage / Credits חסרים
 - Semantic timeline evidence: FOUNDATION OK — per-time-span speech, provider `audio_event`, explicit edit gaps ו-measured RMS/dBFS energy קיימים; `remove_silence` משלב חותמות-מילה להגנת דיבור עם עמקי RMS למיקום חיתוך במצב tight ‏(0.14s/0.025s), מסיר audio_event מפורש ומהססים נפוצים ומריץ QA ללא overlap/מילה חתוכה. local שומר parity. אין להסיק סוג אירוע מהיעדר תמלול או מ-dB בלבד
 # 2026-08-08 closed gaps
 

@@ -1,5 +1,13 @@
 # ACTIVE_WORK.md
 
+## 2026-08-10 — local organization/brand kit (main 7ab67e7)
+
+- `/settings/brand` provides local-only IndexedDB organization/brand kits: org/name, tagline, writing guidelines, a normalized color picker palette, and logo/reference images with safe object URL cleanup; an active kit is selectable across projects.
+- Agent `get_brand_kit` returns a binary-free summary only (no blobs reach the LLM). `use_brand_asset` imports the Blob through the explicit browser-only `EditorApi.addMediaAsset` boundary (not JSON CommandBus), then `logo_overlay` reuses the existing safe `overlay.addImage` path; `reference_media` imports only. Missing assets are never fabricated; duplicate imports are avoided.
+- No cloud sync or new service; production Supabase auth key still broken.
+- Verification: web 50 files / 342 tests pass, `tsc` clean; production build passed in the rebased isolated worktree including `/settings/brand` (a later primary invocation reached Next build start but timed out after 20m due environment/process contention — not claimed as passed); native render integration still `durationDelta=0`/`audioDrift=0`; graphify 1806 nodes / 4082 edges. `npm audit`: 8 existing vulnerabilities (3 moderate, 4 high, 1 critical), no audit fix applied.
+- Next: browser E2E the brand UI / `use_brand_asset` and composited capture with real media; then complete the high-level CTA workflow (narration + image + popup) using existing generated media/audio/overlay boundaries and brand context, without fabricating assets.
+
 ## 2026-08-10 — gapless tight-cut pipeline
 
 - Replaced transcript-only tight cutting with a hybrid: word timestamps protect speech, 20ms RMS windows place cuts in measured quiet valleys, and explicit provider `audio_event` still forces removal without inventing semantic labels from dB.
@@ -44,16 +52,16 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Finish/publish the gapless tight-cut package, then validate it by listening on the user's real lecture project. The approved local-first brand kit remains the next roadmap package afterward.
+Browser E2E the brand UI / `use_brand_asset` and composited capture with real media, then complete the high-level CTA workflow (narration + image + popup) using existing generated media/audio/overlay boundaries and brand context, without fabricating assets.
 
 ## Branch
 `main`
 
 ## Latest package
-Gapless tight-cut pipeline (hybrid word+waveform cutting, mandatory QA, preloaded preview joins, exact render edges).
+Local organization/brand kit (IndexedDB, binary-free agent summary, browser-only Blob import via `EditorApi.addMediaAsset`, safe logo overlay reuse).
 
 ## Status
-Merged: client-brief tight cutting, overlay safety, logo/card parity, and export-parity composited frame capture (opt-in `timeline=true`). Web 47 files / 296 tests, `tsc` clean, production build passes; native export `durationDelta=0`/`audioDrift=0`; graphify 1722 nodes / 3847 edges. Composited capture is browser-untested and slower by design.
+Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), and the local organization/brand kit. Web 50 files / 342 tests, `tsc` clean; production build passed in the rebased isolated worktree including `/settings/brand` (primary invocation timed out after 20m — not claimed); native export `durationDelta=0`/`audioDrift=0`; graphify 1806 nodes / 4082 edges. Brand UI and composited capture are browser-untested with real media.
 
 ## Exact continuation point
-Build the approved local-first organization/brand kit (logos, colors picker, writing guidelines, reference images) selectable across projects and safely exposed to the agent, reusing the mixed-media/logo agent workflow; IndexedDB first, cloud sync waits for working auth. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
+Browser E2E the brand UI / `use_brand_asset` and composited capture with real media; then complete the high-level CTA workflow (narration + image + popup) using existing generated media/audio/overlay boundaries and brand context, without fabricating assets. Brand blobs stay local IndexedDB and outside LLM/JSON command history; only summaries reach the LLM, binary import crosses the explicit browser-only EditorApi boundary, then state changes use commands. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.

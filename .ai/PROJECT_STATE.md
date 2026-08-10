@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — מצב יציב של hypescript
 
-עודכן לאחרונה: 2026-08-04 (מיזוג PR #32 ל־`main` — CommandBus agent + multi video tracks).
+עודכן לאחרונה: 2026-08-10 (מיזוג `main` 7ab67e7 — ערכת מותג מקומית).
 
 ## מה המוצר
 
@@ -26,8 +26,9 @@
 - **Clip color:** contrast/saturation per-clip עובדים ב-Inspector, Preview ו-FFmpeg export, עם Undo/CommandBus/Agent ו-clamping; neutral/crisp/vivid/muted/mono presets משותפים ל-UI/Agent. Brightness/keyframes טרם קיימים.
 - **כתוביות עברית:** progressive/phrase עם script-as-ground-truth; פיצול תקציב רך מאזן מילה יתומה ב-web+local בלי לחצות פאוזה/פיסוק ובלי לשנות timing.
 - **עורך (פאזה 1+):** shell, preview דו-מאגרי עם preload ובקרת גבול פריים, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום; כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
+- **ערכת מותג מקומית:** `/settings/brand` — org/name, tagline, קווים מנחים לכתיבה, פלטת צבעים מנורמלת, לוגו/תמונות רפרנס ב-IndexedDB מקומי עם ניקוי object URLs וערכה פעילה בין פרויקטים; הסוכן קורא סיכום נטול בינארי (`get_brand_kit`) ומייבא Blob דרך גבול דפדפן מפורש (`use_brand_asset` → `EditorApi.addMediaAsset`), בלי המצאת נכסים או ייבוא כפול. אין סנכרון ענן.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
-- **בדיקות web:** vitest ~151 על ענף המיזוג; tracks/commands/migrate ממוקדים עברו + tsc.
+- **בדיקות web:** vitest 50 קבצים / 342 בדיקות עוברות + `tsc` נקי.
 
 ## מגבלות ידועות
 

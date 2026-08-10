@@ -95,13 +95,13 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786326238.2168186,
-    "ast_hash": "823e67bba62ca1b55a039155266b90aa",
+    "mtime": 1786331983.6089096,
+    "ast_hash": "e998cf61ffa221cb775084099da9f146",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
-    "mtime": 1786193202.042206,
-    "ast_hash": "1197e4e7dee385635042bf86f721b14f",
+    "mtime": 1786331983.6109097,
+    "ast_hash": "c87e5c95568f10acc2cb5545a18393fb",
     "semantic_hash": ""
   },
   "web/components/CaptionsPanel.tsx": {
@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "web/lib/agent/runtime.ts": {
-    "mtime": 1786319713.383915,
-    "ast_hash": "e7648c05a610bf24bf5268e43216037d",
+    "mtime": 1786331983.6119099,
+    "ast_hash": "c19423d3753298d2d991180b4a3e3965",
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786320918.279383,
-    "ast_hash": "404c7a8e648eaf61d9fb56fd249523e5",
+    "mtime": 1786331983.6129093,
+    "ast_hash": "35cdbcf7b1c7fd5b87b47075009705cc",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786320754.7007265,
-    "ast_hash": "76a6665097c52094ddf392d356079cac",
+    "mtime": 1786331983.6184268,
+    "ast_hash": "9f0232ae6f1c8b332ae0f2d17855bf7e",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/toolParity.test.ts": {
-    "mtime": 1786321127.48414,
-    "ast_hash": "fdae2c73f0589b421aab58d1e0d2e263",
+    "mtime": 1786331983.6129093,
+    "ast_hash": "ef0f20d19f5ba8cca90c3bd13a88910c",
     "semantic_hash": ""
   },
   "web/lib/agent/runtimeRetry.test.ts": {
@@ -1352,6 +1352,31 @@
   "web/lib/render/exportProgress.ts": {
     "mtime": 1786326126.4550784,
     "ast_hash": "ef3845485adde65ec46f3515e5d40a3c",
+    "semantic_hash": ""
+  },
+  "web/app/settings/brand/page.tsx": {
+    "mtime": 1786331983.6099095,
+    "ast_hash": "55dcfc4f2320e1cf7296ea80fb4d68ec",
+    "semantic_hash": ""
+  },
+  "web/lib/brand/kit.test.ts": {
+    "mtime": 1786331983.6144164,
+    "ast_hash": "575d4ec98b2d225832cac6b18ae433f1",
+    "semantic_hash": ""
+  },
+  "web/lib/brand/kit.ts": {
+    "mtime": 1786331983.6154232,
+    "ast_hash": "fab1089ac28eeafd8f73bf6ce7aafe3a",
+    "semantic_hash": ""
+  },
+  "web/lib/brand/previews.test.ts": {
+    "mtime": 1786331983.6174233,
+    "ast_hash": "e04e01b942700e3a8157116fdccb4c47",
+    "semantic_hash": ""
+  },
+  "web/lib/brand/previews.ts": {
+    "mtime": 1786331983.6174233,
+    "ast_hash": "c9609c4694be332594ecf4a93c888cc0",
     "semantic_hash": ""
   }
 }

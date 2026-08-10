@@ -116,6 +116,11 @@
 - **בחירה:** `capture_frame` יודע לצלם פריים מורכב של הציר הערוך (multi-track flatten/cutaway, אובריי פעילים, סגנון כתוביות נוכחי, אפקטי קליפ, רזולוציית ייצוא; רווחים = שחור) — **רק** עם `timeline=true` מפורש ועם ציר ערוך קיים. `timeline=false`, `source` מפורש או השמטת `timeline` נשארים בפריים הגולמי המהיר מהמקור, שהוא ברירת המחדל.
 - **סיבה:** הרינדור המורכב מרנדר מיקרו-קטע ולכן איטי יותר; צריך לאמת בו שינוי ויזואלי משמעותי בלבד (אובריי, cutaway, כתוביות, צבע/flip/fades), פעם אחת לכל נקודה שהשתנתה, בלי צילומים חוזרים מיותרים.
 - **השלכה:** SYSTEM_PROMPT מחייב את הסוכן לאמת שינויים משמעותיים בלי צילומים מיותרים; הפריים אמור להראות בדיוק מה שייצא ב-render. כל נתיב אחר (גולמי/ברירת מחדל) נשאר זול ומהיר.
+
+## D-024 — נכסי מותג: Blob מקומי מחוץ להיסטוריית LLM/JSON
+- **בחירה:** נכסי ערכת מותג (לוגו/רפרנס) נשארים כ-Blob ב-IndexedDB מקומי ומחוץ להיסטוריית פקודות ה-LLM/JSON. הסוכן מקבל ב-`get_brand_kit` סיכום נטול בינארי בלבד; ייבוא בינארי עובר ב-`use_brand_asset` דרך גבול דפדפן מפורש `EditorApi.addMediaAsset` (לא CommandBus JSON), ואחריו שינויי state נעשים בפקודות רגילות (`overlay.addImage` הקיים ללוגו; `reference_media` רק מייבא). נכס חסר לעולם אינו מומצא; ייבוא כפול נמנע.
+- **סיבה:** Blob אינו חוזה JSON ואינו יכול לעבור בהיסטוריית הספק; שמירה מקומית שומרת פרטיות (RULES) בלי שירות ענן חדש בזמן שמפתח ה-auth בייצור שבור.
+- **השלכה:** אין סנכרון ענן/שירות חדש; ערכה פעילה נבחרת בין פרויקטים; ניקוי object URLs בטוח; כל שינוי state אחרי הייבוא עובר CommandBus רגיל.
 # 2026-08-08 — media placement and Preview/Export parity
 
 - An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.
