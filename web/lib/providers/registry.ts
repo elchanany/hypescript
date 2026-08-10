@@ -65,6 +65,15 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     billingRisk: "metered_external",
     billingNoteHe: "יצירת קול צורכת מכסה בחשבון ElevenLabs החיצוני.",
   },
+  {
+    id: "openai-image",
+    labelHe: "OpenAI תמונות (GPT Image)",
+    kind: "image",
+    envKeys: ["OPENAI_API_KEY"],
+    configuredKeys: ["openai-image"],
+    billingRisk: "metered_external",
+    billingNoteHe: "יצירת תמונה מחויבת בחשבון OpenAI החיצוני לפי תנאיו.",
+  },
 ] as const;
 
 export const LLM_PROVIDERS = PROVIDER_REGISTRY.filter((provider) => provider.kind === "llm") as readonly (ProviderDefinition & { id: Provider })[];

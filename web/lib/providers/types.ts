@@ -1,4 +1,4 @@
-export type ProviderKind = "llm" | "transcribe" | "voice";
+export type ProviderKind = "llm" | "transcribe" | "voice" | "image";
 export type ProviderBillingRisk = "no_charge" | "metered_external" | "unknown";
 
 /** `ready` is reserved for a successful live probe; an env key alone is unverified. */
@@ -11,7 +11,8 @@ export type ProviderId =
   | "gemini"
   | "groq-transcribe"
   | "elevenlabs-transcribe"
-  | "elevenlabs-voice";
+  | "elevenlabs-voice"
+  | "openai-image";
 
 export interface ProviderDefinition {
   id: ProviderId;

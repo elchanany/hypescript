@@ -402,6 +402,70 @@ export function formatNarrationResult(info: NarrationResultInfo): string {
   );
 }
 
+// ─── generate_image: בריף מותג מוגבל (טקסט בלבד) ──────────────────────────────
+
+/** בריף מותג קצר שנשלח למודל התמונה — ארגון/סלוגן/צבעים/ניסוח בלבד. */
+export interface ImageBrandBrief {
+  organization: string;
+  tagline?: string;
+  colors: string[];
+  writingGuidelines: string;
+}
+
+/** בונה בריף מותג מוגבל — לעולם לא כולל Blob/URL/תוכן או id של נכסים. */
+export function buildImageBrandBrief(kit: import("@/lib/brand/kit").BrandKit): ImageBrandBrief {
+  return {
+    organization: kit.organization,
+    ...(kit.tagline ? { tagline: kit.tagline } : {}),
+    colors: [...kit.colors],
+    writingGuidelines: kit.writingGuidelines,
+  };
+}
+
+/**
+ * בונה את ה-prompt הסופי למודל התמונה. use_brand=false או היעדר ערכה → ה-prompt
+ * המקורי בלבד. עם ערכה פעילה מצורף בריף מותג מוגבל (טקסט בלבד) + הוראה מפורשת
+ * לא לצייר לוגו (ללוגו אמיתי ישמש use_brand_asset).
+ */
+export function buildImagePrompt(
+  prompt: string,
+  kit: import("@/lib/brand/kit").BrandKit | null | undefined,
+  useBrand: boolean,
+): string {
+  const base = String(prompt || "").trim();
+  if (!useBrand || !kit) return base;
+  const brief = buildImageBrandBrief(kit);
+  const lines = [
+    base,
+    "",
+    "הנחיות מותג (לשילוב בעיצוב בלבד):",
+    `ארגון: ${brief.organization}`,
+  ];
+  if (brief.tagline) lines.push(`סלוגן: ${brief.tagline}`);
+  if (brief.colors.length) lines.push(`פלטת צבעים: ${brief.colors.join(" · ")}`);
+  if (brief.writingGuidelines.trim()) lines.push(`הנחיות ניסוח:\n${brief.writingGuidelines.trim()}`);
+  lines.push(
+    "אל תצייר/תמציא לוגו או טקסט לוגו אלא אם המשתמש ביקש במפורש טקסט/לוגו; ללוגו אמיתי ישמש נכס המותג (use_brand_asset).",
+  );
+  return lines.join("\n");
+}
+
+export interface ImageResultInfo {
+  asset: MediaAsset;
+  model: string;
+  size: string;
+}
+
+/** פורמט תוצאת generate_image — פונקציה טהורה (ניתנת לבדיקה בלי רשת). */
+export function formatImageResult(info: ImageResultInfo): string {
+  const { asset, model, size } = info;
+  return (
+    `נוצרה תמונה (${model}, ${size}) ונשמרה במדיה כפריט @media:${asset.id} (${asset.name}). ` +
+    `הוסף אותה כשכבת תמונה/כרטיס סיום: add_image_overlay(source="@media:${asset.id}", preset="fit_canvas", match_clip_id=ID של קליפ הקריינות, locked=true) — ` +
+    `או כתמונה מלאה על הציר: add_clip(source="@media:${asset.id}", placement="timeline", timeline_start=...).`
+  );
+}
+
 export const TOOLS: ToolMeta[] = [
   {
     name: "get_video_info", label: "בדיקת אורך", color: "#3b82f6", icon: "⏱️",
@@ -2106,6 +2170,72 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "generate_image", label: "יצירת תמונה (OpenAI)", color: "#f97316", icon: "🎨",
+    schema: {
+      name: "generate_image",
+      description:
+        "מייצר תמונה חדשה עם OpenAI GPT Image (gpt-image-1) מתיאור טקסט. " +
+        "השתמש רק כשהמשתמש ביקש ויזואל חדש/נוצר ואין נכס קיים שמתאים (בדוק list_media / get_brand_kit קודם). " +
+        "התמונה נשמרת במדיה ומחזירה @media:<id> יציב. use_brand=true (ברירת מחדל) מצרף בריף מותג קצר (ארגון/סלוגן/צבעים/ניסוח בלבד — בלי קבצים). " +
+        "אל תבקש לצייר לוגו — ללוגו אמיתי השתמש ב-use_brand_asset.",
+      parameters: {
+        type: "object",
+        properties: {
+          prompt: { type: "string", description: "תיאור התמונה בעברית/אנגלית" },
+          size: { type: "string", enum: ["1024x1024", "1536x1024", "1024x1536"], description: "גודל (ברירת מחדל 1024x1024)" },
+          quality: { type: "string", enum: ["auto", "low", "medium", "high"], description: "איכות (ברירת מחדל auto)" },
+          background: { type: "string", enum: ["auto", "opaque", "transparent"], description: "רקע (ברירת מחדל auto)" },
+          use_brand: { type: "boolean", description: "false=בלי בריף מותג (ברירת מחדל true)" },
+        },
+        required: ["prompt"],
+      },
+    },
+    run: async (a, ctx, report) => {
+      const prompt = String(a.prompt || "").trim();
+      if (!prompt) return "שגיאה: חסר prompt לתיאור התמונה.";
+      await ensureProviderBillingApproval("openai-image", ctx.askUser);
+      const kit = ctx.brandKit ?? (await getActiveBrandKit());
+      const useBrand = a.use_brand !== false;
+      const finalPrompt = buildImagePrompt(prompt, kit, useBrand);
+      report("מייצר תמונה ב-OpenAI GPT Image…");
+      const resp = await fetch("/api/openai/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          size: a.size,
+          quality: a.quality,
+          background: a.background,
+        }),
+      });
+      if (!resp.ok) {
+        let err = "יצירת התמונה נכשלה.";
+        try { err = (await resp.json()).error || err; } catch { /* ignore */ }
+        throw new Error(err);
+      }
+      const blob = await resp.blob();
+      const model = resp.headers.get("X-Image-Model") || "gpt-image-1";
+      const size = resp.headers.get("X-Image-Size") || "1024x1024";
+      const { contextualFileName } = await import("@/lib/chat/markdown");
+      const name = contextualFileName(prompt, "image", `generated_${size.replace("x", "_")}.png`);
+      const file = new File([blob], name, { type: blob.type || "image/png" });
+      const url = URL.createObjectURL(file);
+      const imageAsset: MediaAsset = {
+        id: uid("img"),
+        name,
+        kind: "image",
+        file,
+        duration: 4,
+        url,
+      };
+      const { asset: registered } = registerMediaAsset(ctx, imageAsset);
+      return {
+        text: formatImageResult({ asset: registered, model, size }),
+        artifacts: [{ blob, name, kind: "image" }],
+      };
+    },
+  },
+  {
     name: "ask_user", label: "שאלה למשתמש", color: "#eab308", icon: "❓",
     schema: { name: "ask_user", description: "שואל את המשתמש שאלה עם אפשרויות, או מבקש קובץ/מידע חסר.", parameters: { type: "object", properties: { question: { type: "string" }, options: { type: "array", items: { type: "string" } } }, required: ["question", "options"] } },
     run: async (a, ctx) => `המשתמש בחר: ${await ctx.askUser(String(a.question || ""), a.options || [])}`,
@@ -2138,6 +2268,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - עקבו אחרי פלטת הצבעים והנחיות הניסוח מהערכה; אם יש לוגו בערכה — השתמשו בו (use_brand_asset) במקום להמציא לוגו/צבעים.
 - אין ערכה פעילה = המשך כרגיל בלי מותג; אל תכריח ואל תמציא נכסי מותג מעצמך.
 - use_brand_asset מייבא את הנכס למדיה בעצמו (blob → דפדפן) ואז מוסיף שכבת לוגו דרך overlay.addImage הקיימת. אל תבנה קבצים/URL בעצמך.
+- generate_image: יוצר ויזואל חדש עם OpenAI GPT Image (בתשלום, דורש אישור חיוב) רק כשהמשתמש ביקש תמונה/ויזואל נוצר ואין נכס קיים שמתאים (list_media / get_brand_kit). use_brand=true (ברירת מחדל) מצרף בריף מותג קצר (ארגון/סלוגן/צבעים/ניסוח בלבד — בלי קבצים). לעולם אל תבקש לצייר לוגו — ללוגו אמיתי השתמש ב-use_brand_asset.
 
 ═══ עיצוב תשובות בצ'אט ═══
 - השתמש ב-markdown קל: **מודגש**, קוד קצר בין backticks, ורשימות עם מקף.
@@ -2172,7 +2303,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 25. אחרי שינוי מיקום/סגנון ויזואלי משמעותי (אובריי, cutaway, כתוביות) — אמת מול הפלט בפועל עם capture_frame(timeline=true, at_seconds=הנקודה שהשתנתה). לא אחרי כל עריכה קטנה ולא שוב באותה נקודה.
 26. שכבות תמונה: הוסף פעם אחת, אמת פעם אחת. אם add_image_overlay הצליח והחזיר id — אסור למחוק ולבנות מחדש בגלל ספק. לכל היותר update_overlay אחד לאותו id; אם התוצאה עדיין לא תקינה, עצור ודווח.
 27. ערכת מותג: לפני תמונה/כרטיס/CTA/לוגו קרא get_brand_kit כשייתכן שקיימת ערכה פעילה; פעל לפי צבעים והנחיות ניסוח; השתמש בלוגו הקיים דרך use_brand_asset במקום להמציא לוגו. אין ערכה פעילה — המשך בלי מותג, אל תכריח.
-28. רצף CTA/אאוטרו (טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script): קרא get_brand_kit; אם יש לוגו/תמונת ייחוס בערכה — בחר/עשה שימוש חוזר (use_brand_asset / add_image_overlay) בלי להמציא נכס; list_voices רק אם אין voice_id ידוע; generate_narration(text=טקסט ה-CTA, voice_id=...) → הוסף את @media:<id> שהוחזר כקליפ אודיו ב-add_clip(source="@media:<id>", timeline_start=הזמן המדויק, track=רצועת האודיו); צרף תמונת/כרטיס סיום בדיוק לטווח הקריינות (match_clip_id מ-list_clips); אמת פעם אחת עם list_clips/list_overlays ו-capture_frame(timeline=true). לעולם אל תמציא image/logo/voice id — שאל רק כשצריך.
+28. רצף CTA/אאוטרו (טקסט CTA חדש שלא נאמר — אינו נכנס ל-keep_by_script): קרא get_brand_kit; אם יש לוגו/תמונת ייחוס בערכה — בחר/עשה שימוש חוזר (use_brand_asset / add_image_overlay) בלי להמציא נכס; רק אם המשתמש ביקש ויזואל חדש/נוצר ואין נכס שמתאים — generate_image(prompt=..., use_brand=true) שמחזיר @media:<id>; list_voices רק אם אין voice_id ידוע; generate_narration(text=טקסט ה-CTA, voice_id=...) → הוסף את @media:<id> שהוחזר כקליפ אודיו ב-add_clip(source="@media:<id>", timeline_start=הזמן המדויק, track=רצועת האודיו); צרף תמונת/כרטיס סיום בדיוק לטווח הקריינות (match_clip_id מ-list_clips); אמת פעם אחת עם list_clips/list_overlays ו-capture_frame(timeline=true). לעולם אל תמציא image/logo/voice id — שאל רק כשצריך; לעולם אל תבקש לצייר לוגו — ללוגו אמיתי השתמש ב-use_brand_asset.
 
 כלים חשובים:
 - keep_by_script: כשיש טקסט שישאר. בונה לפי סדר הטקסט.
@@ -2191,10 +2322,11 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - set_caption_style: עיצוב כתוביות אמיתי ב-Preview ובייצוא; אל תבטיח "יפות" בלי לקרוא לו.
 - clear_subtitles למחיקת כל הכתוביות (לא בלולאה).
 - list_voices / generate_narration (מחזיר @media:<id> — הוסף עם add_clip) / list_stt_models / transcribe_video(provider,model).
+- generate_image(prompt, size, quality, background, use_brand): יוצר ויזואל חדש עם OpenAI GPT Image (בתשלום, דורש אישור חיוב) — רק כשאין נכס קיים שמתאים; מחזיר @media:<id> להוספה ב-add_image_overlay או add_clip.
 - capture_frame: ברירת מחדל פריים גולמי מהמקור (מהר). אחרי שינוי ויזואלי משמעותי (אובריי, כתוביות, cutaway, צבע/flip/fades) — צלם capture_frame(timeline=true) פעם אחת כדי לראות את התוצאה בדיוק כמו בייצוא. אל תצלם מורכב אחרי כל שינוי שולי, ואל תצלם שוב את אותה נקודה בלי שינוי — זה רינדור יקר.
 - render_video רק בסוף / כשמבקשים.
 
-זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → CTA/אאוטרו (get_brand_kit → generate_narration → add_clip(@media) → תמונת/כרטיס סיום → capture_frame(timeline=true)) → render.`;
+זרימה טיפוסית: transcribe → keep_by_script → remove_silence(within,tight) → transcribe_timeline → generate_subtitles(script) → set_caption_style → בדיקת גבולות → fade → בקשת נכס עתידי כשהגיע תורו → CTA/אאוטרו (get_brand_kit → [generate_image אם אין נכס שמתאים] → generate_narration → add_clip(@media) → תמונת/כרטיס סיום → capture_frame(timeline=true)) → render.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.

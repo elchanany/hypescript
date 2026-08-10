@@ -22,4 +22,20 @@ describe("provider billing policy", () => {
     setProviderBillingApproval("openai", false, storage);
     expect(isProviderBillingApproved("openai", storage)).toBe(false);
   });
+
+  it("keeps openai-image billing approval separate from the OpenAI LLM approval", () => {
+    const storage = memoryStorage();
+    // אישור LLM של OpenAI אינו מאשר יצירת תמונות
+    setProviderBillingApproval("openai", true, storage);
+    expect(isProviderBillingApproved("openai", storage)).toBe(true);
+    expect(isProviderBillingApproved("openai-image", storage)).toBe(false);
+    // אישור תמונות אינו מאשר את ה-LLM
+    setProviderBillingApproval("openai-image", true, storage);
+    expect(isProviderBillingApproved("openai-image", storage)).toBe(true);
+    expect(isProviderBillingApproved("openai", storage)).toBe(true);
+    // ביטול ה-LLM לא מבטל את אישור התמונות
+    setProviderBillingApproval("openai", false, storage);
+    expect(isProviderBillingApproved("openai", storage)).toBe(false);
+    expect(isProviderBillingApproved("openai-image", storage)).toBe(true);
+  });
 });

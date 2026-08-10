@@ -198,6 +198,22 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
+        <h2>יצירת תמונות (OpenAI GPT Image)</h2>
+        {PROVIDER_REGISTRY.filter((p) => p.kind === "image").map((p) => {
+          const status = statusById[p.id];
+          return (
+            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
+              <span>{p.labelHe} · אותו משתנה <code>{p.envKeys.join(" / ")}</code></span>
+              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
+            </div>
+          );
+        })}
+        <div className="hint" style={{ marginTop: 10 }}>
+          אותו מפתח OpenAI (OPENAI_API_KEY) מאפשר גם את הסוכן. אישור החיוב נפרד מאישור ה-LLM — הסוכן ישאל לפני יצירת תמונה ראשונה.
+        </div>
+      </div>
+
+      <div className="card">
         <h2>ספק ה-AI לסוכן</h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>בחר ספק, ודא שהמפתח שלו מוגדר ב-Vercel. הסוכן ישתמש בספק שנבחר.</p>
         <div className="controls">

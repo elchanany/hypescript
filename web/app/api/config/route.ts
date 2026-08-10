@@ -17,6 +17,9 @@ export async function GET() {
       groq: !!(process.env.GROQ_API_KEY || "").trim(),
       elevenlabs: elevenLabsConfigured(),
     },
+    images: {
+      openai: !!(process.env.OPENAI_API_KEY || "").trim(),
+    },
     auth: {
       supabase: isAuthConfigured(),
       // Safe diagnostics only — never the key value.

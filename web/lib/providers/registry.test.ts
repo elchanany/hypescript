@@ -23,6 +23,23 @@ describe("provider registry", () => {
     ]);
   });
 
+  it("contains the OpenAI image provider as its own kind, separate from LLM billing", () => {
+    const image = PROVIDER_REGISTRY.filter((provider) => provider.kind === "image");
+    expect(image.map((provider) => provider.id)).toEqual(["openai-image"]);
+    expect(image[0].envKeys).toEqual(["OPENAI_API_KEY"]);
+    expect(image[0].configuredKeys).toEqual(["openai-image"]);
+    // kind הוא "image" — לא "llm" — כך שלא מתבלבל עם אישור ה-LLM של OpenAI
+    expect(PROVIDER_REGISTRY.find((provider) => provider.id === "openai")?.kind).toBe("llm");
+  });
+
+  it("maps the images config section to the openai-image provider", () => {
+    const configured = flattenApiConfig({ images: { openai: true } });
+    const status = getProviderStatus("openai-image", configured);
+    expect(status.status).toBe("configured_unverified");
+    expect(isProviderUsable(status)).toBe(true);
+    expect(getProviderStatus("openai-image", flattenApiConfig({})).status).toBe("missing_key");
+  });
+
   it("maps missing keys to missing_key status", () => {
     const status = getProviderStatus("deepseek", { deepseek: false });
 

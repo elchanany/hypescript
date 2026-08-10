@@ -4,6 +4,7 @@ import type { ProviderDefinition, ProviderId, ProviderStatusInfo } from "./types
 export interface ApiConfigShape {
   providers?: Record<string, boolean>;
   transcription?: Record<string, boolean>;
+  images?: Record<string, boolean>;
 }
 
 export function flattenApiConfig(config: ApiConfigShape): Record<string, boolean> {
@@ -13,6 +14,7 @@ export function flattenApiConfig(config: ApiConfigShape): Record<string, boolean
     "groq-transcribe": !!config.transcription?.groq,
     "elevenlabs-transcribe": eleven,
     "elevenlabs-voice": eleven,
+    "openai-image": !!config.images?.openai,
   };
 }
 
