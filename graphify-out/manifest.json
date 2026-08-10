@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786352998.5702875,
-    "ast_hash": "d9184af19e6121dde54713ffc9b29466",
+    "mtime": 1786363085.204247,
+    "ast_hash": "d2affddc9a74bec52c9a7fdac707b5d0",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786228539.1727347,
-    "ast_hash": "5755230bfdb9047f632b00352a7d9c20",
+    "mtime": 1786363430.528855,
+    "ast_hash": "1203d5036b98c996b92b32fdc115ea43",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -965,8 +965,8 @@
     "semantic_hash": ""
   },
   "web/components/ChatMediaCard.tsx": {
-    "mtime": 1786189582.3788936,
-    "ast_hash": "4168bf69c289a3be3bb2baa0ef17a4c1",
+    "mtime": 1786364533.5151858,
+    "ast_hash": "c57b76fff05c071659ae9fbcb62b9c5d",
     "semantic_hash": ""
   },
   "web/lib/auth/bootstrap.ts": {
@@ -1497,6 +1497,16 @@
   "docs/CLOUD_KEYS_CHECKLIST_HE.md": {
     "mtime": 1786355005.8263967,
     "ast_hash": "2d7ad7233b0f21adbd38622583ab8425",
+    "semantic_hash": ""
+  },
+  "web/lib/render/videoCard.test.ts": {
+    "mtime": 1786363704.0385907,
+    "ast_hash": "5ada511d0693da3a50f21ca6ab55be77",
+    "semantic_hash": ""
+  },
+  "web/lib/render/videoCard.ts": {
+    "mtime": 1786363679.9320388,
+    "ast_hash": "130d0d66cf867b0e8bbf677aa4e13983",
     "semantic_hash": ""
   }
 }

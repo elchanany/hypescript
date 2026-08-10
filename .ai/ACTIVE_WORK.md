@@ -1,5 +1,15 @@
 # ACTIVE_WORK.md
 
+## 2026-08-10 — exported video in chat with custom player (main f233969)
+
+- Manual render now auto-opens the chat dock and passes `exportResult` into Chat as `latestExport`, rendered as a pinned ChatMediaCard at the top of the message list. It survives dock close/reopen in-session because it is page-owned state (`exportResult` in page.tsx), not an ephemeral output item.
+- ChatMediaCard video is now a custom player: play/pause (button + click video), seek slider, current/total time, mute toggle, fullscreen, error state; `controlsList=nodownload`; download anchor uses `safeDownloadName` (.mp4 sanitized) plus a "פתח בחלון חדש" fallback anchor (target=_blank rel=noopener).
+- page.tsx URL lifecycle split: abort cleanup is unmount-only; previous export blob URL revoked when replaced, current on unmount — no premature revocation.
+- New pure helpers `web/lib/render/videoCard.ts` (formatTime, safeDownloadName) + 7 tests.
+- Verification: 54 files / 388 tests pass, `tsc` clean; production build passed in a temp worktree (primary `.next` locked by a running dev process, so build verified on an identical patched worktree); graphify 1978 nodes / 4420 edges.
+- Agent artifact cards unchanged; no behavior change to cloud/local render paths. Pinned card is session-only (blob URL dies on full page reload — output items were always session-only).
+- Next: browser E2E the pinned export player with a real render; fix production Supabase key before cloud org sync.
+
 ## 2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261)
 
 - `generate_narration` now persists generated ElevenLabs audio into project media via `EditorApi.addMediaAsset` (no duplicate import, no array mutation) and returns a stable `@media:<id>` plus exact `add_clip` guidance: `timeline_start` = end of the current timeline (max across all tracks), audio track name, and a follow-up card/image exactly spanning the clip (`match_clip_id` from `list_clips`).
@@ -61,16 +71,16 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Live browser E2E the CTA flow (narration + image + popup) and composited capture with a real lecture and ElevenLabs/OpenAI keys; fix the production Supabase key before any cloud org sync.
+Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a real render; fix the production Supabase key before any cloud org sync.
 
 ## Branch
 `main`
 
-## Latest package
-CTA asset pipeline: persisted narration media (`@media:<id>` + exact `add_clip` guidance) and OpenAI GPT Image generation (`openai-image` provider, per-capability billing approval, bounded text-only brand brief).
+## Latest commit
+f233969 "fix(export): show exported video in chat with custom player" — manual render auto-opens the chat dock and pins the exported video as a ChatMediaCard with a custom player (play/pause, seek, time, mute, fullscreen, error state, `controlsList=nodownload`, safe download name + "פתח בחלון חדש" anchor); page.tsx URL lifecycle split (no premature revocation); new `web/lib/render/videoCard.ts` helpers + 7 tests.
 
 ## Status
-Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), local organization/brand kit, and the CTA asset pipeline (persisted narration + GPT images). Web 53 files / 381 tests, `tsc` clean; native export `durationDelta=0`/`audioDrift=0`; graphify 1851 nodes / 4186 edges. Live-key browser E2E with real media still pending.
+Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), local organization/brand kit, CTA asset pipeline (persisted narration + GPT images), and the export-in-chat custom player fix. Web 54 files / 388 tests, `tsc` clean; production build verified in a temp worktree (primary `.next` locked by a running dev process); native export `durationDelta=0`/`audioDrift=0`; graphify 1978 nodes / 4420 edges. Live-key browser E2E with real media still pending.
 
 ## Exact continuation point
-Live browser E2E the CTA flow (narration + image + popup) and composited capture with a real lecture and ElevenLabs/OpenAI keys; fix the production Supabase key before any cloud org sync. Generated external binary media crosses only the explicit browser-only `EditorApi.addMediaAsset` boundary (never JSON CommandBus); provider billing approvals are per capability (LLM vs image vs voice), not shared implicitly. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
+Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a real render; fix the production Supabase key before any cloud org sync. Generated external binary media crosses only the explicit browser-only `EditorApi.addMediaAsset` boundary (never JSON CommandBus); provider billing approvals are per capability (LLM vs image vs voice), not shared implicitly. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
