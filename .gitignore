@@ -59,3 +59,4 @@ graphify-out/.needs_update
 *.graphify-bak
 .graphify/
 .vite/
+.vercel
