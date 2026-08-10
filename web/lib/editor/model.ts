@@ -11,6 +11,9 @@ export interface MediaAsset {
   file: File;
   duration: number; // לתמונות: משך תצוגה שנבחר
   url: string; // object URL לתצוגה מקדימה
+  cloudAssetId?: string;
+  cloudObjectKey?: string;
+  cloudState?: "uploading" | "available" | "failed";
 }
 
 export interface Clip {

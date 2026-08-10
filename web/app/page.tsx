@@ -36,6 +36,8 @@ import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
+import { getProjectPolicy } from "@/lib/projects/policy";
+import { renderCloudProject, uploadCloudAsset } from "@/lib/cloud/client";
 
 ensureBuiltinCommands();
 
@@ -330,7 +332,7 @@ export default function EditorPage() {
             : m.blob instanceof Blob ? new File([m.blob], m.name || "media", { type: m.blob.type || "" })
             : null;
           if (!file) continue; // skip a broken record rather than throwing (never wipe good media)
-          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file, url: URL.createObjectURL(file) });
+          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file, url: URL.createObjectURL(file), cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState });
         }
         return out;
       });
@@ -345,7 +347,7 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (!restored || !projectId) return;
-    kvSet(pk(projectId, "media"), media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file })));
+    kvSet(pk(projectId, "media"), media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file, cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState })));
     touchProject(projectId);
   }, [media, restored, projectId]);
 
@@ -399,11 +401,29 @@ export default function EditorPage() {
   const addFiles = async (files: FileList | File[] | null) => {
     if (!files) return;
     const arr = Array.from(files);
-    const assets = await Promise.all(arr.map(async (f) => {
-      const kind = kindOf(f);
-      return { id: uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f) } as MediaAsset;
-    }));
-    setMedia((m) => [...m, ...assets]);
+    const policy = projectId ? await getProjectPolicy(projectId) : null;
+    const shouldUpload = !!policy?.cloudProjectId && policy.storageBackend === "r2" && policy.dataMode !== "local";
+    try {
+      if (shouldUpload) setPhase("מעלה מדיה מוצפנת לענן…");
+      const assets = await Promise.all(arr.map(async (f, index) => {
+        const kind = kindOf(f);
+        const asset: MediaAsset = { id: uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f) };
+        if (shouldUpload && policy?.cloudProjectId) {
+          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => setProgress((index + ratio) / arr.length));
+          asset.cloudAssetId = cloud.assetId;
+          asset.cloudObjectKey = cloud.objectKey;
+          asset.cloudState = "available";
+        }
+        return asset;
+      }));
+      setMedia((current) => [...current, ...assets]);
+      if (shouldUpload) toast.success("ההעלאה לענן הושלמה", `${arr.length} קבצים נשמרו ב־R2 פרטי`);
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : "העלאה לענן נכשלה";
+      setError(message); toast.error("העלאה לענן נכשלה", message);
+    } finally {
+      if (shouldUpload) { setPhase(""); setProgress(0); }
+    }
   };
 
   const seek = (a: number) => { setCur(a); previewRef.current?.seek(a); };
@@ -628,22 +648,32 @@ export default function EditorPage() {
     setExportResult(null); setExportError(""); setExportOpen(true); setRenderElapsed(0);
     setError(""); setRendering(true); setProgress(0);
     try {
-      const { getRenderBackend } = await import("@/lib/render/RenderBackend");
-      const backend = getRenderBackend();
-      setPhase("מכין קבצים לרינדור מקומי…");
       let edl = flattenVideoTracks(clips, tracks);
       const aid = audioTrack(tracks)?.id;
       const audioClips = aid ? clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)) : [];
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
-      const blob = await backend.renderProject(
-        {
-          media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas,
-          audioClips,
-          subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
-        },
-        (r) => { setPhase("מרנדר את הסרטון…"); setProgress(Math.min(1, r)); },
-        controller.signal,
-      );
+      const policy = projectId ? await getProjectPolicy(projectId) : null;
+      const cloudCapable = policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId
+        && edl.every((clip) => mediaById(media, clip.sourceId)?.cloudAssetId)
+        && !audioClips.length && !overlays.length && !(burnCaptions && subs?.length);
+      let blob: Blob;
+      if (cloudCapable && policy?.cloudProjectId) {
+        setPhase("שולח לרינדור מדויק בענן…");
+        blob = await renderCloudProject({
+          projectId: policy.cloudProjectId,
+          clips: edl.map((clip) => ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
+          target: { width: canvas.width, height: canvas.height, fps: policy.fps },
+        }, (r) => { setPhase("מרנדר בענן…"); setProgress(r); }, controller.signal);
+      } else {
+        const { getRenderBackend } = await import("@/lib/render/RenderBackend");
+        const backend = getRenderBackend();
+        setPhase(policy?.capabilities.render?.execution === "cloud" ? "שכבות מורכבות: מרנדר מקומית לשמירת נאמנות מלאה…" : "מכין קבצים לרינדור מקומי…");
+        blob = await backend.renderProject(
+          { media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas, audioClips, subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length },
+          (r) => { setPhase("מרנדר את הסרטון…"); setProgress(Math.min(1, r)); },
+          controller.signal,
+        );
+      }
       const name = (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4";
       const url = URL.createObjectURL(blob);
       setExportResult({ url, name, size: blob.size });

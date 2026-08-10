@@ -42,6 +42,7 @@ export interface CapabilityChoice {
 }
 
 export interface ProjectExecutionPolicy {
+  cloudProjectId?: string;
   dataMode: DataMode;
   aspectRatio: AspectRatio;
   resolution: ProjectResolution;
@@ -96,7 +97,7 @@ export function storageOptionsForMode(mode: DataMode): { id: StorageBackend; lab
   const cloud = [
     { id: "supabase_storage" as const, label: "Supabase Storage", available: false, reason: "דורש חיבור Storage + health-check (חבילה E)" },
     { id: "s3_compatible" as const, label: "S3-compatible", available: false, reason: "לא מחובר" },
-    { id: "r2" as const, label: "Cloudflare R2", available: false, reason: "לא מחובר" },
+    { id: "r2" as const, label: "Cloudflare R2 (פרטי)", available: false, reason: "נפתח אוטומטית רק אחרי בדיקת ענן חיה" },
     { id: "google_drive" as const, label: "Google Drive", available: false, reason: "לא מחובר" },
     { id: "dropbox" as const, label: "Dropbox", available: false, reason: "לא מחובר" },
     { id: "onedrive" as const, label: "OneDrive", available: false, reason: "לא מחובר" },
@@ -116,7 +117,7 @@ export function presetApplies(preset: ProcessingPreset): Partial<ProjectExecutio
     case "recommended_hybrid":
       return { dataMode: "hybrid", storageBackend: "browser_storage", allowCloudMetadata: true, zeroCostPreferred: false };
     case "cloud_fast":
-      return { dataMode: "cloud", storageBackend: "supabase_storage", allowCloudMetadata: true, zeroCostPreferred: false };
+      return { dataMode: "cloud", storageBackend: "r2", allowCloudMetadata: true, zeroCostPreferred: false };
     case "max_quality":
       return { resolution: "4k", fps: 30, zeroCostPreferred: false };
     default:

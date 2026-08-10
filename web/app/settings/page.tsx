@@ -12,6 +12,14 @@ import type { ProviderId, ProviderStatusInfo } from "@/lib/providers/types";
 import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 
+interface CloudStatus {
+  configured: boolean;
+  authenticated: boolean;
+  services: { database: boolean; storage: boolean; renderer: boolean };
+  live: { database: boolean; storage: boolean };
+  missing: string[];
+}
+
 export default function SettingsPage() {
   const { mode, setMode } = useTheme();
   const [provider, setProvider] = useState<Provider>("deepseek");
@@ -19,6 +27,7 @@ export default function SettingsPage() {
   const [transcribeModel, setTranscribeModel] = useState("");
   const [cfg, setCfg] = useState<ApiConfigShape>({});
   const [billingApprovals, setBillingApprovals] = useState<Partial<Record<ProviderId, boolean>>>({});
+  const [cloud, setCloud] = useState<CloudStatus | null>(null);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -26,6 +35,7 @@ export default function SettingsPage() {
     if (tp === "auto" || tp === "elevenlabs" || tp === "groq") setTranscribePref(tp);
     setTranscribeModel(localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "");
     fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
+    fetch("/api/cloud/status").then((r) => r.json()).then(setCloud).catch(() => setCloud(null));
     const approvals = getProviderApprovals().approved;
     setBillingApprovals(Object.fromEntries(Object.keys(approvals).map((id) => [id, true])));
   }, []);
@@ -124,12 +134,42 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
+        <h2>ענן ורינדור</h2>
+        <p style={{ color: "var(--muted)" }}>
+          פרויקטים ונכסים פרטיים ב־Supabase + Cloudflare R2, ורינדור FFmpeg ב־Google Cloud Run. המפתחות נשארים בצד השרת בלבד.
+        </p>
+        {!cloud ? (
+          <div className="hint">בדיקת הענן אינה זמינה כרגע.</div>
+        ) : (
+          <div className="controls">
+            {([
+              ["מסד נתונים", cloud.services.database, cloud.live.database],
+              ["אחסון R2", cloud.services.storage, cloud.live.storage],
+              ["רינדור Cloud Run", cloud.services.renderer, null],
+            ] as const).map(([label, configured, live]) => (
+              <div key={label} className="row" style={{ justifyContent: "space-between" }}>
+                <span>{label}</span>
+                <span className={configured && live !== false ? "ok" : "err"}>
+                  {!configured ? "— חסרה הגדרה" : live === false ? "— מוגדר אך בדיקה נכשלה" : live === true ? "✓ מחובר ונבדק" : "◐ מוגדר · ייבדק ברינדור ראשון"}
+                </span>
+              </div>
+            ))}
+            {!cloud.authenticated && <div className="hint">יש להתחבר כדי לבצע בדיקת חיבור חיה ולפתוח פרויקטים בענן.</div>}
+            {cloud.missing.length > 0 && <div className="hint">חסרים: <code>{cloud.missing.join(", ")}</code></div>}
+            <div className="row">
+              <Link href="https://github.com/elchanany/hypescript/blob/main/docs/SETUP_CLOUD.md" className="btn" style={{ textDecoration: "none" }}>מדריך חיבור הענן</Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <h2>אודות המוצר</h2>
         <div className="brand-about">
           <BrandLogo variant="icon" size="lg" decorative />
           <div>
             <strong>Hypescript</strong>
-            <p>עריכת וידאו מקצועית עם סוכן AI מובנה. הווידאו נשאר במכשיר שלך.</p>
+            <p>עריכת וידאו מקצועית עם סוכן AI מובנה — מקומי לפרטיות או בענן לפי בחירה.</p>
           </div>
         </div>
       </div>

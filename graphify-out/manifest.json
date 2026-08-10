@@ -95,13 +95,13 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786331983.6089096,
-    "ast_hash": "e998cf61ffa221cb775084099da9f146",
+    "mtime": 1786352998.5702875,
+    "ast_hash": "d9184af19e6121dde54713ffc9b29466",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
-    "mtime": 1786341785.4901073,
-    "ast_hash": "719c24315b19032eeeef74a8e10c5040",
+    "mtime": 1786352848.610847,
+    "ast_hash": "b9d10d8cf7b9fda3b6748c80acf18027",
     "semantic_hash": ""
   },
   "web/components/CaptionsPanel.tsx": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/model.ts": {
-    "mtime": 1786215602.9842494,
-    "ast_hash": "c4003698f0ced20e14645ed9efa3abda",
+    "mtime": 1786352974.2852998,
+    "ast_hash": "b73ab860c478ed89433cdc06202921fb",
     "semantic_hash": ""
   },
   "web/lib/editor/overlay.ts": {
@@ -475,8 +475,8 @@
     "semantic_hash": "368f129b1abbe2d82b25351cde2785d9"
   },
   "web/package.json": {
-    "mtime": 1786319654.844514,
-    "ast_hash": "40daf621d565c8ac7e3f83b7266825c4",
+    "mtime": 1786352645.3370793,
+    "ast_hash": "5105292426b28fd77d11aa9afb12bfba",
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "web/lib/projects/create.ts": {
-    "mtime": 1786189582.5587955,
-    "ast_hash": "31b91b8d7614bfd5b9ab183c373efecc",
+    "mtime": 1786352974.2833004,
+    "ast_hash": "127c6394a179add2af0b3f9180ea6e59",
     "semantic_hash": ""
   },
   "web/lib/projects/policy.ts": {
@@ -1180,8 +1180,8 @@
     "semantic_hash": ""
   },
   "web/lib/projects/types.ts": {
-    "mtime": 1786189582.5668218,
-    "ast_hash": "e4b28786b95bdc2a8927bc8fdd4837aa",
+    "mtime": 1786353044.3843572,
+    "ast_hash": "43fa87e2d3bdf06170b50756898f10b9",
     "semantic_hash": ""
   },
   "web/lib/auth/session.test.ts": {
@@ -1402,6 +1402,91 @@
   "web/lib/openai/images.ts": {
     "mtime": 1786341785.4961083,
     "ast_hash": "737923bdb103f2d8148a00ac31d5294e",
+    "semantic_hash": ""
+  },
+  "cloud-render-worker/package.json": {
+    "mtime": 1786352828.1110065,
+    "ast_hash": "5c3cf21278aeded8bade10df2b01c75f",
+    "semantic_hash": ""
+  },
+  "cloud-render-worker/server.mjs": {
+    "mtime": 1786353649.2225342,
+    "ast_hash": "0f12569abe837f8396775cf0699659fc",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260810050000_cloud_saas.sql": {
+    "mtime": 1786352783.9240673,
+    "ast_hash": "2d80610afe6d9e82c98fa70cbf86845c",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/assets/[id]/download/route.ts": {
+    "mtime": 1786352719.6218114,
+    "ast_hash": "c1742a7a3566a1ce51dece936a71d5db",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/assets/[id]/route.ts": {
+    "mtime": 1786352719.623575,
+    "ast_hash": "247aebc29263272b40b691e2a40104c1",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/jobs/[id]/route.ts": {
+    "mtime": 1786353809.8551004,
+    "ast_hash": "deea810d5357164f5281ecbece12ca06",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/projects/route.ts": {
+    "mtime": 1786352719.6122093,
+    "ast_hash": "4fe9c25e67bff8b3cadea6e3f0e985b1",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/render/callback/route.ts": {
+    "mtime": 1786353809.8531013,
+    "ast_hash": "4dfdc6b556831002886f54f04b738636",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/render/route.ts": {
+    "mtime": 1786353809.8511002,
+    "ast_hash": "116d0445c02c30797c4d77322a32e150",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/status/route.ts": {
+    "mtime": 1786352719.6111953,
+    "ast_hash": "4ed07197c76a3a45c5293a31973073d4",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/uploads/[id]/complete/route.ts": {
+    "mtime": 1786352719.6195018,
+    "ast_hash": "c3b9d52170f84d794bbe6863a31e42a4",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/uploads/route.ts": {
+    "mtime": 1786352719.6142077,
+    "ast_hash": "791399a4908c5995216f35fe9019549d",
+    "semantic_hash": ""
+  },
+  "web/lib/cloud/auth.ts": {
+    "mtime": 1786352687.0095427,
+    "ast_hash": "68a0545bb90e4e57ad0df6ea6ecd682b",
+    "semantic_hash": ""
+  },
+  "web/lib/cloud/client.ts": {
+    "mtime": 1786352974.2872994,
+    "ast_hash": "5c9236bc7bbbadb9a2304eb378bca990",
+    "semantic_hash": ""
+  },
+  "web/lib/cloud/config.ts": {
+    "mtime": 1786352687.0065424,
+    "ast_hash": "91658981f43179280c36954ca0f96940",
+    "semantic_hash": ""
+  },
+  "web/lib/cloud/r2.ts": {
+    "mtime": 1786352687.0095427,
+    "ast_hash": "405782118805dcd3e3265ac24f6460dc",
+    "semantic_hash": ""
+  },
+  "docs/SETUP_CLOUD.md": {
+    "mtime": 1786352887.8453095,
+    "ast_hash": "bf1fed6243139256395bdfb06d3542bc",
     "semantic_hash": ""
   }
 }
