@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786320851.309318,
-    "ast_hash": "d7fbc2d2ee3976b1bdf3f185be33e873",
+    "mtime": 1786326238.2168186,
+    "ast_hash": "823e67bba62ca1b55a039155266b90aa",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "web/components/TimelineToolbar.tsx": {
-    "mtime": 1786320851.3113244,
-    "ast_hash": "77025de64c1920c53d15c8e1f1916e20",
+    "mtime": 1786326179.7625067,
+    "ast_hash": "097bd6a094423db5f3178d53ea722bed",
     "semantic_hash": ""
   },
   "web/components/ToolRail.tsx": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "web/components/TopBar.tsx": {
-    "mtime": 1786189582.4169385,
-    "ast_hash": "26b37ab0b269f3753e287984c9fb5f37",
+    "mtime": 1786326126.4651763,
+    "ast_hash": "ed3a6f9860036e2059559d2b583fb067",
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786320881.2471836,
-    "ast_hash": "6bb43d0aca403cf42200943e509d1f6d",
+    "mtime": 1786326490.4935646,
+    "ast_hash": "b563d50e7003a170cbfe0507832415fe",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "docs/RENDER_BACKEND.md": {
-    "mtime": 1785710325.4478526,
-    "ast_hash": "59ae2609219fb29318bed24aeec2c1b8",
+    "mtime": 1786326490.496083,
+    "ast_hash": "2bf5821e7d50ccfb0ea9a482a7ddd304",
     "semantic_hash": ""
   },
   "docs/SECURITY_MODEL.md": {
@@ -1337,6 +1337,21 @@
   "web/scripts/prepare-ffmpeg.mjs": {
     "mtime": 1786319654.8485396,
     "ast_hash": "2137591d3e97672c5f5fa3424624c6cf",
+    "semantic_hash": ""
+  },
+  "web/components/ExportDialog.tsx": {
+    "mtime": 1786326549.5520513,
+    "ast_hash": "6b3c203139b727e48297c681753e98ab",
+    "semantic_hash": ""
+  },
+  "web/lib/render/exportProgress.test.ts": {
+    "mtime": 1786326126.4570804,
+    "ast_hash": "1eed15dcc050fc093e06d4e0c01268a7",
+    "semantic_hash": ""
+  },
+  "web/lib/render/exportProgress.ts": {
+    "mtime": 1786326126.4550784,
+    "ast_hash": "ef3845485adde65ec46f3515e5d40a3c",
     "semantic_hash": ""
   }
 }
