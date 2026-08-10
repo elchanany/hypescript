@@ -1,5 +1,7 @@
 # Hypescript Cloud — חיבור חד־פעמי
 
+למדריך קצר ומדויק עם מספר המשתנים, קישורים ישירים ואשף אוטומטי, ראה [CLOUD_KEYS_CHECKLIST_HE.md](./CLOUD_KEYS_CHECKLIST_HE.md).
+
 הקוד מוכן לעבוד במבנה הבא:
 
 - Supabase: משתמשים, פרויקטים, metadata, מכסות ו־RLS.
@@ -12,9 +14,7 @@
 ## 1. Supabase
 
 1. פתח Supabase → הפרויקט → **SQL Editor**.
-2. הרץ לפי הסדר את קבצי `supabase/migrations`, ובפרט:
-   - `20260804170000_pkg_a_foundation.sql`
-   - `20260810050000_cloud_saas.sql`
+2. הרץ את `20260810050000_cloud_saas.sql`. הוא עצמאי וניתן להרצה חוזרת. `20260804170000_pkg_a_foundation.sql` אופציונלי לתפקידי הניהול והגדרות המערכת המורחבות.
 3. ב־Project Settings → API Keys העתק ל־Vercel:
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - Publishable key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`

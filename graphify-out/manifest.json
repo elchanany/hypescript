@@ -1415,8 +1415,8 @@
     "semantic_hash": ""
   },
   "supabase/migrations/20260810050000_cloud_saas.sql": {
-    "mtime": 1786352783.9240673,
-    "ast_hash": "2d80610afe6d9e82c98fa70cbf86845c",
+    "mtime": 1786355041.5880115,
+    "ast_hash": "b34114cbfbbd750898ef353c76d31560",
     "semantic_hash": ""
   },
   "web/app/api/cloud/assets/[id]/download/route.ts": {
@@ -1485,8 +1485,18 @@
     "semantic_hash": ""
   },
   "docs/SETUP_CLOUD.md": {
-    "mtime": 1786352887.8453095,
-    "ast_hash": "bf1fed6243139256395bdfb06d3542bc",
+    "mtime": 1786355005.828397,
+    "ast_hash": "0c0046c0fa44cc8d1e60fb40651f7e70",
+    "semantic_hash": ""
+  },
+  "scripts/setup-cloud.ps1": {
+    "mtime": 1786355005.8263967,
+    "ast_hash": "094faed3c2885a1fa6340a81ec183f20",
+    "semantic_hash": ""
+  },
+  "docs/CLOUD_KEYS_CHECKLIST_HE.md": {
+    "mtime": 1786355005.8263967,
+    "ast_hash": "2d7ad7233b0f21adbd38622583ab8425",
     "semantic_hash": ""
   }
 }

@@ -1,5 +1,6 @@
 -- Hypescript cloud foundation: private projects/assets, render jobs and quota-aware plans.
 -- Additive and idempotent. All user data is protected by owner-scoped RLS.
+-- This migration can run without the optional Package A system_settings table.
 
 create extension if not exists pgcrypto;
 
@@ -164,7 +165,17 @@ drop trigger if exists cloud_assets_touch_project on public.cloud_assets;
 create trigger cloud_assets_touch_project after insert or update or delete on public.cloud_assets
 for each row execute function public.touch_cloud_project();
 
-insert into public.system_settings (key, value) values
-  ('cloud_saas_schema_version', '1'::jsonb),
-  ('cloud_default_retention_days', '30'::jsonb)
-on conflict (key) do update set value = excluded.value, updated_at = now();
+-- Package A owns system_settings. Keep the cloud migration independent when
+-- Package A was not installed, while still recording version/retention when it was.
+do $migration$
+begin
+  if to_regclass('public.system_settings') is not null then
+    execute $sql$
+      insert into public.system_settings (key, value) values
+        ('cloud_saas_schema_version', '1'::jsonb),
+        ('cloud_default_retention_days', '30'::jsonb)
+      on conflict (key) do update set value = excluded.value, updated_at = now()
+    $sql$;
+  end if;
+end;
+$migration$;
