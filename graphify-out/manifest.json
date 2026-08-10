@@ -535,23 +535,23 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786334254.9983258,
-    "ast_hash": "f1c8c8d7f819fb668ab7d62dc84853bf",
+    "mtime": 1786343441.331098,
+    "ast_hash": "c0b1c5542848d029a771b6b0b9f9cbd8",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
-    "mtime": 1786334278.3186452,
-    "ast_hash": "8a64417923078e1e37c17db8c42b7b19",
+    "mtime": 1786343580.6077354,
+    "ast_hash": "14b3f40d200a2b34ea0f32c19311d4a2",
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786334211.316213,
-    "ast_hash": "7835abf16d390b3719594cefa68c3556",
+    "mtime": 1786343284.463555,
+    "ast_hash": "6f5eae7301fa5f8bc260e3d380ada21e",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
-    "mtime": 1786334344.4757366,
-    "ast_hash": "a5d7345128dddaaa1c23a4c1300539c7",
+    "mtime": 1786343981.8055346,
+    "ast_hash": "3e29513dd4d76e09af98a207f2487e1c",
     "semantic_hash": ""
   },
   ".ai/WORKFLOW.md": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "docs/GAP_MAP.md": {
-    "mtime": 1786334299.9976518,
-    "ast_hash": "e075e2b7cb5eaa1f2605da9a68630c50",
+    "mtime": 1786343775.6380427,
+    "ast_hash": "cdccc17cd3414b28aaecf2f3f3131e4e",
     "semantic_hash": ""
   },
   "docs/PROVIDER_CAPABILITY_MATRIX.md": {
