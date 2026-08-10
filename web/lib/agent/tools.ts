@@ -40,7 +40,7 @@ import {
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
 import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
-import { clipTrackId, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
+import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { ensureProviderBillingApproval } from "@/lib/providers/policy";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
@@ -1103,8 +1103,8 @@ export const TOOLS: ToolMeta[] = [
     name: "move_clip_to_track", label: "העברת קליפ לרצועה", color: "#0ea5e9", icon: "🔀",
     schema: {
       name: "move_clip_to_track",
-      description: "מעביר קליפ לרצועת וידאו אחרת (מונטאז'/B-roll). index=1-based ב-list_clips, track=שם או id.",
-      parameters: { type: "object", properties: { index: { type: "number" }, track: { type: "string" } }, required: ["index", "track"] },
+      description: "מעביר קליפ לרצועת וידאו אחרת (מונטאז'/B-roll). timeline_start מציב אותו בזמן ציר מדויק ומוסיף רווח לפי הצורך; בלי זמן הוא מצטרף לסוף.",
+      parameters: { type: "object", properties: { index: { type: "number" }, track: { type: "string" }, timeline_start: { type: "number", description: "זמן התחלה מדויק על הציר הערוך" } }, required: ["index", "track"] },
     },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
@@ -1113,11 +1113,16 @@ export const TOOLS: ToolMeta[] = [
       const t = videoTracks(ctx.tracks || []).find((x) => x.id === ref || x.name === ref || x.name.includes(ref));
       if (!t) return `רצועה "${ref}" לא נמצאה.`;
       if (ctx.editorApi) {
-        const e = dispatch(ctx, "clip.moveToTrack", { id: c.id, trackId: t.id });
+        const exact = a.timeline_start != null && Number.isFinite(+a.timeline_start);
+        const e = dispatch(ctx, exact ? "clip.moveAtTimeline" : "clip.moveToTrack", {
+          id: c.id, trackId: t.id, ...(exact ? { timeline_start: Math.max(0, +a.timeline_start) } : {}),
+        });
         if (e) return e;
-        return `קליפ ${a.index | 0} הועבר ל-"${t.name}".`;
+        return `קליפ ${a.index | 0} הועבר ל-"${t.name}"${exact ? ` בזמן ${Math.max(0, +a.timeline_start).toFixed(3)}s` : ""}.`;
       }
-      setClips(ctx, ctx.clips!.map((x) => (x.id === c.id ? { ...x, trackId: t.id } : x)));
+      setClips(ctx, a.timeline_start != null && Number.isFinite(+a.timeline_start)
+        ? moveClipAtTimeline(ctx.clips!, c.id, t.id, Math.max(0, +a.timeline_start), primaryVideoTrackId(ctx.tracks || []))
+        : ctx.clips!.map((x) => (x.id === c.id ? { ...x, trackId: t.id } : x)));
       return `קליפ ${a.index | 0} הועבר ל-"${t.name}".`;
     },
   },

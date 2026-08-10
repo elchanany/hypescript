@@ -212,6 +212,16 @@ describe("Agent ↔ UI CommandBus parity", () => {
     expect(h.ctx._editorDirty).toBe(true);
   });
 
+  it("places a clip on another video track at an exact agent-requested time", async () => {
+    const h = contextWithEditor();
+    const result = await TOOL_BY_NAME.move_clip_to_track.run({ index: 1, track: "video-2", timeline_start: 3.125 }, h.ctx, () => undefined);
+    const moved = h.clips().find((clip) => clip.id === "clip-1");
+    const gap = h.clips().find((clip) => clip.sourceId === "__gap__" && clip.trackId === "video-2");
+    expect(result).toContain("3.125s");
+    expect(moved).toMatchObject({ trackId: "video-2", start: 0, end: 4 });
+    expect(gap).toMatchObject({ trackId: "video-2", end: 3.125 });
+  });
+
   it("matches an end-card overlay to an audio clip's exact assembled span", async () => {
     const h = contextWithEditor();
     h.ctx.editorApi!.setClips!([

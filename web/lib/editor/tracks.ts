@@ -1,9 +1,10 @@
 // עזרי רצועות וידאו מרובות: סינון קליפים, משך פרויקט, ושטיחה ל-EDL יחיד (cutaway).
 
 import {
-  Clip, clipAudioFades, clipContrast, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume, totalDur, uid,
+  Clip, clipAudioFades, clipContrast, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume, splitClip, totalDur, uid,
 } from "./model";
 import { TrackMeta, primaryVideoTrackId, sortedTracks, videoTracks } from "./project";
+import { isGapClip } from "./timelineOps";
 
 export function clipTrackId(c: Clip, primaryId = "trk_video"): string {
   return c.trackId || primaryId;
@@ -41,6 +42,74 @@ export function moveClipOnTrack(
   const [moved] = arr.splice(i, 1);
   arr.splice(Math.max(0, Math.min(arr.length, toIndex)), 0, moved);
   return replaceTrackClips(all, tid, arr, primaryId);
+}
+
+/**
+ * Insert a clip at an exact assembled-time position on one track.
+ * A gap is consumed before later clips are pushed; real media is split when the
+ * requested position is inside it. This gives drag/drop one deterministic model
+ * for magnetic placement instead of converting the pointer back to a guessed index.
+ */
+export function insertClipAtTimeline(trackClips: Clip[], rawClip: Clip, timelineStart: number, trackId: string): Clip[] {
+  const clip = { ...rawClip, trackId };
+  const wanted = Math.max(0, timelineStart);
+  const next: Clip[] = [];
+  let cursor = 0;
+
+  for (const current of trackClips) {
+    const duration = clipDur(current);
+    if (wanted > cursor + duration + 1e-4) {
+      next.push(current);
+      cursor += duration;
+      continue;
+    }
+
+    const local = Math.max(0, Math.min(duration, wanted - cursor));
+    if (local <= 0.001) return [...next, clip, current, ...trackClips.slice(next.length + 1)];
+    if (local >= duration - 0.001) return [...next, current, clip, ...trackClips.slice(next.length + 1)];
+
+    if (isGapClip(current)) {
+      const before = local;
+      const after = duration - local - clipDur(clip);
+      if (before > 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: before, trackId });
+      next.push(clip);
+      if (after > 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: after, trackId });
+      return [...next, ...trackClips.slice(next.length ? trackClips.indexOf(current) + 1 : 0)];
+    }
+
+    const halves = splitClip([current], current.id, current.start + local);
+    if (halves.length === 2) return [...next, halves[0], clip, halves[1], ...trackClips.slice(trackClips.indexOf(current) + 1)];
+    return [...next, current, clip, ...trackClips.slice(trackClips.indexOf(current) + 1)];
+  }
+
+  if (wanted > cursor + 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: wanted - cursor, trackId });
+  next.push(clip);
+  return next;
+}
+
+/** Move a clip across or within tracks while preserving its exact source range. */
+export function moveClipAtTimeline(
+  clips: Clip[], id: string, targetTrackId: string, timelineStart: number, primaryId = "trk_video",
+): Clip[] {
+  const clip = clips.find((item) => item.id === id);
+  if (!clip) return clips;
+  const sourceTrackId = clipTrackId(clip, primaryId);
+  const sourceTrack = clipsOnTrack(clips, sourceTrackId, primaryId);
+  const sourceNext = sourceTrackId === targetTrackId
+    ? sourceTrack.filter((item) => item.id !== id)
+    : sourceTrack.map((item) => item.id === id
+      ? { id: uid("g"), sourceId: "__gap__", start: 0, end: clipDur(item), trackId: sourceTrackId }
+      : item);
+  let without = replaceTrackClips(
+    clips,
+    sourceTrackId,
+    sourceNext,
+    primaryId,
+  );
+  const target = clipsOnTrack(without, targetTrackId, primaryId);
+  const placed = insertClipAtTimeline(target, clip, timelineStart, targetTrackId);
+  without = replaceTrackClips(without, targetTrackId, placed, primaryId);
+  return without;
 }
 
 export function projectDuration(clips: Clip[], tracks: TrackMeta[]): number {

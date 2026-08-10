@@ -20,6 +20,7 @@ export type CommandId =
   | "clip.add"
   | "clip.replaceAll"
   | "clip.moveToTrack"
+  | "clip.moveAtTimeline"
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
@@ -124,6 +125,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num, timeline_start: num }),
   "clip.replaceAll": schema(["clips"], { clips: arr }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
+  "clip.moveAtTimeline": schema(["id", "trackId", "timeline_start"], { id, trackId: id, timeline_start: num }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num, preset: str }),
   "overlay.addImage": schema(["assetId"], { assetId: id, overlayId: id, start: num, end: num, width: num, height: num, preset: str, x: num, y: num, w: num, h: num, borderRadius: num, opacity: num, fadeIn: num, fadeOut: num, locked: bool }),
   "overlay.update": schema(["id", "patch"], { id, patch: obj }),
@@ -139,7 +141,7 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
   "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
 };
-const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.replaceAll", "clip.moveToTrack", "clip.setEnabled", "clip.setVolume", "clip.setAudioFades", "clip.setOpacity", "clip.setColorAdjustments", "clip.setVisualFades", "clip.setFlip", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "subtitle.replaceAll", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.replaceAll", "clip.moveToTrack", "clip.moveAtTimeline", "clip.setEnabled", "clip.setVolume", "clip.setAudioFades", "clip.setOpacity", "clip.setColorAdjustments", "clip.setVisualFades", "clip.setFlip", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "subtitle.replaceAll", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
 const RESULT_SCHEMA = schema(["ok"], { ok: bool });
 
 const registry = new Map<CommandId, CommandDef>();

@@ -48,6 +48,13 @@ export const ZOOM_MAX = 400;
 export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 export type SnapResult = { time: number; snapped: boolean; target: number | null };
+export type MagneticTarget = {
+  time: number;
+  label: string;
+  kind: "clip" | "overlay" | "caption" | "playhead" | "timeline";
+  priority?: number;
+};
+export type MagneticSnapResult = SnapResult & { match: MagneticTarget | null; distance: number };
 
 /** מגנטיות: אם s קרוב לאחד ה-targets בטולרנס — מחזיר את היעד (מעוגל ל-ms). */
 export function snapTimeTo(s: number, targets: number[], toleranceSec: number): SnapResult {
@@ -64,4 +71,39 @@ export function snapTimeTo(s: number, targets: number[], toleranceSec: number): 
 
 export function snapTime(s: number, targets: number[], toleranceSec: number): number {
   return snapTimeTo(s, targets, toleranceSec).time;
+}
+
+/** Metadata-aware snap used by the timeline to explain what the magnet found. */
+export function snapToMagneticTarget(s: number, targets: MagneticTarget[], toleranceSec: number): MagneticSnapResult {
+  let match: MagneticTarget | null = null;
+  let bestDistance = toleranceSec;
+  for (const target of targets) {
+    const distance = Math.abs(target.time - s);
+    if (
+      distance < bestDistance - 1e-9
+      || (Math.abs(distance - bestDistance) <= 1e-9 && (target.priority || 0) > (match?.priority || 0))
+    ) {
+      match = target;
+      bestDistance = distance;
+    }
+  }
+  return match
+    ? { time: roundToMs(match.time), snapped: true, target: roundToMs(match.time), match, distance: bestDistance }
+    : { time: roundToMs(s), snapped: false, target: null, match: null, distance: Infinity };
+}
+
+/** Snap whichever edge of a moving range is closest, preserving its duration. */
+export function snapRangeStart(
+  rawStart: number, duration: number, targets: MagneticTarget[], toleranceSec: number,
+): MagneticSnapResult & { start: number; edge: "start" | "end" | null } {
+  const startHit = snapToMagneticTarget(rawStart, targets, toleranceSec);
+  const endHit = snapToMagneticTarget(rawStart + duration, targets, toleranceSec);
+  if (!startHit.snapped && !endHit.snapped) return { ...startHit, start: roundToMs(rawStart), edge: null };
+  const useStart = startHit.snapped && (!endHit.snapped || startHit.distance <= endHit.distance);
+  const hit = useStart ? startHit : endHit;
+  return {
+    ...hit,
+    start: roundToMs(useStart ? hit.time : hit.time - duration),
+    edge: useStart ? "start" : "end",
+  };
 }

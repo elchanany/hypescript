@@ -5,7 +5,7 @@ import { clampOverlayTransform, imageOverlayGeometry, makeImageOverlay, makeText
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
-import { clipTrackId, clipsOnTrack, moveClipOnTrack, replaceTrackClips } from "./tracks";
+import { clipTrackId, clipsOnTrack, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, replaceTrackClips } from "./tracks";
 import { registerCommand } from "./commands";
 
 let registered = false;
@@ -337,26 +337,7 @@ export function ensureBuiltinCommands() {
       const timelineStart = args?.timeline_start != null ? Math.max(0, Number(args.timeline_start)) : undefined;
       if (timelineStart != null && Number.isFinite(timelineStart)) {
         const onTrack = clipsOnTrack(clips, trackId, primary);
-        const next: Clip[] = [];
-        let cursor = 0;
-        let inserted = false;
-        for (const current of onTrack) {
-          const duration = clipDur(current);
-          if (!inserted && timelineStart <= cursor + duration + 1e-4) {
-            const local = Math.max(0, Math.min(duration, timelineStart - cursor));
-            if (local > 0.001 && local < duration - 0.001 && !isGapClip(current)) {
-              const [left, right] = splitClip([current], current.id, current.start + local);
-              next.push(left, clip, right);
-            } else if (local >= duration - 0.001) next.push(current, clip);
-            else next.push(clip, current);
-            inserted = true;
-          } else next.push(current);
-          cursor += duration;
-        }
-        if (!inserted) {
-          if (timelineStart > cursor + 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: timelineStart - cursor, trackId });
-          next.push(clip);
-        }
+        const next = insertClipAtTimeline(onTrack, clip, timelineStart, trackId);
         api.setClips(replaceTrackClips(clips, trackId, next, primary));
       } else if (at != null && Number.isFinite(at)) {
         const onTrack = clipsOnTrack(clips, trackId, primary);
@@ -426,6 +407,31 @@ export function ensureBuiltinCommands() {
         api.setClips(clips.map((c) => (clipTrackId(c, trackId) === trackId ? { ...c, trackId: primary } : c)));
       }
       api.setTracks(next);
+    },
+  });
+
+  registerCommand({
+    id: "clip.moveAtTimeline",
+    label: "Move clip at exact timeline time",
+    labelHe: "העבר קליפ לזמן מדויק",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const targetTrackId = String(args?.trackId || "");
+      const timelineStart = Number(args?.timeline_start);
+      const clips = api.getClips();
+      const tracks = api.getTracks();
+      if (!clips || !id) throw new Error("אין קטע");
+      const clip = clips.find((item) => item.id === id);
+      const targetTrack = tracks.find((track) => track.id === targetTrackId);
+      if (!clip || !targetTrack || !Number.isFinite(timelineStart)) throw new Error("יעד גרירה לא תקין");
+      const media = api.getMedia().find((item) => item.id === clip.sourceId);
+      const expectedType = media?.kind === "audio" ? "audio" : "video";
+      if (targetTrack.type !== expectedType) throw new Error("סוג רצועת היעד אינו מתאים לקליפ");
+      const primary = primaryVideoTrackId(tracks);
+      api.setClips(moveClipAtTimeline(clips, id, targetTrackId, Math.max(0, timelineStart), primary));
+      api.selectClip(id);
+      api.seek(Math.max(0, timelineStart));
     },
   });
 

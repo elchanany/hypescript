@@ -40,7 +40,10 @@ export default function TimelineToolbar({
         active={avLinked !== false}
         onClick={() => onAvLinked?.(!(avLinked !== false))}
       />
-      <IconButton icon={Magnet} tip="הצמדה לקצוות" tipPos="up" active={snap} onClick={() => onSnap(!snap)} />
+      <IconButton icon={Magnet} tip="מגנט חכם לכל הרצועות (M) · Alt משחרר זמנית" tipPos="up" active={snap} onClick={() => onSnap(!snap)} />
+      <span className={`tl-magnet-state ${snap ? "active" : ""}`} title="המגנט מזהה קצות קליפים בכל הרצועות. החזק Alt בזמן גרירה למיקום חופשי.">
+        {snap ? "מגנט חכם · Alt לשחרור" : "מגנט כבוי"}
+      </span>
       {selInfo && <span className="tl-selinfo">{selInfo}</span>}
       <div className="grow" />
       <div className="tl-zoom">

@@ -246,6 +246,17 @@ describe("CommandBus builtins", () => {
     expect(api.overlays[0].transform.y).toBeLessThan(1080 / 2);
   });
 
+  it("moves a clip to an exact magnetic time through CommandBus", () => {
+    const api = fakeApi([
+      { id: "main", sourceId: "m", start: 0, end: 4, trackId: "trk_video" },
+      { id: "cutaway", sourceId: "m", start: 4, end: 6, trackId: "trk_video_2" },
+    ]) as any;
+    api.tracks.push({ id: "trk_video_2", name: "שכבה 2", type: "video", order: 1, height: 64, locked: false, muted: false });
+    const result = runCommand("clip.moveAtTimeline", api, { id: "cutaway", trackId: "trk_video", timeline_start: 4 });
+    expect(result.ok).toBe(true);
+    expect(api.clips.find((clip: any) => clip.id === "cutaway")).toMatchObject({ start: 4, end: 6, trackId: "trk_video" });
+  });
+
   it("adds independent image overlays by stable id and clamps later updates", () => {
     const api = fakeApi([]) as any;
     api.updateOverlay = (id: string, patch: any) => { api.overlays = api.overlays.map((item: any) => item.id === id ? { ...item, ...patch } : item); };

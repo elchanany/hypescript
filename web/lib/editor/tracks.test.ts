@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Clip } from "./model";
 import { defaultTracks, createVideoTrack } from "./project";
 import {
-  clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipOnTrack, projectDuration, replaceTrackClips,
+  clipTrackId, clipsOnTrack, flattenVideoTracks, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, projectDuration, replaceTrackClips,
 } from "./tracks";
 
 describe("multi-track helpers", () => {
@@ -58,6 +58,37 @@ describe("multi-track helpers", () => {
     expect(flat.length).toBeGreaterThanOrEqual(2);
     expect(flat[0].sourceId).toBe("srcB");
     expect(flat[flat.length - 1].sourceId).toBe("srcA");
+  });
+
+  it("places a clip at an exact empty-track time with a real leading gap", () => {
+    const clip: Clip = { id: "b", sourceId: "src", start: 3, end: 5 };
+    const placed = insertClipAtTimeline([], clip, 7.125, "trk_b");
+    expect(placed).toHaveLength(2);
+    expect(placed[0]).toMatchObject({ sourceId: "__gap__", end: 7.125, trackId: "trk_b" });
+    expect(placed[1]).toMatchObject({ id: "b", start: 3, end: 5, trackId: "trk_b" });
+  });
+
+  it("moves a clip to a cross-track magnetic edge without changing its source range", () => {
+    const clips: Clip[] = [
+      { id: "base", sourceId: "a", start: 10, end: 20, trackId: "trk_video" },
+      { id: "logo", sourceId: "b", start: 2, end: 5, trackId: "trk_b" },
+    ];
+    const moved = moveClipAtTimeline(clips, "logo", "trk_video", 10, "trk_video");
+    const primary = clipsOnTrack(moved, "trk_video");
+    expect(primary.map((item) => item.id)).toEqual(["base", "logo"]);
+    expect(primary[1]).toMatchObject({ sourceId: "b", start: 2, end: 5, trackId: "trk_video" });
+    expect(clipsOnTrack(moved, "trk_b")).toHaveLength(1);
+    expect(clipsOnTrack(moved, "trk_b")[0]).toMatchObject({ sourceId: "__gap__", end: 3 });
+  });
+
+  it("consumes available gap space when magnetically placing a clip", () => {
+    const track: Clip[] = [
+      { id: "gap", sourceId: "__gap__", start: 0, end: 8, trackId: "trk_b" },
+      { id: "after", sourceId: "a", start: 0, end: 2, trackId: "trk_b" },
+    ];
+    const placed = insertClipAtTimeline(track, { id: "new", sourceId: "b", start: 0, end: 2 }, 3, "trk_b");
+    expect(placed.map((item) => item.id)).toEqual([expect.stringMatching(/^g/), "new", expect.stringMatching(/^g/), "after"]);
+    expect(placed.reduce((sum, item) => sum + (item.end - item.start), 0)).toBe(10);
   });
 
   it("does not merge adjacent source ranges with different opacity or volume", () => {

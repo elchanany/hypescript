@@ -7,7 +7,7 @@ import { Overlay } from "@/lib/editor/overlay";
 import { audioTrack, primaryVideoTrackId, sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack } from "@/lib/editor/tracks";
 import { isGapClip } from "@/lib/editor/timelineOps";
-import { snapTimeTo } from "@/lib/editor/time";
+import { formatTimecode, MagneticTarget, snapRangeStart, snapToMagneticTarget } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, timelineContentWidth, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
@@ -45,7 +45,9 @@ interface Props {
   onSubMenu?: (id: string, x: number, y: number) => void;
   onTrackMenu?: (id: string, x: number, y: number) => void;
   /** גרירה מספריית מדיה — assetId + אינדקס הכנסה (+ רצועת יעד) */
-  onDropMedia?: (assetId: string, atIndex: number, trackId?: string) => void;
+  onDropMedia?: (assetId: string, atIndex: number, trackId?: string, timelineStart?: number) => void;
+  /** Magnetic move, including crossing compatible tracks at an exact assembled time. */
+  onMoveAtTime?: (id: string, trackId: string, timelineStart: number) => void;
   onAddVideoTrack?: () => void;
   onOverlayTrimBegin?: () => void;
   onOverlayTrim?: (id: string, start: number, end: number) => void;
@@ -73,6 +75,8 @@ export default function Timeline(p: Props) {
   const dropRef = useRef<HTMLDivElement>(null);
   const dropLaneRef = useRef<{ trackId: string; el: HTMLElement } | null>(null);
   const snapGuideRef = useRef<HTMLDivElement>(null);
+  const snapLabelRef = useRef<HTMLSpanElement>(null);
+  const dragMetaRef = useRef<HTMLSpanElement>(null);
   const pendingScroll = useRef<number | null>(null);
   const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
@@ -96,6 +100,11 @@ export default function Timeline(p: Props) {
     px: number;
     /** Assembled-time start of the clip being trimmed (for edge snap). */
     assembled0?: number;
+    sourceTrackId?: string;
+    targetTrackId?: string;
+    trackType?: "video" | "audio";
+    timelineStart?: number;
+    snapped?: boolean;
   } | null>(null);
 
   const zoomRef = useRef(zoom);
@@ -182,15 +191,33 @@ export default function Timeline(p: Props) {
   const clipsOf = (trackId: string) => clipsOnTrack(clips, trackId, primaryId);
   const primaryClips = clipsOf(primaryId);
 
-  // CapCut-like snap targets: clip edges, overlay edges, caption edges, playhead, timeline ends.
-  const snapPts = useMemo(() => {
-    const pts = [0, total, currentAssembled];
-    let acc = 0;
-    for (const c of clips) { pts.push(acc); acc += clipDur(c); pts.push(acc); }
-    for (const o of overlays) { pts.push(o.start, o.end); }
-    for (const s of (subs || [])) { pts.push(s.start, s.end); }
-    return pts;
-  }, [clips, overlays, subs, total, currentAssembled]);
+  // Each track owns its own assembled clock. The old global accumulator shifted
+  // edges after the first track and made cross-layer snapping visually dishonest.
+  const snapTargets = useMemo<MagneticTarget[]>(() => {
+    const points: MagneticTarget[] = [
+      { time: 0, label: "תחילת הציר", kind: "timeline", priority: 3 },
+      { time: total, label: "סוף הציר", kind: "timeline", priority: 3 },
+      { time: currentAssembled, label: "ראש הנגן", kind: "playhead", priority: 1 },
+    ];
+    const primary = primaryVideoTrackId(tracks);
+    for (const track of sortedTracks(tracks).filter((item) => item.type === "video" || item.type === "audio")) {
+      let cursor = 0;
+      for (const clip of clipsOnTrack(clips, track.id, primary)) {
+        points.push({ time: cursor, label: `${track.name} · התחלה`, kind: "clip", priority: 5 });
+        cursor += clipDur(clip);
+        points.push({ time: cursor, label: `${track.name} · סוף`, kind: "clip", priority: 5 });
+      }
+    }
+    for (const overlay of overlays) {
+      points.push({ time: overlay.start, label: "שכבה · התחלה", kind: "overlay", priority: 4 });
+      points.push({ time: overlay.end, label: "שכבה · סוף", kind: "overlay", priority: 4 });
+    }
+    for (const cue of (subs || [])) {
+      points.push({ time: cue.start, label: "כתובית · התחלה", kind: "caption", priority: 2 });
+      points.push({ time: cue.end, label: "כתובית · סוף", kind: "caption", priority: 2 });
+    }
+    return points;
+  }, [clips, tracks, overlays, subs, total, currentAssembled]);
 
   const snapTol = () => {
     // ~10px at current zoom → time, with floor/ceiling so it stays usable
@@ -199,19 +226,23 @@ export default function Timeline(p: Props) {
     return Math.max(0.04, Math.min(0.35, (pxTol / Math.max(1, laneW)) * total));
   };
 
-  const applySnap = (t: number, exclude?: number[]) => {
-    if (!snap) return { time: t, snapped: false as boolean, target: null as number | null };
+  const applySnap = (t: number, exclude?: number[], bypass = false) => {
+    if (!snap || bypass) return { time: t, snapped: false as boolean, target: null as number | null, match: null, distance: Infinity };
     const skip = new Set((exclude || []).map((x) => +x.toFixed(4)));
-    const targets = snapPts.filter((s) => !skip.has(+s.toFixed(4)));
-    return snapTimeTo(t, targets, snapTol());
+    const targets = snapTargets.filter((target) => !skip.has(+target.time.toFixed(4)));
+    return snapToMagneticTarget(t, targets, snapTol());
   };
 
-  const showSnapGuide = (t: number | null) => {
+  const showSnapGuide = (t: number | null, hint = "", magnetic = true) => {
     const g = snapGuideRef.current;
     if (!g) return;
     if (t == null) { g.style.display = "none"; return; }
     g.style.display = "block";
-    g.style.left = `${pct(t)}%`;
+    g.classList.toggle("free", !magnetic);
+    const fraction = Math.max(0, Math.min(1, t / total));
+    g.classList.toggle("near-end", fraction > 0.78);
+    g.style.left = `calc(${TIMELINE_GUTTER}px + (100% - ${TIMELINE_GUTTER}px) * ${fraction})`;
+    if (snapLabelRef.current) snapLabelRef.current.textContent = hint || formatTimecode(t);
   };
 
   const ticks = useMemo(() => {
@@ -252,7 +283,8 @@ export default function Timeline(p: Props) {
     const locked = trackId ? !!tracks.find((t) => t.id === trackId)?.locked : vLocked;
     if (locked) return;
     e.stopPropagation();
-    const list = trackId ? clipsOf(trackId) : (track === "audio" ? primaryClips : clips);
+    const sourceTrackId = clipTrackId(clip, primaryId);
+    const list = clipsOf(sourceTrackId);
     const idx = list.findIndex((c) => c.id === clip.id);
     const assembled0 = idx >= 0 ? assembledStart(list, idx) : 0;
     dropLaneRef.current = trackId && e.currentTarget.parentElement
@@ -262,6 +294,8 @@ export default function Timeline(p: Props) {
       kind: "clip", mode, id: clip.id, x0: e.clientX,
       laneW: laneRef.current?.clientWidth || 1,
       s0: clip.start, e0: clip.end, moved: false, px: e.clientX, assembled0,
+      sourceTrackId, targetTrackId: sourceTrackId,
+      trackType: mediaById(media, clip.sourceId)?.kind === "audio" ? "audio" : "video",
     };
     selectClip(clip.id, track);
     if (mode === "move") {
@@ -326,13 +360,13 @@ export default function Timeline(p: Props) {
     if (d.kind === "overlay") {
       if (d.mode === "l") {
         const raw = d.s0 + dt;
-        const { time, snapped, target } = applySnap(raw, [d.e0]);
-        showSnapGuide(snapped ? target : null);
+        const { time, snapped, target, match } = applySnap(raw, [d.e0], e.altKey);
+        showSnapGuide(snapped ? target : null, target != null ? `${formatTimecode(target)} · ${match?.label || "קצה"}` : "");
         p.onOverlayTrim?.(d.id, Math.min(time, d.e0 - 0.05), d.e0);
       } else if (d.mode === "r") {
         const raw = d.e0 + dt;
-        const { time, snapped, target } = applySnap(raw, [d.s0]);
-        showSnapGuide(snapped ? target : null);
+        const { time, snapped, target, match } = applySnap(raw, [d.s0], e.altKey);
+        showSnapGuide(snapped ? target : null, target != null ? `${formatTimecode(target)} · ${match?.label || "קצה"}` : "");
         p.onOverlayTrim?.(d.id, d.s0, Math.max(time, d.s0 + 0.05));
       } else if (d.moved) {
         const dur = d.e0 - d.s0;
@@ -350,7 +384,8 @@ export default function Timeline(p: Props) {
           }
         } else if (sSnap.snapped) { start = sSnap.time; guide = sSnap.target; }
         else if (eSnap.snapped) { start = eSnap.time - dur; guide = eSnap.target; }
-        showSnapGuide(guide);
+        const match = guide == null ? null : (sSnap.target === guide ? sSnap.match : eSnap.match);
+        showSnapGuide(guide, guide != null ? `${formatTimecode(guide)} · ${match?.label || "קצה"}` : "");
         p.onOverlayMove?.(d.id, start, start + dur);
         const g = ghostRef.current;
         if (g) {
@@ -367,29 +402,53 @@ export default function Timeline(p: Props) {
       const dur0 = d.e0 - d.s0;
       if (d.mode === "l") {
         const rawAssembled = a0 + dt;
-        const { time: snappedA, snapped, target } = applySnap(rawAssembled, [a0 + dur0]);
-        showSnapGuide(snapped ? target : null);
+        const { time: snappedA, snapped, target, match } = applySnap(rawAssembled, [a0 + dur0], e.altKey);
+        showSnapGuide(snapped ? target : null, target != null ? `${formatTimecode(target)} · ${match?.label || "קצה"}` : "");
         const deltaAssembled = snappedA - a0;
         p.onTrim(d.id, d.s0 + deltaAssembled, d.e0);
       } else {
         const rawAssembled = a0 + dur0 + dt;
-        const { time: snappedA, snapped, target } = applySnap(rawAssembled, [a0]);
-        showSnapGuide(snapped ? target : null);
+        const { time: snappedA, snapped, target, match } = applySnap(rawAssembled, [a0], e.altKey);
+        showSnapGuide(snapped ? target : null, target != null ? `${formatTimecode(target)} · ${match?.label || "קצה"}` : "");
         const newDur = snappedA - a0;
         p.onTrim(d.id, d.s0, d.s0 + newDur);
       }
     } else if (d.mode === "move" && d.moved) {
-      // ghost + drop indicator; also snap drop boundary to nearby edges
+      // Follow the pointer across compatible tracks and magnetize either clip edge.
       const g = ghostRef.current;
       if (g) { g.style.display = "flex"; g.style.left = `${e.clientX + 12}px`; g.style.top = `${e.clientY + 14}px`; }
+      const hoveredLane = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-track-lane]");
+      const laneType = hoveredLane?.dataset.trackType;
+      if (hoveredLane && laneType === d.trackType) {
+        dropLaneRef.current?.el.classList.remove("magnetic-target");
+        const targetTrackId = hoveredLane.dataset.trackLane || d.sourceTrackId || primaryId;
+        dropLaneRef.current = { trackId: targetTrackId, el: hoveredLane };
+        hoveredLane.classList.add("magnetic-target");
+        d.targetTrackId = targetTrackId;
+      }
+      const rawStart = Math.max(0, (d.assembled0 || 0) + dt);
+      const excluded = new Set([d.assembled0 || 0, (d.assembled0 || 0) + clipDur({ id: d.id, sourceId: "", start: d.s0, end: d.e0 })].map((value) => +value.toFixed(4)));
+      const candidates = snapTargets.filter((target) => !excluded.has(+target.time.toFixed(4)));
+      const rangeHit = (!snap || e.altKey)
+        ? { start: rawStart, snapped: false, target: null, match: null, edge: null }
+        : snapRangeStart(rawStart, d.e0 - d.s0, candidates, snapTol());
+      d.timelineStart = Math.max(0, rangeHit.start);
+      d.snapped = rangeHit.snapped;
+      showSnapGuide(
+        rangeHit.snapped ? rangeHit.target : d.timelineStart,
+        rangeHit.snapped && rangeHit.target != null
+          ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הקטע" : "תחילת הקטע"}`
+          : `${formatTimecode(d.timelineStart)} · Alt מבטל מגנט`,
+        rangeHit.snapped,
+      );
+      if (dragMetaRef.current) {
+        const targetName = tracks.find((item) => item.id === d.targetTrackId)?.name || "רצועה";
+        dragMetaRef.current.textContent = `${rangeHit.snapped ? "🧲 " : ""}${targetName} · ${formatTimecode(d.timelineStart)}`;
+      }
       const drop = dropRef.current;
       if (drop && laneRef.current) {
-        const { boundary } = dropTarget(e.clientX);
-        const { time, snapped, target } = applySnap(boundary);
-        const line = snapped && target != null ? target : boundary;
         drop.style.display = "block";
-        drop.style.left = `${pct(line)}%`;
-        showSnapGuide(snapped ? target : null);
+        drop.style.left = `${pct(d.timelineStart)}%`;
       }
     }
   };
@@ -397,30 +456,40 @@ export default function Timeline(p: Props) {
     if (ghostRef.current) ghostRef.current.style.display = "none";
     if (dropRef.current) dropRef.current.style.display = "none";
     showSnapGuide(null);
+    dropLaneRef.current?.el.classList.remove("magnetic-target");
     setDragLabel(null);
   };
 
   const hasMediaDrag = (dt: DataTransfer) =>
     Array.from(dt.types || []).includes(MEDIA_DRAG_MIME);
 
-  const showMediaDropAt = (clientX: number) => {
-    const drop = dropRef.current;
-    if (!drop || !laneRef.current) return;
-    const { boundary } = dropTarget(clientX);
-    drop.style.display = "block";
-    drop.style.left = `${pct(boundary)}%`;
+  const pointerTime = (clientX: number, lane: HTMLElement) => {
+    const rect = lane.getBoundingClientRect();
+    return Math.max(0, Math.min(total, ((clientX - rect.left) / Math.max(1, rect.width)) * total));
   };
 
-  const onLaneDragOver = (e: React.DragEvent) => {
+  const showMediaDropAt = (clientX: number, lane: HTMLElement, bypass = false) => {
+    const drop = dropRef.current;
+    const raw = pointerTime(clientX, lane);
+    const hit = applySnap(raw, [], bypass);
+    const time = hit.snapped ? hit.time : raw;
+    if (drop) { drop.style.display = "block"; drop.style.left = `${pct(time)}%`; }
+    showSnapGuide(time, hit.snapped ? `${formatTimecode(time)} · ${hit.match?.label || "קצה"}` : `${formatTimecode(time)} · מיקום חופשי`, hit.snapped);
+    return time;
+  };
+
+  const onLaneDragOver = (e: React.DragEvent, trackId: string) => {
     if (!hasMediaDrag(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     e.currentTarget.classList.add("drop-target");
-    showMediaDropAt(e.clientX);
+    dropLaneRef.current = { trackId, el: e.currentTarget as HTMLElement };
+    showMediaDropAt(e.clientX, e.currentTarget as HTMLElement, e.altKey);
   };
   const onLaneDragLeave = (e: React.DragEvent) => {
     e.currentTarget.classList.remove("drop-target");
     if (dropRef.current) dropRef.current.style.display = "none";
+    showSnapGuide(null);
   };
   const onLaneDrop = (e: React.DragEvent, trackId?: string) => {
     e.preventDefault();
@@ -431,7 +500,9 @@ export default function Timeline(p: Props) {
     const tid = trackId || primaryId;
     const list = clipsOf(tid);
     const { index } = dropTarget(e.clientX, list, e.currentTarget as HTMLElement);
-    p.onDropMedia(id, index, tid);
+    const timelineStart = showMediaDropAt(e.clientX, e.currentTarget as HTMLElement, e.altKey);
+    p.onDropMedia(id, index, tid, timelineStart);
+    endDragVisuals();
   };
   const onUp = () => {
     const d = drag.current;
@@ -447,6 +518,11 @@ export default function Timeline(p: Props) {
         const clip = clips.find((c) => c.id === d.id);
         const tid = clip ? clipTrackId(clip, primaryId) : primaryId;
         const list = clipsOf(tid);
+        if (d.targetTrackId && d.timelineStart != null && p.onMoveAtTime && (d.targetTrackId !== d.sourceTrackId || d.snapped)) {
+          p.onMoveAtTime(d.id, d.targetTrackId, d.timelineStart);
+          drag.current = null;
+          return;
+        }
         let { index, boundary } = dropTarget(d.px, list);
         if (snap) {
           const { snapped, target } = applySnap(boundary);
@@ -523,7 +599,7 @@ export default function Timeline(p: Props) {
         </div>
         <div className="g-meta">
           <span className="g-name">{dragLabel?.name}</span>
-          <span className="g-dur">{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
+          <span className="g-dur" ref={dragMetaRef}>{dragLabel ? `${dragLabel.dur.toFixed(1)}s` : ""}</span>
         </div>
       </div>
       <div
@@ -531,7 +607,7 @@ export default function Timeline(p: Props) {
         style={{ width: portW > 0 ? timelineContentWidth(portW, zoom) : `${Math.max(0.05, zoom) * 100}%` }}
       >
         {/* CapCut-style snap guide — full height across all tracks */}
-        <div className="tl-snap-guide" ref={snapGuideRef} />
+        <div className="tl-snap-guide" ref={snapGuideRef}><span ref={snapLabelRef} /></div>
 
         {/* ruler */}
         <div className="tl-rowline tl-rulerline">
@@ -579,8 +655,9 @@ export default function Timeline(p: Props) {
 
               {track.type === "video" && (
                 <div className="tl-lane2" ref={track.id === primaryId ? laneRef : undefined}
+                  data-track-lane={track.id} data-track-type="video"
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}
-                  onDragOver={(e) => { dropLaneRef.current = { trackId: track.id, el: e.currentTarget }; onLaneDragOver(e); }}
+                  onDragOver={(e) => onLaneDragOver(e, track.id)}
                   onDragLeave={onLaneDragLeave}
                   onDrop={(e) => onLaneDrop(e, track.id)}>
                   <Grid />
@@ -633,8 +710,9 @@ export default function Timeline(p: Props) {
 
               {track.type === "audio" && (
                 <div className={`tl-lane2 ${track.muted ? "muted" : ""}`}
+                  data-track-lane={audioId} data-track-type="audio"
                   onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); seekFromRow(e, e.currentTarget); } }}
-                  onDragOver={onLaneDragOver}
+                  onDragOver={(e) => onLaneDragOver(e, audioId)}
                   onDragLeave={onLaneDragLeave}
                   onDrop={(e) => onLaneDrop(e, audioId)}>
                   <Grid />

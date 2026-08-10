@@ -432,7 +432,7 @@ export default function EditorPage() {
     setSelectedSubId(null);
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
   };
-  const dropMediaOnTimeline = (assetId: string, atIndex: number, trackId?: string) => {
+  const dropMediaOnTimeline = (assetId: string, atIndex: number, trackId?: string, timelineStart?: number) => {
     const asset = mediaById(media, assetId);
     if (!asset) return;
     const api = editorApiRef.current;
@@ -445,6 +445,7 @@ export default function EditorPage() {
       sourceId: asset.id,
       trackId: tid,
       at_index: atIndex,
+      timeline_start: timelineStart,
       start: 0,
       end: asset.duration,
     });
@@ -452,6 +453,15 @@ export default function EditorPage() {
     setSelectedOverlayId(null);
     setSelectedSubId(null);
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
+  };
+  const moveClipAtTimeline = (id: string, trackId: string, timelineStart: number) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const result = runCommand("clip.moveAtTimeline", api, { id, trackId, timeline_start: timelineStart });
+    if (!result.ok) { setError(result.error); return; }
+    setSelectedOverlayId(null);
+    setSelectedSubId(null);
+    setSelectionTrack(tracks.find((track) => track.id === trackId)?.type === "audio" ? "audio" : "video");
   };
   const addVideoTrack = () => {
     const { tracks: next } = createVideoTrack(tracks);
@@ -713,6 +723,7 @@ export default function EditorPage() {
       else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId || selectedSubId)) { e.preventDefault(); deleteSel(e.shiftKey); }
       else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
+      else if (e.key.toLowerCase() === "m" && !meta && !e.altKey) { e.preventDefault(); setSnap((value) => !value); }
       else if (selectedId && !videoLocked(tracks) && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
         slipSelected(e.key === "]" ? 0.1 : -0.1);
@@ -1015,6 +1026,7 @@ export default function EditorPage() {
                 onSubMenu={(id, x, y) => setSubMenu({ id, x, y })}
                 onTrackMenu={(id, x, y) => setTrackMenu({ id, x, y })}
                 onDropMedia={dropMediaOnTimeline}
+                onMoveAtTime={moveClipAtTimeline}
                 onAddVideoTrack={addVideoTrack}
                 onOverlayTrimBegin={beginTransaction}
                 onOverlayTrim={setOverlayRangeLive}
