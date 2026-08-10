@@ -11,20 +11,20 @@ interface ThemeCtx {
 }
 
 const Ctx = createContext<ThemeCtx>({
-  mode: "system",
-  resolved: "dark",
+  mode: "light",
+  resolved: "light",
   setMode: () => {},
 });
 
 function resolve(mode: ThemeMode): "dark" | "light" {
   if (mode === "dark" || mode === "light") return mode;
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [resolved, setResolved] = useState<"dark" | "light">("dark");
+  const [mode, setModeState] = useState<ThemeMode>("light");
+  const [resolved, setResolved] = useState<"dark" | "light">("light");
 
   useEffect(() => {
     try {

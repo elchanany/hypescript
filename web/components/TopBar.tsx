@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, Bot, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Bot, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
+import { useTheme } from "@/lib/theme/ThemeProvider";
 
 export default function TopBar({
   projectName, projects, projectId, saving,
@@ -23,6 +24,7 @@ export default function TopBar({
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const { configured: authOn, user } = useAuth();
+  const { resolved, setMode } = useTheme();
 
   const items: CtxItem[] = [
     ...projects.map((p) => ({ label: p.name, icon: p.id === projectId ? Check : FolderOpen, onClick: () => onSwitch(p.id) })),
@@ -56,7 +58,12 @@ export default function TopBar({
 
       <div className="tb-group">
         <Link href="/dashboard" className="iconbtn" data-tip="לוח פרויקטים" aria-label="לוח פרויקטים"><LayoutGrid size={16} strokeWidth={1.75} /></Link>
-        <IconButton icon={Bot} tip="סוכן AI" active={chatOpen} onClick={onToggleChat} />
+        <IconButton icon={Bot} tip="עוזר העריכה" active={chatOpen} onClick={onToggleChat} />
+        <IconButton
+          icon={resolved === "dark" ? Sun : Moon}
+          tip={resolved === "dark" ? "עבור למצב בהיר" : "עבור למצב כהה"}
+          onClick={() => setMode(resolved === "dark" ? "light" : "dark")}
+        />
         <Link href="/settings" className="iconbtn" data-tip="הגדרות" aria-label="הגדרות"><Settings size={16} strokeWidth={1.75} /></Link>
         {authOn && !user && (
           <Link href="/login" className="iconbtn" data-tip="התחברות" aria-label="התחברות"><LogIn size={16} strokeWidth={1.75} /></Link>
