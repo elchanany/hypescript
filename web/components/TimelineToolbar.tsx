@@ -1,19 +1,18 @@
 "use client";
 
-import { Scissors, Trash2, Magnet, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart, Link2, Unlink2 } from "lucide-react";
+import { Scissors, Trash2, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart, Link2, Unlink2 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "@/lib/editor/time";
 
 export default function TimelineToolbar({
   selInfo, canSplit, canDelete, onSplit, onDelete, onDeleteLeaveGap, canLeaveGap,
   canRoll, canSlip, onRoll, onSlip,
-  snap, onSnap, zoom, onZoom, onFit,
+  zoom, onZoom, onFit,
   avLinked, onAvLinked,
 }: {
   selInfo: string; canSplit: boolean; canDelete: boolean;
   onSplit: () => void; onDelete: () => void; onDeleteLeaveGap?: () => void; canLeaveGap?: boolean;
   canRoll?: boolean; canSlip?: boolean; onRoll?: (delta: number) => void; onSlip?: (delta: number) => void;
-  snap: boolean; onSnap: (v: boolean) => void;
   zoom: number; onZoom: (v: number) => void; onFit: () => void;
   avLinked?: boolean; onAvLinked?: (v: boolean) => void;
 }) {
@@ -40,10 +39,6 @@ export default function TimelineToolbar({
         active={avLinked !== false}
         onClick={() => onAvLinked?.(!(avLinked !== false))}
       />
-      <IconButton icon={Magnet} tip="מגנט חכם לכל הרצועות (M) · Alt משחרר זמנית" tipPos="up" active={snap} onClick={() => onSnap(!snap)} />
-      <span className={`tl-magnet-state ${snap ? "active" : ""}`} title="המגנט מזהה קצות קליפים בכל הרצועות. החזק Alt בזמן גרירה למיקום חופשי.">
-        {snap ? "מגנט חכם · Alt לשחרור" : "מגנט כבוי"}
-      </span>
       {selInfo && <span className="tl-selinfo">{selInfo}</span>}
       <div className="grow" />
       <div className="tl-zoom">

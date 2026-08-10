@@ -35,6 +35,7 @@ import TimelineToolbar from "@/components/TimelineToolbar";
 import Chat from "@/components/Chat";
 import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
+import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 
 ensureBuiltinCommands();
 
@@ -81,7 +82,26 @@ export default function EditorPage() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [rendering, setRendering] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
+  const [exportError, setExportError] = useState("");
+  const [renderElapsed, setRenderElapsed] = useState(0);
+  const renderAbortRef = useRef<AbortController | null>(null);
+  const renderStartedAtRef = useRef(0);
   const [groqOk, setGroqOk] = useState(true);
+
+  useEffect(() => {
+    if (!rendering) return;
+    const tick = () => setRenderElapsed((Date.now() - renderStartedAtRef.current) / 1000);
+    tick();
+    const timer = window.setInterval(tick, 500);
+    return () => window.clearInterval(timer);
+  }, [rendering]);
+
+  useEffect(() => () => {
+    renderAbortRef.current?.abort();
+    if (exportResult?.url) URL.revokeObjectURL(exportResult.url);
+  }, [exportResult?.url]);
 
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
@@ -589,11 +609,17 @@ export default function EditorPage() {
 
   const render = async () => {
     if (!media.length || !clips?.length) return;
+    if (rendering) { setExportOpen(true); return; }
+    if (exportResult?.url) URL.revokeObjectURL(exportResult.url);
+    const controller = new AbortController();
+    renderAbortRef.current = controller;
+    renderStartedAtRef.current = Date.now();
+    setExportResult(null); setExportError(""); setExportOpen(true); setRenderElapsed(0);
     setError(""); setRendering(true); setProgress(0);
     try {
       const { getRenderBackend } = await import("@/lib/render/RenderBackend");
       const backend = getRenderBackend();
-      setPhase("מרנדר בדפדפן…");
+      setPhase("מכין קבצים לרינדור מקומי…");
       let edl = flattenVideoTracks(clips, tracks);
       const aid = audioTrack(tracks)?.id;
       const audioClips = aid ? clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)) : [];
@@ -604,13 +630,22 @@ export default function EditorPage() {
           audioClips,
           subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length,
         },
-        (r) => setProgress(Math.min(1, r)),
+        (r) => { setPhase("מרנדר את הסרטון…"); setProgress(Math.min(1, r)); },
+        controller.signal,
       );
-      download(blob, (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4");
+      const name = (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4";
+      const url = URL.createObjectURL(blob);
+      setExportResult({ url, name, size: blob.size });
+      setProgress(1);
       setPhase("הרינדור הושלם");
       toast.success("הייצוא הושלם", burnCaptions && subs?.length ? "כולל כתוביות צרובות" : undefined);
-    } catch (e: any) { setError(e?.message || String(e)); }
-    finally { setRendering(false); setProgress(0); }
+    } catch (e: any) {
+      const message = controller.signal.aborted ? "הייצוא בוטל." : (e?.message || String(e));
+      setExportError(message);
+      setError(message);
+      setPhase("");
+    }
+    finally { renderAbortRef.current = null; setRendering(false); }
   };
 
   const generateSubs = () => {
@@ -894,10 +929,23 @@ export default function EditorPage() {
         onSwitch={switchProject} onNew={newProject} onRename={renameCurrent} onDelete={deleteCurrent}
         canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
         chatOpen={chatOpen} onToggleChat={toggleChat}
-        canExport={!!clips?.length} rendering={rendering} onExport={render}
+        canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
       />
 
       {!groqOk && <div className="banner2">GROQ_API_KEY לא מוגדר ב-Vercel. <Link href="/settings">הגדרות</Link></div>}
+
+      <ExportDialog
+        open={exportOpen}
+        rendering={rendering}
+        progress={progress}
+        elapsedSeconds={renderElapsed}
+        phase={phase}
+        error={exportError}
+        result={exportResult}
+        onClose={() => setExportOpen(false)}
+        onCancel={() => renderAbortRef.current?.abort()}
+        onRetry={() => void render()}
+      />
 
       <div className="shell-body">
         {dockSide === "left" && agentDock}
@@ -999,7 +1047,7 @@ export default function EditorPage() {
               canRoll={!!selectedId && !vLocked && !!clips && clips.length >= 2 && !selectedIsGap}
               canSlip={!!selectedId && !vLocked && !selectedIsGap}
               onRoll={rollSelected} onSlip={slipSelected}
-              snap={snap} onSnap={setSnap} zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
+              zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
               avLinked={avLinked} onAvLinked={setAvLinked}
             />
             {clips || media.length > 0 ? (

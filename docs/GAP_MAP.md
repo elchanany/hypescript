@@ -73,6 +73,7 @@
 | פרויקטים מקומיים (IndexedDB) | OK | — |
 | Login / Google OAuth / session | PARTIAL | קוד מוכן; דורש מפתחות Supabase מהמשתמש (`SETUP_AUTH.md`). בלי מפתחות — לא נשבר |
 | Dashboard / project cards | OK | `/dashboard` על פרויקטים מקומיים |
+| Export Center | OK | אחוז, זמן שחלף, ETA מדוד, ביטול אמיתי, retry, נגן וקובץ הורדה שנשאר עד סגירה |
 | Organizations / roles / RLS | MISSING | — |
 
 ## 7. Providers
@@ -118,6 +119,8 @@
 - CLOSED: broad button tooltip coverage, including controls mounted after initial render.
 - CLOSED: UI + Agent real opening source-popup preset with Preview/Export parity.
 - CLOSED: Agent exact-time media placement and downloadable render/SRT/image/audio artifacts in chat.
+- CLOSED: top-bar export no longer auto-discards its Blob; a persistent Export Center shows progress, elapsed/remaining time, cancellation, retry, preview and download.
+- CLOSED: magnetic snapping stays enabled by default without the confusing persistent “מגנט חכם / Alt לשחרור” toolbar control.
 
 # 2026-08-09 closed gaps
 

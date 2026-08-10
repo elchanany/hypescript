@@ -13,13 +13,13 @@ export default function TopBar({
   onSwitch, onNew, onRename, onDelete,
   canUndo, canRedo, onUndo, onRedo,
   chatOpen, onToggleChat,
-  canExport, rendering, onExport,
+  canExport, rendering, renderProgress = 0, onExport,
 }: {
   projectName: string; projects: ProjectMeta[]; projectId: string | null; saving: boolean;
   onSwitch: (id: string) => void; onNew: () => void; onRename: () => void; onDelete: () => void;
   canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void;
   chatOpen: boolean; onToggleChat: () => void;
-  canExport: boolean; rendering: boolean; onExport: () => void;
+  canExport: boolean; rendering: boolean; renderProgress?: number; onExport: () => void;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const { configured: authOn, user } = useAuth();
@@ -64,9 +64,9 @@ export default function TopBar({
         {authOn && user && (
           <span className="tb-user" title={user.email || ""}>{(user.email || "?")[0]?.toUpperCase()}</span>
         )}
-        <button className="btn primary tall" onClick={onExport} disabled={!canExport || rendering} data-tip="ייצוא הווידאו הערוך">
+        <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={rendering ? "פתח את מצב הייצוא" : "ייצוא הווידאו הערוך"}>
           {rendering ? <Loader2 size={16} strokeWidth={2} className="spin" /> : <Download size={16} strokeWidth={2} />}
-          {rendering ? "מרנדר…" : "ייצוא"}
+          {rendering ? `מרנדר ${Math.max(0, Math.min(100, Math.round(renderProgress * 100)))}%` : "ייצוא"}
         </button>
       </div>
 

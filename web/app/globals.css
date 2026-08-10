@@ -26,8 +26,8 @@
   --inset: #0a1020;
 
   /* borders / states */
-  --border: #243049;
-  --border-strong: #334463;
+  --border: rgba(132, 156, 196, .16);
+  --border-strong: rgba(151, 177, 219, .28);
   --hover: #152038;
   --selected: rgba(0, 229, 255, 0.12);
   --active: #1a2a48;
@@ -52,15 +52,15 @@
   --focus: var(--brand-cyan-400);
 
   /* radius */
-  --r-sm: 3px;
-  --r-md: 5px;
-  --r-lg: 8px;
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 14px;
 
   /* control sizing */
   --h-icon: 28px;
   --h-ctrl: 32px;
   --h-primary: 34px;
-  --topbar-h: 48px;
+  --topbar-h: 52px;
   --tab-h: 32px;
 
   /* typography */
@@ -305,7 +305,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .topbar2 {
   height: var(--topbar-h); flex: none; direction: ltr;
   display: flex; align-items: center; gap: 8px; padding: 0 10px;
-  border-bottom: 1px solid var(--border); background: var(--panel);
+  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .16); z-index: 20;
 }
 .tb-group { display: flex; align-items: center; gap: 4px; }
 .tb-spacer { flex: 1; }
@@ -517,11 +518,6 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   font-variant-numeric: tabular-nums; direction: ltr;
 }
 .tl-selinfo { font-size: var(--fs-2); color: var(--text-2); font-family: var(--mono); direction: ltr; padding: 0 6px; }
-.tl-magnet-state {
-  max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; padding: 3px 0;
-  border-radius: 999px; color: var(--text-3); font-size: 10px; transition: max-width .18s ease, opacity .18s ease, padding .18s ease;
-}
-.tl-magnet-state.active { max-width: 150px; opacity: 1; padding: 3px 7px; background: rgba(255,209,102,.1); color: #ffd166; }
 
 /* scroll area */
 .tl-scroll {
@@ -978,6 +974,52 @@ button.quote-chip:hover svg { color: var(--accent); }
 .status-strip .s-msg.err { color: var(--danger); }
 .status-strip .s-bar { flex: 1; height: 4px; background: var(--inset); border-radius: 999px; overflow: hidden; }
 .status-strip .s-bar > div { height: 100%; background: var(--accent); transition: width .2s; }
+
+/* ============================ Export center ============================ */
+.export-backdrop {
+  position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 24px;
+  background: rgba(2, 6, 16, .66); backdrop-filter: blur(9px);
+}
+.export-card {
+  width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto;
+  background: color-mix(in srgb, var(--elevated) 95%, #fff 5%); border: 1px solid var(--border-strong);
+  border-radius: 20px; box-shadow: 0 28px 90px rgba(0, 0, 0, .55); padding: 20px;
+}
+.export-head { display: grid; grid-template-columns: 42px 1fr 32px; gap: 12px; align-items: start; }
+.export-head h2 { margin: 1px 0 4px; font-size: 18px; line-height: 1.3; }
+.export-head p { margin: 0; color: var(--text-2); line-height: 1.55; }
+.export-mark { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; color: var(--accent); background: var(--accent-tint); }
+.export-mark.done { color: var(--success); background: color-mix(in srgb, var(--success) 16%, transparent); }
+.export-mark.failed { color: var(--danger); background: var(--danger-tint); }
+.export-close { justify-self: end; }
+.export-running, .export-result { margin-top: 20px; }
+.export-progress-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 9px; }
+.export-progress-row strong { direction: ltr; font-family: var(--mono); font-size: 20px; color: var(--text); }
+.export-progress-row span { color: var(--text-2); }
+.export-progress { height: 10px; overflow: hidden; border-radius: 999px; background: var(--inset); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
+.export-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand-blue-600), var(--accent)); transition: width .25s ease; box-shadow: 0 0 14px var(--accent-tint); }
+.export-stats { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.export-note { margin-top: 15px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); color: var(--text-2); font-size: 12px; }
+.export-cancel { margin-top: 10px; color: var(--text-2); }
+.export-result video { width: 100%; max-height: 360px; display: block; background: #000; border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.3); }
+.export-file { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.export-file > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.export-file strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: right; }
+.export-file span { color: var(--text-2); font-size: 12px; direction: ltr; text-align: right; }
+.export-error-actions { display: flex; gap: 8px; margin-top: 18px; }
+
+/* Softer application surfaces: hierarchy comes from spacing and elevation, not a grid of hard lines. */
+.leftpanel, .inspector2, .agent-dock { background: color-mix(in srgb, var(--panel) 96%, #fff 4%); }
+.timeline-region { box-shadow: 0 -10px 28px rgba(0, 0, 0, .12); }
+.btn.primary { box-shadow: 0 5px 16px color-mix(in srgb, var(--accent) 18%, transparent); }
+.iconbtn, .toolrail .rail-btn { border-radius: 9px; }
+
+@media (max-width: 640px) {
+  .export-backdrop { padding: 10px; align-items: end; }
+  .export-card { width: 100%; max-height: 90vh; border-radius: 20px 20px 12px 12px; padding: 16px; }
+  .export-stats, .export-file { align-items: stretch; flex-direction: column; }
+  .export-file .btn { width: 100%; }
+}
 
 .banner2 { direction: rtl; padding: 7px 12px; font-size: var(--fs-2); background: var(--danger-tint); color: var(--danger); border-bottom: 1px solid var(--danger); display: flex; align-items: center; gap: 8px; }
 .banner2 a { color: var(--accent); }

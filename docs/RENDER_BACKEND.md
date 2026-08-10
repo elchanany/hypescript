@@ -64,10 +64,28 @@ Contract: `isAvailable()` = `GET /health` (returns ffmpeg version). If down → 
 “start the local service” with instructions; **never** auto-fallback to wasm or upload media.
 Reuse `graph.ts` verbatim so browser preview math and native export stay identical.
 
-## 4. Remaining roadmap (staged, per the spec — not started)
+## 4. Cloud render target (selected, not connected)
+
+The commercial target is **Supabase for auth/metadata/RLS**, **Cloudflare R2 Standard for private
+source/output objects**, and a scale-to-zero **Cloud Run FFmpeg job** for cloud renders. R2 is kept
+behind presigned multipart uploads/downloads; credentials never reach the browser. The current
+`BrowserRenderBackend` remains the zero-compute-cost fallback and privacy mode.
+
+This is intentionally not exposed as a working Cloud option yet: there is no deployed worker,
+signed-object API, queue, quota reservation, or verified result callback in the repository. A
+cloud render cannot honestly be promised as both unlimited-free and fast. The initial Cloud Run
+free allowance is useful for development/low volume, but production usage must be metered and
+charged or capped. Cloudflare Containers require the Workers Paid plan, so they are not the
+zero-cost launch default.
+
+Required acceptance path before enabling Cloud by default:
+
+`reserve quota -> signed R2 upload -> enqueue idempotent job -> FFmpeg render -> signed R2 result -> settle/refund -> retention cleanup`.
+
+## 5. Remaining roadmap (staged)
 
 Provider Registry + Capability interfaces + ExecutionPolicy (Zero-cost default) · Storage/Render/
 Transcription/LLM/Image/Video providers via generic adapters (OpenAI-compat, S3-compat, REST) ·
-Auth (Google) + org/membership/roles + BOOTSTRAP_OWNER_EMAIL · Dashboard/wizard · Asset replicas +
+cloud project metadata + org/membership UI · Plans/subscriptions/usage ledger · Asset replicas +
 relink · Agent CommandBus + Message Normalizer (DeepSeek tool_calls repair) + idempotency · AppError +
 Job Center · Transition/Effect engines. Build package-by-package with tests before advancing.
