@@ -102,6 +102,10 @@ export default function EditorPage() {
 
   useEffect(() => () => {
     renderAbortRef.current?.abort();
+  }, []);
+
+  // revokes the PREVIOUS url when exportResult changes (and the current one on unmount)
+  useEffect(() => () => {
     if (exportResult?.url) URL.revokeObjectURL(exportResult.url);
   }, [exportResult?.url]);
 
@@ -677,6 +681,7 @@ export default function EditorPage() {
       const name = (main?.name.replace(/\.[^.]+$/, "") || "video") + "_edited.mp4";
       const url = URL.createObjectURL(blob);
       setExportResult({ url, name, size: blob.size });
+      setChatOpen(true); localStorage.setItem("hs_chatOpen", "1");
       setProgress(1);
       setPhase("הרינדור הושלם");
       toast.success("הייצוא הושלם", burnCaptions && subs?.length ? "כולל כתוביות צרובות" : undefined);
@@ -864,6 +869,7 @@ export default function EditorPage() {
           script={script} overlays={overlays} canvas={canvas} projectId={projectId}
           captionStyle={captionStyle}
           editorApi={editorApiRef.current} tracks={tracks}
+          latestExport={exportResult}
           onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
             setWords(w);
             if (viaEditor) return; // כבר נדחף דרך EditorApi/CommandBus

@@ -122,6 +122,8 @@ interface ChatProps {
   /** גשר מפאנל המדיה להכנסת אזכור קובץ יציב לתיבת ההודעה */
   mentionSink?: MutableRefObject<((asset: MediaAsset) => void) | null>;
   pendingMentionRef?: MutableRefObject<MediaAsset | null>;
+  /** הייצוא האחרון מהעורך — מוצמד בראש רשימת ההודעות */
+  latestExport?: { url: string; name: string; size: number } | null;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -130,7 +132,7 @@ const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle, latestExport }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -692,6 +694,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         {showThinking && (
           <div className="think2" aria-live="polite" aria-label="הסוכן חושב">
             <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
+          </div>
+        )}
+        {latestExport && (
+          <div className="pinned-export">
+            <div className="pinned-label">הייצוא האחרון מוכן</div>
+            <ChatMediaCard url={latestExport.url} name={latestExport.name} mkind="video" />
           </div>
         )}
         {ask && (

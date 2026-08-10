@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Captions, Download, Film, Image as ImageIcon, Music, Pause, Play } from "lucide-react";
+import { Captions, Download, ExternalLink, Film, Image as ImageIcon, Maximize, Music, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { safeDownloadName } from "@/lib/render/videoCard";
 
 type MKind = "video" | "audio" | "image" | "srt";
 
@@ -24,13 +25,102 @@ export default function ChatMediaCard({ url, name, mkind }: Props) {
   return (
     <div className={`out2 out-${mkind}`}>
       <div className="oh"><Icon size={14} />{LABEL[mkind]}</div>
-      {mkind === "video" && <video className="out-video" src={url} controls playsInline />}
+      {mkind === "video" && <VideoPlayer src={url} />}
       {mkind === "image" && <img className="out-img" src={url} alt="" />}
       {mkind === "audio" && <BeatAudioPlayer src={url} />}
       {mkind === "srt" && <SrtPreview url={url} />}
-      <a className="btn primary sm out-dl" href={url} download={name}>
-        <Download size={14} strokeWidth={2} />הורד {name}
-      </a>
+      <div style={{ display: "flex", gap: 8 }}>
+        <a className="btn primary sm out-dl" style={{ flex: 1 }} href={url} download={mkind === "video" ? safeDownloadName(name) : name}>
+          <Download size={14} strokeWidth={2} />הורד {name}
+        </a>
+        {mkind === "video" && (
+          <a className="btn sm" href={url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink size={14} strokeWidth={2} />פתח בחלון חדש
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VideoPlayer({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [t, setT] = useState(0);
+  const [dur, setDur] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime = () => setT(v.currentTime);
+    const onMeta = () => setDur(v.duration || 0);
+    const onEnd = () => setPlaying(false);
+    const onErr = () => setErr(true);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("ended", onEnd);
+    v.addEventListener("error", onErr);
+    return () => {
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("ended", onEnd);
+      v.removeEventListener("error", onErr);
+    };
+  }, [src]);
+
+  const toggle = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { void v.play(); setPlaying(true); }
+    else { v.pause(); setPlaying(false); }
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+  };
+
+  const toggleFullscreen = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void v.requestFullscreen?.();
+  };
+
+  return (
+    <div className="vplayer">
+      <video ref={videoRef} className="out-video" src={src} playsInline preload="metadata"
+        controlsList="nodownload" onClick={toggle} />
+      {err && <div className="vplayer-err">לא ניתן לטעון את הווידאו</div>}
+      <div className="vplayer-bar">
+        <button type="button" className="iconbtn" onClick={toggle} aria-label={playing ? "השהה" : "נגן"}>
+          {playing ? <Pause size={15} /> : <Play size={15} />}
+        </button>
+        <input
+          className="vplayer-seek"
+          type="range"
+          min={0}
+          max={Math.max(0.01, dur)}
+          step={0.01}
+          value={t}
+          onChange={(e) => {
+            const v = +e.target.value;
+            setT(v);
+            if (videoRef.current) videoRef.current.currentTime = v;
+          }}
+        />
+        <span className="vplayer-time">{fmt(t)} / {fmt(dur)}</span>
+        <button type="button" className="iconbtn" onClick={toggleMute} aria-label={muted ? "הפעל קול" : "השתק"}>
+          {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+        </button>
+        <button type="button" className="iconbtn" onClick={toggleFullscreen} aria-label="מסך מלא">
+          <Maximize size={15} />
+        </button>
+      </div>
     </div>
   );
 }
