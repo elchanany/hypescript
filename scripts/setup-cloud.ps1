@@ -36,7 +36,14 @@ function Get-DotEnv([string]$Name) {
 }
 
 function Set-DotEnv([string]$Name, [string]$Value) {
-  $lines = if (Test-Path -LiteralPath $envPath) { [Collections.Generic.List[string]](Get-Content -LiteralPath $envPath) } else { [Collections.Generic.List[string]]::new() }
+  # Casting Get-Content directly can preserve PowerShell's fixed-size array.
+  # Build a real mutable List so adding the first missing key always succeeds.
+  $lines = [Collections.Generic.List[string]]::new()
+  if (Test-Path -LiteralPath $envPath) {
+    foreach ($existingLine in @(Get-Content -LiteralPath $envPath)) {
+      [void]$lines.Add([string]$existingLine)
+    }
+  }
   $prefix = "$Name="
   $found = $false
   for ($index = 0; $index -lt $lines.Count; $index++) {

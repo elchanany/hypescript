@@ -1,16 +1,16 @@
 # Graph Report - hipescript  (2026-08-10)
 
 ## Corpus Check
-- 275 files · ~469,444 words
+- 275 files · ~469,470 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1979 nodes · 4421 edges · 131 communities (114 shown, 17 thin omitted)
+- 1979 nodes · 4421 edges · 130 communities (113 shown, 17 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 24 edges (avg confidence: 0.67)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1086b4a8`
+- Built from commit: `d3a29057`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -110,7 +110,7 @@
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - .codex/skills/graphify/references/extraction-spec.md
-- server.ts
+- normalizeSupabaseUrl
 - images.ts
 - app/page.tsx
 - model.ts
@@ -141,7 +141,6 @@
 - ExportDialog.tsx
 - חיבור הענן — בדיוק מה להשיג ואיפה לשים
 - materializeOverlays.ts
-- cloud/client.ts
 - colorPresets.ts
 - commandSurface.ts
 
@@ -172,7 +171,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (131 total, 17 thin omitted)
+## Communities (130 total, 17 thin omitted)
 
 ### Community 0 - "Timeline.tsx"
 Cohesion: 0.06
@@ -280,7 +279,7 @@ Nodes (24): For /graphify add and --watch, For /graphify query, For the commit h
 
 ### Community 31 - "clipDur"
 Cohesion: 0.15
-Nodes (26): avgDb(), assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), assembledStart(), clipDur(), clipEnabled() (+18 more)
+Nodes (25): avgDb(), assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), assembledStart(), clipDur(), buildTimelineEnergyEvidence() (+17 more)
 
 ### Community 32 - "projects/types.ts"
 Cohesion: 0.19
@@ -295,8 +294,8 @@ Cohesion: 0.22
 Nodes (8): Active Files, Changes Made, Current State, Exact Next Steps, Failed Attempts, Goal, Open Risks, Tests and Verification
 
 ### Community 35 - "auth/config.ts"
-Cohesion: 0.21
-Nodes (17): GET(), runtime, GET(), configuredProviders(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics(), getRawPublicKey() (+9 more)
+Cohesion: 0.25
+Nodes (14): GET(), runtime, GET(), configuredProviders(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics(), getRawPublicKey() (+6 more)
 
 ### Community 36 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -486,21 +485,21 @@ Nodes (3): AGENT_UI_PARITY, מקרא, פערי Parity מיידיים (לחביל
 Cohesion: 0.50
 Nodes (4): local/, STACK.md — טכנולוגיות, web/ (המסלול המרכזי), עתידי / אפשרי (טרם הוחלט)
 
-### Community 96 - "server.ts"
-Cohesion: 0.31
-Nodes (10): POST(), runtime, POST(), secretMatches(), ensureBootstrapSystemOwner(), allowGuestEditor(), getBootstrapSuperAdminEmail(), getServiceRoleKey() (+2 more)
+### Community 96 - "normalizeSupabaseUrl"
+Cohesion: 0.25
+Nodes (13): POST(), runtime, POST(), secretMatches(), ensureBootstrapSystemOwner(), normalizeSupabaseUrl(), allowGuestEditor(), getBootstrapSuperAdminEmail() (+5 more)
 
 ### Community 97 - "images.ts"
 Cohesion: 0.14
 Nodes (21): maxDuration, POST(), runtime, buildImagePayload(), decodeFirstImage(), DEFAULT_OPENAI_IMAGE_BACKGROUND, DEFAULT_OPENAI_IMAGE_MODEL, DEFAULT_OPENAI_IMAGE_QUALITY (+13 more)
 
 ### Community 98 - "app/page.tsx"
-Cohesion: 0.13
-Nodes (21): COMMAND_ICONS, CaptionsPanel(), TextPanel(), LeftTab, TABS, ToolRail(), TopBar(), Button() (+13 more)
+Cohesion: 0.10
+Nodes (26): COMMAND_ICONS, CaptionsPanel(), TextPanel(), LeftTab, TABS, ToolRail(), TopBar(), Button() (+18 more)
 
 ### Community 99 - "model.ts"
 Cohesion: 0.14
-Nodes (28): ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num(), OverlayInspector(), SubInspector(), titleFor() (+20 more)
+Nodes (29): ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num(), OverlayInspector(), SubInspector(), titleFor() (+21 more)
 
 ### Community 100 - "storage.ts"
 Cohesion: 0.33
@@ -610,10 +609,6 @@ Nodes (17): 1. Supabase — שלושה ערכים, 2. Cloudflare R2 — ארבע
 Cohesion: 0.38
 Nodes (8): RenderTarget, extOf(), MaterializedOverlay, materializeOverlays(), renderRoundedImagePng(), renderTextPng(), OverlayBurnSpec, projectOverlayToTarget()
 
-### Community 127 - "cloud/client.ts"
-Cohesion: 0.47
-Nodes (5): CloudUploadResult, createCloudProject(), json(), renderCloudProject(), uploadCloudAsset()
-
 ### Community 128 - "colorPresets.ts"
 Cohesion: 0.67
 Nodes (4): CLIP_COLOR_PRESETS, ClipColorPreset, colorPreset(), matchingColorPreset()
@@ -623,7 +618,7 @@ Cohesion: 0.50
 Nodes (4): CommandDef, CommandPermission, CommandSelection, RunnableCommand
 
 ## Knowledge Gaps
-- **609 isolated node(s):** `2026-08-10 — exported video in chat with custom player (main f233969)`, `2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261)`, `2026-08-10 — local organization/brand kit (main 7ab67e7)`, `2026-08-10 — gapless tight-cut pipeline`, `2026-08-09 — composited timeline frame capture (export-parity, opt-in)` (+604 more)
+- **609 isolated node(s):** `track-edit.sh script`, `name`, `version`, `private`, `type` (+604 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -631,12 +626,12 @@ Nodes (4): CommandDef, CommandPermission, CommandSelection, RunnableCommand
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Clip` connect `Clip` to `Timeline.tsx`, `app/page.tsx`, `model.ts`, `EditorPage`, `Chat.tsx`, `graph.test.ts`, `timelineFrame.ts`, `models.ts`, `ffmpeg.ts`, `graph.integration.test.ts`, `project.ts`, `tools.ts`, `clipFilter.ts`, `commands.builtin.ts`, `subtitlesEdl.ts`, `commands.ts`, `RenderBackend.ts`, `clipDur`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `BrandLogo()` connect `BrandLogo` to `projects/types.ts`, `kit.ts`, `app/page.tsx`, `settings/page.tsx`, `useAuth`, `BrandLogo.tsx`, `dashboard/page.tsx`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Why does `MediaAsset` connect `Clip` to `Timeline.tsx`, `app/page.tsx`, `model.ts`, `EditorPage`, `overlay.ts`, `Chat.tsx`, `graph.test.ts`, `ffmpeg.ts`, `graph.integration.test.ts`, `tools.ts`, `commands.ts`, `RenderBackend.ts`, `materializeOverlays.ts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **What connects `2026-08-10 — exported video in chat with custom player (main f233969)`, `2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261)`, `2026-08-10 — local organization/brand kit (main 7ab67e7)` to the rest of the system?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `BrandLogo()` connect `BrandLogo` to `projects/types.ts`, `kit.ts`, `app/page.tsx`, `settings/page.tsx`, `useAuth`, `BrandLogo.tsx`, `dashboard/page.tsx`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **What connects `track-edit.sh script`, `name`, `version` to the rest of the system?**
   _609 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Timeline.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05506329113924051 - nodes in this community are weakly interconnected._

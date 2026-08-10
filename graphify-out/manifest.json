@@ -1490,8 +1490,8 @@
     "semantic_hash": ""
   },
   "scripts/setup-cloud.ps1": {
-    "mtime": 1786355005.8263967,
-    "ast_hash": "094faed3c2885a1fa6340a81ec183f20",
+    "mtime": 1786383067.271828,
+    "ast_hash": "c6c2aff775030270b88cabf230d04665",
     "semantic_hash": ""
   },
   "docs/CLOUD_KEYS_CHECKLIST_HE.md": {
