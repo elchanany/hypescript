@@ -72,6 +72,8 @@ function validJob(body) {
 }
 
 async function render(body, controller) {
+  const startedAt = Date.now();
+  const renderedSeconds = body.clips.reduce((total, clip) => total + clip.end - clip.start, 0);
   const work = await mkdtemp(join(tmpdir(), "hypescript-render-"));
   try {
     await callback(body.callbackUrl, { jobId: body.jobId, status: "running", progress: 0.01 });
@@ -111,13 +113,17 @@ async function render(body, controller) {
     const bytes = await readFile(output);
     await s3.send(new PutObjectCommand({ Bucket: body.bucket, Key: body.outputKey, Body: bytes, ContentType: "video/mp4" }), { abortSignal: controller.signal });
     const info = await stat(output);
-    await callback(body.callbackUrl, { jobId: body.jobId, status: "completed", progress: 1, sizeBytes: info.size });
+    await callback(body.callbackUrl, {
+      jobId: body.jobId, status: "completed", progress: 1, sizeBytes: info.size,
+      renderedSeconds, processingSeconds: (Date.now() - startedAt) / 1000,
+    });
   } catch (error) {
     const cancelled = controller.signal.aborted;
     await callback(body.callbackUrl, {
       jobId: body.jobId, status: cancelled ? "cancelled" : "failed", progress: 0,
       errorCode: cancelled ? "cancelled" : "render_failed",
       errorMessage: cancelled ? "Render cancelled" : String(error?.message || error).slice(0, 1000),
+      processingSeconds: (Date.now() - startedAt) / 1000,
     }).catch(() => {});
   } finally {
     active.delete(body.jobId);

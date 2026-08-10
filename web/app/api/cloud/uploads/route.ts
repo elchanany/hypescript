@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { getCloudUploadLimitBytes, getR2Config } from "@/lib/cloud/config";
 import { assetObjectKey, signUpload } from "@/lib/cloud/r2";
+import { cloudQuotaError } from "@/lib/cloud/quota";
+import { getSupabaseServiceClient } from "@/lib/auth/server";
 
 const ALLOWED = /^(video|audio|image)\//;
 
@@ -22,23 +24,23 @@ export async function POST(request: Request) {
   const owned = await auth.supabase.from("cloud_projects").select("id").eq("id", projectId).single();
   if (owned.error || !owned.data) return NextResponse.json({ error: "project_not_found" }, { status: 404 });
 
-  const usage = await auth.supabase.rpc("cloud_storage_usage_bytes");
-  const limit = await auth.supabase.rpc("cloud_storage_limit_bytes");
-  if (!usage.error && !limit.error && Number(usage.data) + sizeBytes > Number(limit.data)) {
-    return NextResponse.json({ error: "storage_quota_exceeded" }, { status: 402 });
-  }
-
   const objectKey = assetObjectKey(auth.user.id, projectId, name);
-  const { data, error } = await auth.supabase.from("cloud_assets").insert({
-    owner_id: auth.user.id, project_id: projectId, object_key: objectKey, original_name: name,
-    mime_type: mimeType, media_kind: mimeType.split("/")[0], size_bytes: sizeBytes, state: "pending",
-  }).select("id").single();
-  if (error || !data) return NextResponse.json({ error: "asset_reservation_failed" }, { status: 400 });
+  const { data, error } = await auth.supabase.rpc("cloud_reserve_asset", {
+    p_project_id: projectId,
+    p_object_key: objectKey,
+    p_original_name: name,
+    p_mime_type: mimeType,
+    p_media_kind: mimeType.split("/")[0],
+    p_size_bytes: sizeBytes,
+  });
+  const quota = cloudQuotaError(error);
+  if (quota) return NextResponse.json({ error: quota.code }, { status: quota.status });
+  if (error || !data) return NextResponse.json({ error: "asset_reservation_failed" }, { status: 500 });
   try {
     const uploadUrl = await signUpload(objectKey, mimeType);
-    return NextResponse.json({ assetId: data.id, objectKey, uploadUrl, headers: { "content-type": mimeType }, expiresInSeconds: 900 }, { status: 201 });
+    return NextResponse.json({ assetId: data, objectKey, uploadUrl, headers: { "content-type": mimeType }, expiresInSeconds: 900 }, { status: 201 });
   } catch {
-    await auth.supabase.from("cloud_assets").delete().eq("id", data.id);
+    await getSupabaseServiceClient()?.from("cloud_assets").delete().eq("id", data).eq("owner_id", auth.user.id);
     return NextResponse.json({ error: "upload_signing_failed" }, { status: 502 });
   }
 }

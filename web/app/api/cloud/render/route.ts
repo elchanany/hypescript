@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { getRendererConfig, getR2Config } from "@/lib/cloud/config";
 import { renderObjectKey } from "@/lib/cloud/r2";
+import { cloudQuotaError } from "@/lib/cloud/quota";
+import { getSupabaseServiceClient } from "@/lib/auth/server";
 
 interface ClipInput { assetId: string; start: number; end: number }
 
@@ -32,9 +34,17 @@ export async function POST(request: Request) {
   if (assets.error || !assets.data || assets.data.length !== assetIds.length) return NextResponse.json({ error: "render_asset_unavailable" }, { status: 409 });
   const assetMap = new Map(assets.data.map((asset) => [asset.id, asset]));
 
-  const inserted = await auth.supabase.from("cloud_jobs").insert({ owner_id: auth.user.id, project_id: projectId, type: "render", status: "dispatching", progress: 0 }).select("id").single();
-  if (inserted.error || !inserted.data) return NextResponse.json({ error: "render_job_create_failed" }, { status: 500 });
-  const jobId = inserted.data.id;
+  const estimatedSeconds = clips.reduce((total, clip) => total + clip.end - clip.start, 0);
+  const reserved = await auth.supabase.rpc("cloud_reserve_render", {
+    p_project_id: projectId,
+    p_estimated_seconds: estimatedSeconds,
+  });
+  const quota = cloudQuotaError(reserved.error);
+  if (quota) return NextResponse.json({ error: quota.code }, { status: quota.status });
+  if (reserved.error || !reserved.data) return NextResponse.json({ error: "render_job_create_failed" }, { status: 500 });
+  const jobId = String(reserved.data);
+  const service = getSupabaseServiceClient();
+  if (!service) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   const outputKey = renderObjectKey(auth.user.id, projectId, jobId);
   const workerPayload = {
     jobId,
@@ -57,10 +67,10 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) throw new Error(`worker_${response.status}`);
-    await auth.supabase.from("cloud_jobs").update({ status: "queued", provider_job_id: jobId, output_key: outputKey }).eq("id", jobId).eq("status", "dispatching");
+    await service.from("cloud_jobs").update({ status: "queued", provider_job_id: jobId, output_key: outputKey }).eq("id", jobId).eq("owner_id", auth.user.id).eq("status", "dispatching");
     return NextResponse.json({ jobId, status: "queued" }, { status: 202 });
   } catch {
-    await auth.supabase.from("cloud_jobs").update({ status: "failed", error_code: "dispatch_failed", finished_at: new Date().toISOString() }).eq("id", jobId);
+    await service.from("cloud_jobs").update({ status: "failed", usage_seconds: 0, error_code: "dispatch_failed", finished_at: new Date().toISOString() }).eq("id", jobId).eq("owner_id", auth.user.id);
     return NextResponse.json({ error: "render_dispatch_failed", jobId }, { status: 502 });
   }
 }

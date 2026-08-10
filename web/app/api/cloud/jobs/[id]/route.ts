@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { getRendererConfig } from "@/lib/cloud/config";
+import { getSupabaseServiceClient } from "@/lib/auth/server";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireCloudUser();
@@ -17,7 +18,9 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const job = await auth.supabase.from("cloud_jobs").select("id, status").eq("id", params.id).single();
   if (job.error || !job.data) return NextResponse.json({ error: "job_not_found" }, { status: 404 });
   if (["completed", "failed", "cancelled"].includes(job.data.status)) return NextResponse.json({ status: job.data.status });
-  await auth.supabase.from("cloud_jobs").update({ cancel_requested: true }).eq("id", params.id);
+  const service = getSupabaseServiceClient();
+  if (!service) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
+  await service.from("cloud_jobs").update({ cancel_requested: true }).eq("id", params.id).eq("owner_id", auth.user.id);
   if (renderer) {
     await fetch(`${renderer.url}/jobs/${params.id}`, {
       method: "DELETE", headers: { authorization: `Bearer ${renderer.token}` }, signal: AbortSignal.timeout(5_000),

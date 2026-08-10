@@ -82,11 +82,13 @@ function Set-GoogleSecret([string]$SecretName, [string]$Value) {
 
 function Add-VercelValue([string]$Name, [string]$Value, [bool]$Sensitive) {
   foreach ($target in @('production', 'preview', 'development')) {
-    $arguments = @('env', 'add', $Name, $target)
-    if ($Sensitive) { $arguments += '--sensitive' }
+    $arguments = @('env', 'update', $Name, $target)
+    if ($Sensitive -and $target -ne 'development') { $arguments += '--sensitive' }
     $Value | & vercel @arguments
     if ($LASTEXITCODE -ne 0) {
-      Write-Warning "$Name כבר קיים או לא נוסף ל-$target. עדכן אותו ידנית ב-Vercel אם צריך."
+      $arguments[1] = 'add'
+      $Value | & vercel @arguments
+      if ($LASTEXITCODE -ne 0) { throw "סנכרון $Name ל-Vercel נכשל בסביבת $target" }
     }
   }
 }
@@ -136,7 +138,7 @@ Write-Host 'פורס את FFmpeg worker ל-Cloud Run...' -ForegroundColor Cyan
   --memory 4Gi `
   --timeout 3600 `
   --concurrency 1 `
-  --max-instances 3 `
+  --max-instances 1 `
   --set-env-vars="R2_ACCOUNT_ID=$r2Account,R2_BUCKET=$r2Bucket" `
   --set-secrets='R2_ACCESS_KEY_ID=hypescript-r2-access-key:latest,R2_SECRET_ACCESS_KEY=hypescript-r2-secret-key:latest,CLOUD_RENDER_TOKEN=hypescript-render-token:latest,CLOUD_RENDER_CALLBACK_SECRET=hypescript-callback-secret:latest'
 if ($LASTEXITCODE -ne 0) { throw 'פריסת Cloud Run נכשלה.' }

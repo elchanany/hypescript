@@ -1410,8 +1410,8 @@
     "semantic_hash": ""
   },
   "cloud-render-worker/server.mjs": {
-    "mtime": 1786353649.2225342,
-    "ast_hash": "0f12569abe837f8396775cf0699659fc",
+    "mtime": 1786385439.8680732,
+    "ast_hash": "b77131fd9445306f7c6b510d33181878",
     "semantic_hash": ""
   },
   "supabase/migrations/20260810050000_cloud_saas.sql": {
@@ -1425,28 +1425,28 @@
     "semantic_hash": ""
   },
   "web/app/api/cloud/assets/[id]/route.ts": {
-    "mtime": 1786352719.623575,
-    "ast_hash": "247aebc29263272b40b691e2a40104c1",
+    "mtime": 1786385480.2091851,
+    "ast_hash": "e31969e5248fa0c44e34f71e7c8ed0ee",
     "semantic_hash": ""
   },
   "web/app/api/cloud/jobs/[id]/route.ts": {
-    "mtime": 1786353809.8551004,
-    "ast_hash": "deea810d5357164f5281ecbece12ca06",
+    "mtime": 1786385406.399429,
+    "ast_hash": "cfab75e0f72ab7123c1fee9fd530dced",
     "semantic_hash": ""
   },
   "web/app/api/cloud/projects/route.ts": {
-    "mtime": 1786352719.6122093,
-    "ast_hash": "4fe9c25e67bff8b3cadea6e3f0e985b1",
+    "mtime": 1786385406.3904295,
+    "ast_hash": "b01116e296df1a54b9e6e474f3488e3a",
     "semantic_hash": ""
   },
   "web/app/api/cloud/render/callback/route.ts": {
-    "mtime": 1786353809.8531013,
-    "ast_hash": "4dfdc6b556831002886f54f04b738636",
+    "mtime": 1786386131.9635346,
+    "ast_hash": "ce6408bd783a8640bca7711e1a5c26f7",
     "semantic_hash": ""
   },
   "web/app/api/cloud/render/route.ts": {
-    "mtime": 1786353809.8511002,
-    "ast_hash": "116d0445c02c30797c4d77322a32e150",
+    "mtime": 1786385406.3964286,
+    "ast_hash": "397e0138017b8541f32d1d5d19461a73",
     "semantic_hash": ""
   },
   "web/app/api/cloud/status/route.ts": {
@@ -1455,13 +1455,13 @@
     "semantic_hash": ""
   },
   "web/app/api/cloud/uploads/[id]/complete/route.ts": {
-    "mtime": 1786352719.6195018,
-    "ast_hash": "c3b9d52170f84d794bbe6863a31e42a4",
+    "mtime": 1786385406.3984277,
+    "ast_hash": "21282adf959d2382c91e18034bcfdbf6",
     "semantic_hash": ""
   },
   "web/app/api/cloud/uploads/route.ts": {
-    "mtime": 1786352719.6142077,
-    "ast_hash": "791399a4908c5995216f35fe9019549d",
+    "mtime": 1786385406.393428,
+    "ast_hash": "fafcfa4bff105eb763de91999162fb08",
     "semantic_hash": ""
   },
   "web/lib/cloud/auth.ts": {
@@ -1490,8 +1490,8 @@
     "semantic_hash": ""
   },
   "scripts/setup-cloud.ps1": {
-    "mtime": 1786383067.271828,
-    "ast_hash": "c6c2aff775030270b88cabf230d04665",
+    "mtime": 1786386097.767939,
+    "ast_hash": "82c712801ef401e7840d71cee67ad29c",
     "semantic_hash": ""
   },
   "docs/CLOUD_KEYS_CHECKLIST_HE.md": {
@@ -1507,6 +1507,31 @@
   "web/lib/render/videoCard.ts": {
     "mtime": 1786363679.9320388,
     "ast_hash": "130d0d66cf867b0e8bbf677aa4e13983",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260810120000_enforce_cloud_quotas.sql": {
+    "mtime": 1786385480.2081828,
+    "ast_hash": "5dd6fad36c4e28f93499c70231af8cca",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260810123000_cloud_quota_advisor_fixes.sql": {
+    "mtime": 1786385900.4069417,
+    "ast_hash": "10652cdb0ce611d3b482aadf91db97ea",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260810124500_global_storage_hard_cap.sql": {
+    "mtime": 1786386127.5656543,
+    "ast_hash": "c3eb0d6692199fbc29d56d3e7837244a",
+    "semantic_hash": ""
+  },
+  "web/app/api/cloud/usage/route.ts": {
+    "mtime": 1786385406.401429,
+    "ast_hash": "03509fb8940b8e2e6b83104c6d2e4307",
+    "semantic_hash": ""
+  },
+  "web/lib/cloud/quota.ts": {
+    "mtime": 1786386127.5666554,
+    "ast_hash": "6d218d6503aace74b6ab04d6d8e71bcd",
     "semantic_hash": ""
   }
 }

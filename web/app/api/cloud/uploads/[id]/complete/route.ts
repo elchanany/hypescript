@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { headObject } from "@/lib/cloud/r2";
+import { getSupabaseServiceClient } from "@/lib/auth/server";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireCloudUser();
@@ -15,7 +16,9 @@ export async function POST(_request: Request, { params }: { params: { id: string
   } catch {
     return NextResponse.json({ error: "uploaded_object_not_found" }, { status: 409 });
   }
-  const { error } = await auth.supabase.from("cloud_assets").update({ state: "available", uploaded_at: new Date().toISOString() }).eq("id", params.id);
+  const service = getSupabaseServiceClient();
+  if (!service) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
+  const { error } = await service.from("cloud_assets").update({ state: "available", uploaded_at: new Date().toISOString() }).eq("id", params.id).eq("owner_id", auth.user.id);
   if (error) return NextResponse.json({ error: "asset_finalize_failed" }, { status: 500 });
   return NextResponse.json({ assetId: params.id, state: "available" });
 }
