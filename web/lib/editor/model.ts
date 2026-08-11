@@ -11,6 +11,8 @@ export interface MediaAsset {
   file: File;
   duration: number; // לתמונות: משך תצוגה שנבחר
   url: string; // object URL לתצוגה מקדימה
+  /** The project still references this asset, but its local file was removed. */
+  missing?: boolean;
   cloudAssetId?: string;
   cloudObjectKey?: string;
   cloudState?: "uploading" | "available" | "failed";
@@ -76,7 +78,7 @@ export function mediaById(media: MediaAsset[], id: string): MediaAsset | undefin
   return media.find((m) => m.id === id);
 }
 export function firstVideo(media: MediaAsset[]): MediaAsset | undefined {
-  return media.find((m) => m.kind === "video");
+  return media.find((m) => m.kind === "video" && !m.missing);
 }
 
 export function assembledStart(clips: Clip[], i: number): number {

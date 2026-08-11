@@ -463,6 +463,9 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .pv-canvas video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; cursor: pointer; }
 .pv-still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; z-index: 2; }
 .pv-audio-only { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--text-2); background: radial-gradient(circle at center, #18202d, #07090d 64%); z-index: 3; }
+.pv-missing { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 8px; color: #ffd7da; background: repeating-linear-gradient(135deg, #4a141a 0 12px, #2b0d11 12px 24px); text-align: center; }
+.pv-missing strong { font-size: 15px; }
+.pv-missing span { font-size: 11px; opacity: .82; }
 .pv-empty { color: var(--text-3); font-size: var(--fs); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pv-empty svg { color: var(--text-3); opacity: .6; }
 .pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: auto; white-space: pre-line; line-height: 1.35; z-index: 7; margin: 0 4%; cursor: move; }
@@ -516,8 +519,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .transport .tp-play { width: 34px; height: 34px; border-radius: var(--r-md); background: var(--accent); color: #fff; border: none; display: grid; place-items: center; cursor: pointer; }
 .transport .tp-play:hover:not(:disabled) { background: var(--accent-hover); }
 .transport .tp-play:disabled { opacity: .4; cursor: not-allowed; }
-.transport .tp-vol { display: flex; align-items: center; gap: 6px; width: 108px; }
-.transport .tp-vol input[type="range"] { flex: 1; }
+.transport .tp-vol { display: flex; align-items: center; gap: 6px; flex: 0 1 108px; min-width: 34px; overflow: hidden; }
+.transport .tp-vol input[type="range"] { flex: 1; min-width: 0; }
 .transport .tp-grow { flex: 1; }
 
 /* ============================ Media panel ============================ */
@@ -537,6 +540,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   background: var(--inset); border: 1px solid var(--border); display: grid; place-items: center; color: var(--text-3);
 }
 .media-cell .cell-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-cell.missing, .media-item.missing { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); background: var(--danger-tint); cursor: default; }
+.cell-missing { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 4px; color: var(--danger); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--danger) 8%, var(--inset)) 0 8px, var(--inset) 8px 16px); font-size: 10px; }
 .media-cell .cell-thumb .cell-dur {
   position: absolute; inset-inline-end: 3px; bottom: 3px; direction: ltr;
   background: rgba(0,0,0,.72); color: #fff; font-size: 10px; font-family: var(--mono);
@@ -630,7 +635,7 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 }
 .tl-inner {
   /* בלי min-width:100% — אחרת אי אפשר להקטין מתחת ל־fit (zoom < 1) */
-  position: relative; min-width: 0; height: 100%; box-sizing: border-box;
+  position: relative; min-width: 0; min-height: 100%; height: max-content; box-sizing: border-box;
   max-width: none; /* רוחב נשלט ב-inline לפי zoom — לא דוחף את הפריסה */
 }
 
@@ -673,6 +678,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .clip2:active { cursor: grabbing; }
 .clip2.locked { cursor: default; }
 .clip2.disabled { opacity: .4; filter: saturate(.4); }
+.clip2.missing, .clip-audio.missing, .clip-ov.missing { background: repeating-linear-gradient(135deg, #5a171d 0 9px, #321116 9px 18px); border-color: #ef5562; color: #fff; }
+.clip2.missing .clip-fill { display: none; }
 .clip2.hovered:not(.selected), .clip2:hover:not(.selected) { border-color: rgba(108,146,255,.7); box-shadow: 0 0 0 1px rgba(108,146,255,.35); z-index: 2; }
 .clip2 .clip-fill { position: absolute; inset: 0; opacity: .9; }
 /* real filmstrip / image fill (above the color fallback, below label + handles) */

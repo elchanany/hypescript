@@ -606,11 +606,6 @@ export function ensureBuiltinCommands() {
       const id = String(args?.id || "");
       const asset = api.getMedia().find((item) => item.id === id);
       if (!asset || !id) throw new Error("קובץ המדיה לא נמצא");
-      const clipRefs = (api.getClips() || []).filter((clip) => clip.sourceId === id).length;
-      const overlayRefs = api.getOverlays().filter((overlay) => overlay.assetId === id).length;
-      if (clipRefs || overlayRefs) {
-        throw new Error(`לא ניתן להסיר את \"${asset.name}\": הקובץ בשימוש ב-${clipRefs} קליפים ו-${overlayRefs} שכבות. הסר אותם מהציר קודם.`);
-      }
       if (!api.removeMediaAsset) throw new Error("הסרת מדיה אינה זמינה");
       api.removeMediaAsset(id);
     },

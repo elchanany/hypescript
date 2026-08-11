@@ -71,7 +71,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const [t, setT] = useState(0);
   const [vol, setVol] = useState(1);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [activeKind, setActiveKind] = useState<"video" | "image" | "audio" | "gap">("gap");
+  const [activeKind, setActiveKind] = useState<"video" | "image" | "audio" | "gap" | "missing">("gap");
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
   const primaryId = tracks?.length ? primaryVideoTrackId(tracks) : "trk_video";
@@ -146,7 +146,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     setT(assembled); onTime(assembled); syncExtraAudio(assembled, shouldPlay);
   };
 
-  const runTimed = (index: number, from: number, play: boolean, kind: "gap" | "image") => {
+  const runTimed = (index: number, from: number, play: boolean, kind: "gap" | "image" | "missing") => {
     clearClock(); activeMedia()?.pause(); idx.current = index; setActiveKind(kind);
     const clip = edl[index];
     const asset = kind === "image" ? byId(clip.sourceId) : null;
@@ -171,7 +171,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     while (nextIndex < edl.length && !clipEnabled(edl[nextIndex])) nextIndex++;
     const clip = edl[nextIndex];
     const asset = clip ? byId(clip.sourceId) : null;
-    if (!clip || !asset || (asset.kind !== "video" && asset.kind !== "audio") || isGapClip(clip)) {
+    if (!clip || !asset || asset.missing || (asset.kind !== "video" && asset.kind !== "audio") || isGapClip(clip)) {
       prepared.current = null;
       return;
     }
@@ -194,7 +194,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const ensureMedia = (sourceId: string, sourceTime: number, play: boolean) => {
     const slot = activeSlotRef.current;
     const el = mediaRefs[slot].current, asset = byId(sourceId);
-    if (!el || !asset || (asset.kind !== "video" && asset.kind !== "audio")) return;
+    if (!el || !asset || asset.missing || (asset.kind !== "video" && asset.kind !== "audio")) return;
     clearClock(); setActiveImageUrl(null); setActiveKind(asset.kind);
     el.muted = false;
     if (loaded.current[slot] === sourceId) {
@@ -211,7 +211,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     idx.current = i;
     if (i >= edl.length) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); publishTime(total, false); return; }
     const clip = edl[i], asset = byId(clip.sourceId), from = assembledStart(edl, i);
-    if (isGapClip(clip) || !asset) runTimed(i, from, play, "gap");
+    if (!asset || asset.missing) runTimed(i, from, play, "missing");
+    else if (isGapClip(clip)) runTimed(i, from, play, "gap");
     else if (asset.kind === "image") runTimed(i, from, play, "image");
     else {
       const ready = prepared.current;
@@ -241,7 +242,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     const { index, source } = assembledToSource(edl, Math.min(next, Math.max(0, total - 0.0001)));
     idx.current = Math.max(0, index);
     const clip = edl[idx.current], asset = clip ? byId(clip.sourceId) : null;
-    if (!clip || isGapClip(clip) || !asset) runTimed(idx.current, next, false, "gap");
+    if (!asset || asset.missing) runTimed(idx.current, next, false, "missing");
+    else if (!clip || isGapClip(clip)) runTimed(idx.current, next, false, "gap");
     else if (asset.kind === "image") runTimed(idx.current, next, false, "image");
     else ensureMedia(clip.sourceId, source, false);
     publishTime(next, false);
@@ -252,7 +254,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     if (playing) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); return; }
     if (t >= total - 0.001) { idx.current = 0; advanceFrom(0, true); return; }
     const clip = edl[idx.current], start = assembledStart(edl, idx.current), asset = byId(clip?.sourceId || "");
-    if (!clip || isGapClip(clip) || !asset) runTimed(idx.current, Math.max(start, t), true, "gap");
+    if (!asset || asset.missing) runTimed(idx.current, Math.max(start, t), true, "missing");
+    else if (!clip || isGapClip(clip)) runTimed(idx.current, Math.max(start, t), true, "gap");
     else if (asset.kind === "image") runTimed(idx.current, Math.max(start, t), true, "image");
     else ensureMedia(clip.sourceId, clip.start + Math.max(0, t - start), true);
   };
@@ -265,7 +268,16 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();
   }, []);
   useEffect(() => { seekTo(Math.min(t, total)); }, [edl, audioClips]);
-  useEffect(() => { syncExtraAudio(t, playing); }, [vol, audioMuted]);
+  useEffect(() => {
+    const el = activeMedia();
+    const clip = edl[idx.current];
+    if (el && clip) {
+      const fades = clipAudioFades(clip);
+      const offset = Math.max(0, t - assembledStart(edl, idx.current));
+      el.volume = Math.min(1, previewAudioGain(vol, clipVolume(clip), !!audioMuted, audioFadeFactor(offset, clipDur(clip), fades.fadeIn, fades.fadeOut)));
+    }
+    syncExtraAudio(t, playing);
+  }, [vol, audioMuted, activeSlot]);
 
   const onLoaded = (slot: 0 | 1) => {
     const el = mediaRefs[slot].current, p = pending.current[slot];
@@ -337,6 +349,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
         <audio ref={extraAudioRef} onEnded={() => syncExtraAudio(t, playing)} />
         {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />}
         {activeKind === "audio" && <div className="pv-audio-only"><Music size={46} /><span>אודיו מתנגן</span></div>}
+        {activeKind === "missing" && <div className="pv-missing"><Film size={42} /><strong>קובץ המדיה חסר</strong><span>אפשר לקשר אותו מחדש מספריית המדיה</span></div>}
         {activeKind === "gap" && <div className="pv-gap" aria-hidden />}
         {cue && <div className={`pv-caption ${cue.id === selectedSubId ? "selected" : ""}`} style={captionStyleToCss(st)}
           contentEditable={cue.id === selectedSubId} suppressContentEditableWarning

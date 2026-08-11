@@ -112,6 +112,10 @@ export default function EditorPage() {
     if (exportResult?.url) URL.revokeObjectURL(exportResult.url);
   }, [exportResult?.url]);
 
+  useEffect(() => {
+    if (error) toast.error("הפעולה לא הושלמה", error);
+  }, [error]);
+
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
   const [chatOpen, setChatOpen] = useState(false);
@@ -176,8 +180,13 @@ export default function EditorPage() {
       getMedia: () => mediaRef.current,
       removeMediaAsset: (id) => setMedia((items) => {
         const asset = items.find((item) => item.id === id);
-        if (asset) URL.revokeObjectURL(asset.url);
-        return items.filter((item) => item.id !== id);
+        if (!asset) return items;
+        if (asset.url) URL.revokeObjectURL(asset.url);
+        const referenced = !!clipsRef.current?.some((clip) => clip.sourceId === id)
+          || overlaysRef.current.some((overlay) => overlay.assetId === id);
+        return referenced
+          ? items.map((item) => item.id === id ? { ...item, file: new File([], item.name, { type: item.file.type }), url: "", missing: true } : item)
+          : items.filter((item) => item.id !== id);
       }),
       // Browser-only I/O: assets imported from a brand kit / agent land here so
       // they persist (media → kvSet effect) and appear in the media panel.
@@ -374,7 +383,7 @@ export default function EditorPage() {
     (async () => {
       const sm = await kvGet<any[]>(pk(projectId, "media"));
       setMedia((prev) => {
-        prev.forEach((m) => URL.revokeObjectURL(m.url));
+        prev.forEach((m) => { if (m.url) URL.revokeObjectURL(m.url); });
         if (!sm?.length) return [];
         const out: MediaAsset[] = [];
         for (const m of sm) {
@@ -382,8 +391,9 @@ export default function EditorPage() {
           const file = m.blob instanceof File ? m.blob
             : m.blob instanceof Blob ? new File([m.blob], m.name || "media", { type: m.blob.type || "" })
             : null;
-          if (!file) continue; // skip a broken record rather than throwing (never wipe good media)
-          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file, url: URL.createObjectURL(file), cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState });
+          if (!file && !m.missing) continue; // skip a broken record rather than throwing (never wipe good media)
+          const restoredFile = file || new File([], m.name || "media", { type: "" });
+          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: restoredFile, url: m.missing ? "" : URL.createObjectURL(restoredFile), missing: !!m.missing, cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState });
         }
         return out;
       });
@@ -406,7 +416,7 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (!restored || !projectId) return;
-    kvSet(pk(projectId, "media"), media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.file, cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState })));
+    kvSet(pk(projectId, "media"), media.map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, blob: m.missing ? null : m.file, missing: !!m.missing, cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState })));
     touchProject(projectId);
   }, [media, restored, projectId]);
 
@@ -483,7 +493,8 @@ export default function EditorPage() {
       if (shouldUpload) setPhase("מעלה מדיה מוצפנת לענן…");
       const assets = await Promise.all(arr.map(async (f, index) => {
         const kind = kindOf(f);
-        const asset: MediaAsset = { id: uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f) };
+        const matchingMissing = mediaRef.current.find((item) => item.missing && item.name === f.name && item.kind === kind);
+        const asset: MediaAsset = { id: matchingMissing?.id || uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f), missing: false };
         if (shouldUpload && policy?.cloudProjectId) {
           const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => setProgress((index + ratio) / arr.length));
           asset.cloudAssetId = cloud.assetId;
@@ -492,11 +503,14 @@ export default function EditorPage() {
         }
         return asset;
       }));
-      setMedia((current) => [...current, ...assets]);
+      setMedia((current) => {
+        const restoredIds = new Set(assets.map((asset) => asset.id));
+        return [...current.filter((item) => !restoredIds.has(item.id)), ...assets];
+      });
       if (shouldUpload) toast.success("ההעלאה לענן הושלמה", `${arr.length} קבצים נשמרו ב־R2 פרטי`);
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "העלאה לענן נכשלה";
-      setError(message); toast.error("העלאה לענן נכשלה", message);
+      setError(message);
     } finally {
       if (shouldUpload) { setPhase(""); setProgress(0); }
     }
@@ -508,6 +522,21 @@ export default function EditorPage() {
     if (!editorApiRef.current) return;
     const result = runCommand("media.remove", editorApiRef.current, { id });
     if (!result.ok) setError(result.error);
+    else toast.success("המדיה הוסרה", "מופעים קיימים בציר סומנו כחסרים וניתן לקשר את הקובץ מחדש.");
+  };
+  const relinkMedia = async (id: string, file: File) => {
+    const previous = mediaRef.current.find((item) => item.id === id);
+    if (!previous) return;
+    const kind = kindOf(file);
+    if (kind !== previous.kind) {
+      setError(`נבחר קובץ מסוג ${kind}, אך המקור החסר הוא ${previous.kind}.`);
+      return;
+    }
+    const duration = await probeDuration(file, kind);
+    setMedia((items) => items.map((item) => item.id === id
+      ? { ...item, name: file.name, file, duration: duration || item.duration, url: URL.createObjectURL(file), missing: false }
+      : item));
+    toast.success("הקובץ קושר מחדש", file.name);
   };
   const addImageOverlay = (asset: MediaAsset) => {
     const api = editorApiRef.current;
@@ -1089,7 +1118,7 @@ export default function EditorPage() {
               onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
               onCanvasDetected={onCanvasDetected} captionStyle={captionStyle} />
           </div>
-          {(working || phase || error) && <div className="chat-focus-progress"><span className={error ? "err" : ""}>{error || phase}</span>{working && <div><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>}</div>}
+          {(working || phase) && <div className="chat-focus-progress"><span>{phase}</span>{working && <div><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>}</div>}
         </section>
         <aside className="agent-dock chat-focus-dock">
           <Chat media={media} onAddMedia={addFiles} onClose={toggleFocusMode} words={words} clips={clips} subs={subs}
@@ -1109,7 +1138,7 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }}>
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia}
+            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
@@ -1155,9 +1184,9 @@ export default function EditorPage() {
                 onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
                 onCanvasDetected={onCanvasDetected}
                 captionStyle={captionStyle} />
-              {(working || phase || error) && (
+              {(working || phase) && (
                 <div className="status-strip">
-                  <span className={`s-msg ${error ? "err" : ""}`}>{error || phase}</span>
+                  <span className="s-msg">{phase}</span>
                   {working && <div className="s-bar"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
                 </div>
               )}

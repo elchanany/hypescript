@@ -190,6 +190,7 @@ export default function Timeline(p: Props) {
   const vLocked = !!vTrack?.locked;
   const clipsOf = (trackId: string) => clipsOnTrack(clips, trackId, primaryId);
   const primaryClips = clipsOf(primaryId);
+  const overlayRows: Array<Overlay | null> = overlays.length ? [...overlays].sort((a, b) => b.start - a.start) : [null];
 
   // Each track owns its own assembled clock. The old global accumulator shifted
   // edges after the first track and made cross-layer snapping visually dishonest.
@@ -685,7 +686,7 @@ export default function Timeline(p: Props) {
                     const thumbH = Math.max(28, track.height - 8);
                     return (
                       <div key={c.id}
-                        className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${tLocked ? "locked" : ""}`}
+                        className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${tLocked ? "locked" : ""} ${!asset || asset.missing ? "missing" : ""}`}
                         style={{ left: `${pct(assembledStart(tClips, i))}%`, width: `${pct(clipDur(c))}%`, opacity: clipOpacity(c) }}
                         onMouseDown={(e) => onDown(e, c, "move", "video", track.id)}
                         onClick={(e) => e.stopPropagation()}
@@ -694,11 +695,11 @@ export default function Timeline(p: Props) {
                         onContextMenu={(e) => { e.preventDefault(); selectClip(c.id, "video"); p.onClipMenu(c.id, e.clientX, e.clientY); }}
                         title={`${short} · ${asset?.kind === "image" ? "תמונה מלאה ברצועה — לא לוגו" : "קליפ וידאו"} · ${clipDur(c).toFixed(1)}s`}>
                         <div className="clip-fill" style={{ background: colorOf(c.sourceId) }} />
-                        {asset?.kind === "video" && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
-                        {asset?.kind === "image" && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
+                        {asset?.kind === "video" && !asset.missing && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
+                        {asset?.kind === "image" && !asset.missing && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
                         <span className="clip-accent" style={{ background: colorOf(c.sourceId) }} />
                         {!tLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "video", track.id)} />}
-                        <span className="clip-label"><span>{asset?.kind === "image" ? `תמונה מלאה · ${short}` : (short || `קטע ${i + 1}`)}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
+                        <span className="clip-label"><span>{!asset || asset.missing ? `מדיה חסרה · ${short || c.sourceId}` : asset.kind === "image" ? `תמונה מלאה · ${short}` : (short || `קטע ${i + 1}`)}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
                         {!tLocked && <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "video", track.id)} />}
                       </div>
                     );
@@ -722,7 +723,7 @@ export default function Timeline(p: Props) {
                     return (
                       <div
                         key={c.id}
-                        className={`clip-audio ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || vLocked ? "locked" : ""}`}
+                        className={`clip-audio ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || vLocked ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""}`}
                         style={{ left: `${pct(assembledStart(tClips, i))}%`, width: `${pct(clipDur(c))}%` }}
                         onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio", audioId); }}
                         onClick={(e) => e.stopPropagation()}
@@ -731,7 +732,7 @@ export default function Timeline(p: Props) {
                         onContextMenu={(e) => { e.preventDefault(); if (!gap) { selectClip(c.id, "audio"); p.onClipMenu(c.id, e.clientX, e.clientY); } }}
                         title={gap ? "רווח" : `${(asset?.name || "").replace(/\.[^.]+$/, "")} · ${clipDur(c).toFixed(1)}s`}
                       >
-                        {!gap && asset && (asset.kind === "video" || asset.kind === "audio") && (
+                        {!gap && asset && !asset.missing && (asset.kind === "video" || asset.kind === "audio") && (
                           <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />
                         )}
                         {!gap && !tLocked && !vLocked && (
@@ -775,26 +776,28 @@ export default function Timeline(p: Props) {
           );
         })}
 
-        {/* Overlay lane — visual track for image/text layers (not a TrackMeta type yet) */}
-        <div className="tl-rowline" style={{ height: Math.max(48, overlays.length ? 52 : 48) }}>
-          <div className="tl-head2">
-            <div className="hd-top">
-              <Layers className="hd-type" size={14} strokeWidth={1.75} />
-              <span className="hd-name">שכבות</span>
+        {/* Each visual overlay gets a real lane; rows grow with the composition. */}
+        {overlayRows.map((rowOverlay, rowIndex) => (
+          <div className="tl-rowline" style={{ height: 48 }} key={rowOverlay?.id || "empty-overlay-row"}>
+            <div className="tl-head2">
+              <div className="hd-top">
+                <Layers className="hd-type" size={14} strokeWidth={1.75} />
+                <span className="hd-name">{rowIndex === 0 ? "שכבות" : `שכבה ${rowIndex + 1}`}</span>
+              </div>
+              <div className="hd-ctrls" dir="ltr" aria-hidden>
+                <span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" />
+              </div>
             </div>
-            <div className="hd-ctrls" dir="ltr" aria-hidden>
-              <span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" />
-            </div>
-          </div>
-          <div className="tl-lane2" ref={overlayLaneRef} onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
-            <Grid />
-            {overlays.map((o) => {
+            <div className="tl-lane2" ref={rowIndex === 0 ? overlayLaneRef : undefined} onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>
+              <Grid />
+              {rowOverlay && (() => {
+              const o = rowOverlay;
               const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
               const label = o.kind === "text" ? (o.text || "טקסט") : ((asset?.name || "").replace(/\.[^.]+$/, "") || "תמונה");
               const dur = Math.max(0.05, o.end - o.start);
               return (
                 <div key={o.id}
-                  className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""}`}
+                  className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""}`}
                   style={{ left: `${pct(o.start)}%`, width: `${Math.max(0.4, pct(dur))}%`, opacity: o.hidden ? 0.35 : (o.transform?.opacity ?? 1) }}
                   title={`${label} · ${dur.toFixed(1)}s`}
                   onMouseDown={(e) => onOverlayDown(e, o, "move")}
@@ -804,10 +807,11 @@ export default function Timeline(p: Props) {
                   <span className="trim r" onMouseDown={(e) => onOverlayDown(e, o, "r")} />
                 </div>
               );
-            })}
-            <Playhead laneEl={null} />
+            })()}
+              <Playhead laneEl={null} />
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );

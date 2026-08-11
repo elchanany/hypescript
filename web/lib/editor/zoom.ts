@@ -1,6 +1,6 @@
 // זום טיימליין — חישוב גורם מגלגלת + עגינה לשמאל (התחלה נשארת בהתחלה).
 // כותרות הרצועות (sticky) ברוחב קבוע — רק אזור ה-lane משתנה עם הזום.
-// zoom < 1 → תוכן צר מה-viewport (ריק מימין); zoom > 1 → גלילה אופקית.
+// zoom < 1 changes the time scale while the canvas still fills the viewport.
 
 import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "./time";
 
@@ -42,7 +42,7 @@ export function nextZoom(current: number, deltaY: number, pinch = false, portWid
 export function timelineContentWidth(portWidth: number, zoom: number, gutter = TIMELINE_GUTTER): number {
   if (!(portWidth > 0)) return 0;
   const z = clampZoomForPort(zoom, portWidth, gutter);
-  return Math.max(portWidth * z, gutter + MIN_LANE_PX);
+  return Math.max(portWidth, portWidth * z, gutter + MIN_LANE_PX);
 }
 
 /**

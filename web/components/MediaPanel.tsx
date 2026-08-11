@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
-import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List } from "lucide-react";
+import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "lucide-react";
 import { IconButton } from "@/components/ui";
 
 const KIND_ICON = { video: Film, image: ImageIcon, audio: Music } as const;
@@ -31,7 +31,8 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
   const Icon = KIND_ICON[asset.kind];
   return (
     <div className="cell-thumb">
-      {url ? <img src={url} alt="" draggable={false} />
+      {asset.missing ? <div className="cell-missing"><TriangleAlert size={24} /><span>קובץ חסר</span></div>
+        : url ? <img src={url} alt="" draggable={false} />
         : asset.kind === "video" ? <span className="strip-loading cover" />
         : <Icon size={22} strokeWidth={1.5} />}
       {url && <span className="cell-kind"><Icon size={13} strokeWidth={2} /></span>}
@@ -41,7 +42,7 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 }
 
 export default function MediaPanel({
-  media, mainId, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onAssetMenu,
+  media, mainId, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onRelink, onAssetMenu,
 }: {
   media: MediaAsset[]; mainId?: string;
   onUpload: (files: FileList | File[] | null) => void;
@@ -49,9 +50,12 @@ export default function MediaPanel({
   onAddOverlay: (asset: MediaAsset) => void;
   onMention: (asset: MediaAsset) => void;
   onRemove: (id: string) => void;
+  onRelink: (id: string, file: File) => void;
   onAssetMenu?: (id: string, x: number, y: number) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const relinkRef = useRef<HTMLInputElement>(null);
+  const relinkId = useRef<string | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [over, setOver] = useState(false);
   const [view, setView] = useState<View>("grid");
@@ -116,6 +120,8 @@ export default function MediaPanel({
       </div>
       <input ref={fileRef} type="file" accept="video/*,image/*,audio/*" multiple hidden
         onChange={(e) => { onUpload(e.target.files); e.currentTarget.value = ""; }} />
+      <input ref={relinkRef} type="file" accept="video/*,image/*,audio/*" hidden
+        onChange={(e) => { const file = e.target.files?.[0]; const id = relinkId.current; if (file && id) onRelink(id, file); e.currentTarget.value = ""; relinkId.current = null; }} />
 
       <div className="panel-scroll"
         onDragOver={(e) => {
@@ -136,19 +142,20 @@ export default function MediaPanel({
           <div className="media-grid">
             {media.map((m) => (
               <div key={m.id}
-                className={`media-cell ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""}`}
-                draggable
+                className={`media-cell ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""} ${m.missing ? "missing" : ""}`}
+                draggable={!m.missing}
                 onDragStart={(e) => startMediaDrag(e, m)}
                 onDragEnd={endMediaDrag}
                 onClick={() => setSel(m.id)}
-                onDoubleClick={() => m.kind === "image" ? onAddOverlay(m) : onAddClip(m)}
+                onDoubleClick={() => { if (!m.missing) m.kind === "image" ? onAddOverlay(m) : onAddClip(m); }}
                 onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                 title={`${m.name} — גרור לציר הזמן`}>
                 <CellThumb asset={m} />
                 {m.id === mainId && <span className="cell-badge">ראשי</span>}
                 <div className="cell-actions">
-                  {m.kind === "image" && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="down" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
-                  <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="down" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                  {m.missing && <IconButton icon={RefreshCw} tip="אתר מחדש את הקובץ" tipPos="down" onClick={(e) => { e.stopPropagation(); relinkId.current = m.id; relinkRef.current?.click(); }} />}
+                  {m.kind === "image" && !m.missing && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="down" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
+                  {!m.missing && <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="down" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />}
                   <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="down" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
                   <IconButton icon={Trash2} tip="הסר" tipPos="down" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                 </div>
@@ -162,12 +169,12 @@ export default function MediaPanel({
               const Icon = KIND_ICON[m.kind];
               return (
                 <div key={m.id}
-                  className={`media-item ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""}`}
-                  draggable
+                  className={`media-item ${m.id === mainId ? "main" : ""} ${m.id === sel ? "selected" : ""} ${m.missing ? "missing" : ""}`}
+                  draggable={!m.missing}
                   onDragStart={(e) => startMediaDrag(e, m)}
                   onDragEnd={endMediaDrag}
                   onClick={() => setSel(m.id)}
-                  onDoubleClick={() => m.kind === "image" ? onAddOverlay(m) : onAddClip(m)}
+                  onDoubleClick={() => { if (!m.missing) m.kind === "image" ? onAddOverlay(m) : onAddClip(m); }}
                   onContextMenu={(e) => { e.preventDefault(); setSel(m.id); onAssetMenu?.(m.id, e.clientX, e.clientY); }}
                   title={`${m.name} — גרור לציר הזמן`}>
                   <div className="media-thumb"><Icon size={16} strokeWidth={1.5} /></div>
@@ -177,8 +184,9 @@ export default function MediaPanel({
                   </div>
                   {m.id === mainId && <span className="media-badge">ראשי</span>}
                   <div className="media-actions">
-                    {m.kind === "image" && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="left" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
-                    <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="left" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />
+                    {m.missing && <IconButton icon={RefreshCw} tip="אתר מחדש את הקובץ" tipPos="left" onClick={(e) => { e.stopPropagation(); relinkId.current = m.id; relinkRef.current?.click(); }} />}
+                    {m.kind === "image" && !m.missing && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="left" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
+                    {!m.missing && <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="left" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />}
                     <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="left" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
                     <IconButton icon={Trash2} tip="הסר" tipPos="left" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                   </div>

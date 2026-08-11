@@ -196,17 +196,22 @@ describe("CommandBus builtins", () => {
     expect(api.subs).toEqual([]);
   });
 
-  it("fails closed when removing referenced media and removes only an unused asset", () => {
+  it("allows the media boundary to preserve a missing placeholder for referenced assets", () => {
     const api = fakeApi([{ id: "c1", sourceId: "m", start: 0, end: 2 }]) as any;
     let media = api.getMedia();
     api.getMedia = () => media;
-    api.removeMediaAsset = (id: string) => { media = media.filter((item: any) => item.id !== id); };
-    const blocked = runCommand("media.remove", api, { id: "m" });
-    expect(blocked).toMatchObject({ ok: false });
-    expect((blocked as any).error).toContain("בשימוש");
+    api.removeMediaAsset = (id: string) => {
+      const referenced = api.getClips().some((clip: any) => clip.sourceId === id);
+      media = referenced
+        ? media.map((item: any) => item.id === id ? { ...item, missing: true } : item)
+        : media.filter((item: any) => item.id !== id);
+    };
+    expect(runCommand("media.remove", api, { id: "m" }).ok).toBe(true);
     expect(media).toHaveLength(1);
+    expect(media[0].missing).toBe(true);
 
     api.clips = [];
+    media = media.map((item: any) => ({ ...item, missing: false }));
     expect(runCommand("media.remove", api, { id: "m" }).ok).toBe(true);
     expect(media).toEqual([]);
   });

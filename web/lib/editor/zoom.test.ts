@@ -22,13 +22,12 @@ describe("timeline zoom", () => {
     expect(z).toBe(ZOOM_MIN);
   });
 
-  it("zooms out below 1 — content narrower than viewport (not locked to fit)", () => {
+  it("keeps the timeline canvas filling the viewport when zoomed out", () => {
     const port = 1000;
     const w1 = timelineContentWidth(port, 1);
     const wHalf = timelineContentWidth(port, 0.5);
     expect(w1).toBe(port);
-    expect(wHalf).toBe(port * 0.5);
-    expect(wHalf).toBeLessThan(port);
+    expect(wHalf).toBe(port);
   });
 
   it("zooms in far — content much wider than viewport", () => {
@@ -71,8 +70,7 @@ describe("timeline zoom", () => {
     const next = scrollLeftAfterZoom({
       oldZoom: 2, newZoom: 0.5, scrollLeft: 100, portWidth, gutter,
     });
-    // תוכן צר מה-viewport → אין גלילה, נשארים ב-0
-    expect(timelineContentWidth(portWidth, 0.5)).toBeLessThan(portWidth);
+    expect(timelineContentWidth(portWidth, 0.5)).toBe(portWidth);
     expect(next).toBe(0);
   });
 });
