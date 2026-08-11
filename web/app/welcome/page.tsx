@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, Captions, Check, Cloud, CreditCard, Download, Fi
 import BrandLogo from "@/components/BrandLogo";
 
 export const metadata: Metadata = {
-  title: "Hypescript — עריכת וידאו שמתחילה במילים",
+  title: "Hypescript — עורך וידאו AI בעברית",
   description: "מעבירים שיעור או סרטון ארוך לגרסה מדויקת ומוכנה לפרסום — חיתוך דרך טקסט, כתוביות עברית, שכבות ורינדור במקום אחד.",
   keywords: ["עריכת וידאו", "כתוביות בעברית", "חיתוך סרטונים", "עורך וידאו אונליין", "תמלול וידאו"],
   alternates: { canonical: "/welcome" },

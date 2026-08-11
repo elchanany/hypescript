@@ -2,8 +2,8 @@
 
 export const BRAND_NAME = "Hypescript";
 export const BRAND_NAME_HE = "Hypescript";
-export const BRAND_TAGLINE_HE = "עריכת וידאו בעברית, מהרעיון לסרטון מוכן";
-export const BRAND_TAGLINE_EN = "Hebrew video editing, from first cut to final export";
+export const BRAND_TAGLINE_HE = "עורך וידאו AI בעברית — מהרעיון לסרטון מוכן";
+export const BRAND_TAGLINE_EN = "AI video editor for Hebrew creators, from first cut to final export";
 
 export const BRAND_PATHS = {
   icon: "/brand/hypescript-mark.svg",
@@ -43,13 +43,13 @@ export const BRAND_SIZE_PX: Record<BrandVariant, Record<BrandSize, { w: number; 
     lg: { w: 40, h: 40 },
     xl: { w: 64, h: 64 },
   },
-  // Native SVG viewBox is 244×64 (3.8125:1).
+  // Native SVG viewBox is 318×64 (4.96875:1), including the AI-video descriptor.
   horizontal: {
-    xs: { w: 107, h: 28 },
-    sm: { w: 149, h: 39 },
-    md: { w: 214, h: 56 },
-    lg: { w: 275, h: 72 },
-    xl: { w: 339, h: 89 },
+    xs: { w: 139, h: 28 },
+    sm: { w: 194, h: 39 },
+    md: { w: 278, h: 56 },
+    lg: { w: 358, h: 72 },
+    xl: { w: 442, h: 89 },
   },
 };
 

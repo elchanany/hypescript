@@ -52,3 +52,10 @@ Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemo
 - Chat history is now a named conversation manager with create/rename/delete/select, while provider/model selection has a clear header control.
 - Text templates are generic creator patterns rather than lesson-specific copy. Effects and transition tabs apply real clip looks and visual fades shared by Preview and Export.
 - Next catalog expansion must follow `docs/CREATIVE_LIBRARY_ARCHITECTURE.md` and preserve Preview/Export parity and asset licensing.
+
+# 2026-08-11 — complete AI video editor rebrand
+
+- Replaced the generic play ribbon with a compact H built from timeline rails and an integrated playhead; the horizontal lockup explicitly says `AI VIDEO EDITOR`.
+- `BrandLogo` remains the single UI entry point. Canonical SVGs now feed editor, landing, auth, dashboard, account, onboarding, settings and legal surfaces.
+- Regenerated favicon PNG/ICO, Apple/PWA/maskable icons, raster lockups, Open Graph/Twitter cards and subscription product artwork. Landing metadata now names the product as a Hebrew AI video editor.
+- Raster derivatives are reproducible with `scripts/generate-brand-assets.py`; canonical SVG geometry stays sharp down to 16px.

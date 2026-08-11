@@ -6,8 +6,8 @@
   "dir": "rtl",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#000B30",
-  "theme_color": "#0080F8",
+  "background_color": "#0B1733",
+  "theme_color": "#35D59A",
   "icons": [
     {
       "src": "/brand/icons/icon-192.png",
