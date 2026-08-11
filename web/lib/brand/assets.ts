@@ -6,7 +6,7 @@ export const BRAND_TAGLINE_HE = "עורך וידאו AI בעברית — מהר�
 export const BRAND_TAGLINE_EN = "AI video editor for Hebrew creators, from first cut to final export";
 
 export const BRAND_PATHS = {
-  icon: "/brand/hypescript-mark-generated.png",
+  icon: "/brand/hypescript-mark-minimal.png",
   horizontal: "/brand/hypescript-wordmark-dark.svg",
   dark: "/brand/hypescript-wordmark-dark.svg",
   light: "/brand/hypescript-wordmark-light.svg",
@@ -37,19 +37,19 @@ export type BrandTheme = "auto" | "dark" | "light";
 
 export const BRAND_SIZE_PX: Record<BrandVariant, Record<BrandSize, { w: number; h: number }>> = {
   icon: {
-    xs: { w: 16, h: 16 },
-    sm: { w: 24, h: 24 },
-    md: { w: 28, h: 28 },
-    lg: { w: 40, h: 40 },
-    xl: { w: 64, h: 64 },
+    xs: { w: 20, h: 20 },
+    sm: { w: 30, h: 30 },
+    md: { w: 36, h: 36 },
+    lg: { w: 52, h: 52 },
+    xl: { w: 80, h: 80 },
   },
   // Native SVG viewBox is 318×64 (4.96875:1), including the AI-video descriptor.
   horizontal: {
-    xs: { w: 139, h: 28 },
-    sm: { w: 194, h: 39 },
-    md: { w: 278, h: 56 },
-    lg: { w: 358, h: 72 },
-    xl: { w: 442, h: 89 },
+    xs: { w: 160, h: 32 },
+    sm: { w: 225, h: 45 },
+    md: { w: 300, h: 60 },
+    lg: { w: 380, h: 76 },
+    xl: { w: 460, h: 92 },
   },
 };
 

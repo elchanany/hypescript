@@ -46,7 +46,7 @@ export default function BrandLogo({
         aria-hidden={decorative || undefined}
         style={{ width: dim.w, height: dim.h }}
       >
-        {/* Raster master gives the mark a crafted material finish; live type stays crisp at every scale. */}
+        {/* Raster mark stays crisp in tiny UI surfaces; live type keeps the lockup readable. */}
         <img src={brandSrc("icon", effective)} alt="" decoding="async" loading={priority ? "eager" : "lazy"} draggable={false} />
         <span className="brand-lockup-copy"><b>Hypescript</b><small>AI VIDEO EDITOR</small></span>
       </span>

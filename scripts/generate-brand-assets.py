@@ -1,10 +1,10 @@
-"""Generate Hypescript raster icons and social cards from the canonical mark geometry."""
+"""Generate every Hypescript raster asset from the minimal H/play mark."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1] / "web" / "public"
 NAVY, ACCENT, WHITE, MUTED = "#0B1733", "#6F8CFF", "#F7FAFF", "#9AA7BC"
-GENERATED_MARK = ROOT / "brand" / "hypescript-mark-generated.png"
+MINT = "#35D59A"
 
 def font(size: int, bold: bool = False):
     names = ["C:/Windows/Fonts/seguisb.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf", "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"]
@@ -14,36 +14,45 @@ def font(size: int, bold: bool = False):
     return ImageFont.load_default()
 
 def mark(size: int, maskable: bool = False) -> Image.Image:
-    source = Image.open(GENERATED_MARK).convert("RGBA")
-    bbox = source.getchannel("A").getbbox()
-    source = source.crop(bbox) if bbox else source
-    inset = round(size * (.16 if maskable else .08))
-    target = max(1, size - inset * 2)
-    source.thumbnail((target, target), Image.Resampling.LANCZOS)
-    im = Image.new("RGBA", (size, size), NAVY if maskable else (0, 0, 0, 0))
-    im.alpha_composite(source, ((size-source.width)//2, (size-source.height)//2))
-    return im
+    """Draw a flat, small-size-safe squircle with one H/play glyph."""
+    scale = 4
+    canvas = size * scale
+    im = Image.new("RGBA", (canvas, canvas), NAVY if maskable else (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    pad = round(canvas * (.13 if maskable else .045))
+    d.rounded_rectangle(
+        (pad, pad, canvas - pad, canvas - pad),
+        radius=round(canvas * .245),
+        fill=NAVY,
+    )
+    top, bottom = round(canvas * .245), round(canvas * .755)
+    rail_w = round(canvas * .13)
+    left_x, right_x = round(canvas * .27), round(canvas * .60)
+    d.rounded_rectangle((left_x, top, left_x + rail_w, bottom), radius=rail_w // 2, fill=MINT)
+    d.rounded_rectangle((right_x, top, right_x + rail_w, bottom), radius=rail_w // 2, fill=MINT)
+    d.polygon(((round(canvas * .335), round(canvas * .39)), (round(canvas * .665), round(canvas * .50)), (round(canvas * .335), round(canvas * .61))), fill=MINT)
+    return im.resize((size, size), Image.Resampling.LANCZOS)
 
 def social(size: tuple[int,int]) -> Image.Image:
     w,h=size; im=Image.new("RGB",size,NAVY); d=ImageDraw.Draw(im)
-    d.ellipse((w*.68,-h*.5,w*1.08,h*.35),fill="#123C4A")
-    d.ellipse((-w*.2,h*.55,w*.25,h*1.4),fill="#102B45")
-    icon=mark(round(h*.34)); im.paste(icon,(round(w*.09),round(h*.19)),icon)
-    d.text((w*.09,h*.59),"Hypescript",font=font(round(h*.10),True),fill=WHITE)
-    d.text((w*.09,h*.72),"AI VIDEO EDITOR",font=font(round(h*.033),True),fill=ACCENT)
-    d.text((w*.09,h*.80),"From words to a finished video.",font=font(round(h*.034)),fill=MUTED)
+    d.rounded_rectangle((w*.72,-h*.12,w*1.05,h*.34),radius=80,fill="#102A3C")
+    icon=mark(round(h*.38)); im.paste(icon,(round(w*.08),round(h*.15)),icon)
+    d.text((w*.32,h*.29),"Hypescript",font=font(round(h*.105),True),fill=WHITE)
+    d.text((w*.325,h*.46),"AI VIDEO EDITOR",font=font(round(h*.034),True),fill=MINT)
+    d.text((w*.325,h*.57),"From words to a finished video.",font=font(round(h*.038)),fill=MUTED)
     return im
 
 def wordmark(dark: bool = False) -> Image.Image:
     im=Image.new("RGBA",(1272,256),(0,0,0,0)); icon=mark(256); im.paste(icon,(0,0),icon); d=ImageDraw.Draw(im)
-    main=WHITE if dark else NAVY; d.text((312,66),"Hype",font=font(116,True),fill=main)
-    hype_w=d.textlength("Hype",font=font(116,True)); d.text((312+hype_w,66),"script",font=font(116,True),fill=ACCENT)
-    d.text((318,185),"AI VIDEO EDITOR",font=font(34,True),fill=MUTED)
+    main=WHITE if dark else NAVY; d.text((316,53),"Hypescript",font=font(122,True),fill=main)
+    d.text((323,184),"AI VIDEO EDITOR",font=font(34,True),fill=MINT)
     return im
 
 def save_icon(size: int, path: Path, maskable=False):
     path.parent.mkdir(parents=True,exist_ok=True); mark(size,maskable).save(path,optimize=True)
 
+mark(2048).save(ROOT/"brand/hypescript-mark-minimal.png", optimize=True)
+mark(1024).save(ROOT/"brand/hypescript-icon.png", optimize=True)
 for s in (16,32,48,64,96,128,180,192,256,512): save_icon(s,ROOT/f"brand/icons/icon-{s}.png")
 save_icon(192,ROOT/"brand/icons/icon-maskable-192.png",True)
 save_icon(512,ROOT/"brand/icons/icon-maskable-512.png",True)

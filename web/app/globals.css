@@ -234,8 +234,8 @@ html[data-theme="light"] {
 .account-plan.requested{outline:3px solid rgba(51,92,255,.13);border-color:#335cff}.account-trial-price{width:max-content;margin:0 0 8px;padding:5px 9px;border-radius:99px;color:#087755;background:#e8f8f2;font-size:11px;font-weight:750}.account-card-note{min-height:28px;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:5px;color:#7a8492;font-size:10px;text-align:center}.quota-inline-link{margin-inline-start:6px;color:inherit;text-decoration:underline;font-weight:700}
 @media(max-width:900px){.tb-focus span,.tb-account>span,.tb-account>svg:last-child{display:none}.chat-focus-shell{grid-template-rows:minmax(200px,34vh) minmax(0,1fr)}.chat-focus-stage{width:calc(100vw - 24px)}.chat-focus-dock{width:calc(100vw - 16px);margin-bottom:8px}.account-grid,.account-plans{grid-template-columns:1fr}.account-section-head{align-items:stretch;flex-direction:column}}@media(max-width:620px){.account-hero{padding:24px;align-items:stretch;flex-direction:column}.account-plan-chip{min-width:0}.account-danger,.account-trial-banner,.account-quota-callout{align-items:stretch;flex-direction:column;gap:14px}.account-trial-banner>span{width:max-content}.chat-focus-dock .agent-ctx{display:none}.chat-focus-dock .msg2{max-width:92%}}
 
-/* 2026 product interaction pass: raster brand lockup, touch-sized splitters and theme-native billing. */
-.brand-lockup{display:inline-flex;align-items:center;gap:.16em;direction:ltr;line-height:1;color:var(--text);overflow:visible}.brand-lockup>img{width:auto;height:78%;aspect-ratio:1;object-fit:contain;flex:none}.brand-lockup-copy{display:grid;align-content:center;gap:.08em;text-align:left;white-space:nowrap}.brand-lockup-copy b{font-size:.36em;letter-spacing:-.045em;font-weight:790}.brand-lockup-copy small{color:var(--text-3);font-size:.115em;letter-spacing:.19em;font-weight:720}.marketing-page .brand-lockup{color:#15171c}
+/* 2026 product interaction pass: minimal brand lockup, touch-sized splitters and theme-native billing. */
+.brand-lockup{display:inline-flex;align-items:center;gap:10px;direction:ltr;line-height:1;color:var(--text);overflow:visible}.brand-lockup>img{width:auto;height:88%;aspect-ratio:1;object-fit:contain;flex:none}.brand-lockup-copy{display:grid;align-content:center;gap:4px;text-align:left;white-space:nowrap}.brand-lockup-copy b{letter-spacing:-.045em;font-weight:790}.brand-lockup-copy small{color:var(--text-3);letter-spacing:.17em;font-weight:760}.brand-lockup.brand-logo-xs{gap:7px}.brand-lockup.brand-logo-xs .brand-lockup-copy b{font-size:15px}.brand-lockup.brand-logo-xs .brand-lockup-copy small{font-size:5px}.brand-lockup.brand-logo-sm .brand-lockup-copy b{font-size:22px}.brand-lockup.brand-logo-sm .brand-lockup-copy small{font-size:7px}.brand-lockup.brand-logo-md .brand-lockup-copy b{font-size:30px}.brand-lockup.brand-logo-md .brand-lockup-copy small{font-size:9px}.brand-lockup.brand-logo-lg .brand-lockup-copy b{font-size:38px}.brand-lockup.brand-logo-lg .brand-lockup-copy small{font-size:11px}.brand-lockup.brand-logo-xl .brand-lockup-copy b{font-size:46px}.brand-lockup.brand-logo-xl .brand-lockup-copy small{font-size:13px}.marketing-page .brand-lockup{color:#15171c}.marketing-page .brand-lockup-copy small{color:#168263}
 .shell-body .col-resize{width:16px;margin-inline:-8px;touch-action:none;user-select:none;z-index:30}.timeline-region>.tl-resize{height:20px;margin-top:-10px;touch-action:none;user-select:none;z-index:30}.shell-body .col-resize::after{width:4px;height:54px}.timeline-region>.tl-resize span{width:68px;height:5px}
 @media(pointer:coarse){.shell-body .col-resize{width:26px;margin-inline:-13px}.timeline-region>.tl-resize{height:28px;margin-top:-14px}.clip2 .trim{width:18px;opacity:.42}.ov-handle{width:22px;height:22px}}
 
@@ -497,11 +497,11 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .tb-spacer { flex: 1; }
 .tb-brand { display: flex; align-items: center; gap: 8px; padding-inline-end: 4px; }
 .tb-logo {
-  width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
   flex: none; overflow: hidden; text-decoration: none; background: transparent;
 }
 .tb-logo:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.tb-logo .brand-logo { display: block; width: 26px; height: 26px; }
+.tb-logo .brand-logo { display: block; width: 34px; height: 34px; }
 .tb-project { display: flex; align-items: center; gap: 6px; height: var(--h-ctrl); padding: 0 8px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); cursor: pointer; max-width: 220px; }
 .tb-project:hover { border-color: var(--border-strong); background: var(--hover); }
 .tb-project .pname { font-size: var(--fs); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1185,8 +1185,8 @@ button.quote-chip:hover svg { color: var(--accent); }
 .iconbtn { border-radius: 11px; border-color: transparent; }
 .iconbtn:hover:not(:disabled) { background: var(--hover); }
 .tb-project { border-color: transparent; border-radius: 12px; }
-.tb-logo { width: 34px; height: 34px; border-radius: 11px; }
-.tb-logo .brand-logo { width: 30px; height: 30px; }
+.tb-logo { width: 38px; height: 38px; border-radius: 11px; }
+.tb-logo .brand-logo { width: 34px; height: 34px; }
 .tb-user { box-shadow: none; }
 input, select, textarea { border-radius: 12px; background: var(--panel-2); border-color: transparent; }
 input:focus, select:focus, textarea:focus { border-color: color-mix(in srgb, var(--accent) 46%, transparent); box-shadow: 0 0 0 3px var(--accent-tint); outline: none; }
@@ -1231,7 +1231,7 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
    =================================================================== */
 .site-header { direction: rtl; height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
 .site-header .brand { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-decoration: none; }
-.site-header .brand .brand-logo-horizontal { height: 36px; width: auto; }
+.site-header .brand .brand-logo-horizontal { height: 45px; width: auto; }
 .legal-back { display: inline-block; margin-top: 18px; color: var(--accent); text-decoration: none; }
 .legal-back:hover { text-decoration: underline; }
 .site-header nav { display: flex; gap: 6px; }
@@ -1320,7 +1320,7 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
 .brand-about { display: flex; align-items: center; gap: 12px; }
 .brand-about p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
 .dash-brand-link { text-decoration: none; display: inline-flex; align-items: center; }
-.dash-brand-link .brand-logo-horizontal { height: 36px; width: auto; max-width: 200px; object-fit: contain; }
+.dash-brand-link .brand-logo-horizontal { height: 45px; width: auto; max-width: 225px; object-fit: contain; }
 .brand-logo { object-fit: contain; display: block; }
 .brand-logo-horizontal { height: auto; max-width: 100%; }
 
