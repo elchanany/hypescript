@@ -2,11 +2,9 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
-- 2026-08-11: main has an uncommitted billing/landing package ready for final Git handoff. The live Supabase project now contains a private `trial` entitlement (5 projects, 1GB, 20 render minutes, concurrency 1), trial tracking columns and the target-plan index.
-- Lemon production configuration is verified as Test Mode with one product and four exact Creator/Pro month/year variants. The application now fails closed until every paid variant has a one-month trial configured; the Lemon dashboard session still requires the user to sign in before that external setting can be changed.
-- `/welcome` is now a full Hebrew marketing page with product story, before/after, use cases, pricing, FAQ and explicit trial disclosures. `/account` shows trial state, usage pressure and upgrade prompts; onboarding preserves the selected paid plan.
-- Checkout refuses duplicate active/trial subscriptions and only grants one trial per account. Signed webhooks map trial access to the limited DB plan, retain the intended Creator/Pro target plan, and unlock full quotas only after the trial ends and Lemon reports paid access.
-- Verification for this package: 56 files / 395 tests pass, `tsc` clean, isolated production build passes, and local browser QA renders `/welcome` successfully.
+- 2026-08-12: `main` now contains missing-media recovery, real player volume, dynamic overlay lanes, chat entitlement gating, upload progress, visible selected answers/quotes, Hebrew-first marketing copy and a repaired unified motion system.
+- The editing agent now uses global Hebrew script alignment, measured waveform boundaries, explicit non-speech classification, non-overlapping caption segmentation and a mandatory edit audit instead of claiming success from transcript timestamps alone.
+- Verification: 60 Vitest files / 464 tests pass, 31 Python tests pass, CSS parses and `tsc` is clean. `next build` could not obtain the shared `.next` workspace while another Next process was running; no compiler error was emitted.
 - `main` @ f233969: manual render now auto-opens the chat dock and passes `exportResult` into Chat as `latestExport`, rendered as a pinned ChatMediaCard (page-owned state, survives dock close/reopen in-session).
 - ChatMediaCard video is a custom player: play/pause (button + click video), seek slider, current/total time, mute toggle, fullscreen, error state; `controlsList=nodownload`; download uses `safeDownloadName` (.mp4 sanitized) plus a "פתח בחלון חדש" fallback anchor (target=_blank rel=noopener).
 - page.tsx URL lifecycle split: abort cleanup is unmount-only; previous export blob URL revoked when replaced, current on unmount — no premature revocation.

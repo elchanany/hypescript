@@ -1,5 +1,28 @@
 # ACTIVE_WORK.md
 
+## 2026-08-12 — ליבת חיתוך/כתוביות חדשה + שער קבלה (לא commited)
+
+הפעלה אמיתית של המוצר נכשלה בארבע דרכים: נעלמו מילים מהטקסט שהלקוח ביקש, הקאטים לא נפלו בשקט, לא הייתה שום הבנה של צלילים שאינם דיבור, והכתוביות חזרו על מילים ונשברו באמצע צירופים. כל הארבעה תוקנו בשורש.
+
+**מודולים חדשים (web):**
+- `lib/align/hebrew.ts` — נרמול עברי + דמיון מדורג. קיפול פונטי (כ→ק, ט→ת, ש→ס, השמטת א/ע/ה ואמות קריאה פנימיות) מאחד את שתי טעויות ה-ASR שנצפו בפועל: `טיפרת`↔`תפארת`, `קשר`↔`כשר`. זיהוי אות שימוש (`ובמקום`↔`במקום`) כווריאציה ולא כמילה אחרת.
+- `lib/align/globalAlign.ts` — Needleman–Wunsch עם פערים אפיניים (Gotoh) ועונשים א-סימטריים: דילוג ASR זול (-0.55/-0.03), דילוג סקריפט יקר (-3.2/-1.6), וזיווג מתחת לסף דמיון 0.62 **אסור** (FORBIDDEN=-1e5) — בלי זה האלגוריתם היה מצמיד מילה שלא נאמרה למילת ASR אקראית והדוח היה משקר. עוגני-ייחוד + LIS לקלט ארוך.
+- `lib/audio/features.ts` — מעטפת RMS בחלונות 25ms/קפיצה 5ms (במקום 20ms בלי חפיפה), חלון Hann, רצפת רעש **נעה** (אחוזון 12 בחלון 3s), ZCR, ומאפיינים ספקטרליים לפי דרישה (FFT רדיקס-2: centroid/flatness/rolloff/יחסי פסים/attack/קצב אפנון).
+- `lib/audio/nonSpeech.ts` — מסווג נשימה/כחכוח/חבטה-גרירת רהיט/צחוק בחברות טרפזית עם ביטחון. מתחת ל-0.55 או כשההפרש בין שני המועמדים <0.06 → `unknown_nonspeech`, לא ניחוש. תווית ספק תמיד גוברת.
+- `lib/cut/boundaries.ts` — `refineOnset`/`refineOffset`/`findValley`/`chooseJoinPoint` עם אינטרפולציה תת-מסגרתית והרחבת "דיבור רך" (softMarginDb=3) שמגינה על עיצור שוקק ועל דעיכת סוף מילה.
+- `lib/cut/scriptPlan.ts` — מתכנן יחיד שמחליף את הזוג `scriptToClips` + `tightSpeechFromWords` שעבדו זה נגד זה. שלושה presets: `broadcast` (0.85s), `natural` (0.42s), `tight` (0.16s). מחזיר `missingScript` מפורש.
+- `lib/captions/segment.ts` + `fromScript.ts` — תכנות דינמי שממזער עלות משולבת (מספר מילים מול יעד 5, קצב קריאה ≤17 CPS, משך 1–5s, איכות נקודת שבירה). ניקוד שבירה דקדוקי: `BIND_NEXT` (בית/בן/רבי/של/את…) מונע `בית / אלהינו` ו-`רבי / יוחנן`; `BREAK_BEFORE` (אבל/כי/אז…) מעדיף שבירה לפני פסוקית. כל טוקן בכתובית אחת בדיוק ⇒ אפס חזרות מבנית.
+- `lib/qa/editAudit.ts` — שער קבלה: כיסוי סקריפט, אינווריאנטות ציר, איכות מעברים מדודה, איכות כתוביות.
+- `lib/audio/source.ts` — גשר דפדפן (ffmpeg.wasm → Web Audio → מעטפת), מטמון חסום ב-2 (דגימות של 10 דק' ≈ 38MB).
+
+**שינויי סוכן:** `keep_by_script` עושה עכשיו יישור+הסרה+הידוק+מיקום מדויק בפעולה אחת (אין יותר `remove_silence` אחריו); `generate_subtitles` ברירת מחדל פעימות ללא חזרות (`reveal="progressive"` נשאר בבקשה מפורשת); כלי חדש `audit_edit`; `inspect_timeline_evidence(classify_sounds=true)`. SYSTEM_PROMPT נכתב מחדש כמבנה מדורג עם שלב 0 לסיווג הבריף לחמישה סוגים (הכשל שגרם להכנסת כותרות ו-CTA ל-keep_by_script) וכלל הכרעה: קטע הוא "טקסט מדובר" רק אם `find_in_transcript` מוצא אותו.
+
+**Python parity (RULES §3):** `hebrew.py`, `align_global.py`, `captions.py` + 22 בדיקות. הליבה האקוסטית לא הועברה — ל-local אין numpy/librosa; מתועד ב-ARCHITECTURE.md.
+
+- אימות: web 60 קבצים / 464 בדיקות עוברות, `tsc` נקי; local 31 בדיקות עוברות; graphify 2360 nodes / 5363 edges.
+- לא נבדק: הרצה חיה עם וידאו אמיתי בדפדפן. הסיווג האקוסטי נבדק על אות מסונתז בלבד — הספים (breath/cough/impact/laugh) עשויים לדרוש כיול על הקלטות אמיתיות.
+- הבא: E2E בדפדפן עם שיעור אמיתי; כיול ספי הסיווג; שקילת הסרת `scriptToClips`/`tightSpeechFromWords` הישנים אחרי שהחדשים יוכחו בשטח.
+
 ## 2026-08-10 — exported video in chat with custom player (main f233969)
 
 - Manual render now auto-opens the chat dock and passes `exportResult` into Chat as `latestExport`, rendered as a pinned ChatMediaCard at the top of the message list. It survives dock close/reopen in-session because it is page-owned state (`exportResult` in page.tsx), not an ephemeral output item.
@@ -71,16 +94,11 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Finalize and deploy the 2026-08-11 editor workspace/creative-library package: visible persistent split handles, a canvas that always fits, more timeline space, clearer conversation/model management, generic text templates and the first Preview/Export-equivalent effects and fades.
+Continue the professional editor roadmap from a verified baseline: chat-first UX, measurable speech-boundary cuts, non-overlapping captions, dynamic timeline layers and cloud-safe product flows.
 
 ## Branch
 `main`
 
-## Latest commit
-f233969 "fix(export): show exported video in chat with custom player" — manual render auto-opens the chat dock and pins the exported video as a ChatMediaCard with a custom player (play/pause, seek, time, mute, fullscreen, error state, `controlsList=nodownload`, safe download name + "פתח בחלון חדש" anchor); page.tsx URL lifecycle split (no premature revocation); new `web/lib/render/videoCard.ts` helpers + 7 tests.
-
 ## Status
-Merged editor foundation remains unchanged. Current uncommitted package adds a marketing landing page, card-backed one-month trial flow, one-trial-per-account enforcement, reduced trial quotas (5 projects / 1GB / 20 render minutes) in Supabase, quota-aware UX and checkout/webhook synchronization. Web 56 files / 395 tests pass, `tsc` clean, isolated production build passes, and local browser QA confirms `/welcome`. Supabase migrations are live. Lemon remains Test Mode; variant trial configuration and signed webhook dashboard verification remain external acceptance steps.
-
-## Exact continuation point
-Run full Vitest/build/browser verification, update Graphify, commit and deploy. After this package, grow the creative catalog through a shared transition/effect schema only when Preview and Export implementations are both available; do not copy CapCut-owned assets.
+- `main` includes `33eaef4` (missing-media recovery and dynamic layers), `7904750` (chat entitlements, upload/quote UX and Hebrew-first landing), `ee60333` (motion/depth polish) and `d48f684` (global script alignment, measured boundaries, caption segmentation and edit audit).
+- Verification: 60 Vitest files / 464 tests pass, 31 Python tests pass, CSS parses and `tsc --noEmit` is clean. Production build remained blocked by another running Next process holding the shared `.next` workspace.
