@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FolderOpen, Plus, LogIn, LogOut, Settings, Film,
-  Pencil, Trash2, MoreHorizontal, Clapperboard,
-  Clock3, ShieldCheck,
+  Pencil, Trash2, MoreHorizontal, Clapperboard, CreditCard,
+  Clock3,
 } from "lucide-react";
 import {
   deleteProject, listProjects, ProjectMeta,
@@ -347,11 +347,14 @@ export default function DashboardPage() {
                       <div>
                         <div className="dash-user-name">{label}</div>
                         {user.email && <div className="dash-user-mail">{user.email}</div>}
-                        <div className="dash-user-status"><ShieldCheck size={12} />מחובר</div>
+                        <div className="dash-user-status">חשבון Hypescript</div>
                       </div>
                     </div>
                     <Link href="/settings" role="menuitem" onClick={() => setUserOpen(false)}>
                       <Settings size={14} />הגדרות
+                    </Link>
+                    <Link href="/account" role="menuitem" onClick={() => setUserOpen(false)}>
+                      <CreditCard size={14} />חשבון ומנוי
                     </Link>
                     <button
                       type="button"
@@ -389,7 +392,7 @@ export default function DashboardPage() {
               <div className="dash-identity-name">{label}</div>
               <div className="dash-identity-sub">
                 {user.email && <span className="dash-identity-mail">{user.email}</span>}
-                <span className="dash-pill ok"><ShieldCheck size={12} />מחובר</span>
+                <Link className="dash-pill" href="/account">חשבון ומנוי</Link>
                 <span className="dash-pill">{projects.length} פרויקטים בחשבון</span>
               </div>
             </div>

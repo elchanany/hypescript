@@ -28,10 +28,12 @@ describe("brand assets", () => {
 
   it("ships required public files", () => {
     const required = [
-      "brand/hypescript-icon.png",
-      "brand/hypescript-logo-horizontal.png",
-      "brand/hypescript-logo-dark.png",
-      "brand/hypescript-logo-light.png",
+      "brand/hypescript-mark.svg",
+      "brand/hypescript-wordmark-dark.svg",
+      "brand/hypescript-wordmark-light.svg",
+      "brand/products/creator.svg",
+      "brand/products/pro.svg",
+      "brand/BRAND-KIT.md",
       "brand/icons/icon-16.png",
       "brand/icons/icon-32.png",
       "brand/icons/icon-192.png",

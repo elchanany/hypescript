@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, Bot, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun } from "lucide-react";
-import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
+import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard } from "lucide-react";
+import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -13,18 +13,22 @@ export default function TopBar({
   projectName, projects, projectId, saving,
   onSwitch, onNew, onRename, onDelete,
   canUndo, canRedo, onUndo, onRedo,
-  chatOpen, onToggleChat,
+  chatOpen, onToggleChat, focusMode, onToggleFocusMode,
   canExport, rendering, renderProgress = 0, onExport,
 }: {
   projectName: string; projects: ProjectMeta[]; projectId: string | null; saving: boolean;
   onSwitch: (id: string) => void; onNew: () => void; onRename: () => void; onDelete: () => void;
   canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void;
-  chatOpen: boolean; onToggleChat: () => void;
+  chatOpen: boolean; onToggleChat: () => void; focusMode: boolean; onToggleFocusMode: () => void;
   canExport: boolean; rendering: boolean; renderProgress?: number; onExport: () => void;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const { configured: authOn, user } = useAuth();
+  const { configured: authOn, user, signOut } = useAuth();
   const { resolved, setMode } = useTheme();
+  const [userOpen, setUserOpen] = useState(false);
+  const userRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
+  const avatar = (user?.user_metadata?.avatar_url || user?.user_metadata?.picture) as string | undefined;
+  const userName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "חשבון") as string;
 
   const items: CtxItem[] = [
     ...projects.map((p) => ({ label: p.name, icon: p.id === projectId ? Check : FolderOpen, onClick: () => onSwitch(p.id) })),
@@ -58,7 +62,11 @@ export default function TopBar({
 
       <div className="tb-group">
         <Link href="/dashboard" className="iconbtn" data-tip="לוח פרויקטים" aria-label="לוח פרויקטים"><LayoutGrid size={16} strokeWidth={1.75} /></Link>
-        <IconButton icon={Bot} tip="עוזר העריכה" active={chatOpen} onClick={onToggleChat} />
+        <IconButton icon={MessageCircle} tip="פתח שיחה לצד העורך" active={chatOpen && !focusMode} onClick={onToggleChat} />
+        <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip="מצב שיחה — וידאו ושיחה בלבד">
+          <MessagesSquare size={16} strokeWidth={1.75} />
+          <span>{focusMode ? "חזרה לעורך" : "מצב שיחה"}</span>
+        </button>
         <IconButton
           icon={resolved === "dark" ? Sun : Moon}
           tip={resolved === "dark" ? "עבור למצב בהיר" : "עבור למצב כהה"}
@@ -68,9 +76,18 @@ export default function TopBar({
         {authOn && !user && (
           <Link href="/login" className="iconbtn" data-tip="התחברות" aria-label="התחברות"><LogIn size={16} strokeWidth={1.75} /></Link>
         )}
-        {authOn && user && (
-          <span className="tb-user" title={user.email || ""}>{(user.email || "?")[0]?.toUpperCase()}</span>
-        )}
+        {authOn && user && <div className="tb-account-wrap" ref={userRef}>
+          <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu">
+            {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" /> : <UserRound size={16} />}
+            <span>{userName.split(" ")[0]}</span><ChevronDown size={13} />
+          </button>
+          {userOpen && <div className="tb-account-menu" role="menu">
+            <div className="tb-account-meta"><strong>{userName}</strong><span>{user.email}</span></div>
+            <Link href="/account" role="menuitem"><CreditCard size={15} />חשבון ומנוי</Link>
+            <Link href="/settings" role="menuitem"><Settings size={15} />הגדרות</Link>
+            <button role="menuitem" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />התנתקות</button>
+          </div>}
+        </div>}
         <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={rendering ? "פתח את מצב הייצוא" : "ייצוא הווידאו הערוך"}>
           {rendering ? <Loader2 size={16} strokeWidth={2} className="spin" /> : <Download size={16} strokeWidth={2} />}
           {rendering ? `מרנדר ${Math.max(0, Math.min(100, Math.round(renderProgress * 100)))}%` : "ייצוא"}

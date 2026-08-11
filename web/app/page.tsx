@@ -114,6 +114,7 @@ export default function EditorPage() {
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
   const [chatOpen, setChatOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [chatWidth, setChatWidth] = useState(460);
   const chatWidthRef = useRef(460); chatWidthRef.current = chatWidth;
   const [dockSide, setDockSide] = useState<"left" | "right">("right");
@@ -268,6 +269,7 @@ export default function EditorPage() {
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
+    const focus = localStorage.getItem("hs_chatFocus"); if (focus === "1") { setFocusMode(true); setChatOpen(true); }
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
     const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
@@ -315,6 +317,12 @@ export default function EditorPage() {
   };
   const resetInsp = () => { setInspW(300); localStorage.setItem("hs_inspw", "300"); };
   const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
+  const toggleFocusMode = () => setFocusMode((current) => {
+    const next = !current;
+    localStorage.setItem("hs_chatFocus", next ? "1" : "0");
+    if (next) { setChatOpen(true); localStorage.setItem("hs_chatOpen", "1"); }
+    return next;
+  });
 
   useEffect(() => {
     (async () => {
@@ -1007,6 +1015,7 @@ export default function EditorPage() {
         onSwitch={switchProject} onNew={newProject} onRename={renameCurrent} onDelete={deleteCurrent}
         canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
         chatOpen={chatOpen} onToggleChat={toggleChat}
+        focusMode={focusMode} onToggleFocusMode={toggleFocusMode}
         canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
       />
 
@@ -1025,7 +1034,38 @@ export default function EditorPage() {
         onRetry={() => void render()}
       />
 
-      <div className="shell-body">
+      {focusMode && <div className="chat-focus-shell">
+        <section className="chat-focus-preview">
+          <div className="chat-focus-stage">
+            <VideoPreview ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
+              selectedSubId={selectedSubId} onSelectSub={selectSub} onEditSub={editSub}
+              onCaptionPosition={(position) => {
+                if (!editorApiRef.current) return;
+                const result = runCommand("caption.setStyle", editorApiRef.current, { position });
+                if (!result.ok) setError(result.error);
+              }}
+              onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
+              canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
+              onSelectOverlay={selectOverlay} onBeginOverlay={beginTransaction}
+              onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
+              onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
+              onCanvasDetected={onCanvasDetected} captionStyle={captionStyle} />
+          </div>
+          {(working || phase || error) && <div className="chat-focus-progress"><span className={error ? "err" : ""}>{error || phase}</span>{working && <div><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>}</div>}
+        </section>
+        <aside className="agent-dock chat-focus-dock">
+          <Chat media={media} onAddMedia={addFiles} onClose={toggleFocusMode} words={words} clips={clips} subs={subs}
+            script={script} overlays={overlays} canvas={canvas} projectId={projectId} captionStyle={captionStyle}
+            editorApi={editorApiRef.current} tracks={tracks} latestExport={exportResult}
+            onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
+              setWords(w); if (viaEditor) return; setProject(c, s); if (ovs) setOverlays(ovs); if (tr?.length) setTracks(tr);
+            }}
+            playhead={cur} selectionLabel={agentSelLabel} quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef}
+            mentionSink={mentionSink} pendingMentionRef={pendingMentionRef} />
+        </aside>
+      </div>}
+
+      {!focusMode && <div className="shell-body">
         {dockSide === "left" && agentDock}
         <ToolRail active={leftTab} onSelect={setLeftTab} />
 
@@ -1170,7 +1210,7 @@ export default function EditorPage() {
         </div>
 
         {dockSide === "right" && agentDock}
-      </div>
+      </div>}
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
       {commandMenu && <ContextMenu

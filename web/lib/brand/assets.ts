@@ -6,10 +6,10 @@ export const BRAND_TAGLINE_HE = "עריכת וידאו מקצועית עם סו�
 export const BRAND_TAGLINE_EN = "AI-powered video editing with professional manual controls";
 
 export const BRAND_PATHS = {
-  icon: "/brand/hypescript-icon.png",
-  horizontal: "/brand/hypescript-logo-horizontal.png",
-  dark: "/brand/hypescript-logo-dark.png",
-  light: "/brand/hypescript-logo-light.png",
+  icon: "/brand/hypescript-mark.svg",
+  horizontal: "/brand/hypescript-wordmark-dark.svg",
+  dark: "/brand/hypescript-wordmark-dark.svg",
+  light: "/brand/hypescript-wordmark-light.svg",
   favicon16: "/favicon-16.png",
   favicon32: "/favicon-32.png",
   appleTouch: "/apple-touch-icon.png",
@@ -43,13 +43,13 @@ export const BRAND_SIZE_PX: Record<BrandVariant, Record<BrandSize, { w: number; 
     lg: { w: 40, h: 40 },
     xl: { w: 64, h: 64 },
   },
-  // Source crop is ~1383×385 (≈3.59:1) — keep aspect to avoid stretch.
+  // Native SVG viewBox is 244×64 (3.8125:1).
   horizontal: {
-    xs: { w: 100, h: 28 },
-    sm: { w: 140, h: 39 },
-    md: { w: 200, h: 56 },
-    lg: { w: 260, h: 72 },
-    xl: { w: 320, h: 89 },
+    xs: { w: 107, h: 28 },
+    sm: { w: 149, h: 39 },
+    md: { w: 214, h: 56 },
+    lg: { w: 275, h: 72 },
+    xl: { w: 339, h: 89 },
   },
 };
 

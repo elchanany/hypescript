@@ -27,10 +27,10 @@ import {
 } from "@/lib/agent/chatStore";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
-  Bot, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
+  MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
-  HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Wand2, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote,
+  HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play,
 } from "lucide-react";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -48,7 +48,7 @@ const TOOL_ICON: Record<string, LucideIcon> = {
   transcribe_timeline: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
   trim_clip: Scissors, move_clip: Move, delete_clip: Trash2, delete_clips: Trash2, keep_source_range: Scissors,
-  clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines, set_clip_color: Wand2,
+  clear_clips: Trash2, set_clip_enabled: Eye, set_clip_volume: AudioLines, set_clip_color: Palette,
   list_overlays: Layers, add_text_overlay: Type, delete_overlay: Trash2, update_overlay: Pencil,
   analyze_audio: AudioLines, remove_silence: AudioLines,
   capture_frame: Camera, generate_subtitles: Captions, list_subtitles: Captions, edit_subtitle: Pencil,
@@ -60,9 +60,9 @@ const KIND_ICON = { video: FilmIcon, image: ImageIcon, audio: Music } as const;
 
 // שלושת מצבי הסוכן — Ask/Plan אינם מקבלים כלים (אכיפה ב-runtime), Act מבצע.
 const MODES: { id: AgentMode; label: string; icon: LucideIcon; tip: string }[] = [
-  { id: "ask", label: "Ask", icon: Eye, tip: "שאלות והסברים — ללא שינוי בפרויקט" },
-  { id: "plan", label: "Plan", icon: ClipboardList, tip: "תכנון עריכה — ללא ביצוע" },
-  { id: "act", label: "Act", icon: Wand2, tip: "ביצוע עריכות בפועל" },
+  { id: "ask", label: "שאל", icon: Eye, tip: "שאלות והסברים — ללא שינוי בפרויקט" },
+  { id: "plan", label: "תכנן", icon: ClipboardList, tip: "תכנון עריכה — ללא ביצוע" },
+  { id: "act", label: "בצע", icon: Play, tip: "ביצוע עריכות בפועל" },
 ];
 
 // פקודות Slash. enabled=false מוצג מעומעם עם סיבה (בלי להעמיד פנים שעובד).
@@ -70,7 +70,7 @@ interface SlashCmd { cmd: string; label: string; icon: LucideIcon; enabled: bool
 const SLASH: SlashCmd[] = [
   { cmd: "/ask", label: "מצב שאלות", icon: Eye, enabled: true, kind: "mode", mode: "ask" },
   { cmd: "/plan", label: "מצב תכנון", icon: ClipboardList, enabled: true, kind: "mode", mode: "plan" },
-  { cmd: "/act", label: "מצב ביצוע", icon: Wand2, enabled: true, kind: "mode", mode: "act" },
+  { cmd: "/act", label: "מצב ביצוע", icon: Play, enabled: true, kind: "mode", mode: "act" },
   { cmd: "/transcribe", label: "תמלל את הסרטון", icon: Type, enabled: true, kind: "prompt", template: "תמלל את הסרטון הראשי." },
   { cmd: "/captions", label: "צור כתוביות", icon: Captions, enabled: true, kind: "prompt", template: "צור כתוביות מסונכרנות לקצב הדיבור לפי הטקסט הנקי שנתתי (generate_subtitles עם script). אל תשאיר שיבושי ASR." },
   { cmd: "/new", label: "שיחה חדשה", icon: MessageSquarePlus, enabled: true, kind: "prompt", template: "" },
@@ -527,20 +527,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   return (
     <>
       <div className="panel-header">
-        <span className="title"><Bot size={15} strokeWidth={1.75} />סוכן AI</span>
+        <span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span>
         <div className="actions" style={{ gap: 4 }}>
-          <select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} data-tip="ספק / מודל" data-tippos="down"
-            style={{ width: "auto", height: 26, padding: "0 6px", fontSize: 12 }}>
-            {LLM_PROVIDERS.map((p) => {
-              const status = getProviderStatus(p.id, configured);
-              const disabled = configLoaded && !isProviderUsable(status);
-              return (
-                <option key={p.id} value={p.id} disabled={disabled}>
-                  {p.labelHe}{disabled ? ` — ${status.reasonHe}` : ""}
-                </option>
-              );
-            })}
-          </select>
           {usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
@@ -553,6 +541,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       </div>
 
       <div className="chat-threads" aria-label="שיחות בפרויקט">
+        <button className="chat-new" onClick={startNewChat}><MessageSquarePlus size={15} />שיחה חדשה</button>
         <select
           value={store.activeId}
           onChange={(e) => selectChat(e.target.value)}
@@ -564,9 +553,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             <option key={c.id} value={c.id}>{c.title || "שיחה"}</option>
           ))}
         </select>
-        <button className="iconbtn" data-tip="שיחה חדשה" data-tippos="down" onClick={startNewChat} aria-label="שיחה חדשה" disabled={false}>
-          <MessageSquarePlus size={16} strokeWidth={1.75} />
-        </button>
       </div>
 
       <div className="agent-modes" role="tablist" aria-label="מצב סוכן">
@@ -754,8 +740,15 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           <div className="chat-compose-tools">
             <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
             <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
-            <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Wand2 size={16} strokeWidth={1.75} /></button>
+            <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Command size={16} strokeWidth={1.75} /></button>
             <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
+            <select className="chat-provider-compact" value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מודל שיחה">
+              {LLM_PROVIDERS.map((p) => {
+                const status = getProviderStatus(p.id, configured);
+                const disabled = configLoaded && !isProviderUsable(status);
+                return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}</option>;
+              })}
+            </select>
           </div>
           <textarea
             ref={taRef}
