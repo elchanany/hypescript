@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, CreditCard, Download, Eye, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, MousePointer2, Play, ScanText, Scissors, ShieldCheck, Sparkles, WandSparkles, Zap } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import LandingProductExperience from "@/components/LandingProductExperience";
+import "./landing-v2.css";
 
 export const metadata: Metadata = {
   title: "Hypescript — עורך וידאו AI בעברית",
@@ -58,7 +60,7 @@ export default function WelcomePage() {
         </nav>
         <div className="marketing-actions">
           <Link href="/login" className="btn ghost">התחברות</Link>
-          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary">חודש ראשון חינם <ArrowLeft size={15} /></Link>
+          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary"><span>חודש ראשון חינם</span><ArrowLeft size={15} /></Link>
         </div>
       </header>
 
@@ -72,16 +74,10 @@ export default function WelcomePage() {
         </div>
         <div className="marketing-trust"><LockKeyhole size={15} />נדרש כרטיס לאימות · אפשר לבטל לפני החיוב הראשון · מכסת ניסיון מוגנת</div>
 
-        <div className="marketing-product" aria-label="תצוגה מקדימה של עורך Hypescript">
-          <div className="mp-top"><i /><i /><i /><span>פרק 42 · יוצרים בעברית</span><b>ייצוא</b></div>
-          <div className="mp-body">
-            <aside><span>מדיה</span><div /><div /><div /></aside>
-            <section className="mp-preview"><div className="mp-video"><span className="mp-play"><Play size={22} fill="currentColor" /></span><strong>רעיונות טובים נשמעים טוב יותר<br />כשהעריכה לא מפריעה להם.</strong></div><div className="mp-controls" /></section>
-            <aside className="mp-agent"><span>עוזר העריכה</span><p>הדק את הקצב, הסר נשימות והשאר את המשפטים בשלמותם.</p><em>בוצעו 12 חיתוכים · אין חפיפות</em></aside>
-          </div>
-          <div className="mp-timeline"><div className="mp-ruler" /><div className="mp-track video" /><div className="mp-track audio" /><div className="mp-track captions" /></div>
-        </div>
+        <LandingProductExperience />
       </section>
+
+      <div className="hsx-kinetic" aria-hidden="true"><div><span>חותכים בטקסט</span><i>✦</i><span>מדייקים בנשימה</span><i>✦</i><span>מעצבים על המסך</span><i>✦</i><span>מפרסמים בעברית</span><i>✦</i><span>חותכים בטקסט</span><i>✦</i><span>מדייקים בנשימה</span><i>✦</i></div></div>
 
       <section className="marketing-proof" aria-label="עקרונות המוצר">
         <article><BadgeCheck size={18} /><div><strong>דיוק לפני אוטומציה</strong><span>כל שינוי נשאר גלוי וניתן לביטול</span></div></article>
@@ -89,13 +85,26 @@ export default function WelcomePage() {
         <article><ShieldCheck size={18} /><div><strong>שליטה בעלויות</strong><span>מכסות קשיחות, בלי חיובי חריגה אוטומטיים</span></div></article>
       </section>
 
-      <section className="marketing-story" aria-label="מחומר גלם לתוכן מוכן">
-        <img src="/brand/campaign-editorial.webp" alt="המחשה של הפיכת תוכן עברי ארוך לסרטון אנכי עם כתוביות וגלי קול" loading="eager" />
+      <section className="marketing-story hsx-reveal hsx-story" aria-label="מחומר גלם לתוכן מוכן">
+        <div className="hsx-story-visual">
+          <img src="/brand/landing-creator-frame.webp" alt="יוצרת תוכן באולפן מודרני" loading="eager" />
+          <div className="hsx-story-caption"><span>לפני</span><del>אז... מה שבעצם רציתי להגיד...</del><span>אחרי</span><strong>רציתי להפוך רעיון לסיפור.</strong></div>
+          <div className="hsx-story-wave">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 29) % 76)}%` }} />)}</div>
+        </div>
         <div className="marketing-story-copy">
-          <span>לא קסם שחור. עריכה שאפשר לראות.</span>
-          <h2>המשפט שלך נכנס.<br />הגרסה המדויקת יוצאת.</h2>
+          <span>העורך לא מסתתר מאחורי הצ׳אט</span>
+          <h2>מבקשים בשפה טבעית.<br />רואים כל שינוי קורה.</h2>
           <p>Hypescript מחבר תמלול, החלטות עריכה, טיימליין ורינדור לאותה אמת. כל חיתוך מסומן, כל שכבה ניתנת להזזה, וכל שינוי ניתן לביטול.</p>
           <div className="story-metrics"><b><strong>0</strong> חפיפות</b><b><strong>1</strong> פרויקט</b><b><strong>∞</strong> גרסאות</b></div>
+        </div>
+      </section>
+
+      <section className="hsx-scroll-story hsx-reveal" aria-label="תהליך עריכה חי">
+        <div className="hsx-scroll-head"><span>שלוש שכבות. זרימה אחת.</span><h2>הסיפור מתקדם יחד איתך.</h2></div>
+        <div className="hsx-scroll-rail">
+          <article><b>01</b><div><ScanText size={22} /><h3>המילים הופכות לחומר עריכה</h3><p>מסמנים חזרה או שתיקה בטקסט ורואים מיד את החיתוך על הווידאו.</p></div><div className="hsx-text-sculpture"><span>הרעיון</span><span className="muted">אה...</span><span>מקבל</span><span>קצב</span></div></article>
+          <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><strong>H</strong></div></article>
+          <article><b>03</b><div><WandSparkles size={22} /><h3>העוזר מציע. אתם מחליטים.</h3><p>כל פעולה מגיעה עם תצוגה מקדימה, הסבר ואפשרות ביטול.</p></div><div className="hsx-decision"><span><Check size={14} />8 שינויים בטוחים</span><button type="button">החל הכול</button></div></article>
         </div>
       </section>
 
@@ -103,7 +112,7 @@ export default function WelcomePage() {
         <div className="marketing-section-head"><span>חדש בדרך שבה עורכים</span><h2>לא עוד עורך עם כפתור AI בצד</h2><p>ממשק שנבנה סביב הפעולה עצמה — שיחה, תמונה, קול וטיימליין שעובדים יחד.</p></div>
         <div className="marketing-bento">
           <article className="bento-command"><Command size={22} /><span>Command canvas</span><h3>כותבים כוונה.<br />רואים פעולה.</h3><div className="command-demo"><i>הסר נשימות, שמור על כל מילה</i><b><Zap size={13} /> 14 פעולות מוכנות</b></div></article>
-          <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>קשה</i><i>סילוקו</i><i className="cut">אה...</i><i>של אדם</i><i>כשר</i></div></article>
+          <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>הפרק</i><i>הזה</i><i className="cut">אה...</i><i>מתחיל</i><i>עכשיו</i></div></article>
           <article className="bento-precision"><AudioWaveform size={22} /><span>Breath precision</span><h3>חיתוך שנצמד לנשימה, לא לניחוש</h3><div className="mini-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
           <article className="bento-direct"><MousePointer2 size={22} /><span>Direct manipulation</span><h3>גוררים על הסרטון עצמו</h3><div className="mini-canvas"><b>שם הפרק והדובר</b><i /><i /><i /><i /></div></article>
           <article className="bento-proof"><Eye size={22} /><span>Proof before export</span><h3>רואים את התוצאה לפני שמחכים לרינדור</h3><div className="proof-line"><i /><b>Preview matches export</b></div></article>
