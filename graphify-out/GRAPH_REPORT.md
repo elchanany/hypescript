@@ -5,12 +5,12 @@
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2112 nodes · 4719 edges · 149 communities (125 shown, 24 thin omitted)
+- 2112 nodes · 4718 edges · 148 communities (124 shown, 24 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.68)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `67d29482`
+- Built from commit: `86ba1ca9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -46,7 +46,7 @@
 - next.config.js
 - What You Must Do When Invoked
 - clipDur
-- storage.ts
+- dashboard/page.tsx
 - AGENTS.md — נקודת הכניסה לכל סוכן
 - HANDOFF.md
 - canvasCoords.ts
@@ -112,7 +112,7 @@
 - .codex/skills/graphify/references/extraction-spec.md
 - chunking.ts
 - images.ts
-- create.ts
+- projects/types.ts
 - model.ts
 - commands.builtin.ts
 - Chat.tsx
@@ -147,11 +147,10 @@
 - BRAND-KIT.md
 - auth/config.ts
 - Creative library architecture
-- dashboard/page.tsx
+- כל הפרמטרים וכוונון
 - preview.ts
 - Word
 - commandSurface.ts
-- quotaMessaging.ts
 - public.credit_ledger
 - public.analytics_events
 - public.user_settings
@@ -184,7 +183,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (149 total, 24 thin omitted)
+## Communities (148 total, 24 thin omitted)
 
 ### Community 0 - "thumbnails.ts"
 Cohesion: 0.10
@@ -294,9 +293,9 @@ Nodes (24): For /graphify add and --watch, For /graphify query, For the commit h
 Cohesion: 0.14
 Nodes (26): avgDb(), assembledDuration(), AssembleOpts, assembleTranscript(), formatTranscriptLines(), WordsBySource, assembledStart(), clipDur() (+18 more)
 
-### Community 32 - "storage.ts"
-Cohesion: 0.32
-Nodes (13): ensureProjectPolicy(), getProjectPolicy(), saveProjectPolicy(), createProject(), ensureProject(), getCurrentProjectId(), kvClear(), kvGet() (+5 more)
+### Community 32 - "dashboard/page.tsx"
+Cohesion: 0.21
+Nodes (25): DashboardPage(), DialogState, userAvatarUrl(), userLabel(), CloudProject, listCloudProjects(), createProjectWithPolicy(), ensureCloudProjectMirror() (+17 more)
 
 ### Community 33 - "AGENTS.md — נקודת הכניסה לכל סוכן"
 Cohesion: 0.22
@@ -375,12 +374,12 @@ Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
 ### Community 52 - "hypescript — עורך אוטומטי לסרטוני שיעורים בעברית"
-Cohesion: 0.09
-Nodes (22): 1. השג מפתח (Groq, חינם), 2. הרצה — התרחיש המרכזי, hypescript — עורך אוטומטי לסרטוני שיעורים בעברית, איך זה עובד (למתעניינים), אינטרו/אאוטרו וכללי, דוגמאות נוספות, דרישות מוקדמות, התקנה (+14 more)
+Cohesion: 0.12
+Nodes (15): 1. השג מפתח (Groq, חינם), 2. הרצה — התרחיש המרכזי, hypescript — עורך אוטומטי לסרטוני שיעורים בעברית, איך זה עובד (למתעניינים), דוגמאות נוספות, דרישות מוקדמות, התקנה, התקנת FFmpeg על Windows (+7 more)
 
 ### Community 61 - "app/page.tsx"
-Cohesion: 0.19
-Nodes (20): COMMAND_ICONS, download(), EditorPage(), kindOf(), probeDuration(), LeftTab, TABS, ToolRail() (+12 more)
+Cohesion: 0.15
+Nodes (22): COMMAND_ICONS, download(), EditorPage(), kindOf(), probeDuration(), ConfirmDialog(), NameDialog(), LeftTab (+14 more)
 
 ### Community 62 - "Word"
 Cohesion: 0.13
@@ -506,9 +505,9 @@ Nodes (7): DEFAULT_CHUNK_SEC, mergeWordChunks(), planChunkOffsets(), shiftWords(
 Cohesion: 0.14
 Nodes (21): maxDuration, POST(), runtime, buildImagePayload(), decodeFirstImage(), DEFAULT_OPENAI_IMAGE_BACKGROUND, DEFAULT_OPENAI_IMAGE_MODEL, DEFAULT_OPENAI_IMAGE_QUALITY (+13 more)
 
-### Community 98 - "create.ts"
-Cohesion: 0.14
-Nodes (19): NewProjectWizard(), Props, WizardResult, CloudProject, CreateProjectInput, AspectRatio, CapabilityChoice, CapabilityKey (+11 more)
+### Community 98 - "projects/types.ts"
+Cohesion: 0.13
+Nodes (21): NewProjectWizard(), Props, WizardResult, QUOTA_CODES, quotaCode(), quotaMessage(), UserQuotaCode, CreateProjectInput (+13 more)
 
 ### Community 99 - "model.ts"
 Cohesion: 0.15
@@ -630,9 +629,9 @@ Nodes (10): GET(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics()
 Cohesion: 0.40
 Nodes (4): Creative library architecture, Delivery order, Product contract, Sources and licensing
 
-### Community 139 - "dashboard/page.tsx"
-Cohesion: 0.28
-Nodes (12): DashboardPage(), DialogState, userAvatarUrl(), userLabel(), ConfirmDialog(), NameDialog(), listCloudProjects(), createProjectWithPolicy() (+4 more)
+### Community 139 - "כל הפרמטרים וכוונון"
+Cohesion: 0.29
+Nodes (7): אינטרו/אאוטרו וכללי, כל הפרמטרים וכוונון, כתוביות, מנוע תמלול, ענן, עריכה, קלט/פלט
 
 ### Community 140 - "preview.ts"
 Cohesion: 0.24
@@ -646,29 +645,25 @@ Nodes (7): CutQualityReport, ElevenLabsSttRaw, ElevenLabsWordRaw, mapTokenType()
 Cohesion: 0.67
 Nodes (3): CommandDef, CommandSelection, RunnableCommand
 
-### Community 143 - "quotaMessaging.ts"
-Cohesion: 0.60
-Nodes (4): QUOTA_CODES, quotaCode(), quotaMessage(), UserQuotaCode
-
 ### Community 147 - "CreativePanel.tsx"
 Cohesion: 0.40
 Nodes (4): ClipPatch, CreativePanel(), FADES, LOOKS
 
 ## Knowledge Gaps
-- **624 isolated node(s):** `track-edit.sh script`, `name`, `version`, `private`, `type` (+619 more)
+- **624 isolated node(s):** `metadata`, `features`, `plans`, `useCases`, `track-edit.sh script` (+619 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `requireCloudUser()` connect `requireCloudUser` to `render/route.ts`, `r2.ts`, `auth/config.ts`, `lemon.ts`, `getSupabaseServiceClient`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Why does `Clip` connect `Clip` to `RenderBackend.ts`, `EditorApi`, `tools.ts`, `CreativePanel.tsx`, `project.ts`, `clipFilter.ts`, `graph.test.ts`, `subtitlesEdl.ts`, `clipDur`, `app/page.tsx`, `InspectorPanel.tsx`, `commands.ts`, `model.ts`, `commands.builtin.ts`, `Chat.tsx`, `timelineFrame.ts`, `graph.integration.test.ts`, `captionBurn.ts`, `ffmpeg.ts`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `toast` connect `app/page.tsx` to `lemon.ts`, `dashboard/page.tsx`, `BrandLogo.tsx`, `kit.ts`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `Word` connect `Word` to `chunking.ts`, `Chat.tsx`, `Clip`, `subtitles.ts`, `models.ts`, `tools.ts`, `clipFilter.ts`, `app/page.tsx`, `clipDur`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **What connects `track-edit.sh script`, `name`, `version` to the rest of the system?**
+- **Why does `toast` connect `app/page.tsx` to `dashboard/page.tsx`, `lemon.ts`, `BrandLogo.tsx`, `kit.ts`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **What connects `metadata`, `features`, `plans` to the rest of the system?**
   _624 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `thumbnails.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.10317460317460317 - nodes in this community are weakly interconnected._
