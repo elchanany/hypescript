@@ -20,6 +20,8 @@ import {
   formatDurationHe, getProjectCardInfo, type ProjectCardInfo,
 } from "@/lib/projects/preview";
 import { createProjectWithPolicy } from "@/lib/projects/create";
+import { ensureCloudProjectMirror } from "@/lib/projects/create";
+import { deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
 
@@ -145,7 +147,7 @@ function ProjectCard({
 
         <div className="dash-card-badges">
           <span className={`dash-badge mode-${meta.dataMode || "local"}`}>
-            {meta.dataMode || "local"}
+            {meta.dataMode === "cloud" ? "בענן" : meta.dataMode === "hybrid" ? "משולב" : "מקומי"}
           </span>
           {meta.aspectRatio && (
             <span className="dash-badge">{meta.aspectRatio}</span>
@@ -207,9 +209,17 @@ export default function DashboardPage() {
   const userMenuRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const welcomed = useRef(false);
 
-  const refresh = async () => setProjects(await listProjects());
+  const refresh = async () => {
+    if (user) {
+      try {
+        const cloud = await listCloudProjects();
+        await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
+      } catch { /* show local cache while offline */ }
+    }
+    setProjects(await listProjects());
+  };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { if (!loading) refresh(); }, [loading, user?.id]);
 
   useEffect(() => {
     if (authError) toast.error("שגיאת התחברות", authError);
@@ -222,6 +232,10 @@ export default function DashboardPage() {
       sessionStorage.removeItem("hs_just_logged_in");
       toast.success("התחברת בהצלחה", userLabel(user));
       welcomed.current = true;
+    }
+    if (sessionStorage.getItem("hs_after_login") === "create-project") {
+      sessionStorage.removeItem("hs_after_login");
+      setDlg({ kind: "create" });
     }
   }, [loading, user]);
 
@@ -258,6 +272,8 @@ export default function DashboardPage() {
     const id = dlg.id;
     setDlg({ kind: "none" });
     try {
+      const project = (await listProjects() as ProjectMetaV2[]).find((item) => item.id === id);
+      if (project?.cloudProjectId) await renameCloudProject(project.cloudProjectId, name);
       await renameProject(id, name);
       await refresh();
       toast.success("השם עודכן", name);
@@ -271,6 +287,8 @@ export default function DashboardPage() {
     const { id, name } = dlg;
     setDlg({ kind: "none" });
     try {
+      const project = (await listProjects() as ProjectMetaV2[]).find((item) => item.id === id);
+      if (project?.cloudProjectId) await deleteCloudProject(project.cloudProjectId);
       await deleteProject(id);
       await refresh();
       toast.success("הפרויקט נמחק", name);
@@ -281,6 +299,14 @@ export default function DashboardPage() {
 
   const avatar = userAvatarUrl(user);
   const label = userLabel(user);
+  const startCreate = () => {
+    if (configured && !user) {
+      sessionStorage.setItem("hs_after_login", "create-project");
+      signInWithGoogle();
+      return;
+    }
+    setDlg({ kind: "create" });
+  };
 
   return (
     <div className="dash-root">
@@ -364,7 +390,7 @@ export default function DashboardPage() {
               <div className="dash-identity-sub">
                 {user.email && <span className="dash-identity-mail">{user.email}</span>}
                 <span className="dash-pill ok"><ShieldCheck size={12} />מחובר</span>
-                <span className="dash-pill">{projects.length} פרויקטים במחשב זה</span>
+                <span className="dash-pill">{projects.length} פרויקטים בחשבון</span>
               </div>
             </div>
             <button
@@ -382,23 +408,23 @@ export default function DashboardPage() {
             <h1>הפרויקטים שלי</h1>
             <p>
               {user
-                ? `שלום ${label.split(" ")[0]} — הפרויקטים נשמרים מקומית במחשב שלך. הווידאו לא עולה לענן.`
-                : "נשמרים מקומית במחשב שלך (IndexedDB). הווידאו לא עולה לענן."}
+                ? `שלום ${label.split(" ")[0]} — הפרויקטים נשמרים ומסתנכרנים בענן כברירת מחדל.`
+                : "התחבר כדי ליצור פרויקטים שמסתנכרנים אוטומטית בין המכשירים שלך."}
             </p>
           </div>
           <button
             type="button"
             className="btn primary tall"
-            onClick={() => setDlg({ kind: "create" })}
+            onClick={startCreate}
             disabled={busy}
           >
-            <Plus size={16} />פרויקט חדש
+            <Plus size={16} />{configured && !user ? "התחבר והתחל" : "פרויקט חדש"}
           </button>
         </div>
 
         {configured && !loading && !user && (
           <div className="dash-banner">
-            אפשר לעבוד בלי התחברות. להתחברות עם Google (סנכרון זהות בלבד) —{" "}
+            Hypescript הוא שירות ענן. התחבר עם Google כדי ליצור, לסנכרן ולרנדר פרויקטים —{" "}
             <button type="button" className="linkish" onClick={() => signInWithGoogle()}>לחץ כאן</button>.
           </div>
         )}
@@ -407,7 +433,7 @@ export default function DashboardPage() {
           <div className="dash-empty">
             <FolderOpen size={40} strokeWidth={1.25} />
             <p>אין פרויקטים עדיין.</p>
-            <button type="button" className="btn primary tall" onClick={() => setDlg({ kind: "create" })}>
+            <button type="button" className="btn primary tall" onClick={startCreate}>
               צור את הראשון
             </button>
           </div>

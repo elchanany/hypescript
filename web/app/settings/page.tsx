@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
+import { DEFAULT_DATA_MODE_PREF, PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
 import { Provider } from "@/lib/agent/types";
 import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
 import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
@@ -11,6 +11,7 @@ import { getProviderApprovals, setProviderBillingApproval } from "@/lib/provider
 import type { ProviderId, ProviderStatusInfo } from "@/lib/providers/types";
 import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
+import type { DataMode } from "@/lib/projects/types";
 
 interface CloudStatus {
   configured: boolean;
@@ -28,12 +29,15 @@ export default function SettingsPage() {
   const [cfg, setCfg] = useState<ApiConfigShape>({});
   const [billingApprovals, setBillingApprovals] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
+  const [defaultDataMode, setDefaultDataMode] = useState<DataMode>("cloud");
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
     const tp = localStorage.getItem(TRANSCRIBE_PREF) as TranscribeProviderPref | null;
     if (tp === "auto" || tp === "elevenlabs" || tp === "groq") setTranscribePref(tp);
     setTranscribeModel(localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "");
+    const savedMode = localStorage.getItem(DEFAULT_DATA_MODE_PREF);
+    if (savedMode === "cloud" || savedMode === "local" || savedMode === "hybrid") setDefaultDataMode(savedMode);
     fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
     fetch("/api/cloud/status").then((r) => r.json()).then(setCloud).catch(() => setCloud(null));
     const approvals = getProviderApprovals().approved;
@@ -54,6 +58,11 @@ export default function SettingsPage() {
     setTranscribeModel(m);
     if (m.trim()) localStorage.setItem(TRANSCRIBE_MODEL_PREF, m.trim());
     else localStorage.removeItem(TRANSCRIBE_MODEL_PREF);
+  };
+
+  const saveDefaultDataMode = (mode: DataMode) => {
+    setDefaultDataMode(mode);
+    localStorage.setItem(DEFAULT_DATA_MODE_PREF, mode);
   };
 
   const setBillingApproval = (id: ProviderId, approved: boolean) => {
@@ -131,6 +140,26 @@ export default function SettingsPage() {
         <div className="row">
           <Link href="/settings/brand" className="btn primary" style={{ textDecoration: "none" }}>ניהול ערכת מותג</Link>
         </div>
+      </div>
+
+      <div className="card" id="workspace-storage">
+        <h2>שמירת פרויקטים</h2>
+        <p style={{ color: "var(--muted)", marginTop: 0 }}>
+          ברירת המחדל היא ענן: מסמך העריכה ב־Supabase, קובצי המקור ב־Cloudflare R2 ורינדור ב־Cloud Run. הבחירה חלה על פרויקטים חדשים.
+        </p>
+        <div className="settings-choice-grid">
+          {([
+            ["cloud", "ענן · מומלץ", "סנכרון בין מכשירים, גיבוי והעלאת מדיה אוטומטית."],
+            ["hybrid", "משולב", "מסמך העריכה בענן; קובצי מקור יכולים להישאר מקומיים."],
+            ["local", "מקומי בלבד", "הכול נשמר בדפדפן במכשיר הזה. ללא גיבוי ענן."],
+          ] as const).map(([id, label, description]) => (
+            <label key={id} className={`settings-choice ${defaultDataMode === id ? "on" : ""}`}>
+              <input type="radio" name="default-data-mode" checked={defaultDataMode === id} onChange={() => saveDefaultDataMode(id)} />
+              <span><strong>{label}</strong><small>{description}</small></span>
+            </label>
+          ))}
+        </div>
+        <div className="hint" style={{ marginTop: 12 }}>פרויקטים קיימים אינם מועברים או נמחקים אוטומטית בעת שינוי ההגדרה.</div>
       </div>
 
       <div className="card">

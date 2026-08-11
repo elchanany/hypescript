@@ -1,9 +1,9 @@
 "use client";
 
 import { createProject, deleteProject, kvGet, kvSet, listProjects, type ProjectMeta } from "@/lib/storage";
-import { createCloudProject } from "@/lib/cloud/client";
+import { createCloudProject, type CloudProject } from "@/lib/cloud/client";
 import { saveProjectPolicy } from "./policy";
-import type { ProjectExecutionPolicy, ProjectMetaV2 } from "./types";
+import { DEFAULT_POLICY, type ProjectExecutionPolicy, type ProjectMetaV2 } from "./types";
 
 export interface CreateProjectInput {
   name: string;
@@ -37,6 +37,10 @@ export async function createProjectWithPolicy(input: CreateProjectInput): Promis
     try {
       const cloud = await createCloudProject(name);
       policy.cloudProjectId = cloud.id;
+      if (row) {
+        row.cloudProjectId = cloud.id;
+        await kvSet("projects", list);
+      }
       if (policy.dataMode === "cloud") {
         policy.storageBackend = "r2";
         policy.capabilities = {
@@ -58,6 +62,43 @@ export async function createProjectWithPolicy(input: CreateProjectInput): Promis
   }
 
   await saveProjectPolicy(id, policy);
+  return id;
+}
+
+/** Creates a local cache entry for a project that already exists in Supabase. */
+export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<string> {
+  const list = (await listProjects()) as ProjectMetaV2[];
+  const existing = list.find((project) => project.cloudProjectId === cloud.id);
+  if (existing) {
+    const localState = await kvGet<Record<string, unknown>>(`p:${existing.id}:state`);
+    if (!localState && cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
+      await kvSet(`p:${existing.id}:state`, cloud.editor_state);
+    }
+    return existing.id;
+  }
+
+  const id = await createProject(cloud.name || "פרויקט בענן");
+  const next = (await listProjects()) as ProjectMetaV2[];
+  const row = next.find((project) => project.id === id);
+  if (row) {
+    row.dataMode = "cloud";
+    row.cloudProjectId = cloud.id;
+    row.createdAt = Date.parse(cloud.created_at) || Date.now();
+    row.updatedAt = Date.parse(cloud.updated_at) || Date.now();
+    await kvSet("projects", next);
+  }
+  const policy = DEFAULT_POLICY();
+  policy.dataMode = "cloud";
+  policy.cloudProjectId = cloud.id;
+  policy.storageBackend = "r2";
+  policy.allowCloudMetadata = true;
+  policy.processingPreset = "cloud_fast";
+  policy.capabilities.render = { providerId: "cloud-run-ffmpeg", execution: "cloud" };
+  policy.capabilities.storage = { providerId: "cloudflare-r2", execution: "cloud" };
+  await saveProjectPolicy(id, policy);
+  if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
+    await kvSet(`p:${id}:state`, cloud.editor_state);
+  }
   return id;
 }
 

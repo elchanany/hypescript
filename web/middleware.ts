@@ -4,7 +4,7 @@ import { normalizeSupabaseUrl } from "@/lib/auth/config";
 
 /**
  * 1) Refresh Supabase auth cookies (PKCE / session) on navigations.
- * 2) Soft-gate the editor (/) when Auth is configured and guest mode is off.
+ * 2) Keep the marketing home public and gate the editor at `/` behind auth.
  */
 export async function middleware(req: NextRequest) {
   const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
@@ -41,8 +41,6 @@ export async function middleware(req: NextRequest) {
     await supabase.auth.getUser();
   }
 
-  if (allowGuest) return response;
-
   const { pathname } = req.nextUrl;
   if (pathname !== "/") return response;
 
@@ -51,10 +49,12 @@ export async function middleware(req: NextRequest) {
   );
   if (hasSession) return response;
 
-  const login = req.nextUrl.clone();
-  login.pathname = "/login";
-  login.searchParams.set("next", pathname);
-  return NextResponse.redirect(login);
+  if (allowGuest && !authConfigured) return response;
+
+  const welcome = req.nextUrl.clone();
+  welcome.pathname = "/welcome";
+  welcome.search = "";
+  return NextResponse.redirect(welcome);
 }
 
 export const config = {

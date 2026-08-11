@@ -19,7 +19,7 @@ import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
 import { TitlePopupPreset } from "@/lib/editor/overlay";
-import { createProject, deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
+import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
 import { ContextMenu, CtxItem } from "@/components/ui";
@@ -37,7 +37,9 @@ import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 import { getProjectPolicy } from "@/lib/projects/policy";
-import { renderCloudProject, uploadCloudAsset } from "@/lib/cloud/client";
+import { deleteCloudProject, getCloudProject, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
+import { createProjectWithPolicy } from "@/lib/projects/create";
+import { DEFAULT_POLICY } from "@/lib/projects/types";
 
 ensureBuiltinCommands();
 
@@ -125,6 +127,7 @@ export default function EditorPage() {
   const [zoom, setZoom] = useState(1);
   const [snap, setSnap] = useState(true);
   const [saving, setSaving] = useState(false);
+  const cloudSyncWarned = useRef(false);
   const [clipMenu, setClipMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [trackMenu, setTrackMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [subMenu, setSubMenu] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -315,7 +318,10 @@ export default function EditorPage() {
 
   useEffect(() => {
     (async () => {
-      const id = await ensureProject();
+      const existing = await listProjects();
+      const id = existing.length
+        ? await ensureProject()
+        : await createProjectWithPolicy({ name: "פרויקט 1", policy: DEFAULT_POLICY() });
       setProjects(await listProjects());
       setProjectId(id);
     })();
@@ -340,7 +346,15 @@ export default function EditorPage() {
         }
         return out;
       });
-      const raw = await kvGet<any>(pk(projectId, "state"));
+      let raw = await kvGet<any>(pk(projectId, "state"));
+      const policy = await getProjectPolicy(projectId);
+      if (!raw && policy?.cloudProjectId) {
+        try {
+          const cloud = await getCloudProject(policy.cloudProjectId);
+          raw = cloud.project.editor_state;
+          if (raw && Object.keys(raw).length > 0) await kvSet(pk(projectId, "state"), raw);
+        } catch { /* local cache remains usable while offline */ }
+      }
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
       resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas, captionStyle: st.captionStyle });
@@ -359,7 +373,20 @@ export default function EditorPage() {
     if (!restored || !projectId) return;
     setSaving(true);
     const t = setTimeout(async () => {
-      await kvSet(pk(projectId, "state"), { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas, captionStyle });
+      const state = { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas, captionStyle };
+      await kvSet(pk(projectId, "state"), state);
+      const policy = await getProjectPolicy(projectId);
+      if (policy?.cloudProjectId && policy.dataMode !== "local") {
+        try {
+          await saveCloudProjectState(policy.cloudProjectId, state);
+          cloudSyncWarned.current = false;
+        } catch (syncError) {
+          if (!cloudSyncWarned.current) {
+            cloudSyncWarned.current = true;
+            toast.error("השמירה בענן נכשלה", syncError instanceof Error ? `${syncError.message} · העותק המקומי נשמר` : "העותק המקומי נשמר");
+          }
+        }
+      }
       touchProject(projectId); setSaving(false);
     }, 500);
     return () => clearTimeout(t);
@@ -372,13 +399,15 @@ export default function EditorPage() {
 
   const submitCreate = async (name: string) => {
     setProjDlg("none");
-    const id = await createProject(name || "פרויקט");
+    const id = await createProjectWithPolicy({ name: name || "פרויקט", policy: DEFAULT_POLICY() });
     setProjects(await listProjects()); setProjectId(id);
     toast.success("הפרויקט נוצר", name);
   };
   const submitRename = async (name: string) => {
     if (!projectId) return;
     setProjDlg("none");
+    const policy = await getProjectPolicy(projectId);
+    if (policy?.cloudProjectId) await renameCloudProject(policy.cloudProjectId, name);
     await renameProject(projectId, name);
     setProjects(await listProjects());
     toast.success("השם עודכן", name);
@@ -387,10 +416,12 @@ export default function EditorPage() {
     if (!projectId) return;
     setProjDlg("none");
     const oldName = projects.find((p) => p.id === projectId)?.name || "";
+    const policy = await getProjectPolicy(projectId);
+    if (policy?.cloudProjectId) await deleteCloudProject(policy.cloudProjectId);
     await deleteProject(projectId);
     const list = await listProjects(); setProjects(list);
     if (list.length) { await setCurrentProject(list[0].id); setProjectId(list[0].id); }
-    else { const id = await createProject("פרויקט 1"); setProjects(await listProjects()); setProjectId(id); }
+    else { const id = await createProjectWithPolicy({ name: "פרויקט 1", policy: DEFAULT_POLICY() }); setProjects(await listProjects()); setProjectId(id); }
     toast.success("הפרויקט נמחק", oldName);
   };
 

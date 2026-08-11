@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_POLICY, presetApplies, storageOptionsForMode } from "./types";
 
 describe("project execution policy", () => {
-  it("defaults to local privacy-first", () => {
+  it("defaults to the SaaS cloud workspace", () => {
     const p = DEFAULT_POLICY();
-    expect(p.dataMode).toBe("local");
-    expect(p.storageBackend).toBe("browser_storage");
-    expect(p.zeroCostPreferred).toBe(true);
+    expect(p.dataMode).toBe("cloud");
+    expect(p.storageBackend).toBe("r2");
+    expect(p.capabilities.render).toEqual({ providerId: "cloud-run-ffmpeg", execution: "cloud" });
+    expect(p.zeroCostPreferred).toBe(false);
   });
 
   it("applies local_only preset without enabling cloud storage", () => {

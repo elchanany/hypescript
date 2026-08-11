@@ -65,29 +65,41 @@ export interface ProjectMetaV2 {
   dataMode?: DataMode;
   aspectRatio?: AspectRatio;
   resolution?: ProjectResolution;
+  cloudProjectId?: string;
   archived?: boolean;
   trashedAt?: number | null;
 }
 
-export const DEFAULT_POLICY = (): ProjectExecutionPolicy => ({
-  dataMode: "local",
+function preferredDataMode(): DataMode {
+  if (typeof window === "undefined") return "cloud";
+  const saved = localStorage.getItem("hypescript_default_data_mode");
+  return saved === "local" || saved === "hybrid" || saved === "cloud" ? saved : "cloud";
+}
+
+export const DEFAULT_POLICY = (): ProjectExecutionPolicy => {
+  const dataMode = preferredDataMode();
+  const cloud = dataMode === "cloud";
+  const local = dataMode === "local";
+  return ({
+  dataMode,
   aspectRatio: "16:9",
   resolution: "1080p",
   fps: 30,
   background: "#000000",
-  storageBackend: "browser_storage",
-  processingPreset: "max_privacy",
-  allowCloudMetadata: false,
-  zeroCostPreferred: true,
+  storageBackend: cloud ? "r2" : "browser_storage",
+  processingPreset: cloud ? "cloud_fast" : local ? "max_privacy" : "recommended_hybrid",
+  allowCloudMetadata: !local,
+  zeroCostPreferred: local,
   capabilities: {
     llm: { providerId: "deepseek", execution: "cloud" },
     transcription: { providerId: "groq-transcribe", execution: "cloud" },
-    render: { providerId: "ffmpeg-wasm", execution: "local" },
-    storage: { providerId: "browser_storage", execution: "local" },
+    render: cloud ? { providerId: "cloud-run-ffmpeg", execution: "cloud" } : { providerId: "ffmpeg-wasm", execution: "local" },
+    storage: cloud ? { providerId: "cloudflare-r2", execution: "cloud" } : { providerId: "browser_storage", execution: "local" },
   },
   createdAt: Date.now(),
   updatedAt: Date.now(),
-});
+  });
+};
 
 export function storageOptionsForMode(mode: DataMode): { id: StorageBackend; label: string; available: boolean; reason?: string }[] {
   const local = [

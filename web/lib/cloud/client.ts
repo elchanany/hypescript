@@ -3,6 +3,15 @@ export interface CloudUploadResult {
   objectKey: string;
 }
 
+export interface CloudProject {
+  id: string;
+  name: string;
+  state: "active" | "archived" | "deleting";
+  editor_state: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 async function json<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `cloud_request_${response.status}`);
@@ -13,6 +22,35 @@ export async function createCloudProject(name: string) {
   return json<{ id: string }>(await fetch("/api/cloud/projects", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }),
   }));
+}
+
+export async function listCloudProjects() {
+  const result = await json<{ projects: CloudProject[] }>(await fetch("/api/cloud/projects"));
+  return result.projects;
+}
+
+export async function getCloudProject(id: string) {
+  return json<{ project: CloudProject }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`));
+}
+
+export async function saveCloudProjectState(id: string, editorState: Record<string, unknown>) {
+  return json<{ ok: true }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ editorState }),
+  }));
+}
+
+export async function renameCloudProject(id: string, name: string) {
+  return json<{ ok: true }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  }));
+}
+
+export async function deleteCloudProject(id: string) {
+  return json<{ ok: true }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, { method: "DELETE" }));
 }
 
 export async function uploadCloudAsset(projectId: string, file: File, onProgress?: (ratio: number) => void, signal?: AbortSignal): Promise<CloudUploadResult> {
