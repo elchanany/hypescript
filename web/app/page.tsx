@@ -281,16 +281,16 @@ export default function EditorPage() {
     const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 260) setInspW(Math.min(460, iw));
   }, []);
 
-  const startResizeChat = (e: React.MouseEvent) => {
+  const startResizeChat = (e: React.PointerEvent) => {
     e.preventDefault();
     const startX = e.clientX; const startW = chatWidthRef.current;
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const delta = dockSideRef.current === "right" ? (startX - ev.clientX) : (ev.clientX - startX);
       setChatWidth(Math.max(360, Math.min(720, startW + delta)));
     };
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
+    const onUp = () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); localStorage.setItem("hs_chatw", String(chatWidthRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
   };
   const resetChatWidth = () => { setChatWidth(460); localStorage.setItem("hs_chatw", "460"); };
   const resizeChatByKey = (e: React.KeyboardEvent) => {
@@ -301,21 +301,21 @@ export default function EditorPage() {
     setChatWidth(next); localStorage.setItem("hs_chatw", String(next));
   };
   const toggleDockSide = () => setDockSide((s) => { const n = s === "right" ? "left" : "right"; localStorage.setItem("hs_dockside", n); return n; });
-  const startResizeTL = (e: React.MouseEvent) => {
+  const startResizeTL = (e: React.PointerEvent) => {
     e.preventDefault();
     const startY = e.clientY; const startH = tlHeightRef.current;
-    const onMove = (ev: MouseEvent) => setTlHeight(Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), startH + (startY - ev.clientY))));
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_tlh", String(tlHeightRef.current)); document.body.style.userSelect = ""; };
+    const onMove = (ev: PointerEvent) => setTlHeight(Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), startH + (startY - ev.clientY))));
+    const onUp = () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); localStorage.setItem("hs_tlh", String(tlHeightRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
   };
-  const startResizeLeft = (e: React.MouseEvent) => {
+  const startResizeLeft = (e: React.PointerEvent) => {
     e.preventDefault();
     const startX = e.clientX; const startW = leftWRef.current;
-    const onMove = (ev: MouseEvent) => setLeftW(Math.max(220, Math.min(440, startW + (ev.clientX - startX))));
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_leftw", String(leftWRef.current)); document.body.style.userSelect = ""; };
+    const onMove = (ev: PointerEvent) => setLeftW(Math.max(180, Math.min(440, startW + (ev.clientX - startX))));
+    const onUp = () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); localStorage.setItem("hs_leftw", String(leftWRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
   };
   const resetTimeline = () => {
     const next = Math.max(280, Math.min(Math.max(260, window.innerHeight - 300), Math.round(window.innerHeight * 0.38)));
@@ -334,13 +334,13 @@ export default function EditorPage() {
     const next = Math.max(220, Math.min(440, leftWRef.current + (e.key === "ArrowRight" ? 24 : -24)));
     setLeftW(next); localStorage.setItem("hs_leftw", String(next));
   };
-  const startResizeInsp = (e: React.MouseEvent) => {
+  const startResizeInsp = (e: React.PointerEvent) => {
     e.preventDefault();
     const startX = e.clientX; const startW = inspWRef.current;
-    const onMove = (ev: MouseEvent) => setInspW(Math.max(260, Math.min(460, startW - (ev.clientX - startX))));
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_inspw", String(inspWRef.current)); document.body.style.userSelect = ""; };
+    const onMove = (ev: PointerEvent) => setInspW(Math.max(210, Math.min(460, startW - (ev.clientX - startX))));
+    const onUp = () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); localStorage.setItem("hs_inspw", String(inspWRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
   };
   const resetInsp = () => { setInspW(300); localStorage.setItem("hs_inspw", "300"); };
   const resizeInspectorByKey = (e: React.KeyboardEvent) => {
@@ -873,6 +873,11 @@ export default function EditorPage() {
       else if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
+      else if (e.key === "ArrowLeft" && !e.altKey) { e.preventDefault(); seek(Math.max(0, curRef.current - (e.shiftKey ? 1 : 1 / 30))); }
+      else if (e.key === "ArrowRight" && !e.altKey) { e.preventDefault(); seek(Math.min(timelineDuration, curRef.current + (e.shiftKey ? 1 : 1 / 30))); }
+      else if (e.key === "Home") { e.preventDefault(); seek(0); }
+      else if (e.key === "End") { e.preventDefault(); seek(timelineDuration); }
+      else if (e.key.toLowerCase() === "k" && !meta) { e.preventDefault(); previewRef.current?.toggle(); }
       else if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedOverlayId || selectedSubId)) { e.preventDefault(); deleteSel(e.shiftKey); }
       else if (e.key === "Escape") { setSelectedId(null); setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack(null); }
       else if (e.key.toLowerCase() === "s" && !meta && clips?.length) { e.preventDefault(); splitAtPlayhead(); }
@@ -930,7 +935,7 @@ export default function EditorPage() {
   };
 
   const dockHandle = (
-    <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth} onKeyDown={resizeChatByKey} tabIndex={0}
+    <div className="col-resize" onPointerDown={startResizeChat} onDoubleClick={resetChatWidth} onKeyDown={resizeChatByKey} tabIndex={0}
       title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל הסוכן" />
   );
   const agentDock = chatOpen ? (
@@ -1127,7 +1132,7 @@ export default function EditorPage() {
             <CreativePanel kind={leftTab} clip={selectedClip} onApply={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)} />
           )}
         </div>
-        <div className="col-resize" onMouseDown={startResizeLeft} onDoubleClick={resetLeft} onKeyDown={resizeLeftByKey} tabIndex={0}
+        <div className="col-resize" onPointerDown={startResizeLeft} onDoubleClick={resetLeft} onKeyDown={resizeLeftByKey} tabIndex={0}
           title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מדיה" />
 
         <div className="main-area">
@@ -1158,7 +1163,7 @@ export default function EditorPage() {
               )}
             </div>
 
-            <div className="col-resize" onMouseDown={startResizeInsp} onDoubleClick={resetInsp} onKeyDown={resizeInspectorByKey} tabIndex={0}
+            <div className="col-resize" onPointerDown={startResizeInsp} onDoubleClick={resetInsp} onKeyDown={resizeInspectorByKey} tabIndex={0}
               title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מאפיינים" />
             <InspectorPanel
               width={inspW}
@@ -1191,7 +1196,7 @@ export default function EditorPage() {
           </div>
 
           <div className="timeline-region" style={{ height: tlHeight }}>
-            <div className="tl-resize" onMouseDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
+            <div className="tl-resize" onPointerDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
               title="גרור לשינוי גובה · חצים למעלה/למטה · דאבל-קליק לאיפוס" role="separator" tabIndex={0}
               aria-orientation="horizontal" aria-label="שינוי הגובה בין הנגן לטיימליין"><span /></div>
             <TimelineToolbar

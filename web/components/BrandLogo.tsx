@@ -37,6 +37,22 @@ export default function BrandLogo({
   const src = brandSrc(variant, effective);
   const alt = decorative ? "" : (ariaLabel || BRAND_NAME);
 
+  if (variant === "horizontal") {
+    return (
+      <span
+        className={`brand-lockup brand-logo-${size} ${className}`.trim()}
+        role={decorative ? undefined : "img"}
+        aria-label={decorative ? undefined : alt}
+        aria-hidden={decorative || undefined}
+        style={{ width: dim.w, height: dim.h }}
+      >
+        {/* Raster master gives the mark a crafted material finish; live type stays crisp at every scale. */}
+        <img src={brandSrc("icon", effective)} alt="" decoding="async" loading={priority ? "eager" : "lazy"} draggable={false} />
+        <span className="brand-lockup-copy"><b>Hypescript</b><small>AI VIDEO EDITOR</small></span>
+      </span>
+    );
+  }
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

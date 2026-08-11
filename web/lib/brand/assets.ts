@@ -6,7 +6,7 @@ export const BRAND_TAGLINE_HE = "עורך וידאו AI בעברית — מהר�
 export const BRAND_TAGLINE_EN = "AI video editor for Hebrew creators, from first cut to final export";
 
 export const BRAND_PATHS = {
-  icon: "/brand/hypescript-mark.svg",
+  icon: "/brand/hypescript-mark-generated.png",
   horizontal: "/brand/hypescript-wordmark-dark.svg",
   dark: "/brand/hypescript-wordmark-dark.svg",
   light: "/brand/hypescript-wordmark-light.svg",
