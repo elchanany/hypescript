@@ -1,6 +1,14 @@
 export type BillingPlanId = "free" | "creator" | "pro";
 export type BillingInterval = "month" | "year";
 
+export const TRIAL_OFFER = {
+  interval: "month",
+  intervalCount: 1,
+  projects: 5,
+  storageGb: 1,
+  renderMinutes: 20,
+} as const;
+
 export const BILLING_PLANS = {
   free: {
     id: "free",
@@ -48,4 +56,12 @@ export function inferPlanId(value: string): BillingPlanId | null {
   if (/creator|יוצר/.test(normalized)) return "creator";
   if (/\bpro\b|professional|מקצועי/.test(normalized)) return "pro";
   return null;
+}
+
+export function hasRequiredTrial(attributes: Record<string, unknown>): boolean {
+  if (attributes.has_free_trial !== true) return false;
+  const interval = String(attributes.trial_interval || "");
+  const count = Number(attributes.trial_interval_count || 0);
+  return (interval === TRIAL_OFFER.interval && count === TRIAL_OFFER.intervalCount)
+    || (interval === "day" && count === 30);
 }

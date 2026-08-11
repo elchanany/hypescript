@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — מצב יציב של hypescript
 
-עודכן לאחרונה: 2026-08-10 (מיזוג `main` f368261 — CTA asset pipeline: קריינות מתמשכת + GPT images).
+עודכן לאחרונה: 2026-08-11 (חבילת SaaS trial + landing בבדיקה לפני push).
 
 ## מה המוצר
 
@@ -19,6 +19,7 @@
 
 - **ליבה משותפת (מסונכרנת):** יישור-סקריפט, keep intervals + הסרת מהססים, SRT/RTL — ב-`web/lib` וב-`local/hypescript`.
 - **web:** Next.js על Vercel; ffmpeg.wasm מקומי; תמלול דרך proxy (`/api/transcribe` → Groq); מפתחות ב-`localStorage`/env; `npm run build` עובר.
+- **SaaS cloud/billing:** Supabase אוכף מכסות שרת; Lemon Squeezy ב-Test Mode עם Creator/Pro חודשי ושנתי. ניסיון מוגבל הוא entitlement פנימי לא-ציבורי (5 פרויקטים, 1GB, 20 דקות רינדור), נשמר פעם אחת לחשבון, ומופרד מהמסלול בתשלום המיועד עד לאירוע webhook חתום.
 - **סוכן AI (v0.3.0):** tool-calling, ריבוי ספקים, צ'אט/כרטיסי כלים, multi-chat, within_existing silence, delete_clips/keep_source_range, אנטי-לופ, scriptToClips, כתוביות + תמלול ציר; מוטציות EDL/רצועות דרך EditorApi/CommandBus עם רענון מיידי.
 - **הבנת ציר מבוססת ראיות:** speech מתמלול, אירועי `audio_event` של הספק ופערי עריכה מפורשים ממופים ל-per-time-span ב-web+local; אין ניחוש semantics מהיעדר תמלול או מעוצמת dB.
 - **Energy evidence:** web יכול למדוד RMS/dBFS ב-opt-in ולמפות low/elevated יחסי לציר הערוך; local מכיל mapper טהור מקביל אך ה-CLI אינו מפיק עדיין את פרופיל ה-dB.
@@ -35,7 +36,7 @@
 
 - Roll/Slip חלקיים; transitions חסרים; לא כל UI דרך CommandBus (AG-2 חלקי).
 - Multi-track cutaway מחליף גם אודיו מהרצועה המנצחת (אין A-roll audio שמור עדיין).
-- Auth/Dashboard/Supabase — דורשים אישור מפורש (RULES §7); קוד חלקי קיים.
+- Auth/Dashboard/Supabase — תשתית הענן והמיגרציות פעילות; עדיין נדרש E2E חי של Google login, checkout ב-Test Mode ו-webhook חתום לפני טענת מוכנות מסחרית.
 - Provider policies / health-check / Zero-cost — חלקיים.
 - intro/outro + preview לפני הורדה ב-web — מתוכננים ל-v0.2.0.
 - רינדור ffmpeg.wasm איטי מקבצים כבדים (לכן קיים `local/`).

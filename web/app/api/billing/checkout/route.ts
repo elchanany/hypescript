@@ -13,6 +13,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
   }
   try {
+    const { data: subscription, error: subscriptionError } = await auth.supabase
+      .from("cloud_subscriptions")
+      .select("status,provider,trial_used_at")
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+    if (subscriptionError) throw new Error("subscription_lookup_failed");
+    if (subscription?.provider && ["active", "trialing", "past_due"].includes(subscription.status)) {
+      return NextResponse.json({ error: "subscription_already_exists" }, { status: 409 });
+    }
     const origin = new URL(request.url).origin;
     const checkout = await createCheckout({
       userId: auth.user.id,
@@ -20,10 +29,11 @@ export async function POST(request: NextRequest) {
       planId,
       interval,
       returnUrl: `${origin}/account?checkout=success`,
+      allowTrial: !subscription?.trial_used_at,
     });
     const url = checkout.data.attributes.url;
     if (!url) throw new Error("checkout_url_missing");
-    return NextResponse.json({ url, testMode: true });
+    return NextResponse.json({ url, testMode: true, trialIncluded: !subscription?.trial_used_at });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "checkout_failed" }, { status: 503 });
   }

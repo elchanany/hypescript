@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cloud, HardDrive, Sparkles } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import { quotaMessage } from "@/lib/billing/quotaMessaging";
 import {
   DEFAULT_POLICY,
   type AspectRatio,
@@ -56,6 +57,7 @@ export default function NewProjectWizard({ open, initialName = "פרויקט ח�
 
   if (!open) return null;
   const isCloud = policy.dataMode === "cloud";
+  const upgradeMessage = quotaMessage(error);
 
   return (
     <div className="wiz-backdrop" role="dialog" aria-modal="true" aria-labelledby="wiz-title">
@@ -113,7 +115,10 @@ export default function NewProjectWizard({ open, initialName = "פרויקט ח�
           </div>
 
           <div className="wiz-agent-note"><Sparkles size={16} />אפשר לשנות ספקי AI, תמלול, אחסון ורינדור בכל רגע מתוך ההגדרות.</div>
-          {error && <div className="auth-error" role="alert">{error}</div>}
+          {error && <div className="auth-error" role="alert">
+            {upgradeMessage || error}
+            {upgradeMessage && <> <Link href="/account#plans" className="quota-inline-link">לצפייה במסלולים</Link></>}
+          </div>}
         </div>
 
         <div className="wiz-foot">

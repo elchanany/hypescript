@@ -38,8 +38,13 @@ export function postLoginPath(next?: string | null): string {
   try {
     onboarded = globalThis.localStorage?.getItem("hs_onboarding_done") === "1";
   } catch { /* private mode / SSR */ }
-  if (!onboarded) return "/onboarding";
   const n = (next || "").trim();
+  if (!onboarded) {
+    if (n.startsWith("/") && !n.startsWith("//")) {
+      try { globalThis.sessionStorage?.setItem("hs_post_onboarding", n); } catch { /* private mode */ }
+    }
+    return "/onboarding";
+  }
   if (n.startsWith("/") && !n.startsWith("//")) return n;
   return "/dashboard";
 }

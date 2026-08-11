@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BILLING_PLANS, PAID_PLAN_IDS } from "@/lib/billing/plans";
+import { BILLING_PLANS, PAID_PLAN_IDS, TRIAL_OFFER } from "@/lib/billing/plans";
 import { getCatalog, getStore, resolveVariant } from "@/lib/billing/lemon";
 
 export async function GET() {
@@ -20,6 +20,7 @@ export async function GET() {
       store: { id: store.id, name: store.attributes.name, slug: store.attributes.slug },
       productCount: catalog.products.length,
       plans: BILLING_PLANS,
+      trial: TRIAL_OFFER,
       readiness,
     });
   } catch (error) {

@@ -127,6 +127,11 @@
 - **סיבה:** Blob אינו חוזה JSON ואינו יכול לעבור בהיסטוריית הספק; אישור חיוב ל-LLM אינו אישור ליצירת תמונות/קול בתשלום, ולהפך.
 - **השלכה:** `openai-image` הוא ספק נפרד עם אישור fail-closed משלו (אותו `OPENAI_API_KEY`); `generate_narration`/`generate_image` רושמים את הנכס דרך `registerMediaAsset` (מניעת כפילות, בלי מוטציית מערך) ומחזירים `@media:<id>` + artifact; בריף המותג לתמונה מוגבל לטקסט בלבד ולעולם אינו ממציא לוגו.
 
+## D-026 — ניסיון בתשלום הוא entitlement מוגבל ונפרד
+- **בחירה:** Lemon Squeezy מאמת אמצעי תשלום ומנהל את חלון הניסיון; בתקופה זו `cloud_subscriptions.plan_id='trial'` עם 5 פרויקטים, 1GB ו־20 דקות רינדור, בעוד `target_plan_id` שומר את Creator/Pro שנבחר. רק webhook חתום לאחר סיום הניסיון מעביר למכסה המלאה. `trial_used_at` מונע ניסיון נוסף לאותו חשבון.
+- **סיבה:** חודש ללא חיוב אינו הרשאה לצרוך את מלוא משאבי הענן של לקוח משלם, ומגבלת UI לבדה ניתנת לעקיפה.
+- **השלכה:** checkout נכשל סגור אם חסר trial של חודש באחת הווריאציות; מכסות נאכפות ב-RPC/DB; ביטול בתקופת הניסיון שומר גישה רק עד מועד הסיום; Test Mode לעולם אינו מוצג כאימות כרטיס אמיתי.
+
 # 2026-08-08 — media placement and Preview/Export parity
 
 - An image may be either a sequential full-frame video-track clip or a timed canvas overlay. The caller must choose; UI labels and Agent `placement` make the distinction explicit.

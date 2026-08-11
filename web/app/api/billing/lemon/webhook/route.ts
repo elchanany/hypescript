@@ -33,11 +33,19 @@ export async function POST(request: NextRequest) {
   const mappedStatus = mapSubscriptionStatus(String(attrs.status || "cancelled"));
   const endsAt = attrs.ends_at ? new Date(attrs.ends_at).getTime() : 0;
   const expired = event === "subscription_expired" || (endsAt > 0 && endsAt <= Date.now());
+  const trialEndsAt = attrs.trial_ends_at || (mappedStatus === "trialing" ? attrs.renews_at : null);
+  const trialEndMs = trialEndsAt ? new Date(trialEndsAt).getTime() : 0;
+  const hasTrialAccess = !expired && trialEndMs > Date.now();
   // A cancelled subscription keeps access until Lemon's ends_at date.
-  const status = mappedStatus === "cancelled" && !expired ? "active" : mappedStatus;
+  const status = hasTrialAccess ? "trialing" : mappedStatus === "cancelled" && !expired ? "active" : mappedStatus;
+  const { data: existing } = await supabase.from("cloud_subscriptions")
+    .select("trial_used_at")
+    .eq("user_id", userId)
+    .maybeSingle();
   const { error } = await supabase.from("cloud_subscriptions").upsert({
     user_id: userId,
-    plan_id: expired ? "free" : planId,
+    plan_id: expired ? "free" : hasTrialAccess ? "trial" : planId,
+    target_plan_id: planId,
     plan_version: 1,
     status: expired ? "active" : status,
     provider: "lemonsqueezy_test",
@@ -45,6 +53,8 @@ export async function POST(request: NextRequest) {
     provider_subscription_id: String(payload.data?.id || ""),
     current_period_start: attrs.created_at || null,
     current_period_end: attrs.renews_at || attrs.ends_at || null,
+    trial_ends_at: hasTrialAccess ? trialEndsAt : null,
+    trial_used_at: existing?.trial_used_at || (hasTrialAccess ? new Date().toISOString() : null),
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id" });
   if (error) return NextResponse.json({ error: "subscription_sync_failed" }, { status: 500 });

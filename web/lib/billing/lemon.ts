@@ -1,6 +1,6 @@
 import "server-only";
 
-import { BILLING_PLANS, BillingInterval, BillingPlanId, inferPlanId } from "./plans";
+import { BILLING_PLANS, BillingInterval, BillingPlanId, hasRequiredTrial, inferPlanId } from "./plans";
 
 const API = "https://api.lemonsqueezy.com/v1";
 
@@ -68,6 +68,7 @@ export async function resolveVariant(planId: BillingPlanId, interval: BillingInt
   if (matches.length !== 1) throw new Error(matches.length ? "billing_variant_ambiguous" : "billing_variant_missing");
   const variant = matches[0];
   if (variant.attributes.test_mode !== true) throw new Error("live_billing_blocked_while_in_review");
+  if (!hasRequiredTrial(variant.attributes)) throw new Error("billing_trial_missing");
   return variant;
 }
 
@@ -77,6 +78,7 @@ export async function createCheckout(input: {
   planId: BillingPlanId;
   interval: BillingInterval;
   returnUrl: string;
+  allowTrial: boolean;
 }) {
   const [store, variant] = await Promise.all([getStore(), resolveVariant(input.planId, input.interval)]);
   return lemonRequest<{ data: LemonResource }>("/checkouts", {
@@ -93,6 +95,10 @@ export async function createCheckout(input: {
           product_options: {
             enabled_variants: [Number(variant.id)],
             redirect_url: input.returnUrl,
+          },
+          checkout_options: {
+            skip_trial: !input.allowTrial,
+            subscription_preview: true,
           },
         },
         relationships: {

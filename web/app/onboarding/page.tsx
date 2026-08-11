@@ -41,7 +41,9 @@ export default function OnboardingPage() {
       localStorage.setItem("hs_display_name", displayName.trim());
       localStorage.setItem("hs_usage_type", usageType);
       localStorage.setItem("hs_default_project_mode", projectMode);
-      router.replace("/dashboard");
+      const next = sessionStorage.getItem("hs_post_onboarding") || "/dashboard";
+      sessionStorage.removeItem("hs_post_onboarding");
+      router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
     } catch (e: any) {
       setError(e?.message || "שגיאה בשמירה");
     } finally {

@@ -71,7 +71,7 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a real render; fix the production Supabase key before any cloud org sync.
+Finalize and deploy the 2026-08-11 SaaS trial/landing package. Code and live database changes are complete; configure one-month trial on all four Lemon Squeezy variants after signing into the dashboard, then push and verify the production catalog/checkout.
 
 ## Branch
 `main`
@@ -80,7 +80,7 @@ Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a
 f233969 "fix(export): show exported video in chat with custom player" — manual render auto-opens the chat dock and pins the exported video as a ChatMediaCard with a custom player (play/pause, seek, time, mute, fullscreen, error state, `controlsList=nodownload`, safe download name + "פתח בחלון חדש" anchor); page.tsx URL lifecycle split (no premature revocation); new `web/lib/render/videoCard.ts` helpers + 7 tests.
 
 ## Status
-Merged: client-brief tight cutting, overlay safety, logo/card parity, export-parity composited frame capture (opt-in `timeline=true`), local organization/brand kit, CTA asset pipeline (persisted narration + GPT images), and the export-in-chat custom player fix. Web 54 files / 388 tests, `tsc` clean; production build verified in a temp worktree (primary `.next` locked by a running dev process); native export `durationDelta=0`/`audioDrift=0`; graphify 1978 nodes / 4420 edges. Live-key browser E2E with real media still pending.
+Merged editor foundation remains unchanged. Current uncommitted package adds a marketing landing page, card-backed one-month trial flow, one-trial-per-account enforcement, reduced trial quotas (5 projects / 1GB / 20 render minutes) in Supabase, quota-aware UX and checkout/webhook synchronization. Web 56 files / 395 tests pass, `tsc` clean, isolated production build passes, and local browser QA confirms `/welcome`. Supabase migrations are live. Lemon remains Test Mode; variant trial configuration and signed webhook dashboard verification remain external acceptance steps.
 
 ## Exact continuation point
-Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a real render; fix the production Supabase key before any cloud org sync. Generated external binary media crosses only the explicit browser-only `EditorApi.addMediaAsset` boundary (never JSON CommandBus); provider billing approvals are per capability (LLM vs image vs voice), not shared implicitly. No new cloud service while the production Supabase auth key is broken; no Auth/Supabase changes without explicit permission.
+Sign into the Lemon Squeezy tab handed back by Codex, set a 1-month free trial on Creator Monthly, Creator Yearly, Pro Monthly and Pro Yearly, and verify the signed webhook points to `https://hypescript.vercel.app/api/billing/lemon/webhook`. Then deploy and require `/api/billing/catalog` to report all four entries ready before checkout is considered available.
