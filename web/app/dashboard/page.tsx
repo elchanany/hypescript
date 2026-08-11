@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   FolderOpen, Plus, LogIn, LogOut, Settings, Film,
   Pencil, Trash2, MoreHorizontal, Clapperboard, CreditCard,
-  Clock3,
+  Clock3, ShieldCheck,
 } from "lucide-react";
 import {
   deleteProject, listProjects, ProjectMeta,
@@ -206,6 +206,7 @@ export default function DashboardPage() {
   const [busy, setBusy] = useState(false);
   const [dlg, setDlg] = useState<DialogState>({ kind: "none" });
   const [userOpen, setUserOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const userMenuRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const welcomed = useRef(false);
 
@@ -220,6 +221,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => { if (!loading) refresh(); }, [loading, user?.id]);
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    fetch("/api/admin/access").then((r) => r.json()).then((body) => setIsAdmin(body.admin === true)).catch(() => setIsAdmin(false));
+  }, [user?.id]);
 
   useEffect(() => {
     if (authError) toast.error("שגיאת התחברות", authError);
@@ -317,6 +322,7 @@ export default function DashboardPage() {
         <nav className="dash-nav">
           <Link href="/" className="dash-link"><Film size={16} />עורך</Link>
           <Link href="/settings" className="dash-link"><Settings size={16} />הגדרות</Link>
+          {isAdmin && <Link href="/admin" className="dash-link admin"><ShieldCheck size={16} />ניהול</Link>}
           {configured && !loading && (
             user ? (
               <div className="dash-user-wrap" ref={userMenuRef}>
@@ -356,6 +362,7 @@ export default function DashboardPage() {
                     <Link href="/account" role="menuitem" onClick={() => setUserOpen(false)}>
                       <CreditCard size={14} />חשבון ומנוי
                     </Link>
+                    {isAdmin && <Link href="/admin" role="menuitem" onClick={() => setUserOpen(false)}><ShieldCheck size={14} />מרכז ניהול</Link>}
                     <button
                       type="button"
                       role="menuitem"

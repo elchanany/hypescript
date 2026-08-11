@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { createCheckout } from "@/lib/billing/lemon";
 import type { BillingInterval, BillingPlanId } from "@/lib/billing/plans";
+import { getSupabaseServiceClient } from "@/lib/auth/server";
+import { readPricing } from "@/lib/admin/server";
 
 export async function POST(request: NextRequest) {
   const auth = await requireCloudUser();
@@ -23,6 +25,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "subscription_already_exists" }, { status: 409 });
     }
     const origin = new URL(request.url).origin;
+    const service = getSupabaseServiceClient();
+    const pricing = service ? await readPricing(service) : null;
+    const customPriceMinor = pricing ? Number(pricing[planId]?.[interval === "year" ? "yearlyIls" : "monthlyIls"]) * 100 : undefined;
     const checkout = await createCheckout({
       userId: auth.user.id,
       email: auth.user.email,
@@ -30,6 +35,7 @@ export async function POST(request: NextRequest) {
       interval,
       returnUrl: `${origin}/account?checkout=success`,
       allowTrial: !subscription?.trial_used_at,
+      customPriceMinor,
     });
     const url = checkout.data.attributes.url;
     if (!url) throw new Error("checkout_url_missing");

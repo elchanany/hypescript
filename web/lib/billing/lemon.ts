@@ -79,6 +79,7 @@ export async function createCheckout(input: {
   interval: BillingInterval;
   returnUrl: string;
   allowTrial: boolean;
+  customPriceMinor?: number;
 }) {
   const [store, variant] = await Promise.all([getStore(), resolveVariant(input.planId, input.interval)]);
   return lemonRequest<{ data: LemonResource }>("/checkouts", {
@@ -88,6 +89,7 @@ export async function createCheckout(input: {
         type: "checkouts",
         attributes: {
           test_mode: true,
+          custom_price: input.customPriceMinor,
           checkout_data: {
             email: input.email || undefined,
             custom: { user_id: input.userId, plan_id: input.planId, interval: input.interval },

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
@@ -26,9 +26,14 @@ export default function TopBar({
   const { configured: authOn, user, signOut } = useAuth();
   const { resolved, setMode } = useTheme();
   const [userOpen, setUserOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const userRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const avatar = (user?.user_metadata?.avatar_url || user?.user_metadata?.picture) as string | undefined;
   const userName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "חשבון") as string;
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    fetch("/api/admin/access").then((r) => r.json()).then((body) => setIsAdmin(body.admin === true)).catch(() => setIsAdmin(false));
+  }, [user?.id]);
 
   const items: CtxItem[] = [
     ...projects.map((p) => ({ label: p.name, icon: p.id === projectId ? Check : FolderOpen, onClick: () => onSwitch(p.id) })),
@@ -85,6 +90,7 @@ export default function TopBar({
             <div className="tb-account-meta"><strong>{userName}</strong><span>{user.email}</span></div>
             <Link href="/account" role="menuitem"><CreditCard size={15} />חשבון ומנוי</Link>
             <Link href="/settings" role="menuitem"><Settings size={15} />הגדרות</Link>
+            {isAdmin && <Link href="/admin" role="menuitem"><ShieldCheck size={15} />מרכז ניהול</Link>}
             <button role="menuitem" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />התנתקות</button>
           </div>}
         </div>}

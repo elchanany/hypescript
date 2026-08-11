@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "web/components/TopBar.tsx": {
-    "mtime": 1786442331.309793,
-    "ast_hash": "d077b5d8242037ed1a71043474ee14cc",
+    "mtime": 1786467963.4213276,
+    "ast_hash": "bd2a4c2211aa0e15ae3f430ebc783ed1",
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "web/app/dashboard/page.tsx": {
-    "mtime": 1786443305.5267816,
-    "ast_hash": "98b338d91e673b155b5ab98c1195669a",
+    "mtime": 1786467953.0283134,
+    "ast_hash": "222a0f9b1fbb9a1b040a334d51ab2a78",
     "semantic_hash": ""
   },
   "web/app/login/page.tsx": {
@@ -1555,8 +1555,8 @@
     "semantic_hash": ""
   },
   "web/app/api/billing/checkout/route.ts": {
-    "mtime": 1786455749.3054783,
-    "ast_hash": "85f82f65ca7354fc56fb01c423c5fcd2",
+    "mtime": 1786467877.9873886,
+    "ast_hash": "ef82f972938df00c0fa2ab4174bb90e3",
     "semantic_hash": ""
   },
   "web/app/api/billing/lemon/webhook/route.ts": {
@@ -1585,8 +1585,8 @@
     "semantic_hash": ""
   },
   "web/lib/billing/lemon.ts": {
-    "mtime": 1786455749.3034775,
-    "ast_hash": "c019a5b8d6b61498af61cc79ce710e95",
+    "mtime": 1786467863.9722314,
+    "ast_hash": "4bc1e09f019c57bab7a6184b2e5256f8",
     "semantic_hash": ""
   },
   "web/lib/billing/plans.test.ts": {
@@ -1675,8 +1675,8 @@
     "semantic_hash": ""
   },
   "web/app/admin/page.tsx": {
-    "mtime": 1786461847.3093688,
-    "ast_hash": "05a1304fe9c1d4ad6d5aaeec28fbdbe0",
+    "mtime": 1786467997.1363978,
+    "ast_hash": "ce11af8bc5890c88c7e1d60bf8c858fb",
     "semantic_hash": ""
   },
   "web/app/api/account/route.ts": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "web/app/api/admin/overview/route.ts": {
-    "mtime": 1786461847.2823706,
-    "ast_hash": "f15c5001fab6b72344a2631b3b5974b8",
+    "mtime": 1786467922.1652648,
+    "ast_hash": "b134ab7e6b420444d17c1a565d772112",
     "semantic_hash": ""
   },
   "web/app/api/analytics/route.ts": {
@@ -1712,6 +1712,21 @@
   "web/public/brand/campaign-editorial.webp": {
     "mtime": 1786467492.5257087,
     "ast_hash": "8148f8e4d2ea4c877160c709c2476353",
+    "semantic_hash": ""
+  },
+  "web/app/api/admin/access/route.ts": {
+    "mtime": 1786467863.9672313,
+    "ast_hash": "f59d67d2be8620b6537a0f8de072e8aa",
+    "semantic_hash": ""
+  },
+  "web/app/api/admin/pricing/route.ts": {
+    "mtime": 1786467884.2214108,
+    "ast_hash": "5e32695893df1c7164721a79dee3de48",
+    "semantic_hash": ""
+  },
+  "web/lib/admin/server.ts": {
+    "mtime": 1786467877.9823892,
+    "ast_hash": "a9c8c457705636a45efc7441d57d1f89",
     "semantic_hash": ""
   }
 }
