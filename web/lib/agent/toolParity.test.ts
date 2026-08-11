@@ -266,7 +266,9 @@ describe("Agent ↔ UI CommandBus parity", () => {
     const result = await TOOL_BY_NAME.inspect_timeline_evidence.run({}, h.ctx, () => undefined);
     expect(result).toContain("דיבור מתמלול: שלום");
     expect(result).toContain("אירוע שסומן במפורש בידי ספק התמלול: [cough]");
-    expect(result).toContain("לא הוסקו נשימה, שיעול או צחוק");
+    // בלי classify_sounds אין סיווג אקוסטי, והכלי אומר זאת במפורש
+    expect(result).toContain("היעדר תמלול אינו מוכיח שקט");
+    expect(result).not.toContain("מאפיינים תואמים");
   });
 
   it("capture_frame with explicit timeline=false stays raw even when an edited timeline exists", async () => {
@@ -320,21 +322,49 @@ describe("capture_frame mode decision (captureFrameMode)", () => {
 });
 
 describe("client brief operating rules", () => {
-  it("requires tight script-first editing, boundary verification, deferred assets, captions, and fade", () => {
-    expect(SYSTEM_PROMPT).toContain('remove_silence(within_existing=true,pacing="tight")');
-    expect(SYSTEM_PROMPT).toContain("לעולם לא 29.7/29.8 מחדש");
-    expect(SYSTEM_PROMPT).toContain("אל תשאל מוקדם");
+  it("teaches the agent to classify a mixed client brief before cutting", () => {
+    // הכשל שדווח בשדה: כותרות ופרסומת נכנסו ל-keep_by_script, ותוכן אמיתי הושמט
+    expect(SYSTEM_PROMPT).toContain("קריאת הבריף");
+    expect(SYSTEM_PROMPT).toContain("טקסט מדובר לשמירה");
+    expect(SYSTEM_PROMPT).toContain("find_in_transcript");
+    expect(SYSTEM_PROMPT).toContain("אסור** שייכנס ל-keep_by_script");
+    expect(SYSTEM_PROMPT).toContain("אילוץ קשיח");
+  });
+
+  it("mandates script-first cutting with pacing, and an acceptance gate before render", () => {
+    expect(SYSTEM_PROMPT).toContain("keep_by_script");
+    expect(SYSTEM_PROMPT).toContain("pacing");
+    expect(SYSTEM_PROMPT).toContain("audit_edit");
+    expect(SYSTEM_PROMPT).toContain("חובה לפני render");
+    expect(SYSTEM_PROMPT).toContain("אל תדווח הצלחה לפני audit_edit");
+  });
+
+  it("forbids silently dropping a requested word and forbids repeated caption words", () => {
+    expect(SYSTEM_PROMPT).toContain("לא נעלמת בשקט");
+    expect(SYSTEM_PROMPT).toContain("כתוביות בלי חזרות");
+    expect(SYSTEM_PROMPT).toContain("progressive");
+  });
+
+  it("keeps source continuity, caption styling, fades, deferred assets and overlay identity", () => {
+    expect(SYSTEM_PROMPT).toContain("אין חזרה על זמן-מקור");
     expect(SYSTEM_PROMPT).toContain("set_caption_style");
     expect(SYSTEM_PROMPT).toContain("set_clip_audio_fades");
-    expect(SYSTEM_PROMPT).toContain("overlay_id+expected_source");
-    expect(SYSTEM_PROMPT).toContain("אסור לשנות או למחוק אותה");
+    expect(SYSTEM_PROMPT).toContain("overlay_id + expected_source");
+    expect(SYSTEM_PROMPT).toContain("אל תיגע בעבודה שכבר סודרה");
+    expect(SYSTEM_PROMPT).toContain("נכס חסר אינו חוסם");
+  });
+
+  it("separates direct provider labels from probabilistic acoustic classification", () => {
+    expect(SYSTEM_PROMPT).toContain("ראיה ישירה");
+    expect(SYSTEM_PROMPT).toContain("מאפיינים תואמים ל");
+    expect(SYSTEM_PROMPT).toContain("היעדר מילים בתמלול אינו ראיה לשקט");
   });
 
   it("instructs the agent to consult the local brand kit before image/card/CTA/logo work", () => {
     expect(SYSTEM_PROMPT).toContain("get_brand_kit");
     expect(SYSTEM_PROMPT).toContain("use_brand_asset");
-    expect(SYSTEM_PROMPT).toContain("אין ערכה פעילה");
-    expect(SYSTEM_PROMPT).toContain("במקום להמציא לוגו");
+    expect(SYSTEM_PROMPT).toContain("אל תמציא נכסים");
+    expect(SYSTEM_PROMPT).toContain("לעולם לא לצייר לוגו");
   });
 });
 
