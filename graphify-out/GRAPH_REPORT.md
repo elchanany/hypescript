@@ -1,7 +1,7 @@
 # Graph Report - hipescript  (2026-08-11)
 
 ## Corpus Check
-- 295 files · ~476,027 words
+- 295 files · ~476,034 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `14169409`
+- Built from commit: `dfe8f5e8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,7 +22,7 @@
 - runtime.ts
 - dependencies
 - HypescriptGUI
-- subtitles.ts
+- Clip
 - transcription.py
 - compilerOptions
 - editing.py
@@ -77,7 +77,7 @@
 - handoff.md
 - dashboard/page.tsx
 - Word
-- Clip
+- useAuth
 - מדריך התחברות (Supabase) — צעד־אחר־צעד
 - tests/__init__.py
 - AGENTS.md
@@ -110,7 +110,7 @@
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - .codex/skills/graphify/references/extraction-spec.md
-- login/page.tsx
+- BrandLogo
 - images.ts
 - projects/types.ts
 - model.ts
@@ -118,7 +118,7 @@
 - Chat.tsx
 - timelineFrame.ts
 - Hypescript — Brand Guidelines
-- BrandLogo
+- subtitles.ts
 - ui.tsx
 - ChatMediaCard.tsx
 - models.ts
@@ -127,7 +127,7 @@
 - graph.integration.test.ts
 - ChatMessage
 - BrandLogo.tsx
-- audio.ts
+- כל הפרמטרים וכוונון
 - prepare-ffmpeg.mjs
 - public.cloud_runtime_settings
 - ChatMarkdown.tsx
@@ -135,14 +135,14 @@
 - 20260810050000_cloud_saas.sql
 - cloud-render-worker/package.json
 - server.mjs
-- כל הפרמטרים וכוונון
+- account/page.tsx
 - ExportDialog.tsx
 - חיבור הענן — בדיוק מה להשיג ואיפה לשים
-- account/page.tsx
-- canvasCoords.ts
 - webhook/route.ts
-- BrowserRenderBackend
+- canvasCoords.ts
 - welcome/page.tsx
+- BrowserRenderBackend
+- audio.ts
 - chunking.ts
 - lemon-discover.mjs
 - BRAND-KIT.md
@@ -204,9 +204,9 @@ Nodes (47): @aws-sdk/s3-request-presigner, @ffmpeg/core, @ffmpeg/ffmpeg, @ffmpeg
 Cohesion: 0.11
 Nodes (7): Frame, build_command(), HypescriptGUI, main(), ממשק משתמש גרפי קליל ל-hypescript (Tkinter, בלי תלויות נוספות). ה-GUI הוא…, בונה את רשימת הארגומנטים ל-``python -m hypescript`` מתוך ערכי הטופס., Tk
 
-### Community 7 - "subtitles.ts"
-Cohesion: 0.23
-Nodes (14): buildCues(), CaptionMode, Cue, endsPhrase(), endsSentence(), formatCueText(), mapToEdited(), phraseBlocks() (+6 more)
+### Community 7 - "Clip"
+Cohesion: 0.09
+Nodes (29): ChatProps, Props, CORNERS, DragState, Handle, Props, Props, Props (+21 more)
 
 ### Community 8 - "transcription.py"
 Cohesion: 0.14
@@ -376,9 +376,9 @@ Nodes (21): DashboardPage(), DialogState, fmtDate(), fmtRelativeHe(), ProjectCar
 Cohesion: 0.13
 Nodes (20): build_keep_intervals(), בונה קטעים לשמירה מתוך המילים. שני מקורות לחיתוך, מטופלים באופן אחיד: *…, is_speech_word(), מבני נתונים משותפים לכל שלבי ה-pipeline. חשוב: שני מנועי התמלול (מקומי וענן)…, מילה בודדת עם חותמות זמן (בשניות, על ציר הזמן המקורי של הווידאו)., מילת דיבור בלבד — ללא רווחים/אירועי שמע., כל המילים מכל הקטעים, ממוינות לפי זמן התחלה., speech_words() (+12 more)
 
-### Community 63 - "Clip"
-Cohesion: 0.09
-Nodes (29): ChatProps, Props, CORNERS, DragState, Handle, Props, Props, Props (+21 more)
+### Community 63 - "useAuth"
+Cohesion: 0.19
+Nodes (12): ContinueInner(), LoginInner(), Tab, AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession(), getSupabaseBrowser() (+4 more)
 
 ### Community 64 - "מדריך התחברות (Supabase) — צעד־אחר־צעד"
 Cohesion: 0.12
@@ -488,9 +488,9 @@ Nodes (3): AGENT_UI_PARITY, מקרא, פערי Parity מיידיים (לחביל
 Cohesion: 0.50
 Nodes (4): local/, STACK.md — טכנולוגיות, web/ (המסלול המרכזי), עתידי / אפשרי (טרם הוחלט)
 
-### Community 96 - "login/page.tsx"
-Cohesion: 0.19
-Nodes (12): ContinueInner(), LoginInner(), Tab, AuthDiagnostics, authIssueMessage(), postLoginPath(), waitForSession(), getSupabaseBrowser() (+4 more)
+### Community 96 - "BrandLogo"
+Cohesion: 0.18
+Nodes (10): OnboardingPage(), Step, BrandLogo(), TopBar(), Ctx, resolve(), ThemeCtx, ThemeMode (+2 more)
 
 ### Community 97 - "images.ts"
 Cohesion: 0.14
@@ -520,9 +520,9 @@ Nodes (18): overlayVisibleAt(), audioFadeFactor, edgeFadeFactor(), previewAudioG
 Cohesion: 0.13
 Nodes (14): Accessibility, Clear space / Minimum size, Email, Hypescript — Brand Guidelines, Metadata / PWA / Social, Palette (נדגם מהלוגו), Theme, כלל מקור (+6 more)
 
-### Community 104 - "BrandLogo"
-Cohesion: 0.18
-Nodes (10): OnboardingPage(), Step, BrandLogo(), TopBar(), Ctx, resolve(), ThemeCtx, ThemeMode (+2 more)
+### Community 104 - "subtitles.ts"
+Cohesion: 0.23
+Nodes (14): buildCues(), CaptionMode, Cue, endsPhrase(), endsSentence(), formatCueText(), mapToEdited(), phraseBlocks() (+6 more)
 
 ### Community 105 - "ui.tsx"
 Cohesion: 0.18
@@ -556,9 +556,9 @@ Nodes (5): Conversation, CANCELLED_RESULT, isToolHistoryValid(), repairToolMessa
 Cohesion: 0.17
 Nodes (16): metadata, viewport, Props, ChunkReload(), isChunkError(), BRAND_NAME, BRAND_NAME_HE, BRAND_PATHS (+8 more)
 
-### Community 114 - "audio.ts"
-Cohesion: 0.50
-Nodes (4): analyzeAudio(), cache, findSilences(), fp()
+### Community 114 - "כל הפרמטרים וכוונון"
+Cohesion: 0.29
+Nodes (7): אינטרו/אאוטרו וכללי, כל הפרמטרים וכוונון, כתוביות, מנוע תמלול, ענן, עריכה, קלט/פלט
 
 ### Community 115 - "prepare-ffmpeg.mjs"
 Cohesion: 0.50
@@ -584,9 +584,9 @@ Nodes (11): dependencies, @aws-sdk/client-s3, express, @aws-sdk/client-s3, name,
 Cohesion: 0.21
 Nodes (9): active, app, callback(), hasAudio(), missing, render(), required, run() (+1 more)
 
-### Community 123 - "כל הפרמטרים וכוונון"
-Cohesion: 0.29
-Nodes (7): אינטרו/אאוטרו וכללי, כל הפרמטרים וכוונון, כתוביות, מנוע תמלול, ענן, עריכה, קלט/פלט
+### Community 123 - "account/page.tsx"
+Cohesion: 0.33
+Nodes (4): AccountPage(), BillingStatus, gb(), toast
 
 ### Community 124 - "ExportDialog.tsx"
 Cohesion: 0.47
@@ -596,21 +596,21 @@ Nodes (7): ExportDialog(), ExportResult, Props, estimateRemainingSeconds(), expo
 Cohesion: 0.11
 Nodes (17): 1. Supabase — שלושה ערכים, 2. Cloudflare R2 — ארבעה ערכים, 3. Google Cloud — בחירה אחת, 4. Vercel — איפה נשמרים 11 הערכים, CORS שחייבים להוסיף, בדיקה סופית, הדרך הקצרה ביותר, חיבור הענן — בדיוק מה להשיג ואיפה לשים (+9 more)
 
-### Community 126 - "account/page.tsx"
-Cohesion: 0.33
-Nodes (4): AccountPage(), BillingStatus, gb(), toast
+### Community 126 - "webhook/route.ts"
+Cohesion: 0.53
+Nodes (5): POST(), runtime, validSignature(), mapSubscriptionStatus(), subscriptionPlan()
 
 ### Community 127 - "canvasCoords.ts"
 Cohesion: 0.29
 Nodes (11): defaultCanvasFor(), displayRect(), getViewportScale(), hitTestRect(), Point, projectToViewport(), Rect, rotatePoint() (+3 more)
 
-### Community 128 - "webhook/route.ts"
-Cohesion: 0.53
-Nodes (5): POST(), runtime, validSignature(), mapSubscriptionStatus(), subscriptionPlan()
-
-### Community 130 - "welcome/page.tsx"
+### Community 128 - "welcome/page.tsx"
 Cohesion: 0.40
 Nodes (3): features, metadata, plans
+
+### Community 130 - "audio.ts"
+Cohesion: 0.50
+Nodes (4): analyzeAudio(), cache, findSilences(), fp()
 
 ### Community 131 - "chunking.ts"
 Cohesion: 0.44
@@ -626,7 +626,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Clip` connect `Clip` to `Timeline.tsx`, `model.ts`, `commands.ts`, `Chat.tsx`, `project.ts`, `timelineFrame.ts`, `graph.integration.test.ts`, `app/page.tsx`, `tools.ts`, `clipFilter.ts`, `commands.builtin.ts`, `ffmpeg.ts`, `subtitlesEdl.ts`, `semanticTimeline.ts`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `BrandLogo()` connect `BrandLogo` to `login/page.tsx`, `kit.ts`, `welcome/page.tsx`, `projects/types.ts`, `settings/page.tsx`, `BrandLogo.tsx`, `dashboard/page.tsx`, `account/page.tsx`?**
+- **Why does `BrandLogo()` connect `BrandLogo` to `welcome/page.tsx`, `kit.ts`, `projects/types.ts`, `settings/page.tsx`, `BrandLogo.tsx`, `account/page.tsx`, `dashboard/page.tsx`, `useAuth`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `requireCloudUser()` connect `requireCloudUser` to `lemon.ts`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._

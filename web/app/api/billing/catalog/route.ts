@@ -14,7 +14,9 @@ export async function GET() {
       }
     })));
     return NextResponse.json({
-      mode: store.attributes.test_mode === true ? "test" : "live",
+      mode: catalog.products.length === 0
+        ? "test-enforced"
+        : catalog.products.every((product) => product.attributes.test_mode === true) ? "test" : "live-blocked",
       store: { id: store.id, name: store.attributes.name, slug: store.attributes.slug },
       productCount: catalog.products.length,
       plans: BILLING_PLANS,

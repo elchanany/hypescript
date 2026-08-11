@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   ".codex/hooks.json": {
-    "mtime": 1786441864.3315053,
-    "ast_hash": "6a28e2cd950fe423048e6c751dce8b9b",
+    "mtime": 1786443495.221328,
+    "ast_hash": "579ed6ce0b7433ef3170211be44afefd",
     "semantic_hash": ""
   },
   ".cursor/hooks.json": {
@@ -1550,8 +1550,8 @@
     "semantic_hash": ""
   },
   "web/app/api/billing/catalog/route.ts": {
-    "mtime": 1786442249.1906211,
-    "ast_hash": "3e3b7d5ccc7cc21ca2b50313a0e73aa9",
+    "mtime": 1786444010.1590078,
+    "ast_hash": "4081131d7975e19c66524388edc4769c",
     "semantic_hash": ""
   },
   "web/app/api/billing/checkout/route.ts": {
