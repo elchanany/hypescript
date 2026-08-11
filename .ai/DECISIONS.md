@@ -139,3 +139,8 @@
 - `timeline_start` insertion splits a source clip when necessary; it never creates overlapping/repeated source-time boundaries on one sequential track.
 - Opening source attribution is a text overlay preset, not a separate mock component: background, radius, transform and timing are materialized to PNG for FFmpeg export.
 - Multiple simultaneous captions remain legal but must be surfaced through stacking, warning styling and an on-canvas overlap badge.
+
+## D-027 — persistent workspace and creative parity
+- Split handles are visible and support pointer, keyboard and double-click reset; their sizes persist locally. The timeline defaults to about 38% height and the canvas always uses contain.
+- An effect or transition appears in the catalog only when the same clip state works in Preview and Export. CapCut is a product reference, not an asset source.
+- The initial catalog uses existing clip looks and fades. Remotion, Lottie, GIPHY or GLSL expansion requires licensing review and Preview/Export parity tests.

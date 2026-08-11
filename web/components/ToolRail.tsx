@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Captions, Type, Settings } from "lucide-react";
+import { Film, Captions, Type, Settings, Blend, WandSparkles } from "lucide-react";
 
-export type LeftTab = "media" | "text" | "captions";
+export type LeftTab = "media" | "text" | "captions" | "transitions" | "effects";
 
 const TABS: { id: LeftTab; icon: typeof Film; label: string }[] = [
   { id: "media", icon: Film, label: "מדיה" },
   { id: "text", icon: Type, label: "טקסט" },
   { id: "captions", icon: Captions, label: "כתוביות" },
+  { id: "transitions", icon: Blend, label: "מעברים" },
+  { id: "effects", icon: WandSparkles, label: "אפקטים" },
 ];
 
 export default function ToolRail({ active, onSelect }: { active: LeftTab; onSelect: (t: LeftTab) => void }) {

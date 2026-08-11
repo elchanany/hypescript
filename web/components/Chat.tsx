@@ -22,15 +22,15 @@ import { ChatMessage } from "@/lib/agent/types";
 import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
 import { approvedPlanPrompt, parsePlanSteps } from "@/lib/agent/planApproval";
 import {
-  activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore,
-  switchConversation, upsertActive,
+  activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore, removeConversation,
+  renameConversation, switchConversation, upsertActive,
 } from "@/lib/agent/chatStore";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown,
 } from "lucide-react";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -147,6 +147,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [mode, setMode] = useState<AgentMode>("act");
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
   const [composeH, setComposeH] = useState(COMPOSE_H_DEFAULT);
+  const [threadsOpen, setThreadsOpen] = useState(false);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [threadTitle, setThreadTitle] = useState("");
   const composeHRef = useRef(COMPOSE_H_DEFAULT);
   composeHRef.current = composeH;
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -240,6 +243,27 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       history: runnerRef.current?.history || savedHistory.current,
     });
     loadConversation(switchConversation(cur, id));
+    setThreadsOpen(false);
+  };
+
+  const persistConversationStore = (next: ChatStoreV2) => {
+    storeRef.current = next;
+    setStore(next);
+    if (projectId) void kvSet(pk(projectId, "chat"), next);
+  };
+  const saveThreadTitle = (id: string) => {
+    persistConversationStore(renameConversation(storeRef.current, id, threadTitle));
+    setEditingThreadId(null); setThreadTitle("");
+  };
+  const deleteThread = (id: string) => {
+    if (running) { runnerRef.current?.stop(); setRunning(false); }
+    const current = upsertActive(storeRef.current, {
+      items: items.filter((item) => item.kind !== "output"),
+      history: runnerRef.current?.history || savedHistory.current,
+    });
+    const next = removeConversation(current, id);
+    loadConversation(next);
+    if (projectId) void kvSet(pk(projectId, "chat"), next);
   };
 
   useEffect(() => {
@@ -529,6 +553,13 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       <div className="panel-header">
         <span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span>
         <div className="actions" style={{ gap: 4 }}>
+          <label className="chat-model-picker" data-tip="מודל שיחה" data-tippos="down"><span>מודל</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מודל שיחה">
+            {LLM_PROVIDERS.map((p) => {
+              const status = getProviderStatus(p.id, configured);
+              const disabled = configLoaded && !isProviderUsable(status);
+              return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}</option>;
+            })}
+          </select></label>
           {usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
@@ -541,18 +572,22 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       </div>
 
       <div className="chat-threads" aria-label="שיחות בפרויקט">
+        <div className="chat-thread-switcher">
+          <button className="chat-thread-current" onClick={() => setThreadsOpen((open) => !open)} aria-expanded={threadsOpen} aria-haspopup="listbox">
+            <span><small>שיחה נוכחית</small><strong>{activeConversation(store).title || "שיחה חדשה"}</strong></span><ChevronDown size={15} />
+          </button>
+          {threadsOpen && <div className="chat-thread-menu" role="listbox" aria-label="שיחות קודמות">
+            <div className="chat-thread-menu-head"><strong>שיחות בפרויקט</strong><button onClick={() => { startNewChat(); setThreadsOpen(false); }}><MessageSquarePlus size={14} />חדשה</button></div>
+            <div className="chat-thread-list">{[...store.conversations].sort((a, b) => b.updatedAt - a.updatedAt).map((conversation) => <div key={conversation.id} className={`chat-thread-row ${conversation.id === store.activeId ? "active" : ""}`}>
+              {editingThreadId === conversation.id
+                ? <input autoFocus value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveThreadTitle(conversation.id); if (e.key === "Escape") setEditingThreadId(null); }} onBlur={() => saveThreadTitle(conversation.id)} aria-label="שם השיחה" />
+                : <button className="chat-thread-select" onClick={() => selectChat(conversation.id)} role="option" aria-selected={conversation.id === store.activeId}><span>{conversation.title || "שיחה"}</span><time>{new Date(conversation.updatedAt).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" })}</time></button>}
+              <button className="chat-thread-action" onClick={() => { setEditingThreadId(conversation.id); setThreadTitle(conversation.title); }} data-tip="שינוי שם" aria-label="שנה שם"><Pencil size={13} /></button>
+              <button className="chat-thread-action danger" onClick={() => deleteThread(conversation.id)} data-tip="מחיקת שיחה" aria-label="מחק שיחה"><Trash2 size={13} /></button>
+            </div>)}</div>
+          </div>}
+        </div>
         <button className="chat-new" onClick={startNewChat}><MessageSquarePlus size={15} />שיחה חדשה</button>
-        <select
-          value={store.activeId}
-          onChange={(e) => selectChat(e.target.value)}
-          data-tip="בחר שיחה"
-          data-tippos="down"
-          aria-label="שיחה פעילה"
-        >
-          {store.conversations.map((c) => (
-            <option key={c.id} value={c.id}>{c.title || "שיחה"}</option>
-          ))}
-        </select>
       </div>
 
       <div className="agent-modes" role="tablist" aria-label="מצב סוכן">
@@ -742,13 +777,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
             <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Command size={16} strokeWidth={1.75} /></button>
             <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
-            <select className="chat-provider-compact" value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מודל שיחה">
-              {LLM_PROVIDERS.map((p) => {
-                const status = getProviderStatus(p.id, configured);
-                const disabled = configLoaded && !isProviderUsable(status);
-                return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}</option>;
-              })}
-            </select>
           </div>
           <textarea
             ref={taRef}

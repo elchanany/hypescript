@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Type } from "lucide-react";
+import { Type } from "lucide-react";
 import { Button, Section } from "@/components/ui";
 
 export default function TextPanel({ onAddText, onAddPopup }: { onAddText: () => void; onAddPopup: (preset: "source_popup" | "speaker_card" | "dedication_card") => void }) {
@@ -16,9 +16,11 @@ export default function TextPanel({ onAddText, onAddPopup }: { onAddText: () => 
               הוסף שכבת טקסט מעל הווידאו. אפשר לגרור, לשנות גודל ולסובב בתצוגה המקדימה, ולערוך מאפיינים בפאנל הימני.
             </p>
             <Button variant="secondary" icon={Type} onClick={onAddText}>הוסף טקסט</Button>
-            <Button variant="secondary" icon={Sparkles} onClick={() => onAddPopup("source_popup")} tip="פתיח מעוצב, למשל: מתוך שיעור של…">פופ-אפ מקור</Button>
-            <Button variant="secondary" icon={Sparkles} onClick={() => onAddPopup("speaker_card")} tip="כרטיס דובר בסגנון lower-third">כרטיס שם הדובר</Button>
-            <Button variant="secondary" icon={Sparkles} onClick={() => onAddPopup("dedication_card")} tip="כרטיס הקדשה מעוצב ורב-שורות">כרטיס הקדשה</Button>
+            <div className="text-template-grid" aria-label="תבניות טקסט">
+              <button className="text-template-card title" onClick={() => onAddPopup("source_popup")}><span>כותרת פתיחה</span><i>כותרת מרכזית</i></button>
+              <button className="text-template-card lower" onClick={() => onAddPopup("speaker_card")}><span>כותרת תחתונה</span><i>שם · תיאור קצר</i></button>
+              <button className="text-template-card info" onClick={() => onAddPopup("dedication_card")}><span>כרטיס מידע</span><i>כותרת ופרטים</i></button>
+            </div>
           </div>
         </Section>
       </div>

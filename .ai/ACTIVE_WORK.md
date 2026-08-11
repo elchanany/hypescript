@@ -71,7 +71,7 @@
 - Next: run final full suite after documentation, `graphify update .`, commit/push product package, then graph-only sync commit if needed.
 
 ## Current task
-Finalize and deploy the 2026-08-11 SaaS trial/landing package. Code and live database changes are complete; configure one-month trial on all four Lemon Squeezy variants after signing into the dashboard, then push and verify the production catalog/checkout.
+Finalize and deploy the 2026-08-11 editor workspace/creative-library package: visible persistent split handles, a canvas that always fits, more timeline space, clearer conversation/model management, generic text templates and the first Preview/Export-equivalent effects and fades.
 
 ## Branch
 `main`
@@ -83,4 +83,4 @@ f233969 "fix(export): show exported video in chat with custom player" — manual
 Merged editor foundation remains unchanged. Current uncommitted package adds a marketing landing page, card-backed one-month trial flow, one-trial-per-account enforcement, reduced trial quotas (5 projects / 1GB / 20 render minutes) in Supabase, quota-aware UX and checkout/webhook synchronization. Web 56 files / 395 tests pass, `tsc` clean, isolated production build passes, and local browser QA confirms `/welcome`. Supabase migrations are live. Lemon remains Test Mode; variant trial configuration and signed webhook dashboard verification remain external acceptance steps.
 
 ## Exact continuation point
-Sign into the Lemon Squeezy tab handed back by Codex, set a 1-month free trial on Creator Monthly, Creator Yearly, Pro Monthly and Pro Yearly, and verify the signed webhook points to `https://hypescript.vercel.app/api/billing/lemon/webhook`. Then deploy and require `/api/billing/catalog` to report all four entries ready before checkout is considered available.
+Run full Vitest/build/browser verification, update Graphify, commit and deploy. After this package, grow the creative catalog through a shared transition/effect schema only when Preview and Export implementations are both available; do not copy CapCut-owned assets.

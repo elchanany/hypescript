@@ -110,3 +110,27 @@ export function switchConversation(store: ChatStoreV2, id: string): ChatStoreV2 
   if (!store.conversations.some((c) => c.id === id)) return store;
   return { ...store, activeId: id };
 }
+
+export function renameConversation(store: ChatStoreV2, id: string, title: string): ChatStoreV2 {
+  const clean = title.trim().replace(/\s+/g, " ").slice(0, 80);
+  if (!clean) return store;
+  return {
+    ...store,
+    conversations: store.conversations.map((conversation) => conversation.id === id
+      ? { ...conversation, title: clean, updatedAt: Date.now() }
+      : conversation),
+  };
+}
+
+export function removeConversation(store: ChatStoreV2, id: string): ChatStoreV2 {
+  const remaining = store.conversations.filter((conversation) => conversation.id !== id);
+  if (!remaining.length) {
+    const replacement = emptyConversation();
+    return { version: 2, conversations: [replacement], activeId: replacement.id };
+  }
+  return {
+    ...store,
+    conversations: remaining,
+    activeId: store.activeId === id ? remaining[0].id : store.activeId,
+  };
+}

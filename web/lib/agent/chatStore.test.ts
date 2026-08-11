@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { addConversation, migrateChatStore, titleFromItems, upsertActive } from "./chatStore";
+import { activeConversation, addConversation, migrateChatStore, removeConversation, renameConversation, titleFromItems, upsertActive } from "./chatStore";
 
 describe("migrateChatStore", () => {
   it("migrates v1 {items,history}", () => {
@@ -39,5 +39,20 @@ describe("titleFromItems", () => {
     const t = titleFromItems([{ kind: "user", text: "א".repeat(40), time: "0" }]);
     expect(t.endsWith("…")).toBe(true);
     expect(t.length).toBeLessThanOrEqual(28);
+  });
+});
+
+describe("conversation management", () => {
+  it("renames and removes conversations without leaving an invalid active id", () => {
+    const initial = addConversation(migrateChatStore(null));
+    const activeId = initial.activeId;
+    const renamed = renameConversation(initial, activeId, "  עריכת   פתיח  ");
+    expect(activeConversation(renamed).title).toBe("עריכת פתיח");
+    const removed = removeConversation(renamed, activeId);
+    expect(removed.conversations).toHaveLength(1);
+    expect(removed.activeId).toBe(removed.conversations[0].id);
+    const lastRemoved = removeConversation(removed, removed.activeId);
+    expect(lastRemoved.conversations).toHaveLength(1);
+    expect(lastRemoved.activeId).toBe(lastRemoved.conversations[0].id);
   });
 });

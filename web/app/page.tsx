@@ -30,6 +30,7 @@ import ToolRail, { LeftTab } from "@/components/ToolRail";
 import MediaPanel from "@/components/MediaPanel";
 import CaptionsPanel from "@/components/CaptionsPanel";
 import TextPanel from "@/components/TextPanel";
+import CreativePanel from "@/components/CreativePanel";
 import InspectorPanel from "@/components/InspectorPanel";
 import TimelineToolbar from "@/components/TimelineToolbar";
 import Chat from "@/components/Chat";
@@ -119,8 +120,8 @@ export default function EditorPage() {
   const chatWidthRef = useRef(460); chatWidthRef.current = chatWidth;
   const [dockSide, setDockSide] = useState<"left" | "right">("right");
   const dockSideRef = useRef<"left" | "right">("right"); dockSideRef.current = dockSide;
-  const [tlHeight, setTlHeight] = useState(300);
-  const tlHeightRef = useRef(300); tlHeightRef.current = tlHeight;
+  const [tlHeight, setTlHeight] = useState(380);
+  const tlHeightRef = useRef(380); tlHeightRef.current = tlHeight;
   const [leftW, setLeftW] = useState(264);
   const leftWRef = useRef(264); leftWRef.current = leftW;
   const [inspW, setInspW] = useState(300);
@@ -272,7 +273,10 @@ export default function EditorPage() {
     const focus = localStorage.getItem("hs_chatFocus"); if (focus === "1") { setFocusMode(true); setChatOpen(true); }
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
-    const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10); if (h >= 200) setTlHeight(Math.min(560, h));
+    const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10);
+    const maxTimeline = Math.max(260, window.innerHeight - 300);
+    if (h >= 220) setTlHeight(Math.min(maxTimeline, h));
+    else setTlHeight(Math.max(280, Math.min(maxTimeline, Math.round(window.innerHeight * 0.38))));
     const lw = parseInt(localStorage.getItem("hs_leftw") || "0", 10); if (lw >= 220) setLeftW(Math.min(440, lw));
     const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 260) setInspW(Math.min(460, iw));
   }, []);
@@ -289,11 +293,18 @@ export default function EditorPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
   const resetChatWidth = () => { setChatWidth(460); localStorage.setItem("hs_chatw", "460"); };
+  const resizeChatByKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const direction = dockSideRef.current === "right" ? (e.key === "ArrowLeft" ? 1 : -1) : (e.key === "ArrowRight" ? 1 : -1);
+    const next = Math.max(360, Math.min(720, chatWidthRef.current + direction * 24));
+    setChatWidth(next); localStorage.setItem("hs_chatw", String(next));
+  };
   const toggleDockSide = () => setDockSide((s) => { const n = s === "right" ? "left" : "right"; localStorage.setItem("hs_dockside", n); return n; });
   const startResizeTL = (e: React.MouseEvent) => {
     e.preventDefault();
     const startY = e.clientY; const startH = tlHeightRef.current;
-    const onMove = (ev: MouseEvent) => setTlHeight(Math.max(200, Math.min(560, startH + (startY - ev.clientY))));
+    const onMove = (ev: MouseEvent) => setTlHeight(Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), startH + (startY - ev.clientY))));
     const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); localStorage.setItem("hs_tlh", String(tlHeightRef.current)); document.body.style.userSelect = ""; };
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
@@ -306,7 +317,23 @@ export default function EditorPage() {
     document.body.style.userSelect = "none";
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
+  const resetTimeline = () => {
+    const next = Math.max(280, Math.min(Math.max(260, window.innerHeight - 300), Math.round(window.innerHeight * 0.38)));
+    setTlHeight(next); localStorage.setItem("hs_tlh", String(next));
+  };
+  const resizeTimelineByKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    const next = Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), tlHeightRef.current + (e.key === "ArrowUp" ? 24 : -24)));
+    setTlHeight(next); localStorage.setItem("hs_tlh", String(next));
+  };
   const resetLeft = () => { setLeftW(264); localStorage.setItem("hs_leftw", "264"); };
+  const resizeLeftByKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const next = Math.max(220, Math.min(440, leftWRef.current + (e.key === "ArrowRight" ? 24 : -24)));
+    setLeftW(next); localStorage.setItem("hs_leftw", String(next));
+  };
   const startResizeInsp = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX; const startW = inspWRef.current;
@@ -316,6 +343,12 @@ export default function EditorPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   };
   const resetInsp = () => { setInspW(300); localStorage.setItem("hs_inspw", "300"); };
+  const resizeInspectorByKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const next = Math.max(260, Math.min(460, inspWRef.current + (e.key === "ArrowLeft" ? 24 : -24)));
+    setInspW(next); localStorage.setItem("hs_inspw", String(next));
+  };
   const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
   const toggleFocusMode = () => setFocusMode((current) => {
     const next = !current;
@@ -573,7 +606,7 @@ export default function EditorPage() {
     const api = editorApiRef.current;
     if (!api) return;
     const end = Math.max(cur + 3.5, cur + 0.1);
-    const text = presetName === "speaker_card" ? "שם הדובר\nתפקיד או שם השיעור" : presetName === "dedication_card" ? "השיעור הוקדש לעילוי נשמת\nשם בן/בת שם" : "מתוך שיעור של…";
+    const text = presetName === "speaker_card" ? "שם\nתיאור קצר" : presetName === "dedication_card" ? "כותרת מרכזית\nפרטים נוספים" : "כותרת הסרטון\nטקסט משני";
     const result = runCommand("overlay.addText", api, { text, start: cur, end, preset: presetName });
     if (!result.ok) { setError(result.error); return; }
     setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
@@ -897,7 +930,7 @@ export default function EditorPage() {
   };
 
   const dockHandle = (
-    <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth}
+    <div className="col-resize" onMouseDown={startResizeChat} onDoubleClick={resetChatWidth} onKeyDown={resizeChatByKey} tabIndex={0}
       title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל הסוכן" />
   );
   const agentDock = chatOpen ? (
@@ -1075,7 +1108,7 @@ export default function EditorPage() {
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
-          ) : (
+          ) : leftTab === "captions" ? (
             <CaptionsPanel
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
               hasMain={!!main} hasWords={!!words} subs={subs}
@@ -1090,9 +1123,11 @@ export default function EditorPage() {
                 if (!res.ok) setError(res.error);
               }}
             />
+          ) : (
+            <CreativePanel kind={leftTab} clip={selectedClip} onApply={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)} />
           )}
         </div>
-        <div className="col-resize" onMouseDown={startResizeLeft} onDoubleClick={resetLeft}
+        <div className="col-resize" onMouseDown={startResizeLeft} onDoubleClick={resetLeft} onKeyDown={resizeLeftByKey} tabIndex={0}
           title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מדיה" />
 
         <div className="main-area">
@@ -1123,7 +1158,7 @@ export default function EditorPage() {
               )}
             </div>
 
-            <div className="col-resize" onMouseDown={startResizeInsp} onDoubleClick={resetInsp}
+            <div className="col-resize" onMouseDown={startResizeInsp} onDoubleClick={resetInsp} onKeyDown={resizeInspectorByKey} tabIndex={0}
               title="גרור לשינוי רוחב · דאבל-קליק לאיפוס" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב פאנל מאפיינים" />
             <InspectorPanel
               width={inspW}
@@ -1156,7 +1191,9 @@ export default function EditorPage() {
           </div>
 
           <div className="timeline-region" style={{ height: tlHeight }}>
-            <div className="tl-resize" onMouseDown={startResizeTL} title="גרור לשינוי גובה" />
+            <div className="tl-resize" onMouseDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
+              title="גרור לשינוי גובה · חצים למעלה/למטה · דאבל-קליק לאיפוס" role="separator" tabIndex={0}
+              aria-orientation="horizontal" aria-label="שינוי הגובה בין הנגן לטיימליין"><span /></div>
             <TimelineToolbar
               selInfo={selectedOverlay ? `${(selectedOverlay.end - selectedOverlay.start).toFixed(1)}s` : selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
               canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId || !!selectedSubId}

@@ -44,3 +44,11 @@ Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemo
 # Exact Next Steps
 1. Browser E2E the pinned export player (play/seek/mute/fullscreen/download) with a real render.
 2. Fix the production Supabase key before any cloud org sync.
+
+# 2026-08-11 — persistent workspace + creative catalog foundation
+
+- Restored visible panel/timeline resize handles with pointer, keyboard and double-click reset behavior; saved sizes remain in the existing localStorage keys.
+- The default split gives the timeline more room and keeps the composed canvas contained inside the visible preview without document scrolling.
+- Chat history is now a named conversation manager with create/rename/delete/select, while provider/model selection has a clear header control.
+- Text templates are generic creator patterns rather than lesson-specific copy. Effects and transition tabs apply real clip looks and visual fades shared by Preview and Export.
+- Next catalog expansion must follow `docs/CREATIVE_LIBRARY_ARCHITECTURE.md` and preserve Preview/Export parity and asset licensing.

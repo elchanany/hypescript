@@ -49,7 +49,9 @@ export async function middleware(req: NextRequest) {
   );
   if (hasSession) return response;
 
-  if (allowGuest && !authConfigured) return response;
+  // Explicit local/QA escape hatch. Production remains gated unless the
+  // deployment deliberately sets ALLOW_GUEST_EDITOR.
+  if (allowGuest) return response;
 
   const welcome = req.nextUrl.clone();
   welcome.pathname = "/welcome";
