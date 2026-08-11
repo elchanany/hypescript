@@ -1540,8 +1540,8 @@
     "semantic_hash": ""
   },
   "web/app/welcome/page.tsx": {
-    "mtime": 1786461295.622044,
-    "ast_hash": "b9ac19c323996fae17cf7e671d04d443",
+    "mtime": 1786467502.6791089,
+    "ast_hash": "233100c5f85ada95e7ba0defb4f7fbea",
     "semantic_hash": ""
   },
   "web/app/account/page.tsx": {
@@ -1709,9 +1709,9 @@
     "ast_hash": "dc5941b5ce61d87b54364dda97215101",
     "semantic_hash": ""
   },
-  "web/public/brand/sources/hypescript-mark-generated-key.png": {
-    "mtime": 1786466279.5990636,
-    "ast_hash": "47591fe3af48d155603c2a884507244d",
+  "web/public/brand/campaign-editorial.webp": {
+    "mtime": 1786467492.5257087,
+    "ast_hash": "8148f8e4d2ea4c877160c709c2476353",
     "semantic_hash": ""
   }
 }

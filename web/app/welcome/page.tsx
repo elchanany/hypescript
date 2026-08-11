@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, Captions, Check, Cloud, CreditCard, Download, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, Play, Scissors, ShieldCheck, Sparkles, WandSparkles } from "lucide-react";
+import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, CreditCard, Download, Eye, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, MousePointer2, Play, ScanText, Scissors, ShieldCheck, Sparkles, WandSparkles, Zap } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 
 export const metadata: Metadata = {
@@ -89,10 +89,31 @@ export default function WelcomePage() {
         <article><ShieldCheck size={18} /><div><strong>שליטה בעלויות</strong><span>מכסות קשיחות, בלי חיובי חריגה אוטומטיים</span></div></article>
       </section>
 
+      <section className="marketing-story" aria-label="מחומר גלם לתוכן מוכן">
+        <img src="/brand/campaign-editorial.webp" alt="המחשה של הפיכת הרצאה ארוכה לסרטון אנכי עם כתוביות וגלי קול" loading="eager" />
+        <div className="marketing-story-copy">
+          <span>לא קסם שחור. עריכה שאפשר לראות.</span>
+          <h2>המשפט שלך נכנס.<br />הגרסה המדויקת יוצאת.</h2>
+          <p>Hypescript מחבר תמלול, החלטות עריכה, טיימליין ורינדור לאותה אמת. כל חיתוך מסומן, כל שכבה ניתנת להזזה, וכל שינוי ניתן לביטול.</p>
+          <div className="story-metrics"><b><strong>0</strong> חפיפות</b><b><strong>1</strong> פרויקט</b><b><strong>∞</strong> גרסאות</b></div>
+        </div>
+      </section>
+
+      <section className="marketing-section marketing-lab">
+        <div className="marketing-section-head"><span>חדש בדרך שבה עורכים</span><h2>לא עוד עורך עם כפתור AI בצד</h2><p>ממשק שנבנה סביב הפעולה עצמה — שיחה, תמונה, קול וטיימליין שעובדים יחד.</p></div>
+        <div className="marketing-bento">
+          <article className="bento-command"><Command size={22} /><span>Command canvas</span><h3>כותבים כוונה.<br />רואים פעולה.</h3><div className="command-demo"><i>הסר נשימות, שמור על כל מילה</i><b><Zap size={13} /> 14 פעולות מוכנות</b></div></article>
+          <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>קשה</i><i>סילוקו</i><i className="cut">אה...</i><i>של אדם</i><i>כשר</i></div></article>
+          <article className="bento-precision"><AudioWaveform size={22} /><span>Breath precision</span><h3>חיתוך שנצמד לנשימה, לא לניחוש</h3><div className="mini-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
+          <article className="bento-direct"><MousePointer2 size={22} /><span>Direct manipulation</span><h3>גוררים על הסרטון עצמו</h3><div className="mini-canvas"><b>כותרת השיעור</b><i /><i /><i /><i /></div></article>
+          <article className="bento-proof"><Eye size={22} /><span>Proof before export</span><h3>רואים את התוצאה לפני שמחכים לרינדור</h3><div className="proof-line"><i /><b>Preview matches export</b></div></article>
+        </div>
+      </section>
+
       <section className="marketing-section" id="features">
         <div className="marketing-section-head"><span>כלי עבודה אמיתיים</span><h2>כל מה שצריך כדי להגיע לגרסה הסופית</h2><p>פחות חלונות, פחות ייצוא־ייבוא, פחות תיקונים ידניים.</p></div>
         <div className="marketing-feature-grid">
-          {features.map(({ icon: Icon, title, text }) => <article key={title}><Icon size={22} /><h3>{title}</h3><p>{text}</p></article>)}
+          {features.map(({ icon: Icon, title, text }, index) => <article key={title} className={`feature-${index + 1}`}><Icon size={22} /><small>0{index + 1}</small><h3>{title}</h3><p>{text}</p></article>)}
         </div>
       </section>
 
