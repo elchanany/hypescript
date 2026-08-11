@@ -785,8 +785,8 @@
     "semantic_hash": ""
   },
   "web/app/login/page.tsx": {
-    "mtime": 1786189582.3398974,
-    "ast_hash": "591fe012f2bcd7a616e52b29fdf982c5",
+    "mtime": 1786444418.6226192,
+    "ast_hash": "40312d46d8f6ddd9d84b5bba7d7d7a5b",
     "semantic_hash": ""
   },
   "web/components/Modal.tsx": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "web/lib/brand/assets.ts": {
-    "mtime": 1786442470.9388416,
-    "ast_hash": "d76f3674d2173ba761f1f9067851e4b1",
+    "mtime": 1786444418.6281452,
+    "ast_hash": "c47d0d3f19eec1c82b0a39cfc934f0b5",
     "semantic_hash": ""
   },
   "web/lib/chat/markdown.test.ts": {
