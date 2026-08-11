@@ -7,6 +7,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { BILLING_PLANS, BillingInterval, BillingPlanId, TRIAL_OFFER } from "@/lib/billing/plans";
 import { toast } from "@/lib/ui/toast";
+import AccountPreferences from "@/components/AccountPreferences";
 
 type BillingStatus = {
   subscription: {
@@ -163,5 +164,6 @@ export default function AccountPage() {
       <div><h2>יציאה מהחשבון</h2><p>הפרויקטים בענן יישארו שמורים לחשבון שלך.</p></div>
       <button className="btn ghost tall" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />התנתקות</button>
     </section>
+    <AccountPreferences />
   </main>;
 }

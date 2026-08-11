@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "web/app/layout.tsx": {
-    "mtime": 1786404927.7236931,
-    "ast_hash": "df337b8fa9a408b444c4d09fb791c005",
+    "mtime": 1786461236.775555,
+    "ast_hash": "e475a5f7ad678df780ff42dcb390eb21",
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
-    "mtime": 1786406769.6744187,
-    "ast_hash": "dc1967440daee147612b59a070a995ca",
+    "mtime": 1786461295.6200466,
+    "ast_hash": "c43ca696edc874a5ab97c37fe95fbe73",
     "semantic_hash": ""
   },
   "web/components/CaptionsPanel.tsx": {
@@ -480,7 +480,7 @@
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
-    "mtime": 1786460776.6066527,
+    "mtime": 1786461604.677977,
     "ast_hash": "2c1aa3bdc9433793f25a91a53e188ded",
     "semantic_hash": "2c1aa3bdc9433793f25a91a53e188ded"
   },
@@ -940,8 +940,8 @@
     "semantic_hash": ""
   },
   "web/app/legal/privacy/page.tsx": {
-    "mtime": 1786189582.3378947,
-    "ast_hash": "78e481ddee7698310fe4310d3a174ffc",
+    "mtime": 1786461442.4702888,
+    "ast_hash": "0f195cc2f6ab5b788133f4ef2642ce7a",
     "semantic_hash": ""
   },
   "web/app/legal/terms/page.tsx": {
@@ -1540,13 +1540,13 @@
     "semantic_hash": ""
   },
   "web/app/welcome/page.tsx": {
-    "mtime": 1786460530.0728636,
-    "ast_hash": "bc72d6064cacf5b8fc6bffcc8202a645",
+    "mtime": 1786461295.622044,
+    "ast_hash": "b9ac19c323996fae17cf7e671d04d443",
     "semantic_hash": ""
   },
   "web/app/account/page.tsx": {
-    "mtime": 1786456112.9465632,
-    "ast_hash": "c525a7c31a08bae3c5de5642e3aefad8",
+    "mtime": 1786461295.619044,
+    "ast_hash": "6cd042efdda287b2297d5bb4f850adfb",
     "semantic_hash": ""
   },
   "web/app/api/billing/catalog/route.ts": {
@@ -1667,6 +1667,41 @@
   "scripts/generate-brand-assets.py": {
     "mtime": 1786460530.0678625,
     "ast_hash": "0afb7ccfea5445d640a8c0627df915a0",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260811151210_account_analytics_credits_admin.sql": {
+    "mtime": 1786461236.7308974,
+    "ast_hash": "34e4b73e40c3b26ca2d4d9422cc55f6f",
+    "semantic_hash": ""
+  },
+  "web/app/admin/page.tsx": {
+    "mtime": 1786461847.3093688,
+    "ast_hash": "05a1304fe9c1d4ad6d5aaeec28fbdbe0",
+    "semantic_hash": ""
+  },
+  "web/app/api/account/route.ts": {
+    "mtime": 1786461847.2428467,
+    "ast_hash": "d88b96eccb46ca0f2e0e5207594941e2",
+    "semantic_hash": ""
+  },
+  "web/app/api/admin/overview/route.ts": {
+    "mtime": 1786461847.2823706,
+    "ast_hash": "f15c5001fab6b72344a2631b3b5974b8",
+    "semantic_hash": ""
+  },
+  "web/app/api/analytics/route.ts": {
+    "mtime": 1786461847.2688563,
+    "ast_hash": "c1ee87468a6fb5c65d23b4ec8672f45f",
+    "semantic_hash": ""
+  },
+  "web/components/AccountPreferences.tsx": {
+    "mtime": 1786461881.346475,
+    "ast_hash": "0fe150573e701e24d2aa7085e5835aed",
+    "semantic_hash": ""
+  },
+  "web/components/CookieConsent.tsx": {
+    "mtime": 1786461847.3213706,
+    "ast_hash": "be6a1d6cbad20ce2ab8555504956a547",
     "semantic_hash": ""
   }
 }

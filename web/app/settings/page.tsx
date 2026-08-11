@@ -161,8 +161,9 @@ export default function SettingsPage() {
         </div>
         <div className="hint" style={{ marginTop: 12 }}>פרויקטים קיימים אינם מועברים או נמחקים אוטומטית בעת שינוי ההגדרה.</div>
       </div>
+      <nav className="settings-hub-nav" aria-label="קטגוריות הגדרות"><a href="#appearance">מראה ונגישות</a><a href="#workspace-storage">פרויקטים וענן</a><a href="#providers">AI וספקים</a><Link href="/settings/brand">ערכת מותג</Link><Link href="/account">חשבון, פרטיות וחיוב</Link></nav>
 
-      <div className="card">
+      <div className="card" id="appearance">
         <h2>ענן ורינדור</h2>
         <p style={{ color: "var(--muted)" }}>
           פרויקטים ונכסים פרטיים ב־Supabase + Cloudflare R2, ורינדור FFmpeg ב־Google Cloud Run. המפתחות נשארים בצד השרת בלבד.
@@ -203,7 +204,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" id="providers">
         <h2>תמלול</h2>
         {PROVIDER_REGISTRY.filter((p) => p.kind === "transcribe").map((p) => {
           const status = statusById[p.id];

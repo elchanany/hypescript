@@ -4,6 +4,7 @@ import ChunkReload from "@/components/ChunkReload";
 import ToastHost from "@/components/ToastHost";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { BRAND_NAME, BRAND_PATHS, BRAND_TAGLINE_EN, BRAND_TAGLINE_HE } from "@/lib/brand/assets";
+import CookieConsent from "@/components/CookieConsent";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChunkReload />
           {children}
           <ToastHost />
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

@@ -20,9 +20,9 @@ const features = [
 ];
 
 const plans = [
-  { name: "Free", price: "₪0", suffix: "לתמיד", text: "להכיר את סביבת העריכה בקצב שלך.", items: ["3 פרויקטים", "2GB אחסון", "10 דקות רינדור בחודש"], href: "/login?next=/dashboard", cta: "התחל בחינם" },
-  { name: "Creator", price: "₪49", suffix: "לחודש לאחר הניסיון", intro: "חודש ראשון ₪0", text: "ליוצרים, עורכים ועסקים שמפרסמים באופן קבוע.", items: ["50 פרויקטים", "20GB אחסון", "120 דקות רינדור בחודש"], featured: true, href: "/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth", cta: "התחל חודש חינם" },
-  { name: "Pro", price: "₪119", suffix: "לחודש לאחר הניסיון", intro: "חודש ראשון ₪0", text: "לצוותים ולנפח עבודה מקצועי.", items: ["500 פרויקטים", "100GB אחסון", "480 דקות רינדור בחודש"], href: "/login?next=%2Faccount%3Fplan%3Dpro%26interval%3Dmonth", cta: "התחל חודש חינם" },
+  { name: "Free", price: "₪0", suffix: "לתמיד", text: "העורך המלא עם המפתחות שלך.", items: ["3 פרויקטים", "2GB אחסון", "10 דקות רינדור", "AI במצב BYOK בלבד"], href: "/login?next=/dashboard", cta: "התחל בחינם" },
+  { name: "Creator", price: "₪49", suffix: "לחודש לאחר הניסיון", intro: "חודש ראשון ₪0", text: "AI מנוהל בלי להתעסק במפתחות וספקים.", items: ["50 פרויקטים", "20GB אחסון", "120 דקות רינדור", "מודלי AI מנוהלים + אפשרות BYOK"], featured: true, href: "/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth", cta: "התחל חודש חינם" },
+  { name: "Pro", price: "₪119", suffix: "לחודש לאחר הניסיון", intro: "חודש ראשון ₪0", text: "לצוותים ולנפח עבודה מקצועי.", items: ["500 פרויקטים", "100GB אחסון", "480 דקות רינדור", "AI מנוהל, קדימות וקרדיטים מוזלים"], href: "/login?next=%2Faccount%3Fplan%3Dpro%26interval%3Dmonth", cta: "התחל חודש חינם" },
 ];
 
 const useCases = [
