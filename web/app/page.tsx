@@ -484,19 +484,23 @@ export default function EditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [main]);
 
-  const addFiles = async (files: FileList | File[] | null) => {
-    if (!files) return;
+  const addFiles = async (files: FileList | File[] | null, onProgress?: (ratio: number) => void) => {
+    if (!files) return false;
     const arr = Array.from(files);
     const policy = projectId ? await getProjectPolicy(projectId) : null;
     const shouldUpload = !!policy?.cloudProjectId && policy.storageBackend === "r2" && policy.dataMode !== "local";
     try {
+      onProgress?.(0.02);
       if (shouldUpload) setPhase("מעלה מדיה מוצפנת לענן…");
       const assets = await Promise.all(arr.map(async (f, index) => {
         const kind = kindOf(f);
         const matchingMissing = mediaRef.current.find((item) => item.missing && item.name === f.name && item.kind === kind);
         const asset: MediaAsset = { id: matchingMissing?.id || uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f), missing: false };
         if (shouldUpload && policy?.cloudProjectId) {
-          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => setProgress((index + ratio) / arr.length));
+          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => {
+            const totalProgress = (index + ratio) / arr.length;
+            setProgress(totalProgress); onProgress?.(totalProgress);
+          });
           asset.cloudAssetId = cloud.assetId;
           asset.cloudObjectKey = cloud.objectKey;
           asset.cloudState = "available";
@@ -507,10 +511,13 @@ export default function EditorPage() {
         const restoredIds = new Set(assets.map((asset) => asset.id));
         return [...current.filter((item) => !restoredIds.has(item.id)), ...assets];
       });
+      onProgress?.(1);
       if (shouldUpload) toast.success("ההעלאה לענן הושלמה", `${arr.length} קבצים נשמרו ב־R2 פרטי`);
+      return true;
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "העלאה לענן נכשלה";
       setError(message);
+      return false;
     } finally {
       if (shouldUpload) { setPhase(""); setProgress(0); }
     }

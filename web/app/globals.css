@@ -147,6 +147,58 @@ html[data-theme="light"] {
   .transport { height: 42px; }
   .pv-stage { padding: 6px; margin-bottom: 4px; }
 }
+
+/* Hypescript motion language: directional cuts, soft depth, one shared shimmer. */
+@keyframes hs-arrive { from { opacity: 0; transform: translateY(7px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes hs-shimmer { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+.skeleton-shimmer { position: relative; overflow: hidden; background-image: linear-gradient(105deg, transparent 25%, color-mix(in srgb, var(--text) 9%, transparent) 45%, transparent 65%); background-size: 220% 100%; animation: hs-shimmer 1.35s ease-in-out infinite; }
+.chat-header-skeleton { width: 92px; height: 28px; border-radius: 999px; background-color: var(--panel-2); }
+.chat-model-picker { position: relative; height: 31px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel-2); color: var(--text-2); box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+.chat-model-picker:hover { border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); background: var(--hover); }
+.chat-model-picker > svg:first-child { color: var(--accent); }
+.chat-model-picker > svg:last-child { pointer-events: none; }
+.chat-model-picker select { width: auto; max-width: 96px; appearance: none; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 11px; font-weight: 650; cursor: pointer; }
+.chat-body2 { gap: 13px; padding: 16px 14px 18px; background: radial-gradient(circle at 50% 0, color-mix(in srgb, var(--accent) 5%, transparent), transparent 28%); }
+.msg2 { animation: hs-arrive .22s cubic-bezier(.22,.8,.3,1); }
+.msg2 .b { box-shadow: 0 5px 18px rgba(4,12,28,.055); }
+.msg2.user .b::after, .msg2.assistant .b::after { content: ""; position: absolute; bottom: 5px; width: 10px; height: 12px; background: inherit; border-bottom: inherit; transform: rotate(38deg); }
+.msg2.user .b::after { inset-inline-start: -5px; border-inline-start: inherit; }
+.msg2.assistant .b::after { inset-inline-end: -5px; border-inline-end: inherit; transform: rotate(-38deg); }
+.msg2.user .b { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 24%, var(--border)); }
+.msg2.assistant .b { background: var(--panel); }
+.ask2 { align-self: flex-start; max-width: 92%; border: 0; border-inline-start: 3px solid var(--accent); border-radius: 16px; background: var(--panel); box-shadow: 0 9px 28px rgba(4,12,28,.08); animation: hs-arrive .24s ease-out; }
+.ask2 .opts .btn { border-radius: 999px; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.ask2 .opts .btn:hover { color: var(--accent); background: var(--accent-tint); transform: translateY(-1px); }
+.composer { padding-top: 2px; background: linear-gradient(180deg, transparent, var(--panel) 18%); }
+.chat-compose { margin: 0 8px 8px; padding: 6px 8px; gap: 5px; border: 1px solid var(--border-strong); border-radius: 18px; background: var(--panel); box-shadow: 0 10px 30px rgba(4,12,28,.09); }
+.chat-compose textarea { min-height: 58px; padding: 7px 5px; border: 0; border-radius: 10px; background: transparent; box-shadow: none; }
+.chat-compose textarea:focus { outline: 0; }
+.composer-references { display: flex; gap: 6px; overflow-x: auto; margin: 0 12px 6px; padding: 0 2px; }
+.composer-references span { flex: none; display: inline-flex; align-items: center; gap: 5px; max-width: 240px; padding: 5px 9px; color: var(--text-2); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: 10px; background: var(--accent-tint); font-size: 10px; direction: rtl; }
+.chat-inline-ref { display: inline-flex; align-items: center; gap: 4px; margin: 1px 3px; padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, var(--panel)); color: var(--text); font-size: .88em; unicode-bidi: isolate; }
+.chat-loading-stack { display: grid; gap: 10px; width: 100%; padding: 5px 0; }
+.chat-loading-stack i { display: block; height: 52px; width: 76%; border-radius: 16px; background-color: var(--panel-2); }
+.chat-loading-stack i:nth-child(2) { width: 58%; justify-self: end; }
+.chat-loading-stack i:nth-child(3) { width: 68%; }
+.chat-upload-progress { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5px 10px; margin: 0 10px 7px; padding: 8px 10px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--border); font-size: 11px; animation: hs-arrive .2s ease-out; }
+.chat-upload-progress span { display: inline-flex; align-items: center; gap: 6px; }
+.chat-upload-progress b { font-family: var(--mono); color: var(--accent); }
+.chat-upload-progress > i { grid-column: 1 / -1; height: 4px; overflow: hidden; border-radius: 999px; background: var(--inset); }
+.chat-upload-progress em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #48d8b0); transition: width .18s ease; }
+.think2 { min-width: 58px; border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .skeleton-shimmer, .msg2, .ask2, .chat-upload-progress { animation: none !important; } }
+
+/* Brand palette picker */
+.brand-palette { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.brand-swatch { display: inline-flex; align-items: center; gap: 7px; padding: 5px 7px 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-2); box-shadow: 0 4px 12px rgba(0,0,0,.04); }
+.brand-swatch > i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in srgb, white 68%, transparent); box-shadow: 0 0 0 1px rgba(0,0,0,.16); }
+.brand-swatch .iconbtn { width: 23px; height: 23px; }
+.brand-color-picker { display: grid; grid-template-columns: 48px minmax(110px,170px) auto; align-items: center; gap: 8px; width: fit-content; padding: 7px; border: 1px solid var(--border); border-radius: 14px; background: var(--card-2); }
+.brand-color-picker input[type="color"] { width: 42px; height: 36px; padding: 3px; border: 0; border-radius: 10px; background: var(--panel); cursor: pointer; }
+.brand-color-picker input[type="text"] { height: 36px; margin: 0; font-family: var(--mono); text-transform: uppercase; }
+.brand-color-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.brand-color-presets button { width: 27px; height: 27px; border: 2px solid var(--panel); border-radius: 50%; box-shadow: 0 0 0 1px var(--border); cursor: pointer; transition: transform .15s ease; }
+.brand-color-presets button:hover { transform: scale(1.12); }
 .admin-page{min-height:100vh;background:var(--bg);color:var(--text)}.admin-shell{width:min(1120px,calc(100% - 36px));margin:36px auto}.admin-shell>p{color:var(--text-2)}.admin-metrics{margin:24px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.admin-metrics article{padding:20px;display:grid;gap:7px;border:1px solid var(--border);border-radius:20px;background:var(--panel)}.admin-metrics svg{color:var(--accent)}.admin-metrics strong{font-size:28px}.admin-metrics span{color:var(--text-2);font-size:11px}.admin-events{margin:14px 0;display:grid}.admin-events>div{padding:10px 0;display:flex;justify-content:space-between;border-bottom:1px solid var(--border);font-size:11px}.admin-events time{color:var(--text-2)}@media(max-width:800px){.admin-metrics{grid-template-columns:repeat(2,1fr)}}
 
 /* Product shell: calm SaaS chrome and conversation-first workflow. */

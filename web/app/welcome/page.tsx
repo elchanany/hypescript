@@ -5,7 +5,7 @@ import BrandLogo from "@/components/BrandLogo";
 
 export const metadata: Metadata = {
   title: "Hypescript — עורך וידאו AI בעברית",
-  description: "מעבירים שיעור או סרטון ארוך לגרסה מדויקת ומוכנה לפרסום — חיתוך דרך טקסט, כתוביות עברית, שכבות ורינדור במקום אחד.",
+  description: "הופכים וידאו, פודקאסט או ראיון בעברית לגרסה מדויקת ומוכנה לפרסום — חיתוך דרך טקסט, כתוביות, שכבות ורינדור במקום אחד.",
   keywords: ["עריכת וידאו", "כתוביות בעברית", "חיתוך סרטונים", "עורך וידאו אונליין", "תמלול וידאו"],
   alternates: { canonical: "/welcome" },
 };
@@ -26,7 +26,7 @@ const plans = [
 ];
 
 const useCases = [
-  { title: "שיעורים והרצאות", text: "מורידים שתיקות, נשימות וחזרות בלי לאבד מילה חשובה." },
+  { title: "פודקאסטים וראיונות", text: "מורידים שתיקות, נשימות וחזרות בלי לאבד מילה חשובה." },
   { title: "תוכן לרשתות", text: "מכינים גרסה הדוקה, כתוביות ברורות ופורמט אנכי לפרסום." },
   { title: "עסקים ועמותות", text: "שומרים על לוגו, צבעים, פתיחים וקריאות לפעולה עקביות." },
 ];
@@ -65,7 +65,7 @@ export default function WelcomePage() {
       <section className="marketing-hero">
         <div className="marketing-kicker"><Sparkles size={14} />חודש ראשון חינם במסלולים בתשלום</div>
         <h1>ממילים ארוכות.<br /><span>לסרטון שאי אפשר לדלג עליו.</span></h1>
-        <p>Hypescript הופך שיעור, הרצאה או חומר גלם ארוך לסרטון מדויק ומוכן לפרסום — עם חיתוך דרך הטקסט, כתוביות עברית ושכבות בממשק אחד נקי.</p>
+        <p>Hypescript נבנה במיוחד לתוכן בעברית: וידאו, פודקאסט, ראיון או הרצאה נכנסים כחומר גלם — ויוצאים מדויקים, כתובים ומוכנים לפרסום.</p>
         <div className="marketing-hero-actions">
           <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link>
           <a href="#how" className="btn secondary marketing-cta"><Play size={16} />ראה איך זה עובד</a>
@@ -73,11 +73,11 @@ export default function WelcomePage() {
         <div className="marketing-trust"><LockKeyhole size={15} />נדרש כרטיס לאימות · אפשר לבטל לפני החיוב הראשון · מכסת ניסיון מוגנת</div>
 
         <div className="marketing-product" aria-label="תצוגה מקדימה של עורך Hypescript">
-          <div className="mp-top"><i /><i /><i /><span>הרב הקדיש והחסד</span><b>ייצוא</b></div>
+          <div className="mp-top"><i /><i /><i /><span>פרק 42 · יוצרים בעברית</span><b>ייצוא</b></div>
           <div className="mp-body">
             <aside><span>מדיה</span><div /><div /><div /></aside>
-            <section className="mp-preview"><div className="mp-video"><span className="mp-play"><Play size={22} fill="currentColor" /></span><strong>קשה סילוקו של אדם כשר<br />כשריפת בית אלהינו.</strong></div><div className="mp-controls" /></section>
-            <aside className="mp-agent"><span>עוזר העריכה</span><p>הסר את הנשימות והחזרות, ושמור על כל המילים.</p><em>בוצעו 12 חיתוכים · אין חפיפות</em></aside>
+            <section className="mp-preview"><div className="mp-video"><span className="mp-play"><Play size={22} fill="currentColor" /></span><strong>רעיונות טובים נשמעים טוב יותר<br />כשהעריכה לא מפריעה להם.</strong></div><div className="mp-controls" /></section>
+            <aside className="mp-agent"><span>עוזר העריכה</span><p>הדק את הקצב, הסר נשימות והשאר את המשפטים בשלמותם.</p><em>בוצעו 12 חיתוכים · אין חפיפות</em></aside>
           </div>
           <div className="mp-timeline"><div className="mp-ruler" /><div className="mp-track video" /><div className="mp-track audio" /><div className="mp-track captions" /></div>
         </div>
@@ -90,7 +90,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-story" aria-label="מחומר גלם לתוכן מוכן">
-        <img src="/brand/campaign-editorial.webp" alt="המחשה של הפיכת הרצאה ארוכה לסרטון אנכי עם כתוביות וגלי קול" loading="eager" />
+        <img src="/brand/campaign-editorial.webp" alt="המחשה של הפיכת תוכן עברי ארוך לסרטון אנכי עם כתוביות וגלי קול" loading="eager" />
         <div className="marketing-story-copy">
           <span>לא קסם שחור. עריכה שאפשר לראות.</span>
           <h2>המשפט שלך נכנס.<br />הגרסה המדויקת יוצאת.</h2>
@@ -105,7 +105,7 @@ export default function WelcomePage() {
           <article className="bento-command"><Command size={22} /><span>Command canvas</span><h3>כותבים כוונה.<br />רואים פעולה.</h3><div className="command-demo"><i>הסר נשימות, שמור על כל מילה</i><b><Zap size={13} /> 14 פעולות מוכנות</b></div></article>
           <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>קשה</i><i>סילוקו</i><i className="cut">אה...</i><i>של אדם</i><i>כשר</i></div></article>
           <article className="bento-precision"><AudioWaveform size={22} /><span>Breath precision</span><h3>חיתוך שנצמד לנשימה, לא לניחוש</h3><div className="mini-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
-          <article className="bento-direct"><MousePointer2 size={22} /><span>Direct manipulation</span><h3>גוררים על הסרטון עצמו</h3><div className="mini-canvas"><b>כותרת השיעור</b><i /><i /><i /><i /></div></article>
+          <article className="bento-direct"><MousePointer2 size={22} /><span>Direct manipulation</span><h3>גוררים על הסרטון עצמו</h3><div className="mini-canvas"><b>שם הפרק והדובר</b><i /><i /><i /><i /></div></article>
           <article className="bento-proof"><Eye size={22} /><span>Proof before export</span><h3>רואים את התוצאה לפני שמחכים לרינדור</h3><div className="proof-line"><i /><b>Preview matches export</b></div></article>
         </div>
       </section>

@@ -30,7 +30,7 @@ import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles,
 } from "lucide-react";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -86,7 +86,7 @@ const SLASH: SlashCmd[] = [
 
 interface ChatProps {
   media: MediaAsset[];
-  onAddMedia: (files: FileList | File[] | null) => void;
+  onAddMedia: (files: FileList | File[] | null, onProgress?: (ratio: number) => void) => boolean | void | Promise<boolean | void>;
   onClose: () => void;
   words: Word[] | null;
   clips: Clip[] | null;
@@ -127,6 +127,12 @@ interface ChatProps {
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const REF_TOKEN = /(\[ציטוט\s+[^\]]+\]|@media:[\w-]+)/g;
+function ChatUserText({ text }: { text: string }) {
+  return <>{text.split(REF_TOKEN).map((part, index) => /^(?:\[ציטוט\s+[^\]]+\]|@media:[\w-]+)$/.test(part)
+    ? <span className="chat-inline-ref" key={`${part}-${index}`}>{part.startsWith("[ציטוט") ? <Quote size={11} /> : <AtSign size={11} />}{part}</span>
+    : part)}</>;
+}
 const COMPOSE_H_KEY = "hs_compose_h";
 const COMPOSE_H_DEFAULT = 96;
 const COMPOSE_H_MIN = 72;
@@ -141,6 +147,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [usage, setUsage] = useState<AgentUsage>({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [canChooseProvider, setCanChooseProvider] = useState(false);
+  const [entitlementsLoaded, setEntitlementsLoaded] = useState(false);
+  const [uploading, setUploading] = useState<{ count: number; progress: number } | null>(null);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
   const [askText, setAskText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
@@ -313,7 +322,24 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       .then((d) => setConfigured(d.providers || {}))
       .catch(() => {})
       .finally(() => setConfigLoaded(true));
+    Promise.all([
+      fetch("/api/account").then((r) => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/billing/status").then((r) => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([account, billing]) => {
+      setCanChooseProvider(account?.settings?.provider_mode === "byok" || billing?.subscription?.plan_id === "pro");
+    }).finally(() => setEntitlementsLoaded(true));
   }, []);
+
+  useEffect(() => {
+    if (!configLoaded) return;
+    const current = getProviderStatus(provider, configured);
+    if (isProviderUsable(current)) return;
+    const fallback = LLM_PROVIDERS.find((candidate) => isProviderUsable(getProviderStatus(candidate.id, configured)));
+    if (!fallback) return;
+    setProvider(fallback.id);
+    localStorage.setItem(PROVIDER_PREF, fallback.id);
+    if (runnerRef.current) runnerRef.current.provider = fallback.id;
+  }, [configLoaded, configured, provider]);
   const displayItems = useMemo(() => collapseConsecutiveTools(items), [items]);
   // תמיד מציגים נקודות חשיבה כל עוד יש בקשה פתוחה (גם בזמן כלי רץ)
   const showThinking = running && !ask;
@@ -463,6 +489,30 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   };
   const copy = (t: string, i: number) => { navigator.clipboard?.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1200); };
   const attachRef = useRef<HTMLInputElement>(null);
+  const handleAttachments = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading({ count: files.length, progress: 0 });
+    try {
+      const uploaded = await Promise.resolve(onAddMedia(files, (progress) => setUploading({ count: files.length, progress })));
+      if (uploaded === false) {
+        setUploading(null);
+        return;
+      }
+      setUploading({ count: files.length, progress: 1 });
+      window.setTimeout(() => setUploading(null), 900);
+    } catch {
+      setUploading(null);
+    }
+  };
+
+  const answerAsk = (value: string) => {
+    if (!ask || !value.trim()) return;
+    const clean = value.trim();
+    setItems((prev) => [...prev, { kind: "user", text: `בחרתי: ${clean}`, time: now() }]);
+    ask.resolve(clean);
+    setAsk(null);
+    setAskText("");
+  };
 
   const retryTool = async (tool: ToolItem) => {
     if (!tool.args || running) return;
@@ -553,14 +603,15 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       <div className="panel-header">
         <span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span>
         <div className="actions" style={{ gap: 4 }}>
-          <label className="chat-model-picker" data-tip="מודל שיחה" data-tippos="down"><span>מודל</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מודל שיחה">
+          {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
+          {canChooseProvider && <label className="chat-model-picker" data-tip="בחירת מנוע AI זמינה ב־Pro או במצב BYOK" data-tippos="down"><Sparkles size={13} /><span>מנוע</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מנוע AI לשיחה">
             {LLM_PROVIDERS.map((p) => {
               const status = getProviderStatus(p.id, configured);
               const disabled = configLoaded && !isProviderUsable(status);
               return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}</option>;
             })}
-          </select></label>
-          {usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
+          </select><ChevronDown size={12} /></label>}
+          {canChooseProvider && usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
               onClick={onToggleDock} aria-label="החלף צד עגינה">
@@ -612,7 +663,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       </div>
 
       <div className="chat-body2" ref={scrollRef}>
-        {items.length === 0 && (
+        {!restoredChat && <div className="chat-loading-stack" aria-label="טוען את השיחה"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>}
+        {restoredChat && items.length === 0 && (
           <div className="chat-empty2">
             העלה קבצים ותאר מה לעשות — למשל: “השאר רק את הקטע על X”, “תמלל והכן כתוביות”, “הסר שתיקות ונשימות”.
           </div>
@@ -705,7 +757,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             <div key={i} className={`msg2 ${it.kind}`}>
               <div className="b">
                 {it.kind === "error" && <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6, color: "var(--danger)" }} />}
-                {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.text}
+                {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.kind === "user" ? <ChatUserText text={it.text} /> : it.text}
                 <button className="cp" onClick={() => copy(it.text, i)} aria-label="העתק">{copied === i ? <Check size={13} /> : <Copy size={13} />}</button>
               </div>
               <span className="t">{it.time}</span>
@@ -713,7 +765,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           );
         })}
         {showThinking && (
-          <div className="think2" aria-live="polite" aria-label="הסוכן חושב">
+          <div className="think2 skeleton-shimmer" aria-live="polite" aria-label="הסוכן חושב">
             <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
           </div>
         )}
@@ -726,12 +778,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         {ask && (
           <div className="ask2">
             <div className="q">{ask.q}</div>
-            <div className="opts">{ask.options.map((o, i) => (<button key={i} className="btn sm" onClick={() => { ask.resolve(o); setAsk(null); setAskText(""); }}>{o}</button>))}</div>
+            <div className="opts">{ask.options.map((o, i) => (<button key={i} className="btn sm" onClick={() => answerAsk(o)}>{o}</button>))}</div>
             <div className="free">
               <input value={askText} onChange={(e) => setAskText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && askText.trim()) { ask.resolve(askText.trim()); setAsk(null); setAskText(""); } }}
+                onKeyDown={(e) => { if (e.key === "Enter" && askText.trim()) answerAsk(askText); }}
                 placeholder="או כתוב תשובה משלך…" />
-              <button className="btn primary sm" disabled={!askText.trim()} onClick={() => { ask.resolve(askText.trim()); setAsk(null); setAskText(""); }}>שלח</button>
+              <button className="btn primary sm" disabled={!askText.trim()} onClick={() => answerAsk(askText)}>שלח</button>
             </div>
           </div>
         )}
@@ -771,10 +823,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           aria-orientation="horizontal"
           aria-label="שינוי גובה תיבת ההודעה"
         />
+        {uploading && <div className="chat-upload-progress" role="status"><span><Paperclip size={13} />מעלה {uploading.count === 1 ? "קובץ" : `${uploading.count} קבצים`}</span><b>{Math.round(uploading.progress * 100)}%</b><i><em style={{ width: `${Math.round(uploading.progress * 100)}%` }} /></i></div>}
+        {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.length ? <div className="composer-references" aria-label="הפניות בהודעה">
+          {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.map((token, index) => <span key={`${token}-${index}`}>{token.startsWith("[ציטוט") ? <Quote size={12} /> : <AtSign size={12} />}{token}</span>)}
+        </div> : null}
         <div className="chat-compose">
           <div className="chat-compose-tools">
             <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
-            <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { onAddMedia(e.target.files); e.currentTarget.value = ""; }} />
+            <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { void handleAttachments(e.target.files); e.currentTarget.value = ""; }} />
             <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Command size={16} strokeWidth={1.75} /></button>
             <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
           </div>

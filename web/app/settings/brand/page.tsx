@@ -50,6 +50,7 @@ export default function BrandSettingsPage() {
   const [selId, setSelId] = useState<string | null>(null);
   const [kit, setKit] = useState<BrandKit | null>(null);
   const [draft, setDraft] = useState({ organization: "", tagline: "", writingGuidelines: "" });
+  const [newColor, setNewColor] = useState("#18B981");
   const [previews, setPreviews] = useState<Record<string, string>>({});
   // הרף תמיד מחזיק את ה-URLs הנוכחיים — כדי שניקיון (unmount/remove/switch)
   // ישחרר את ה-URLs העדכניים בדיוק פעם אחת ולא ייתפס על closure מיושן.
@@ -167,8 +168,8 @@ export default function BrandSettingsPage() {
   };
 
   const swatch = (color: string) => (
-    <span key={color} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "1px solid var(--border)", borderRadius: 8, padding: "4px 8px", background: "var(--card-2)" }}>
-      <span style={{ width: 16, height: 16, borderRadius: 4, background: color, border: "1px solid rgba(0,0,0,.25)", display: "inline-block" }} />
+    <span key={color} className="brand-swatch">
+      <i style={{ background: color }} />
       <span className="mono" style={{ fontSize: 12 }}>{color}</span>
       <button className="iconbtn" aria-label={`הסרת ${color}`} onClick={() => removeColor(color)}>✕</button>
     </span>
@@ -248,7 +249,7 @@ export default function BrandSettingsPage() {
             </label>
             <label style={{ display: "block", marginBottom: 10, color: "var(--muted)" }}>
               סלוגן (אופציונלי)
-              <input type="text" value={draft.tagline} onChange={(e) => setDraft((d) => ({ ...d, tagline: e.target.value }))} style={inputStyle} placeholder="למשל: שיעורי תורה לחיזוק הקהילה" />
+              <input type="text" value={draft.tagline} onChange={(e) => setDraft((d) => ({ ...d, tagline: e.target.value }))} style={inputStyle} placeholder="למשל: תוכן עברי שנשמע ונראה מצוין" />
             </label>
             <label style={{ display: "block", marginBottom: 10, color: "var(--muted)" }}>
               הנחיות ניסוח / כתיבה (הסוכן עוקב אחריהן)
@@ -257,21 +258,24 @@ export default function BrandSettingsPage() {
             <button className="btn primary" onClick={saveTextFields} disabled={saving || !draft.organization.trim()}>שמירת פרטים</button>
 
             <h3 style={{ margin: "18px 0 8px" }}>פלטת צבעים</h3>
-            <div className="row" style={{ marginBottom: 8 }}>
+            <div className="brand-palette">
               {kit.colors.length === 0 && <span className="hint">אין צבעים עדיין.</span>}
               {kit.colors.map(swatch)}
             </div>
-            <label className="row" style={{ gap: 8 }}>
-              <span className="hint">צבע חדש:</span>
+            <div className="brand-color-picker">
               <input
                 type="color"
-                defaultValue="#0077cc"
-                onChange={(e) => addColor(e.target.value)}
-                aria-label="הוספת צבע לפלטה"
-                style={{ width: 44, height: 34, border: "1px solid var(--border)", borderRadius: 8, background: "var(--card-2)", cursor: "pointer" }}
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value.toUpperCase())}
+                aria-label="בחירת צבע חדש"
               />
-              <span className="hint">בחירת צבע מוסיפה אותו מיד לפלטה (נשמר מקומית).</span>
-            </label>
+              <input type="text" value={newColor} maxLength={7} aria-label="קוד HEX"
+                onChange={(e) => setNewColor(e.target.value.startsWith("#") ? e.target.value.toUpperCase() : `#${e.target.value.toUpperCase()}`)} />
+              <button className="btn primary sm" onClick={() => /^#[0-9A-F]{6}$/i.test(newColor) && addColor(newColor.toUpperCase())}>הוסף לפלטה</button>
+            </div>
+            <div className="brand-color-presets" aria-label="צבעים מוצעים">
+              {["#0B132B", "#18B981", "#5B6CFF", "#FFB020", "#EF476F", "#F8FAFC"].map((color) => <button key={color} style={{ background: color }} onClick={() => setNewColor(color)} aria-label={`בחר ${color}`} />)}
+            </div>
 
             <h3 style={{ margin: "18px 0 8px" }}>לוגו</h3>
             <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
