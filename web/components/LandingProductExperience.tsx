@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Sparkles, WandSparkles } from "lucide-react";
+import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "lucide-react";
 
 const modes = [
   { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "נשימה אחת סומנה להסרה" },
@@ -12,7 +12,7 @@ const modes = [
 type Mode = (typeof modes)[number]["id"];
 
 export default function LandingProductExperience() {
-  const [mode, setMode] = useState<Mode>("transcript");
+  const [mode, setMode] = useState<Mode>("agent");
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(38);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -94,6 +94,11 @@ export default function LandingProductExperience() {
               </div>
 
               <aside className="hsx-inspector">
+                <div className="hsx-ai-title"><span><Sparkles size={13} /></span><div><b>Hype AI</b><small>עורך יחד איתך</small></div><i>פעיל</i></div>
+                <div className="hsx-chat-thread">
+                  <p className="from-user">הדק את הפתיח והסר נשימות, אבל אל תחתוך מילים.</p>
+                  <p className="from-agent"><b>מצאתי 8 שינויים בטוחים.</b><span>סימנתי אותם על הטיימליין לפני ההחלה.</span></p>
+                </div>
                 <div className="hsx-mode-tabs" role="tablist" aria-label="מצבי הדגמה">
                   {modes.map(({ id, label, icon: Icon }) => (
                     <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => setMode(id)}><Icon size={14} /><span>{label}</span></button>
@@ -101,7 +106,8 @@ export default function LandingProductExperience() {
                 </div>
                 {mode === "transcript" && <div className="hsx-transcript"><small>תמלול חי</small><p>כשמתחילים עם <mark>אה...</mark> רעיון ברור, העריכה כבר מרגישה אחרת.</p><em>לחיצה על מילה עורכת את הווידאו</em></div>}
                 {mode === "captions" && <div className="hsx-style-panel"><small>סגנון כתוביות</small><div className="hsx-style-preview">עברית. בדיוק במקום.</div><label>גודל <i><b /></i></label><label>רקע <span /><span /><span /></label></div>}
-                {mode === "agent" && <div className="hsx-agent-panel"><small>עוזר העריכה</small><p>הדק את הפתיח, הסר נשימות ושמור על המשפטים שלמים.</p><div><WandSparkles size={14} /> מנתח את הטיימליין…</div><ul><li><Check size={12} /> 5 נשימות</li><li><Check size={12} /> 3 שתיקות</li></ul></div>}
+                {mode === "agent" && <div className="hsx-agent-panel"><small>תוכנית עריכה</small><div><WandSparkles size={14} /> התצוגה המקדימה מוכנה</div><ul><li><Check size={12} /> 5 נשימות</li><li><Check size={12} /> 3 שתיקות</li></ul></div>}
+                <div className="hsx-chat-input"><span>בקש שינוי נוסף…</span><button type="button" aria-label="שליחת בקשה"><Send size={12} /></button></div>
               </aside>
             </div>
 

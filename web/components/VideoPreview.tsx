@@ -360,6 +360,33 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
           selectedId={selectedOverlayId ?? null} onSelect={(id) => onSelectOverlay?.(id)} onBegin={() => onBeginOverlay?.()}
           onLive={(u) => onOverlayLive?.(u)} onCommit={() => onCommitOverlay?.()} onCancel={() => onCancelOverlay?.()}
           onEditText={(id, text) => onEditOverlayText?.(id, text)} />
+
+        {(selectedOverlayId || selectedSubId) && (
+          <div className="canvas-quick-bar" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <span className="btn ghost" style={{ cursor: "default", opacity: 0.8, fontSize: "11px" }}>
+              {selectedOverlayId ? "שכבה נבחרת" : "כתובית נבחרת"}
+            </span>
+            <div className="vdivider" style={{ height: "14px" }} />
+            {selectedOverlayId && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => onSelectOverlay?.(null)}
+              >
+                סגור בחירה
+              </button>
+            )}
+            {selectedSubId && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => onSelectSub?.(null)}
+              >
+                סגור בחירה
+              </button>
+            )}
+          </div>
+        )}
       </div> : <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><span>טען מדיה כדי לראות תצוגה מקדימה</span></div>}
     </div>
     <div className="transport" dir="ltr">
@@ -369,7 +396,10 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
         <IconButton icon={SkipBack} tip="פריים אחורה" tipPos="up" onClick={() => step(-1)} disabled={!hasPlayable} />
         <button className="tp-play" onClick={toggle} disabled={!hasPlayable} data-tip={playing ? "השהה (Space)" : "נגן (Space)"} data-tippos="up">{playing ? <Pause size={18} /> : <Play size={18} />}</button>
         <IconButton icon={SkipForward} tip="פריים קדימה" tipPos="up" onClick={() => step(1)} disabled={!hasPlayable} />
-        <span className="tp-time">{fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span></span>
+        <span className="tp-time">
+          {playing && <span className="audio-eq-bars" title="אודיו מתנגן"><i /><i /><i /><i /><i /></span>}
+          {fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span>
+        </span>
       </div><div className="tp-grow" />
       <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up" onClick={quotePlace} disabled={!hasPlayable} />
       <IconButton icon={MoreHorizontal} tip="עוד" tipPos="up" disabled={!hasPlayable} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.left, y: r.top - 8 }); }} />

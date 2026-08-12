@@ -827,6 +827,24 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.length ? <div className="composer-references" aria-label="הפניות בהודעה">
           {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.map((token, index) => <span key={`${token}-${index}`}>{token.startsWith("[ציטוט") ? <Quote size={12} /> : <AtSign size={12} />}{token}</span>)}
         </div> : null}
+
+        {!input.trim() && !running && (
+          <div className="chat-mentions" aria-label="הצעות מהירות לסוכן" style={{ marginBottom: "6px" }}>
+            <button type="button" onClick={() => { setInput("הסר שתיקות ונשימות מכל הווידאו."); taRef.current?.focus(); }}>
+              <Sparkles size={12} style={{ color: "var(--accent)" }} /> הסר שתיקות
+            </button>
+            <button type="button" onClick={() => { setInput("צור כתוביות מסונכרנות בעברית."); taRef.current?.focus(); }}>
+              <Captions size={12} style={{ color: "var(--accent)" }} /> צור כתוביות RTL
+            </button>
+            <button type="button" onClick={() => { setInput("הוסף לוגו בפינה השמאלית העליונה."); taRef.current?.focus(); }}>
+              <ImageIcon size={12} style={{ color: "var(--accent)" }} /> לוגו בפינה
+            </button>
+            <button type="button" onClick={() => { setInput("השאר רק את החלקים לפי הסקריפט."); taRef.current?.focus(); }}>
+              <Scissors size={12} style={{ color: "var(--accent)" }} /> חתוך לפי סקריפט
+            </button>
+          </div>
+        )}
+
         <div className="chat-compose">
           <div className="chat-compose-tools">
             <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>

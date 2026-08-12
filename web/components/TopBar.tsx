@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command } from "lucide-react";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useTheme } from "@/lib/theme/ThemeProvider";
+import KeyboardShortcutsModal from "@/components/KeyboardShortcutsModal";
 
 export default function TopBar({
   projectName, projects, projectId, saving,
@@ -23,6 +24,7 @@ export default function TopBar({
   canExport: boolean; rendering: boolean; renderProgress?: number; onExport: () => void;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [kbdOpen, setKbdOpen] = useState(false);
   const { configured: authOn, user, signOut } = useAuth();
   const { resolved, setMode } = useTheme();
   const [userOpen, setUserOpen] = useState(false);
@@ -30,10 +32,22 @@ export default function TopBar({
   const userRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const avatar = (user?.user_metadata?.avatar_url || user?.user_metadata?.picture) as string | undefined;
   const userName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "חשבון") as string;
+  
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
     fetch("/api/admin/access").then((r) => r.json()).then((body) => setIsAdmin(body.admin === true)).catch(() => setIsAdmin(false));
   }, [user?.id]);
+
+  useEffect(() => {
+    const handleGlobalKbd = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setKbdOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKbd);
+    return () => window.removeEventListener("keydown", handleGlobalKbd);
+  }, []);
 
   const items: CtxItem[] = [
     ...projects.map((p) => ({ label: p.name, icon: p.id === projectId ? Check : FolderOpen, onClick: () => onSwitch(p.id) })),
@@ -45,6 +59,7 @@ export default function TopBar({
 
   return (
     <div className="topbar2">
+      <KeyboardShortcutsModal open={kbdOpen} onClose={() => setKbdOpen(false)} />
       <div className="tb-group tb-brand">
         <Link href="/dashboard" className="tb-logo" title="Hypescript — לוח פרויקטים" aria-label="Hypescript">
           <BrandLogo variant="icon" size="sm" decorative priority />
@@ -66,6 +81,7 @@ export default function TopBar({
       <div className="tb-spacer" />
 
       <div className="tb-group">
+        <IconButton icon={Command} tip="מפת קיצורי מקשים (Ctrl+K)" onClick={() => setKbdOpen(true)} />
         <Link href="/dashboard" className="iconbtn" data-tip="לוח פרויקטים" aria-label="לוח פרויקטים"><LayoutGrid size={16} strokeWidth={1.75} /></Link>
         <IconButton icon={MessageCircle} tip="פתח שיחה לצד העורך" active={chatOpen && !focusMode} onClick={onToggleChat} />
         <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip="מצב שיחה — וידאו ושיחה בלבד">
