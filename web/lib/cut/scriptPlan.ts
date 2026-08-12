@@ -10,6 +10,7 @@ import { Clip, uid } from "@/lib/editor/model";
 import { HebrewToken, makeToken, normalizeBase, tokenizeHebrew } from "@/lib/align/hebrew";
 import { AlignmentReport, alignTokens, summarizeAlignment } from "@/lib/align/globalAlign";
 import { EnvelopeProfile, SpectralFeatures, computeSpectral } from "@/lib/audio/features";
+import { AudioCalibration, calibrateFromTranscript, describeCalibration } from "@/lib/audio/calibration";
 import { NonSpeechEvent, classifyGap, isRemovable } from "@/lib/audio/nonSpeech";
 import { BOUNDARY_DEFAULTS, BoundaryOptions, chooseJoinPoint, refineOffset, refineOnset } from "./boundaries";
 
@@ -97,6 +98,10 @@ export interface ScriptCutPlan {
   removedSec: number;
   /** המילים שנשמרו, לפי סדר — הבסיס לכתוביות. */
   keptWords: Word[];
+  /** מה נמדד מההקלטה עצמה — הבסיס לכל ההחלטות האקוסטיות. */
+  calibration: AudioCalibration | null;
+  /** כמה גבולות הורחבו בתיקון האוטומטי כדי לא לחתוך מילה. */
+  repairedEdges: number;
 }
 
 interface KeptWord {
@@ -138,10 +143,21 @@ export function planScriptCut(
   const pacing: PacingPolicy = options.maxInternalPauseOverride != null
     ? { ...preset, maxInternalPauseSec: Math.max(0.05, options.maxInternalPauseOverride) }
     : preset;
-  const boundaryOpts: BoundaryOptions = { ...BOUNDARY_DEFAULTS, ...preset.boundary, ...options.boundary };
   const minClipSec = options.minClipSec ?? 0.12;
   const removeFillers = options.removeFillers !== false;
   const envelope = options.envelope ?? null;
+
+  // הכיול נגזר מההקלטה עצמה לפני כל החלטה אקוסטית. סף הדיבור מגיע מכאן
+  // ולא מקבוע — זה מה שמאפשר לאותו קוד לעבוד על מיקרופון דש ועל טלפון.
+  const calibration = envelope
+    ? calibrateFromTranscript(envelope, words, options.samples, options.sampleRate)
+    : null;
+  const boundaryOpts: BoundaryOptions = {
+    ...BOUNDARY_DEFAULTS,
+    ...preset.boundary,
+    ...(calibration?.reliable ? { speechMarginDb: calibration.speechMarginDb } : {}),
+    ...options.boundary,
+  };
 
   const speech = words
     .filter(isSpeechWord)
@@ -166,6 +182,8 @@ export function planScriptCut(
     keptSec: 0,
     removedSec: 0,
     keptWords: [],
+    calibration,
+    repairedEdges: 0,
   });
   if (!speech.length || !scriptTokens.length) return emptyPlan();
 
@@ -203,7 +221,7 @@ export function planScriptCut(
       return found;
     }
     if (!envelope || to - from < 0.04) return undefined;
-    const measured = classifyGap(envelope, from, to, spectralFor(options, from, to));
+    const measured = classifyGap(envelope, from, to, spectralFor(options, from, to), { calibration });
     events.push(measured);
     return measured;
   };
@@ -296,6 +314,37 @@ export function planScriptCut(
     merged.push({ ...segment });
   }
 
+  // ─── תיקון מחייב: גבול לעולם לא חוצה מילה שנשמרת ────────────────────────
+  // המדידה האקוסטית יכולה לטעות (הקלטה רועשת, סף שלא כויל, עיצור חלש
+  // במיוחד). כאן זה נעצר: אם גבול נכנס לתוך מילה שהמשתמש ביקש — הגבול זז
+  // החוצה. האינווריאנטה מובטחת מבנית ולא תלויה בכיול המושלם.
+  let repairedEdges = 0;
+  const guard = 0.015;
+  for (const segment of merged) {
+    const first = segment.run.words[0].word;
+    const last = segment.run.words[segment.run.words.length - 1].word;
+    if (segment.start > first.start - guard) {
+      segment.start = Math.max(0, first.start - guard);
+      repairedEdges++;
+    }
+    if (segment.end < last.end + guard) {
+      segment.end = Math.min(options.duration, last.end + guard);
+      repairedEdges++;
+    }
+  }
+  // ההרחבה עלולה ליצור חפיפה בין שכנים — פותרים בנקודת האמצע, שנשארת
+  // מחוץ לשתי המילים כי הן לא חופפות מלכתחילה.
+  for (let i = 1; i < merged.length; i++) {
+    if (merged[i].start >= merged[i - 1].end) continue;
+    const previousLast = merged[i - 1].run.words[merged[i - 1].run.words.length - 1].word.end;
+    const nextFirst = merged[i].run.words[0].word.start;
+    const middle = nextFirst > previousLast
+      ? (previousLast + nextFirst) / 2
+      : Math.max(merged[i - 1].end, merged[i].start);
+    merged[i - 1].end = middle;
+    merged[i].start = middle;
+  }
+
   const clips: Clip[] = [];
   const boundaries: CutBoundaryReport[] = [];
   for (let i = 0; i < merged.length; i++) {
@@ -332,8 +381,12 @@ export function planScriptCut(
     keptSec,
     removedSec: Math.max(0, options.duration - keptSec),
     keptWords: kept.map((k) => ({ ...k.word, text: k.scriptToken.raw })),
+    calibration,
+    repairedEdges,
   };
 }
+
+export { describeCalibration };
 
 /**
  * הידוק שקטים בלי סקריפט — כל הדיבור נשמר, רק הפערים מתהדקים.

@@ -29,7 +29,7 @@ import {
 } from "@/lib/editor/clipFilter";
 import { edlToSubs, edlToSubsWithScript, parseSrt, Sub, subsToSrt } from "@/lib/editor/subtitlesEdl";
 import { loadAudioAnalysis, type AudioAnalysis } from "@/lib/audio/source";
-import { planScriptCut, planSilenceTighten, type Pacing, type ScriptCutPlan } from "@/lib/cut/scriptPlan";
+import { describeCalibration, planScriptCut, planSilenceTighten, type Pacing, type ScriptCutPlan } from "@/lib/cut/scriptPlan";
 import { buildCaptionCues, CAPTION_POLICY, auditCaptions } from "@/lib/captions/segment";
 import { captionTokensFromScript, captionTokensFromTranscript } from "@/lib/captions/fromScript";
 import { auditEdit, formatAudit } from "@/lib/qa/editAudit";
@@ -344,6 +344,15 @@ function summarizePlan(plan: ScriptCutPlan, sourceName: string, measured: boolea
       ? `נקודות החיתוך מוקמו לפי גל-קול מדוד (${plan.boundaries.filter((b) => b.measured).length}/${plan.boundaries.length} מעברים).`
       : "אזהרה: אין ניתוח גל-קול למקור הזה — החיתוך לפי חותמות התמלול בלבד, ולכן פחות מדויק.",
   );
+  if (plan.calibration) {
+    lines.push(describeCalibration(plan.calibration));
+    if (!plan.calibration.reliable) {
+      lines.push("ההחלטות האקוסטיות נעשו בברירות מחדל שמרניות; ההגנה על גבולות המילים עדיין מובטחת.");
+    }
+  }
+  if (plan.repairedEdges) {
+    lines.push(`${plan.repairedEdges} גבולות הורחבו אוטומטית כדי לא לחתוך מילה.`);
+  }
   if (plan.missingScript.length) {
     lines.push(
       `⚠ ${plan.missingScript.length} מילים מהטקסט שלך לא נמצאו בתמלול ולכן אינן בפלט: ${plan.missingScript.slice(0, 10).map((m) => m.text).join(", ")}` +
