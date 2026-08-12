@@ -21,6 +21,12 @@ export type NonSpeechLabel =
   | "cough_throat"
   | "impact"
   | "laugh"
+  /**
+   * הפער נראה כמו דיבור לפי הפרופיל המכויל של ההקלטה. כלומר: ככל הנראה
+   * התמלול פספס כאן מילה. התגלה על הקלטה אמיתית — הסיווג הניח שכל פער הוא
+   * לא-דיבור, וזו הנחה שנשברת מול ASR אמיתי. לעולם לא מוסר אוטומטית.
+   */
+  | "speech_like"
   | "unknown_nonspeech";
 
 export type EventBasis = "provider_label" | "measured_acoustic_features";
@@ -178,6 +184,19 @@ export function classifyGap(
   const centroidHigh = relative ? rank(spectral.centroid, "centroid") : ramp(spectral.centroid, 320, 2600);
 
   const scores: Array<[NonSpeechLabel, number]> = [
+    // דיבור שהתמלול פספס: תואם את פרופיל הדיבור של ההקלטה עצמה — לא אוושתי
+    // כמו נשימה, מרוכז בפס הדיבור, וחזק. חייב להיבדק ראשון: אם זה דיבור,
+    // כל שאר הפרופילים אינם רלוונטיים והקטע לא יוסר.
+    ...(relative ? [[
+      "speech_like",
+      profileScore([
+        ramp(durationSec, 0.08, 0.18),
+        ramp(loudness, 0.35, 0.7),
+        1 - ramp(flatnessHigh, 0.55, 0.85),
+        1 - ramp(highHigh, 0.6, 0.9),
+        band(midHigh, 0.1, 0.25, 0.9, 1.0),
+      ]),
+    ]] as Array<[NonSpeechLabel, number]> : []),
     // נשימה: חלשה מדיבור, אוושתית יותר מדיבור, מוטית לגבוהים, התקפה רכה
     ["breath", profileScore([
       band(durationSec, 0.08, 0.14, 0.6, 1.0),
@@ -232,6 +251,7 @@ export const NON_SPEECH_LABELS_HE: Record<NonSpeechLabel, string> = {
   cough_throat: "שיעול/כחכוח",
   impact: "חבטה/גרירת רהיט",
   laugh: "צחוק",
+  speech_like: "דיבור שהתמלול ככל הנראה פספס",
   unknown_nonspeech: "צליל לא מזוהה",
 };
 
@@ -253,6 +273,9 @@ export function describeEvent(event: NonSpeechEvent): string {
 
 /** האם מותר להסיר את הצליל בחיתוך אוטומטי. */
 export function isRemovable(event: NonSpeechEvent, keepLaughter: boolean): boolean {
+  // דיבור שהתמלול פספס לעולם לא מוסר אוטומטית — זו בדיוק אבדן המילים
+  // שהמשתמש דיווח עליו, רק מכיוון אחר.
+  if (event.label === "speech_like") return false;
   if (event.label === "laugh") return !keepLaughter;
   if (event.label === "unknown_nonspeech") return event.measurements.peakAboveFloorDb < 14;
   return true;
