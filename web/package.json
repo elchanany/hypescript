@@ -2,7 +2,7 @@
   "name": "hypescript-web",
   "version": "0.1.0",
   "private": true,
-  "description": "hypescript web — עריכת שיעורי וידאו בעברית בדפדפן (חיתוך לפי סקריפט, הסרת נשימות, כתוביות)",
+  "description": "Hypescript web — עורך וידאו AI בעברית שפועל בשיחה, בטקסט ובטיימליין מקצועי",
   "scripts": {
     "prepare:ffmpeg": "node scripts/prepare-ffmpeg.mjs",
     "predev": "npm run prepare:ffmpeg",

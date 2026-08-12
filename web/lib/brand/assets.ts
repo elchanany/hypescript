@@ -2,11 +2,11 @@
 
 export const BRAND_NAME = "Hypescript";
 export const BRAND_NAME_HE = "Hypescript";
-export const BRAND_TAGLINE_HE = "עורך וידאו AI בעברית — מהרעיון לסרטון מוכן";
-export const BRAND_TAGLINE_EN = "AI video editor for Hebrew creators, from first cut to final export";
+export const BRAND_TAGLINE_HE = "עורך הווידאו AI שפשוט מדברים איתו";
+export const BRAND_TAGLINE_EN = "The AI video editor you simply talk to";
 
 export const BRAND_PATHS = {
-  icon: "/brand/hypescript-mark-premium.png",
+  icon: "/brand/hypescript-mark-v3.png",
   horizontal: "/brand/hypescript-wordmark-dark.svg",
   dark: "/brand/hypescript-wordmark-dark.svg",
   light: "/brand/hypescript-wordmark-light.svg",

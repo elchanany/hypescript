@@ -8,16 +8,16 @@ import "./landing-v2.css";
 
 export const metadata: Metadata = {
   title: "Hypescript — עורך וידאו AI בעברית",
-  description: "הופכים וידאו, פודקאסט או ראיון בעברית לגרסה מדויקת ומוכנה לפרסום — חיתוך דרך טקסט, כתוביות, שכבות ורינדור במקום אחד.",
+  description: "עורך וידאו AI שפשוט מדברים איתו: מעלים חומר גלם, מבקשים שינוי בשפה טבעית ומקבלים סרטון מעוצב ומוכן לפרסום.",
   keywords: ["עריכת וידאו", "כתוביות בעברית", "חיתוך סרטונים", "עורך וידאו אונליין", "תמלול וידאו"],
   alternates: { canonical: "/welcome" },
 };
 
 const features = [
-  { icon: Scissors, title: "חותכים דרך הטקסט", text: "מוחקים משפט, נשימה או חזרה — והטיימליין מתעדכן בדיוק באותו רגע." },
+  { icon: MessageSquareText, title: "פשוט אומרים מה רוצים", text: "מתארים את הסרטון הרצוי בשפה טבעית — והעורך הופך את הבקשה לפעולות אמיתיות." },
+  { icon: Scissors, title: "חותכים בטקסט או בטיימליין", text: "עורכים דרך התמלול או בדיוק של פריימים, בלי לקפוץ בין כלים ותוכנות." },
   { icon: Captions, title: "כתוביות עברית שנראות נכון", text: "RTL אמיתי, תזמון מדויק, עריכה ישירה על הווידאו וייצוא SRT." },
   { icon: Layers3, title: "וידאו, לוגו, תמונות וסאונד", text: "שכבות חופשיות, גרירה, שינוי גודל, שקיפות, fade ומיקום מדויק." },
-  { icon: MessageSquareText, title: "עוזר עריכה בתוך הפרויקט", text: "מבקש תוצאה בשפה טבעית, רואה את הפעולות ומבטל שינוי בלחיצה." },
   { icon: Cloud, title: "הענן הוא ברירת המחדל", text: "מצב העריכה נשמר בחשבון וקובצי מדיה חדשים מועלים לאחסון פרטי ומאובטח." },
   { icon: Download, title: "רינדור שאפשר לסמוך עליו", text: "התקדמות ברורה, תוצאה לצפייה והורדה, ללא מסכים שמעמידים פנים." },
 ];
@@ -29,9 +29,9 @@ const plans = [
 ];
 
 const useCases = [
-  { title: "פודקאסטים וראיונות", text: "מורידים שתיקות, נשימות וחזרות בלי לאבד מילה חשובה." },
-  { title: "תוכן לרשתות", text: "מכינים גרסה הדוקה, כתוביות ברורות ופורמט אנכי לפרסום." },
-  { title: "עסקים ועמותות", text: "שומרים על לוגו, צבעים, פתיחים וקריאות לפעולה עקביות." },
+  { title: "יוצרים ופודקאסטים", text: "הופכים פרק ארוך לקליפים, כתוביות וגרסאות מוכנות לכל רשת." },
+  { title: "עסקים ומותגים", text: "מייצרים סרטוני מוצר, הדרכה ופרסום עם לוגו, צבעים וקריאה לפעולה." },
+  { title: "קורסים וארגונים", text: "עורכים הרצאות, מפגשים והדרכות בלי ללמוד תוכנת עריכה מורכבת." },
 ];
 
 export default function WelcomePage() {
@@ -41,7 +41,7 @@ export default function WelcomePage() {
     name: "Hypescript",
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
-    description: "עורך וידאו מקצועי בעברית עם חיתוך דרך טקסט, כתוביות ורינדור בענן.",
+    description: "עורך וידאו AI בעברית שפועל בשיחה ומבצע חיתוך, כתוביות, עיצוב, שכבות ורינדור בענן.",
     offers: [
       { "@type": "Offer", name: "Free", price: "0", priceCurrency: "ILS" },
       { "@type": "Offer", name: "Creator", price: "49", priceCurrency: "ILS", description: "חודש ראשון ללא חיוב, לאחר מכן ₪49 לחודש" },
@@ -66,9 +66,9 @@ export default function WelcomePage() {
       </header>
 
       <section className="marketing-hero">
-        <div className="marketing-kicker"><Sparkles size={14} />חודש ראשון חינם במסלולים בתשלום</div>
-        <h1>ממילים ארוכות.<br /><span>לסרטון שאי אפשר לדלג עליו.</span></h1>
-        <p>Hypescript נבנה במיוחד לתוכן בעברית: וידאו, פודקאסט, ראיון או הרצאה נכנסים כחומר גלם — ויוצאים מדויקים, כתובים ומוכנים לפרסום.</p>
+        <div className="marketing-kicker"><Sparkles size={14} />עורך וידאו AI בעברית — בלי ללמוד תוכנה מסובכת</div>
+        <h1>עורך הווידאו<br /><span>שפשוט מדברים איתו.</span></h1>
+        <p>מעלים וידאו וכותבים מה רוצים: לקצר, לסדר, להוסיף כתוביות, תמונות, מוזיקה ולוגו, לשנות פורמט או להכין גרסה לרשתות. Hypescript מבצע הכול — ואתם רואים ומאשרים כל שינוי.</p>
         <div className="marketing-hero-actions">
           <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link>
           <a href="#how" className="btn secondary marketing-cta"><Play size={16} />ראה איך זה עובד</a>
@@ -78,11 +78,11 @@ export default function WelcomePage() {
         <LandingProductExperience />
       </section>
 
-      <div className="hsx-kinetic" aria-hidden="true"><div><span>חותכים בטקסט</span><i>✦</i><span>מדייקים בנשימה</span><i>✦</i><span>מעצבים על המסך</span><i>✦</i><span>מפרסמים בעברית</span><i>✦</i><span>חותכים בטקסט</span><i>✦</i><span>מדייקים בנשימה</span><i>✦</i></div></div>
+      <div className="hsx-kinetic" aria-hidden="true"><div><span>מבקשים בשיחה</span><i>✦</i><span>חותכים ומסדרים</span><i>✦</i><span>מוסיפים כתוביות ועיצוב</span><i>✦</i><span>מפרסמים בכל פורמט</span><i>✦</i><span>מבקשים בשיחה</span><i>✦</i><span>מקבלים סרטון מוכן</span><i>✦</i></div></div>
 
       <section className="marketing-proof" aria-label="עקרונות המוצר">
         <article><BadgeCheck size={18} /><div><strong>דיוק לפני אוטומציה</strong><span>כל שינוי נשאר גלוי וניתן לביטול</span></div></article>
-        <article><Gauge size={18} /><div><strong>קצב עריכה מהיר</strong><span>פחות שניות מתות ופחות עבודת ניקוי</span></div></article>
+        <article><Gauge size={18} /><div><strong>בקשה אחת, הרבה פעולות</strong><span>חיתוך, עיצוב, כתוביות ופורמטים באותו פרויקט</span></div></article>
         <article><ShieldCheck size={18} /><div><strong>שליטה בעלויות</strong><span>מכסות קשיחות, בלי חיובי חריגה אוטומטיים</span></div></article>
       </section>
 
@@ -93,28 +93,28 @@ export default function WelcomePage() {
           <div className="hsx-story-wave">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 29) % 76)}%` }} />)}</div>
         </div>
         <div className="marketing-story-copy">
-          <span>העורך לא מסתתר מאחורי הצ׳אט</span>
-          <h2>מבקשים בשפה טבעית.<br />רואים כל שינוי קורה.</h2>
-          <p>Hypescript מחבר תמלול, החלטות עריכה, טיימליין ורינדור לאותה אמת. כל חיתוך מסומן, כל שכבה ניתנת להזזה, וכל שינוי ניתן לביטול.</p>
+          <span>זה עורך וידאו מלא — עם שיחה במקום תפריטים מסובכים</span>
+          <h2>אומרים מה צריך.<br />רואים את הסרטון נבנה.</h2>
+          <p>Hypescript מבין את הבקשה, בונה תוכנית עריכה ומבצע אותה על טיימליין אמיתי. אפשר להזיז כל שכבה, לשנות כל כיתוב, לבטל כל פעולה ולהמשיך לערוך ידנית בכל רגע.</p>
           <div className="story-metrics"><b><strong>0</strong> חפיפות</b><b><strong>1</strong> פרויקט</b><b><strong>∞</strong> גרסאות</b></div>
         </div>
       </section>
 
       <section className="hsx-scroll-story hsx-reveal" aria-label="תהליך עריכה חי">
-        <div className="hsx-scroll-head"><span>שלוש שכבות. זרימה אחת.</span><h2>הסיפור מתקדם יחד איתך.</h2></div>
+        <div className="hsx-scroll-head"><span>בקשה. עריכה. תוצאה.</span><h2>כך המוצר עובד באמת.</h2></div>
         <div className="hsx-scroll-rail">
-          <article><b>01</b><div><ScanText size={22} /><h3>המילים הופכות לחומר עריכה</h3><p>מסמנים חזרה או שתיקה בטקסט ורואים מיד את החיתוך על הווידאו.</p></div><div className="hsx-text-sculpture"><span>הרעיון</span><span className="muted">אה...</span><span>מקבל</span><span>קצב</span></div></article>
+          <article><b>01</b><div><ScanText size={22} /><h3>כותבים את התוצאה הרצויה</h3><p>“הכן סרטון קצר, הוסף כתוביות ולוגו” — בלי לחפש איפה נמצא כל כלי.</p></div><div className="hsx-text-sculpture"><span>קצר</span><span className="muted">+</span><span>כתוביות</span><span>9:16</span></div></article>
           <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><strong>H</strong></div></article>
-          <article><b>03</b><div><WandSparkles size={22} /><h3>העוזר מציע. אתם מחליטים.</h3><p>כל פעולה מגיעה עם תצוגה מקדימה, הסבר ואפשרות ביטול.</p></div><div className="hsx-decision"><span><Check size={14} />8 שינויים בטוחים</span><button type="button">החל הכול</button></div></article>
+          <article><b>03</b><div><WandSparkles size={22} /><h3>העורך מבצע. אתם בשליטה.</h3><p>כל פעולה מגיעה עם תצוגה מקדימה, הסבר ואפשרות ביטול.</p></div><div className="hsx-decision"><span><Check size={14} />הגרסה מוכנה לבדיקה</span><button type="button">החל הכול</button></div></article>
         </div>
       </section>
 
       <section className="marketing-section marketing-lab">
         <div className="marketing-section-head"><span>חדש בדרך שבה עורכים</span><h2>לא עוד עורך עם כפתור AI בצד</h2><p>ממשק שנבנה סביב הפעולה עצמה — שיחה, תמונה, קול וטיימליין שעובדים יחד.</p></div>
         <div className="marketing-bento">
-          <article className="bento-command"><Command size={22} /><span>Command canvas</span><h3>כותבים כוונה.<br />רואים פעולה.</h3><div className="command-demo"><i>הסר נשימות, שמור על כל מילה</i><b><Zap size={13} /> 14 פעולות מוכנות</b></div></article>
+          <article className="bento-command"><Command size={22} /><span>Conversational editing</span><h3>כותבים בקשה.<br />מקבלים עריכה.</h3><div className="command-demo"><i>הפוך את הפרק לקליפ אנכי עם כותרת וכתוביות</i><b><Zap size={13} /> תוכנית העריכה מוכנה</b></div></article>
           <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>הפרק</i><i>הזה</i><i className="cut">אה...</i><i>מתחיל</i><i>עכשיו</i></div></article>
-          <article className="bento-precision"><AudioWaveform size={22} /><span>Breath precision</span><h3>חיתוך שנצמד לנשימה, לא לניחוש</h3><div className="mini-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
+          <article className="bento-precision"><AudioWaveform size={22} /><span>Timeline precision</span><h3>כל שינוי נוחת בדיוק במקום</h3><div className="mini-wave"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
           <article className="bento-direct"><MousePointer2 size={22} /><span>Direct manipulation</span><h3>גוררים על הסרטון עצמו</h3><div className="mini-canvas"><b>שם הפרק והדובר</b><i /><i /><i /><i /></div></article>
           <article className="bento-proof"><Eye size={22} /><span>Proof before export</span><h3>רואים את התוצאה לפני שמחכים לרינדור</h3><div className="proof-line"><i /><b>Preview matches export</b></div></article>
         </div>
@@ -130,9 +130,9 @@ export default function WelcomePage() {
       <section className="marketing-section marketing-before-after">
         <div className="marketing-section-head"><span>לא עוד תהליך מפורק</span><h2>העריכה נשארת במקום אחד</h2><p>במקום לקפוץ בין תמלול, חיתוך, כתוביות, עיצוב וייצוא.</p></div>
         <div className="marketing-compare">
-          <article className="old"><span>הדרך הישנה</span><ul><li>למצוא ידנית כל שתיקה וחזרה</li><li>להעתיק כתוביות בין תוכנות</li><li>לאבד גרסאות וקבצים בדרך</li><li>לגלות בעיית חיתוך רק אחרי הייצוא</li></ul></article>
+          <article className="old"><span>הדרך הישנה</span><ul><li>ללמוד איפה מסתתר כל כלי</li><li>להעתיק כתוביות בין תוכנות</li><li>לאבד גרסאות וקבצים בדרך</li><li>לבנות ידנית כל פורמט מחדש</li></ul></article>
           <div className="marketing-compare-arrow"><ArrowLeft size={24} /></div>
-          <article className="new"><span>עם Hypescript</span><ul><li><Check size={15} />חותכים דרך הטקסט</li><li><Check size={15} />רואים כל פעולה על הטיימליין</li><li><Check size={15} />שומרים כתוביות ומיתוג יחד</li><li><Check size={15} />צופים ומורידים את התוצר במקום</li></ul></article>
+          <article className="new"><span>עם Hypescript</span><ul><li><Check size={15} />מבקשים את התוצאה בשיחה</li><li><Check size={15} />רואים כל פעולה על הטיימליין</li><li><Check size={15} />שומרים כתוביות ומיתוג יחד</li><li><Check size={15} />מקבלים כל גרסה במקום אחד</li></ul></article>
         </div>
       </section>
 
@@ -140,7 +140,7 @@ export default function WelcomePage() {
         <div className="marketing-section-head"><span>פשוט להתחיל</span><h2>מחומר גלם לסרטון מוכן בשלושה צעדים</h2></div>
         <div className="marketing-steps">
           <article><b>01</b><Film size={24} /><h3>מעלים</h3><p>וידאו, אודיו, תמונות ולוגו נשמרים ישירות בפרויקט הענן.</p></article>
-          <article><b>02</b><MessageSquareText size={24} /><h3>עורכים</h3><p>חותכים בטקסט או מבקשים מעוזר העריכה לבצע סדרת פעולות.</p></article>
+          <article><b>02</b><MessageSquareText size={24} /><h3>מבקשים</h3><p>מתארים בשיחה את הסרטון הרצוי, או עורכים ידנית בטקסט ובטיימליין.</p></article>
           <article><b>03</b><Download size={24} /><h3>מפרסמים</h3><p>רינדור בענן, צפייה בתוצאה והורדה באיכות שנבחרה.</p></article>
         </div>
       </section>
@@ -173,7 +173,7 @@ export default function WelcomePage() {
       <section className="hsx-outro hsx-reveal" aria-label="מתוצאה אחת למערכת תוכן">
         <div className="hsx-outro-head"><span>לא עוצרים בייצוא הראשון</span><h2>פרויקט אחד.<br />מערכת תוכן שלמה.</h2><p>כל מה שנוצר נשאר מאורגן, ניתן לשינוי ומוכן לגרסה הבאה.</p></div>
         <div className="hsx-output-orbit">
-          <div className="hsx-output-core"><img src="/brand/landing-creator-frame.webp" alt="הסרטון המוכן" /><span><Play size={16} fill="currentColor" /></span><b>הסרטון שלך מוכן</b><small>1080p · 00:35</small></div>
+          <div className="hsx-output-core"><img src="/brand/landing-creator-male.webp" alt="סרטון הסבר מוכן לפרסום" /><span><Play size={16} fill="currentColor" /></span><b>הסרטון שלך מוכן</b><small>1080p · 00:35</small></div>
           <article className="output-video"><Film size={17} /><div><b>MP4</b><small>מוכן להורדה</small></div><Check size={14} /></article>
           <article className="output-captions"><Captions size={17} /><div><b>SRT</b><small>כתוביות מסונכרנות</small></div><Check size={14} /></article>
           <article className="output-social"><Sparkles size={17} /><div><b>9:16</b><small>גרסה לרשתות</small></div><Check size={14} /></article>
@@ -181,7 +181,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-icon"><Film size={24} /></div><span>הקליפ הראשון מתחיל כאן</span><h2>יש לך חומר גלם.<br />עכשיו יש לו כיוון.</h2><p>מתחילים בחודש ניסיון, מדברים עם העורך ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
+      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-icon"><Film size={24} /></div><span>הסרטון הראשון מתחיל כאן</span><h2>מעלים. מבקשים.<br />מקבלים סרטון מוכן.</h2><p>מתחילים בחודש ניסיון, מדברים עם עורך הווידאו ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
       <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy">פרטיות</Link><Link href="/legal/terms">תנאי שימוש</Link><Link href="/login">התחברות</Link></nav></footer>
     </main>
   );

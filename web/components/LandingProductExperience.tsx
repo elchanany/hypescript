@@ -4,9 +4,9 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "lucide-react";
 
 const modes = [
-  { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "נשימה אחת סומנה להסרה" },
-  { id: "captions", label: "כתוביות", icon: Captions, note: "RTL ותזמון מסונכרנים" },
-  { id: "agent", label: "עוזר עריכה", icon: MessageSquareText, note: "8 פעולות מוכנות לבדיקה" },
+  { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "הטקסט והווידאו מסונכרנים" },
+  { id: "captions", label: "כתוביות", icon: Captions, note: "עברית, עיצוב ותזמון במקום אחד" },
+  { id: "agent", label: "עוזר עריכה", icon: MessageSquareText, note: "בקשה אחת הפכה לתוכנית עריכה" },
 ] as const;
 
 type Mode = (typeof modes)[number]["id"];
@@ -96,8 +96,8 @@ export default function LandingProductExperience() {
               <aside className="hsx-inspector">
                 <div className="hsx-ai-title"><span><Sparkles size={13} /></span><div><b>Hype AI</b><small>עורך יחד איתך</small></div><i>פעיל</i></div>
                 <div className="hsx-chat-thread">
-                  <p className="from-user">הדק את הפתיח והסר נשימות, אבל אל תחתוך מילים.</p>
-                  <p className="from-agent"><b>מצאתי 8 שינויים בטוחים.</b><span>סימנתי אותם על הטיימליין לפני ההחלה.</span></p>
+                  <p className="from-user">הפוך את הראיון לקליפ קצר לרשתות. הוסף כתוביות, כותרת ולוגו.</p>
+                  <p className="from-agent"><b>הכנתי גרסה מלאה לבדיקה.</b><span>החיתוכים, העיצוב והפורמט כבר מסומנים על הטיימליין.</span></p>
                 </div>
                 <div className="hsx-mode-tabs" role="tablist" aria-label="מצבי הדגמה">
                   {modes.map(({ id, label, icon: Icon }) => (
@@ -106,7 +106,7 @@ export default function LandingProductExperience() {
                 </div>
                 {mode === "transcript" && <div className="hsx-transcript"><small>תמלול חי</small><p>כשמתחילים עם <mark>אה...</mark> רעיון ברור, העריכה כבר מרגישה אחרת.</p><em>לחיצה על מילה עורכת את הווידאו</em></div>}
                 {mode === "captions" && <div className="hsx-style-panel"><small>סגנון כתוביות</small><div className="hsx-style-preview">עברית. בדיוק במקום.</div><label>גודל <i><b /></i></label><label>רקע <span /><span /><span /></label></div>}
-                {mode === "agent" && <div className="hsx-agent-panel"><small>תוכנית עריכה</small><div><WandSparkles size={14} /> התצוגה המקדימה מוכנה</div><ul><li><Check size={12} /> 5 נשימות</li><li><Check size={12} /> 3 שתיקות</li></ul></div>}
+                {mode === "agent" && <div className="hsx-agent-panel"><small>תוכנית עריכה</small><div><WandSparkles size={14} /> התצוגה המקדימה מוכנה</div><ul><li><Check size={12} /> גרסה קצרה + כתוביות</li><li><Check size={12} /> כותרת, לוגו ו־9:16</li></ul></div>}
                 <div className="hsx-chat-input"><span>בקש שינוי נוסף…</span><button type="button" aria-label="שליחת בקשה"><Send size={12} /></button></div>
               </aside>
             </div>

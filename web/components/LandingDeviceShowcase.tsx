@@ -6,9 +6,9 @@ import { useState } from "react";
 export default function LandingDeviceShowcase() {
   const [prompt, setPrompt] = useState(0);
   const prompts = [
-    { ask: "תכין מזה גרסת Reels של 35 שניות", done: "יצרתי גרסה אנכית עם כתוביות וקצב מהודק." },
-    { ask: "שים את הכותרת רק בחמש השניות הראשונות", done: "הכותרת מוקמה, תוזמנה ונשמרה בתוך אזור בטוח." },
-    { ask: "תן לי להוריד גם SRT", done: "קובץ הכתוביות מוכן לצד הסרטון המרונדר." },
+    { ask: "תכין מזה סרטון אנכי של 35 שניות", done: "יצרתי גרסה קצרה עם כתוביות וקצב מתאים לרשתות." },
+    { ask: "הוסף כותרת, לוגו ומוזיקת רקע שקטה", done: "האלמנטים מוקמו, תוזמנו ונשמרו בתוך אזור בטוח." },
+    { ask: "שמור לי גם גרסה לרוחב וקובץ SRT", done: "שתי הגרסאות וקובץ הכתוביות מוכנים להורדה." },
   ];
 
   return (
@@ -28,7 +28,7 @@ export default function LandingDeviceShowcase() {
           <div className="hsx-tablet-ui">
             <header><b>Hypescript</b><span>גרסת Reels</span><button type="button">ייצוא</button></header>
             <div className="hsx-tablet-work">
-              <div className="hsx-tablet-video"><img src="/brand/landing-creator-frame.webp" alt="תצוגת עריכת וידאו בטאבלט" /><button type="button" aria-label="הפעלת תצוגה"><Play size={18} fill="currentColor" /></button><strong>רעיון מדויק. סרטון מהודק.</strong></div>
+              <div className="hsx-tablet-video"><img src="/brand/landing-creator-male.webp" alt="יוצר תוכן עורך סרטון הסבר בטאבלט" /><button type="button" aria-label="הפעלת תצוגה"><Play size={18} fill="currentColor" /></button><strong>בקשה אחת. סרטון מוכן.</strong></div>
               <aside><span><Sparkles size={12} />Hype AI</span><p>{prompts[prompt].ask}</p><div><Check size={12} />{prompts[prompt].done}</div></aside>
             </div>
             <div className="hsx-tablet-timeline"><i /><i /><i /><i /><i /><b /></div>
@@ -38,7 +38,7 @@ export default function LandingDeviceShowcase() {
         <div className="hsx-phone">
           <div className="hsx-phone-notch" />
           <header><span><MessageSquareText size={13} /></span><div><b>Hype AI</b><small>מחובר לפרויקט</small></div><i /></header>
-          <div className="hsx-phone-preview"><img src="/brand/landing-creator-frame.webp" alt="תצוגה מקדימה של הסרטון בטלפון" /><span>00:35</span></div>
+          <div className="hsx-phone-preview"><img src="/brand/landing-creator-male.webp" alt="תצוגה מקדימה של סרטון הסבר בטלפון" /><span>00:35</span></div>
           <div className="hsx-phone-chat">
             <p className="user">{prompts[prompt].ask}</p>
             <p className="agent"><WandSparkles size={12} />{prompts[prompt].done}</p>
