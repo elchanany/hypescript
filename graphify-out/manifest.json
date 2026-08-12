@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
-    "mtime": 1786489590.1843987,
-    "ast_hash": "29278fcc2f76ff9e9b86cbc7b15febd8",
+    "mtime": 1786571767.4439821,
+    "ast_hash": "d172e20ba66fa9e65bbaf67944ab27e3",
     "semantic_hash": ""
   },
   "web/components/Waveform.tsx": {
@@ -475,8 +475,8 @@
     "semantic_hash": ""
   },
   "web/package.json": {
-    "mtime": 1786352645.3370793,
-    "ast_hash": "5105292426b28fd77d11aa9afb12bfba",
+    "mtime": 1786571270.1837778,
+    "ast_hash": "89cd84fc600875eb9c699151a0f0c2cd",
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "web/lib/brand/assets.ts": {
-    "mtime": 1786540403.8719919,
-    "ast_hash": "a9e2cad6cb619a407efc121fd310fae8",
+    "mtime": 1786571257.7073753,
+    "ast_hash": "59877e6308571e88cc7a1fcc65cf874d",
     "semantic_hash": ""
   },
   "web/lib/chat/markdown.test.ts": {
@@ -1020,8 +1020,8 @@
     "semantic_hash": ""
   },
   "web/public/apple-touch-icon.png": {
-    "mtime": 1786540445.352481,
-    "ast_hash": "65ad498200a52a15e3d7d670ee2a0783",
+    "mtime": 1786571870.8237624,
+    "ast_hash": "e2a8cc9feedd296f649dfa0de0542545",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-icon.png": {
@@ -1050,63 +1050,63 @@
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-128.png": {
-    "mtime": 1786540438.11745,
-    "ast_hash": "1bac41ea1c68b77303f3e092603058da",
+    "mtime": 1786571870.5452003,
+    "ast_hash": "b6f2c44699c3ddf5c55593a43dc50246",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-16.png": {
-    "mtime": 1786540435.0286078,
-    "ast_hash": "2ebef7ef1f8bd94ae0d2272010d1fdb0",
+    "mtime": 1786571869.4466257,
+    "ast_hash": "7fe254179e3e214e99976476bc999efa",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-180.png": {
-    "mtime": 1786540438.7856972,
-    "ast_hash": "65ad498200a52a15e3d7d670ee2a0783",
+    "mtime": 1786571870.8237624,
+    "ast_hash": "e2a8cc9feedd296f649dfa0de0542545",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-192.png": {
-    "mtime": 1786540439.3895042,
-    "ast_hash": "a7811be25f7a538f2884ef8b1ed5e998",
+    "mtime": 1786571871.0573232,
+    "ast_hash": "2b1e85d39044046c3f916bc69537729e",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-256.png": {
-    "mtime": 1786540440.176229,
-    "ast_hash": "64dd1bc471ebc10039beccc19908b10c",
+    "mtime": 1786571871.2609093,
+    "ast_hash": "ba610ad69c977c0ea07b34a91a796538",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-32.png": {
-    "mtime": 1786540435.6346445,
-    "ast_hash": "3f8673dd32c5b3685ea01dffc75eef0a",
+    "mtime": 1786571869.6656096,
+    "ast_hash": "6fa14b63ede4ca59addfc7b0921c752f",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-48.png": {
-    "mtime": 1786540436.315217,
-    "ast_hash": "b0d560a5724c5539f7a03258645aa748",
+    "mtime": 1786571869.8934412,
+    "ast_hash": "19e21be9fecb6d3266f26b6f49b5e526",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-512.png": {
-    "mtime": 1786540441.9652586,
-    "ast_hash": "123a283f7a7e46e36e3d67657946a190",
+    "mtime": 1786571871.4771097,
+    "ast_hash": "89b463e523e35cfbc7c8c1b1c6df40a8",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-64.png": {
-    "mtime": 1786540436.9940856,
-    "ast_hash": "5f05bac20f95fd86f19aa322ce2cf4f2",
+    "mtime": 1786571870.0851486,
+    "ast_hash": "70741eddd270c181ec6ff7d1f5f1d8c0",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-96.png": {
-    "mtime": 1786540437.5323255,
-    "ast_hash": "2ed25df2751506dba53b8209e6a76cf9",
+    "mtime": 1786571870.3231652,
+    "ast_hash": "89b99231b36052789021d057a6bb6e35",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-maskable-192.png": {
-    "mtime": 1786540442.4408047,
-    "ast_hash": "a7811be25f7a538f2884ef8b1ed5e998",
+    "mtime": 1786571871.0573232,
+    "ast_hash": "2b1e85d39044046c3f916bc69537729e",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-maskable-512.png": {
-    "mtime": 1786540443.0202506,
-    "ast_hash": "123a283f7a7e46e36e3d67657946a190",
+    "mtime": 1786571871.4771097,
+    "ast_hash": "89b463e523e35cfbc7c8c1b1c6df40a8",
     "semantic_hash": ""
   },
   "web/public/brand/social/open-graph.png": {
@@ -1140,13 +1140,13 @@
     "semantic_hash": ""
   },
   "web/public/favicon-16.png": {
-    "mtime": 1786540444.0553963,
-    "ast_hash": "2ebef7ef1f8bd94ae0d2272010d1fdb0",
+    "mtime": 1786571869.4466257,
+    "ast_hash": "7fe254179e3e214e99976476bc999efa",
     "semantic_hash": ""
   },
   "web/public/favicon-32.png": {
-    "mtime": 1786540444.6559687,
-    "ast_hash": "3f8673dd32c5b3685ea01dffc75eef0a",
+    "mtime": 1786571869.6656096,
+    "ast_hash": "6fa14b63ede4ca59addfc7b0921c752f",
     "semantic_hash": ""
   },
   "web/lib/editor/tracks.test.ts": {
@@ -1540,8 +1540,8 @@
     "semantic_hash": ""
   },
   "web/app/welcome/page.tsx": {
-    "mtime": 1786539960.5046518,
-    "ast_hash": "7c06e3054b7f2939318b867ef763bc11",
+    "mtime": 1786571257.7093737,
+    "ast_hash": "4a02be9b0a925d2e5ba834f734c14cc7",
     "semantic_hash": ""
   },
   "web/app/account/page.tsx": {
@@ -1750,8 +1750,8 @@
     "semantic_hash": ""
   },
   "web/lib/audio/nonSpeech.ts": {
-    "mtime": 1786561100.8623633,
-    "ast_hash": "6cdb5c9657f6732beeb1e19eeaa7962b",
+    "mtime": 1786571018.3714979,
+    "ast_hash": "125c288c62400fecaf3b0df7394fa768",
     "semantic_hash": ""
   },
   "web/lib/audio/source.ts": {
@@ -1830,8 +1830,8 @@
     "semantic_hash": ""
   },
   "web/components/LandingProductExperience.tsx": {
-    "mtime": 1786539930.6918187,
-    "ast_hash": "7212e824cade8850f127bfa831bbdba8",
+    "mtime": 1786571228.6499732,
+    "ast_hash": "5d9e87bc66ebd02714f1cf882ec95861",
     "semantic_hash": ""
   },
   "web/public/brand/landing-creator-frame.webp": {
@@ -1840,8 +1840,8 @@
     "semantic_hash": ""
   },
   "web/components/LandingDeviceShowcase.tsx": {
-    "mtime": 1786539930.694817,
-    "ast_hash": "5a2a0a01d6137db87463c9ca71d62902",
+    "mtime": 1786571228.6524818,
+    "ast_hash": "a1b84180856d112b1d788b8d98339563",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-mark-premium.png": {
@@ -1862,6 +1862,21 @@
   "web/lib/audio/calibration.ts": {
     "mtime": 1786561038.7368767,
     "ast_hash": "08171c44d11035ce9aa16eeb55f0eb85",
+    "semantic_hash": ""
+  },
+  "web/lib/audio/realaudio.probe.test.ts": {
+    "mtime": 1786570774.4118068,
+    "ast_hash": "9d55976e5fc7991f4abd6742b5b07cbb",
+    "semantic_hash": ""
+  },
+  "web/public/brand/hypescript-mark-v3.png": {
+    "mtime": 1786571869.155865,
+    "ast_hash": "a18427fd3ed1e000896bb6be222fab43",
+    "semantic_hash": ""
+  },
+  "web/public/brand/landing-creator-male.webp": {
+    "mtime": 1786571148.0405068,
+    "ast_hash": "ea1800e804d0e833b9bfcd38b2f09b41",
     "semantic_hash": ""
   }
 }
