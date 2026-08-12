@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, CreditCard, Download, Eye, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, MousePointer2, Play, ScanText, Scissors, ShieldCheck, Sparkles, WandSparkles, Zap } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import LandingProductExperience from "@/components/LandingProductExperience";
+import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
 import "./landing-v2.css";
 
 export const metadata: Metadata = {
@@ -149,6 +150,8 @@ export default function WelcomePage() {
         <div className="marketing-use-cases">{useCases.map((item, index) => <article key={item.title}><b>0{index + 1}</b><WandSparkles size={21} /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
 
+      <LandingDeviceShowcase />
+
       <section className="marketing-section" id="pricing">
         <div className="marketing-section-head"><span>מתחילים בלי סיכון</span><h2>מסלול שמתאים לקצב שלך</h2><p>לא מחייבים על שימוש מעבר למכסה בלי אישור ומנוי פעיל.</p></div>
         <div className="marketing-pricing">
@@ -167,7 +170,18 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-final"><div className="marketing-final-icon"><Film size={24} /></div><h2>הסרטון הבא שלך יכול להיות מוכן היום.</h2><p>מתחילים בחודש ניסיון, רואים את התהליך כולו ומחליטים לפני החיוב הראשון.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link></section>
+      <section className="hsx-outro hsx-reveal" aria-label="מתוצאה אחת למערכת תוכן">
+        <div className="hsx-outro-head"><span>לא עוצרים בייצוא הראשון</span><h2>פרויקט אחד.<br />מערכת תוכן שלמה.</h2><p>כל מה שנוצר נשאר מאורגן, ניתן לשינוי ומוכן לגרסה הבאה.</p></div>
+        <div className="hsx-output-orbit">
+          <div className="hsx-output-core"><img src="/brand/landing-creator-frame.webp" alt="הסרטון המוכן" /><span><Play size={16} fill="currentColor" /></span><b>הסרטון שלך מוכן</b><small>1080p · 00:35</small></div>
+          <article className="output-video"><Film size={17} /><div><b>MP4</b><small>מוכן להורדה</small></div><Check size={14} /></article>
+          <article className="output-captions"><Captions size={17} /><div><b>SRT</b><small>כתוביות מסונכרנות</small></div><Check size={14} /></article>
+          <article className="output-social"><Sparkles size={17} /><div><b>9:16</b><small>גרסה לרשתות</small></div><Check size={14} /></article>
+          <i className="hsx-orbit-line one" /><i className="hsx-orbit-line two" /><i className="hsx-orbit-line three" />
+        </div>
+      </section>
+
+      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-icon"><Film size={24} /></div><span>הקליפ הראשון מתחיל כאן</span><h2>יש לך חומר גלם.<br />עכשיו יש לו כיוון.</h2><p>מתחילים בחודש ניסיון, מדברים עם העורך ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
       <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy">פרטיות</Link><Link href="/legal/terms">תנאי שימוש</Link><Link href="/login">התחברות</Link></nav></footer>
     </main>
   );
