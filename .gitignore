@@ -62,3 +62,7 @@ graphify-out/.needs_update
 .graphify/
 .vite/
 .vercel
+
+# בילדים מבודדים לכל סוכן (scripts/agent-build.mjs) ורישום התהליכים שלהם
+.next-*/
+.ai/locks/
