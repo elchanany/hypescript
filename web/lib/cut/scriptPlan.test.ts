@@ -183,6 +183,17 @@ describe("שקיפות על מה שלא נמצא", () => {
     expect(plan.keptWords.map((w) => w.text)).toEqual(["שלום", "וברכה", "השיעור"]);
   });
 
+  it("לא מחזיר לפלט מילה שהוסרה, גם כשהפער שנוצר זעיר", () => {
+    // "בכולל" נמשכת פחות מ-0.5s; מיזוג נאיבי של קאטים קצרים היה מחזיר אותה
+    const script = "שלום וברכה השיעור נמסר הקדיש ההנצחה היום תהיה";
+    const plan = planScriptCut(WORDS, script, {
+      sourceId: "src", duration: DURATION, pacing: "tight", envelope: ENVELOPE,
+    });
+    expect(plan.removedSpeech.map((r) => r.text)).toContain("בכולל");
+    const covered = plan.clips.some((clip) => 3.10 >= clip.start && 3.55 <= clip.end);
+    expect(covered, "המילה שהוסרה חזרה לתוך קליפ").toBe(false);
+  });
+
   it("עובד גם בלי גל-קול, ומסמן שהמדידה חסרה", () => {
     const plan = planScriptCut(WORDS, "שלום וברכה השיעור ההנצחה היום תהיה", {
       sourceId: "src", duration: DURATION, envelope: null,

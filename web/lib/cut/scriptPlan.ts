@@ -283,7 +283,10 @@ export function planScriptCut(
   const merged: Placed[] = [];
   for (const segment of placed) {
     const previous = merged[merged.length - 1];
-    if (previous && segment.start - previous.end < pacing.minRemovalSec) {
+    // מיזוג מותר רק כשהפער הוא פאוזה. חיתוך שנועד להסיר דיבור/מהסס לעולם
+    // אינו מתמזג — מיזוג כזה היה מחזיר לפלט בדיוק את המילים שביקשנו למחוק.
+    const removesSpeech = segment.run.reason === "script_removal" || segment.run.reason === "filler";
+    if (previous && !removesSpeech && segment.start - previous.end < pacing.minRemovalSec) {
       previous.end = Math.max(previous.end, segment.end);
       previous.run = { words: [...previous.run.words, ...segment.run.words], reason: previous.run.reason };
       previous.measured ||= segment.measured;

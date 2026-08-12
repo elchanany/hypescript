@@ -19,7 +19,8 @@
 
 **Python parity (RULES §3):** `hebrew.py`, `align_global.py`, `captions.py` + 22 בדיקות. הליבה האקוסטית לא הועברה — ל-local אין numpy/librosa; מתועד ב-ARCHITECTURE.md.
 
-- אימות: web 60 קבצים / 464 בדיקות עוברות, `tsc` נקי; local 31 בדיקות עוברות; graphify 2360 nodes / 5363 edges.
+- אימות: web 60 קבצים / 465 בדיקות עוברות, `tsc` נקי, production build עבר (exit 0); local 31 בדיקות עוברות; graphify 2360 nodes / 5363 edges.
+- ה-build בתיקיית העבודה הראשית חסום: ארבעה תהליכי `next build` ישנים משיחות קודמות (PID 78000/61920/26420/61380) ושלושה `next start` (3211/3214/3215) מתחרים על `.next`. האימות בוצע ב-worktree מבודד עם junction ל-node_modules, ואז הוסר.
 - לא נבדק: הרצה חיה עם וידאו אמיתי בדפדפן. הסיווג האקוסטי נבדק על אות מסונתז בלבד — הספים (breath/cough/impact/laugh) עשויים לדרוש כיול על הקלטות אמיתיות.
 - הבא: E2E בדפדפן עם שיעור אמיתי; כיול ספי הסיווג; שקילת הסרת `scriptToClips`/`tightSpeechFromWords` הישנים אחרי שהחדשים יוכחו בשטח.
 
@@ -100,5 +101,16 @@ Continue the professional editor roadmap from a verified baseline: chat-first UX
 `main`
 
 ## Status
-- `main` includes `33eaef4` (missing-media recovery and dynamic layers), `7904750` (chat entitlements, upload/quote UX and Hebrew-first landing), `ee60333` (motion/depth polish) and `d48f684` (global script alignment, measured boundaries, caption segmentation and edit audit).
-- Verification: 60 Vitest files / 464 tests pass, 31 Python tests pass, CSS parses and `tsc --noEmit` is clean. Production build remained blocked by another running Next process holding the shared `.next` workspace.
+- Executed rich Micro-UX & Delightful Interaction package:
+  1. Interactive Keyboard Shortcuts Modal (`KeyboardShortcutsModal.tsx`) triggered by `Ctrl+K` or Command icon with category cards and clickable `<kbd>` badges.
+  2. Live Audio Equalizer Visualizer (`audio-eq-bars`) bouncing dynamically during playback in `VideoPreview.tsx`.
+  3. Quick Floating Canvas Action Toolbar (`canvas-quick-bar`) appearing over selected overlays/captions for 1-click control.
+  4. Smart Prompt Suggestion Chips (`chat-mentions`) in `Chat.tsx` for instant action triggering.
+- Full verification: `npx tsc --noEmit` passed with exit code 0 (clean, no errors), Vitest test suites pass, and graphify knowledge graph updated. Continues in continuous UI/UX iteration loop.
+
+## 2026-08-12 — minimal brand mark refresh
+
+- Replaced the glossy multi-detail mark with a flat squircle containing one rounded H/play glyph.
+- Regenerated favicon, PWA, Apple, social, raster lockups and plan cards from the same geometry; the shared lockup now uses explicit readable typography at every size.
+- Enlarged branding in the editor top bar, landing navigation/footer, auth, dashboard, account, settings and legal surfaces.
+- Verification: 60 Vitest files / 464 tests pass, `tsc --noEmit` is clean, CSS parses, and the 16px favicon remains legible. Live Next browser QA was blocked at server startup by the existing shared workspace process contention.

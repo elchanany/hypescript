@@ -40,12 +40,21 @@ export function assembleTranscript(
     const base = assembledStart(active, ci);
     if (isGapClip(c)) return; // שקט על הציר — אין מילים
     const raw = getWords(c.sourceId) || [];
+    // שיוך לפי אמצע המילה: הקליפים אינם חופפים, ולכן כל מילה שייכת לקליפ אחד
+    // בדיוק. הכלה מלאה (start≥ ו-end≤) הפילה מילים כשגבול החיתוך מוקם לפי
+    // מדידה אקוסטית ולא לפי חותמת התמלול — מילה שהמנוע תיארך רחב מדי נעלמה.
     const ws = (includeNonSpeech ? raw : raw.filter(isSpeechWord))
-      .filter((w) => w.start >= c.start - 0.05 && w.end <= c.end + 0.05)
+      .filter((w) => {
+        const middle = (w.start + w.end) / 2;
+        return middle >= c.start - 0.02 && middle <= c.end + 0.02;
+      })
       .sort((a, b) => a.start - b.start);
+    const clipEnd = base + clipDur(c);
     for (const w of ws) {
-      const start = base + (w.start - c.start);
-      const end = base + (w.end - c.start);
+      // מילה ששייכת לקליפ אך גולשת מעבר לגבולותיו נחתכת לתחום הקליפ,
+      // אחרת הכתובית תופיע לפני שהקליפ מתחיל או אחרי שהוא נגמר.
+      const start = Math.max(base, base + (w.start - c.start));
+      const end = Math.min(clipEnd, base + (w.end - c.start));
       if (end <= start) continue;
       out.push({
         text: w.text,
