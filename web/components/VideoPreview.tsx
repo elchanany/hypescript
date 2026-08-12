@@ -166,6 +166,23 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  /**
+   * חיתוך-לפי-סקריפט מייצר עשרות קליפים *מאותו מקור*, בסדר עולה. במקרה הזה
+   * אין שום טעם להחליף אלמנט: החלפה מכריחה את הדפדפן לפענח את אותו וידאו
+   * פעמיים במקביל (זיכרון ו-CPU כפולים על קובץ של 45MB), ומוסיפה הבהוב
+   * בכל מעבר. דילוג קדימה קצר על האלמנט שכבר מנגן זול בהרבה.
+   */
+  const sameSourceForward = (currentIndex: number, nextIndex: number): boolean => {
+    const current = edl[currentIndex];
+    const next = edl[nextIndex];
+    if (!current || !next || current.sourceId !== next.sourceId) return false;
+    if (isGapClip(current) || isGapClip(next)) return false;
+    const asset = byId(next.sourceId);
+    if (!asset || asset.kind !== "video") return false;
+    const jump = next.start - current.end;
+    return jump >= -0.001 && jump < 12;
+  };
+
   const prepareNext = (fromIndex: number) => {
     let nextIndex = fromIndex;
     while (nextIndex < edl.length && !clipEnabled(edl[nextIndex])) nextIndex++;
@@ -175,6 +192,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
       prepared.current = null;
       return;
     }
+    if (sameSourceForward(idx.current, nextIndex)) { prepared.current = null; return; }
     const slot = (activeSlotRef.current === 0 ? 1 : 0) as 0 | 1;
     const el = mediaRefs[slot].current;
     if (!el) return;
@@ -208,6 +226,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const advanceFrom = (index: number, play: boolean) => {
     let i = index;
     while (i < edl.length && !clipEnabled(edl[i])) i++;
+    const previousIndex = idx.current;
     idx.current = i;
     if (i >= edl.length) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); publishTime(total, false); return; }
     const clip = edl[i], asset = byId(clip.sourceId), from = assembledStart(edl, i);
@@ -215,6 +234,19 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     else if (isGapClip(clip)) runTimed(i, from, play, "gap");
     else if (asset.kind === "image") runTimed(i, from, play, "image");
     else {
+      // אותו מקור וקדימה בזמן — דילוג במקום, בלי החלפת אלמנט ובלי טעינה מחדש
+      const inPlace = mediaRefs[activeSlotRef.current].current;
+      if (inPlace && loaded.current[activeSlotRef.current] === clip.sourceId && sameSourceForward(previousIndex, i)) {
+        setActiveImageUrl(null);
+        setActiveKind(asset.kind);
+        inPlace.muted = false;
+        if (Math.abs(inPlace.currentTime - clip.start) > 0.004) inPlace.currentTime = clip.start;
+        publishTime(from, play);
+        if (play) { void inPlace.play().catch(() => undefined); startVideoClock(activeSlotRef.current); }
+        else inPlace.pause();
+        prepareNext(i + 1);
+        return;
+      }
       const ready = prepared.current;
       const preloaded = ready && ready.index === i && ready.sourceId === clip.sourceId
         ? mediaRefs[ready.slot].current : null;
@@ -267,7 +299,18 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     const measure = () => setStageSize({ w: el.clientWidth, h: el.clientHeight }); measure();
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();
   }, []);
-  useEffect(() => { seekTo(Math.min(t, total)); }, [edl, audioClips]);
+  // הניגון נעצר רק כשהתוכן באמת השתנה. קודם התלה כאן ב-*זהות* המערך, ולכן
+  // כל רינדור מחדש של ההורה (שינוי state, הודעה בצ'אט, resize) בנה edl חדש
+  // עם אותו תוכן, הריץ seekTo, ועצר את הניגון באמצע. זה ה"נתקע" שנראה אקראי.
+  const edlSignature = useMemo(
+    () => edl.map((c) => `${c.sourceId}@${c.start.toFixed(3)}-${c.end.toFixed(3)}${clipEnabled(c) ? "" : "x"}`).join("|"),
+    [edl],
+  );
+  const audioSignature = useMemo(
+    () => audioClips.map((c) => `${c.sourceId}@${c.start.toFixed(3)}-${c.end.toFixed(3)}`).join("|"),
+    [audioClips],
+  );
+  useEffect(() => { seekTo(Math.min(t, total)); }, [edlSignature, audioSignature]);
   useEffect(() => {
     const el = activeMedia();
     const clip = edl[idx.current];
