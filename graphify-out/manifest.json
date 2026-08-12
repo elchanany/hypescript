@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786487567.2060542,
-    "ast_hash": "cf67062ef11af768b21f63eb41e1d410",
+    "mtime": 1786489596.619082,
+    "ast_hash": "4e7137545169dc37c2d6c6804edc00bf",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -160,13 +160,13 @@
     "semantic_hash": ""
   },
   "web/components/TopBar.tsx": {
-    "mtime": 1786467963.4213276,
-    "ast_hash": "bd2a4c2211aa0e15ae3f430ebc783ed1",
+    "mtime": 1786489576.4123967,
+    "ast_hash": "4730543b7eb60007242956bef7140b64",
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
-    "mtime": 1786484682.943553,
-    "ast_hash": "6cde3407c1aa8bd32ac0efb5095ce61f",
+    "mtime": 1786489590.1843987,
+    "ast_hash": "29278fcc2f76ff9e9b86cbc7b15febd8",
     "semantic_hash": ""
   },
   "web/components/Waveform.tsx": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
-    "mtime": 1786461604.677977,
-    "ast_hash": "2c1aa3bdc9433793f25a91a53e188ded",
-    "semantic_hash": "2c1aa3bdc9433793f25a91a53e188ded"
+    "mtime": 1786540602.0439565,
+    "ast_hash": "1262b6e8ccf5eec29144be44a6d849e2",
+    "semantic_hash": ""
   },
   "web/vitest.config.ts": {
     "mtime": 1785624703.636026,
@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   ".ai/ACTIVE_WORK.md": {
-    "mtime": 1786488665.3431847,
-    "ast_hash": "907d5233ddc8e2b7c436421077dc8679",
+    "mtime": 1786528772.7055082,
+    "ast_hash": "2852646fe6135a349f3605577cf4af17",
     "semantic_hash": ""
   },
   ".ai/DECISIONS.md": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   ".ai/HANDOFF.md": {
-    "mtime": 1786488665.349007,
-    "ast_hash": "ba3b243ca68bc11061a9640da7a3c88c",
+    "mtime": 1786490292.0431569,
+    "ast_hash": "078d5da34afcdd5a9f0b64fab9f5f7d7",
     "semantic_hash": ""
   },
   ".ai/PROJECT_STATE.md": {
@@ -915,8 +915,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/assembleTranscript.ts": {
-    "mtime": 1786189582.4809997,
-    "ast_hash": "9e245533721b1c15d5186ba353a435e1",
+    "mtime": 1786528400.5295503,
+    "ast_hash": "6a7ceaa5596b23916fad78e01af6fae5",
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.test.ts": {
@@ -955,8 +955,8 @@
     "semantic_hash": ""
   },
   "web/components/BrandLogo.tsx": {
-    "mtime": 1786466421.7099514,
-    "ast_hash": "55f1bdfba68c0faf3300e60c099f29c6",
+    "mtime": 1786489338.6713493,
+    "ast_hash": "6c2dfde0657166e033d0f0fe8e48bdaa",
     "semantic_hash": ""
   },
   "web/components/ChatMarkdown.tsx": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "web/lib/brand/assets.ts": {
-    "mtime": 1786466421.7069411,
-    "ast_hash": "8c5e012b339f83d6bc1460daa88b6345",
+    "mtime": 1786540403.8719919,
+    "ast_hash": "a9e2cad6cb619a407efc121fd310fae8",
     "semantic_hash": ""
   },
   "web/lib/chat/markdown.test.ts": {
@@ -1020,103 +1020,103 @@
     "semantic_hash": ""
   },
   "web/public/apple-touch-icon.png": {
-    "mtime": 1786466756.3875775,
-    "ast_hash": "339c7bdbaedd515ddf48f29e219f0b52",
+    "mtime": 1786540445.352481,
+    "ast_hash": "65ad498200a52a15e3d7d670ee2a0783",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-icon.png": {
-    "mtime": 1786466756.9295862,
-    "ast_hash": "f7cae2b8f802298b97017eaa12feecc8",
+    "mtime": 1786489463.4501274,
+    "ast_hash": "9fd78415ac4c573f4cd5d99c68d5ed10",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-logo-dark.png": {
-    "mtime": 1786466757.4463992,
-    "ast_hash": "336aaab2a46b5af600571cfa668e7e7b",
+    "mtime": 1786489464.2468987,
+    "ast_hash": "8a769dc05711dc9ac6c9404a688a3e89",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-logo-horizontal.png": {
-    "mtime": 1786466757.3405814,
-    "ast_hash": "a5f3c9e0d287bd07bf4abd506d9871e4",
+    "mtime": 1786489464.10683,
+    "ast_hash": "aef14f622c376a457b51da65b887c9d6",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-logo-light.png": {
-    "mtime": 1786466757.231069,
-    "ast_hash": "a5f3c9e0d287bd07bf4abd506d9871e4",
+    "mtime": 1786489463.8898282,
+    "ast_hash": "aef14f622c376a457b51da65b887c9d6",
     "semantic_hash": ""
   },
   "web/public/brand/icons/apple-touch-icon.png": {
-    "mtime": 1786466756.4360933,
-    "ast_hash": "339c7bdbaedd515ddf48f29e219f0b52",
+    "mtime": 1786489462.6155226,
+    "ast_hash": "825be658b3a389161e0225ab33f41850",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-128.png": {
-    "mtime": 1786466755.7044923,
-    "ast_hash": "cc64d6554f0727fe340dd81417aa8b3f",
+    "mtime": 1786540438.11745,
+    "ast_hash": "1bac41ea1c68b77303f3e092603058da",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-16.png": {
-    "mtime": 1786466755.5321443,
-    "ast_hash": "c78e3dc5e4e35e49b359f9f94cf5870b",
+    "mtime": 1786540435.0286078,
+    "ast_hash": "2ebef7ef1f8bd94ae0d2272010d1fdb0",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-180.png": {
-    "mtime": 1786466755.7600453,
-    "ast_hash": "339c7bdbaedd515ddf48f29e219f0b52",
+    "mtime": 1786540438.7856972,
+    "ast_hash": "65ad498200a52a15e3d7d670ee2a0783",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-192.png": {
-    "mtime": 1786466755.8143003,
-    "ast_hash": "efb6f18771bd8d2421d723a6e562ddb7",
+    "mtime": 1786540439.3895042,
+    "ast_hash": "a7811be25f7a538f2884ef8b1ed5e998",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-256.png": {
-    "mtime": 1786466755.8843331,
-    "ast_hash": "9589b454003a95bb33b59a625db60a03",
+    "mtime": 1786540440.176229,
+    "ast_hash": "64dd1bc471ebc10039beccc19908b10c",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-32.png": {
-    "mtime": 1786466755.5577304,
-    "ast_hash": "fc060e8fb0c15217c14b04fe03d10af4",
+    "mtime": 1786540435.6346445,
+    "ast_hash": "3f8673dd32c5b3685ea01dffc75eef0a",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-48.png": {
-    "mtime": 1786466755.5967326,
-    "ast_hash": "6c6f808563440337c14dfdd4cc655775",
+    "mtime": 1786540436.315217,
+    "ast_hash": "b0d560a5724c5539f7a03258645aa748",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-512.png": {
-    "mtime": 1786466756.1133664,
-    "ast_hash": "c7957ca16ba18f8fecabebba046355bd",
+    "mtime": 1786540441.9652586,
+    "ast_hash": "123a283f7a7e46e36e3d67657946a190",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-64.png": {
-    "mtime": 1786466755.6267421,
-    "ast_hash": "cd89ab02e0e79b6c38ee0376d979447f",
+    "mtime": 1786540436.9940856,
+    "ast_hash": "5f05bac20f95fd86f19aa322ce2cf4f2",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-96.png": {
-    "mtime": 1786466755.65536,
-    "ast_hash": "068e93d6319db19587f51fe56e5fbf38",
+    "mtime": 1786540437.5323255,
+    "ast_hash": "2ed25df2751506dba53b8209e6a76cf9",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-maskable-192.png": {
-    "mtime": 1786466756.1558783,
-    "ast_hash": "2a23811bf9fb10ff4bcec61658475e88",
+    "mtime": 1786540442.4408047,
+    "ast_hash": "a7811be25f7a538f2884ef8b1ed5e998",
     "semantic_hash": ""
   },
   "web/public/brand/icons/icon-maskable-512.png": {
-    "mtime": 1786466756.2970202,
-    "ast_hash": "11a832b7555e9828d0cdcd68f04cbf42",
+    "mtime": 1786540443.0202506,
+    "ast_hash": "123a283f7a7e46e36e3d67657946a190",
     "semantic_hash": ""
   },
   "web/public/brand/social/open-graph.png": {
-    "mtime": 1786466757.5288813,
-    "ast_hash": "636fcd5a67224417a394332845ba4113",
+    "mtime": 1786489464.370411,
+    "ast_hash": "334fa51cb5a4a0c738a86bd705c9f080",
     "semantic_hash": ""
   },
   "web/public/brand/social/twitter-card.png": {
-    "mtime": 1786466757.5978498,
-    "ast_hash": "636fcd5a67224417a394332845ba4113",
+    "mtime": 1786489464.5080006,
+    "ast_hash": "334fa51cb5a4a0c738a86bd705c9f080",
     "semantic_hash": ""
   },
   "web/public/brand/sources/original-additional.png": {
@@ -1140,13 +1140,13 @@
     "semantic_hash": ""
   },
   "web/public/favicon-16.png": {
-    "mtime": 1786466756.3230326,
-    "ast_hash": "c78e3dc5e4e35e49b359f9f94cf5870b",
+    "mtime": 1786540444.0553963,
+    "ast_hash": "2ebef7ef1f8bd94ae0d2272010d1fdb0",
     "semantic_hash": ""
   },
   "web/public/favicon-32.png": {
-    "mtime": 1786466756.3445537,
-    "ast_hash": "fc060e8fb0c15217c14b04fe03d10af4",
+    "mtime": 1786540444.6559687,
+    "ast_hash": "3f8673dd32c5b3685ea01dffc75eef0a",
     "semantic_hash": ""
   },
   "web/lib/editor/tracks.test.ts": {
@@ -1540,8 +1540,8 @@
     "semantic_hash": ""
   },
   "web/app/welcome/page.tsx": {
-    "mtime": 1786487172.4862094,
-    "ast_hash": "2812be2d060461e76a3dc13862e0e617",
+    "mtime": 1786539960.5046518,
+    "ast_hash": "7c06e3054b7f2939318b867ef763bc11",
     "semantic_hash": ""
   },
   "web/app/account/page.tsx": {
@@ -1605,33 +1605,33 @@
     "semantic_hash": ""
   },
   "web/public/brand/BRAND-KIT.md": {
-    "mtime": 1786460384.2108634,
-    "ast_hash": "e42724b7c02ecdcf68ed52316ec3d3cc",
+    "mtime": 1786489453.3452625,
+    "ast_hash": "57ad7b0827262702b5e6d8f0487a4f63",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-mark.svg": {
-    "mtime": 1786460384.1668618,
-    "ast_hash": "63eb4df21b65d4d9b6e97143d85d438e",
+    "mtime": 1786540153.3983345,
+    "ast_hash": "19a6706ee1e17eaedf3409782092873f",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-wordmark-dark.svg": {
-    "mtime": 1786460384.1879005,
-    "ast_hash": "6d125d163cb312f93d65dcbe34658dfe",
+    "mtime": 1786489359.493631,
+    "ast_hash": "c6439df30b95534d19b0c172beddfd6c",
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-wordmark-light.svg": {
-    "mtime": 1786460384.1758666,
-    "ast_hash": "0bf5d18f4388a168b56464517bf5d9b5",
+    "mtime": 1786489359.4976401,
+    "ast_hash": "342ab34e78f56c292c73c0e874a8de3b",
     "semantic_hash": ""
   },
   "web/public/brand/products/creator.svg": {
-    "mtime": 1786460530.0758636,
-    "ast_hash": "3f66d72eb3628104cac3ca47369540e4",
+    "mtime": 1786489394.7860918,
+    "ast_hash": "fd09ed95953a4546014873cb5242a429",
     "semantic_hash": ""
   },
   "web/public/brand/products/pro.svg": {
-    "mtime": 1786460530.0788653,
-    "ast_hash": "51646f03db44af9cadebf53e2f06ed24",
+    "mtime": 1786489394.788101,
+    "ast_hash": "9a16cf4b1c88bf1b445eb8ea711cc889",
     "semantic_hash": ""
   },
   "supabase/migrations/20260811134052_limited_trial_entitlements.sql": {
@@ -1665,8 +1665,8 @@
     "semantic_hash": ""
   },
   "scripts/generate-brand-assets.py": {
-    "mtime": 1786466518.3717577,
-    "ast_hash": "9a331224276505ee613b43112100b932",
+    "mtime": 1786489453.3368099,
+    "ast_hash": "1ef034bf25e8041060cddae73cf1f570",
     "semantic_hash": ""
   },
   "supabase/migrations/20260811151210_account_analytics_credits_admin.sql": {
@@ -1705,8 +1705,8 @@
     "semantic_hash": ""
   },
   "web/public/brand/hypescript-mark-generated.png": {
-    "mtime": 1786466353.429999,
-    "ast_hash": "dc5941b5ce61d87b54364dda97215101",
+    "mtime": 1786489412.9503589,
+    "ast_hash": "a27906bc32e01a2ed8c095df819f8993",
     "semantic_hash": ""
   },
   "web/public/brand/campaign-editorial.webp": {
@@ -1780,13 +1780,13 @@
     "semantic_hash": ""
   },
   "web/lib/cut/scriptPlan.test.ts": {
-    "mtime": 1786486466.7677603,
-    "ast_hash": "5194f5c5117a16b7bd730d29d919921b",
+    "mtime": 1786528425.6050744,
+    "ast_hash": "17c699961b7007c15aa013ca4449cf9b",
     "semantic_hash": ""
   },
   "web/lib/cut/scriptPlan.ts": {
-    "mtime": 1786486756.3813515,
-    "ast_hash": "3bec43f27c17f9110b9f8588dbd3722d",
+    "mtime": 1786528412.9204037,
+    "ast_hash": "6109267959892241bf862c2dac561711",
     "semantic_hash": ""
   },
   "web/lib/qa/editAudit.ts": {
@@ -1817,6 +1817,126 @@
   "web/lib/agent/editPipeline.test.ts": {
     "mtime": 1786487634.8400095,
     "ast_hash": "789f75398a2b39cad000d0203593a47d",
+    "semantic_hash": ""
+  },
+  "web/components/KeyboardShortcutsModal.tsx": {
+    "mtime": 1786490268.9772146,
+    "ast_hash": "c6c56139378d0a933580e6051c9b2274",
+    "semantic_hash": ""
+  },
+  "web/public/brand/hypescript-mark-minimal.png": {
+    "mtime": 1786489460.881777,
+    "ast_hash": "a27906bc32e01a2ed8c095df819f8993",
+    "semantic_hash": ""
+  },
+  "web/components/LandingProductExperience.tsx": {
+    "mtime": 1786539930.6918187,
+    "ast_hash": "7212e824cade8850f127bfa831bbdba8",
+    "semantic_hash": ""
+  },
+  "web/public/brand/landing-creator-frame.webp": {
+    "mtime": 1786490343.8908067,
+    "ast_hash": "a55f3b8eaa293263cb5273186791d1fb",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/app-build-manifest.json": {
+    "mtime": 1786540750.797848,
+    "ast_hash": "2f7403facb2358fcc98b0b5cbd1ab467",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/build-manifest.json": {
+    "mtime": 1786540750.7633052,
+    "ast_hash": "9cb6afb2be56767e85f623122637a919",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/package.json": {
+    "mtime": 1786540602.827984,
+    "ast_hash": "a6b7eb31b5dcf3835a90ea0d201f21e3",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/react-loadable-manifest.json": {
+    "mtime": 1786540750.762301,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/app-paths-manifest.json": {
+    "mtime": 1786540740.611756,
+    "ast_hash": "6c58c683c07bfaf27a06008ffb7d7964",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/interception-route-rewrite-manifest.js": {
+    "mtime": 1786540733.5430062,
+    "ast_hash": "2deb9feee2c80698c754f18a02766889",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/middleware-build-manifest.js": {
+    "mtime": 1786540750.7988348,
+    "ast_hash": "bbc5b5443a06ed383d19c7d003e8bd5f",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/middleware-manifest.json": {
+    "mtime": 1786540733.5430062,
+    "ast_hash": "6adf3c4621dcaa8814c6412d29f7c1bd",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/middleware-react-loadable-manifest.js": {
+    "mtime": 1786540750.797848,
+    "ast_hash": "537157e425123611736ddcf544160221",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/next-font-manifest.js": {
+    "mtime": 1786540750.9263847,
+    "ast_hash": "f7097bf7c93c1cbb4c118491ca6d2b04",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/next-font-manifest.json": {
+    "mtime": 1786540750.9283874,
+    "ast_hash": "d51420cd4aa5d37d6719849cf36d0d6f",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/pages-manifest.json": {
+    "mtime": 1786540740.645381,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/server-reference-manifest.js": {
+    "mtime": 1786540740.611756,
+    "ast_hash": "85f1dc4d97acb4772e6cfbe57b54e554",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/server/server-reference-manifest.json": {
+    "mtime": 1786540740.6137543,
+    "ast_hash": "6fdaeda88df06650fce43293467c66b9",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/static/chunks/polyfills.js": {
+    "mtime": 1786540605.360905,
+    "ast_hash": "846118c33b2c0e922d7b3a7676f81f6f",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/static/development/_buildManifest.js": {
+    "mtime": 1786540750.797848,
+    "ast_hash": "ffa3aabb229020bfdacb6f27acadcf31",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/static/development/_ssgManifest.js": {
+    "mtime": 1786540750.797848,
+    "ast_hash": "abee47769bf307639ace4945f9cfd4ff",
+    "semantic_hash": ""
+  },
+  "web/.next-landing-qa2/types/package.json": {
+    "mtime": 1786540740.6413822,
+    "ast_hash": "b305354b5d3207dc798e87449005a1de",
+    "semantic_hash": ""
+  },
+  "web/components/LandingDeviceShowcase.tsx": {
+    "mtime": 1786539930.694817,
+    "ast_hash": "5a2a0a01d6137db87463c9ca71d62902",
+    "semantic_hash": ""
+  },
+  "web/public/brand/hypescript-mark-premium.png": {
+    "mtime": 1786540391.3621361,
+    "ast_hash": "78da259ae393dd8fc20a1175a0e430fd",
     "semantic_hash": ""
   }
 }
