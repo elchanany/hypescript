@@ -18,6 +18,7 @@ export interface Conversation {
   updatedAt: number;
   items: ChatItem[];
   history: ChatMessage[];
+  pinned?: boolean;
 }
 
 export interface ChatStoreV2 {
@@ -63,6 +64,7 @@ export function migrateChatStore(raw: unknown): ChatStoreV2 {
         updatedAt: c.updatedAt || Date.now(),
         items: Array.isArray(c.items) ? c.items.filter((it: ChatItem) => it.kind !== "output") : [],
         history: Array.isArray(c.history) ? c.history : [],
+        pinned: c.pinned === true,
       })),
     };
   }
@@ -133,4 +135,24 @@ export function removeConversation(store: ChatStoreV2, id: string): ChatStoreV2 
     conversations: remaining,
     activeId: store.activeId === id ? remaining[0].id : store.activeId,
   };
+}
+
+export function pinnedConversationCount(store: ChatStoreV2): number {
+  return store.conversations.filter((conversation) => conversation.pinned === true).length;
+}
+
+export function setConversationPinned(store: ChatStoreV2, id: string, pinned: boolean, limit: number): ChatStoreV2 {
+  const target = store.conversations.find((conversation) => conversation.id === id);
+  if (!target || target.pinned === pinned) return store;
+  if (pinned && pinnedConversationCount(store) >= Math.max(0, limit)) return store;
+  return {
+    ...store,
+    conversations: store.conversations.map((conversation) => conversation.id === id
+      ? { ...conversation, pinned, updatedAt: Date.now() }
+      : conversation),
+  };
+}
+
+export function sortConversations(conversations: Conversation[]): Conversation[] {
+  return [...conversations].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
 }

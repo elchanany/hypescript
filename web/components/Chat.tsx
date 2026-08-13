@@ -21,14 +21,14 @@ import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/li
 import { approvedPlanPrompt, parsePlanSteps } from "@/lib/agent/planApproval";
 import {
   activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore, removeConversation,
-  renameConversation, switchConversation, upsertActive,
+  pinnedConversationCount, renameConversation, setConversationPinned, sortConversations, switchConversation, upsertActive,
 } from "@/lib/agent/chatStore";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock, List, Pin,
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -36,6 +36,8 @@ import { UploadProgressCard } from "@/components/LoadingState";
 import type { TransferProgress } from "@/lib/ui/progress";
 import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
+import { conversationPinLimit } from "@/lib/billing/conversationLimits";
+import { toast } from "@/lib/ui/toast";
 
 type Item = ChatItem;
 type ToolItem = Extract<Item, { kind: "tool" }>;
@@ -164,6 +166,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [threadsOpen, setThreadsOpen] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [threadTitle, setThreadTitle] = useState("");
+  const [pinLimit, setPinLimit] = useState(5);
   const composeHRef = useRef(COMPOSE_H_DEFAULT);
   const suggestionFetchedKeyRef = useRef("");
   composeHRef.current = composeH;
@@ -179,6 +182,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     window.addEventListener("hypescript:chat-example", useTourExample);
     return () => window.removeEventListener("hypescript:chat-example", useTourExample);
   }, []);
+  useEffect(() => {
+    if (!threadsOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setThreadsOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [threadsOpen]);
   const storeRef = useRef(store);
   storeRef.current = store;
 
@@ -290,6 +299,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     const next = removeConversation(current, id);
     loadConversation(next);
     if (projectId) void kvSet(pk(projectId, "chat"), next);
+  };
+  const toggleThreadPin = (id: string) => {
+    const conversation = storeRef.current.conversations.find((entry) => entry.id === id);
+    if (!conversation) return;
+    const nextPinned = !conversation.pinned;
+    if (nextPinned && pinnedConversationCount(storeRef.current) >= pinLimit) {
+      toast.info("מכסת השיחות הנעוצות מלאה", `במסלול שלך אפשר לנעוץ עד ${pinLimit} שיחות.`);
+      return;
+    }
+    persistConversationStore(setConversationPinned(storeRef.current, id, nextPinned, pinLimit));
   };
 
   useEffect(() => {
@@ -415,6 +434,13 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       const end = ta.value.length;
       ta.selectionStart = ta.selectionEnd = end;
     }, 0);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/billing/status")
+      .then((response) => response.ok ? response.json() : null)
+      .then((status) => setPinLimit(conversationPinLimit(status?.subscription?.plan_id)))
+      .catch(() => setPinLimit(conversationPinLimit("free")));
   }, []);
 
   const insertMediaMention = useCallback((asset: MediaAsset) => {
@@ -647,7 +673,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   return (
     <>
       <div className="panel-header">
-        <span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span>
+        <div className="chat-header-leading"><span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span></div>
         <div className="actions" style={{ gap: 4 }}>
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
           {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
@@ -665,27 +691,28 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             </button>
           )}
           <button className="iconbtn" data-tip="סגור" data-tippos="down" onClick={onClose} aria-label="סגור"><X size={16} strokeWidth={1.75} /></button>
+          <button className="iconbtn chat-history-trigger" data-tip="כל השיחות" data-tippos="down" onClick={() => setThreadsOpen(true)} aria-expanded={threadsOpen} aria-controls="chat-history-drawer" aria-label="פתח את כל השיחות"><List size={18} /></button>
         </div>
       </div>
 
-      <div className="chat-threads" aria-label="שיחות בפרויקט">
-        <div className="chat-thread-switcher">
-          <button className="chat-thread-current" onClick={() => setThreadsOpen((open) => !open)} aria-expanded={threadsOpen} aria-haspopup="listbox">
-            <span><small>שיחה נוכחית</small><strong>{activeConversation(store).title || "שיחה חדשה"}</strong></span><ChevronDown size={15} />
-          </button>
-          {threadsOpen && <div className="chat-thread-menu" role="listbox" aria-label="שיחות קודמות">
-            <div className="chat-thread-menu-head"><strong>שיחות בפרויקט</strong><button onClick={() => { startNewChat(); setThreadsOpen(false); }}><MessageSquarePlus size={14} />חדשה</button></div>
-            <div className="chat-thread-list">{[...store.conversations].sort((a, b) => b.updatedAt - a.updatedAt).map((conversation) => <div key={conversation.id} className={`chat-thread-row ${conversation.id === store.activeId ? "active" : ""}`}>
-              {editingThreadId === conversation.id
-                ? <input autoFocus value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveThreadTitle(conversation.id); if (e.key === "Escape") setEditingThreadId(null); }} onBlur={() => saveThreadTitle(conversation.id)} aria-label="שם השיחה" />
-                : <button className="chat-thread-select" onClick={() => selectChat(conversation.id)} role="option" aria-selected={conversation.id === store.activeId}><span>{conversation.title || "שיחה"}</span><time>{new Date(conversation.updatedAt).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" })}</time></button>}
-              <button className="chat-thread-action" onClick={() => { setEditingThreadId(conversation.id); setThreadTitle(conversation.title); }} data-tip="שינוי שם" aria-label="שנה שם"><Pencil size={13} /></button>
-              <button className="chat-thread-action danger" onClick={() => deleteThread(conversation.id)} data-tip="מחיקת שיחה" aria-label="מחק שיחה"><Trash2 size={13} /></button>
-            </div>)}</div>
-          </div>}
-        </div>
-        <button className="chat-new" onClick={startNewChat}><MessageSquarePlus size={15} />שיחה חדשה</button>
-      </div>
+      {threadsOpen && <div className="chat-history-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setThreadsOpen(false); }}>
+        <aside className="chat-history-drawer" id="chat-history-drawer" role="dialog" aria-modal="true" aria-label="כל השיחות">
+          <div className="chat-history-head">
+            <div><strong>כל השיחות</strong><span>{store.conversations.length} שיחות · {pinnedConversationCount(store)}/{pinLimit} נעוצות</span></div>
+            <button className="iconbtn" onClick={() => setThreadsOpen(false)} aria-label="סגור רשימת שיחות"><X size={16} /></button>
+          </div>
+          <button className="chat-history-new" onClick={() => { startNewChat(); setThreadsOpen(false); }}><MessageSquarePlus size={17} />שיחה חדשה</button>
+          <div className="chat-thread-list" role="listbox" aria-label="שיחות קודמות">{sortConversations(store.conversations).map((conversation) => <div key={conversation.id} className={`chat-thread-row ${conversation.id === store.activeId ? "active" : ""} ${conversation.pinned ? "pinned" : ""}`}>
+            {editingThreadId === conversation.id
+              ? <input autoFocus value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveThreadTitle(conversation.id); if (e.key === "Escape") setEditingThreadId(null); }} onBlur={() => saveThreadTitle(conversation.id)} aria-label="שם השיחה" />
+              : <button className="chat-thread-select" onClick={() => selectChat(conversation.id)} role="option" aria-selected={conversation.id === store.activeId}><span>{conversation.pinned && <Pin size={12} weight="fill" />}{conversation.title || "שיחה"}</span><time>{new Date(conversation.updatedAt).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" })}</time></button>}
+            <button className={`chat-thread-action ${conversation.pinned ? "on" : ""}`} onClick={() => toggleThreadPin(conversation.id)} data-tip={conversation.pinned ? "בטל נעיצה" : "נעץ שיחה"} aria-label={conversation.pinned ? "בטל נעיצת שיחה" : "נעץ שיחה"} aria-pressed={!!conversation.pinned}><Pin size={14} weight={conversation.pinned ? "fill" : "regular"} /></button>
+            <button className="chat-thread-action" onClick={() => { setEditingThreadId(conversation.id); setThreadTitle(conversation.title); }} data-tip="שינוי שם" aria-label="שנה שם"><Pencil size={14} /></button>
+            <button className="chat-thread-action danger" onClick={() => deleteThread(conversation.id)} data-tip="מחיקת שיחה" aria-label="מחק שיחה"><Trash2 size={14} /></button>
+          </div>)}</div>
+          <div className="chat-history-foot">נעוצות נשארות בראש הרשימה. <a href="/account#plans">הגדלת המכסה</a></div>
+        </aside>
+      </div>}
 
       {byokOpen && <section className="chat-ai-settings" aria-label="הגדרות AI">
         <div className="chat-ai-settings-head"><div><strong>{providerMode === "managed" ? "AI מנוהל" : "BYOK פעיל"}</strong><span>{providerMode === "managed" ? "Hypescript בוחר אוטומטית שירות זמין. אין צורך במפתח או בבחירת מודל." : "הקריאות נעשות עם המפתח המוצפן שלך."}</span></div><button className="iconbtn" onClick={() => setByokOpen(false)} aria-label="סגור"><X size={14} /></button></div>

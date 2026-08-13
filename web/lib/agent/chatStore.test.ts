@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activeConversation, addConversation, migrateChatStore, removeConversation, renameConversation, titleFromItems, upsertActive } from "./chatStore";
+import { activeConversation, addConversation, migrateChatStore, pinnedConversationCount, removeConversation, renameConversation, setConversationPinned, sortConversations, titleFromItems, upsertActive } from "./chatStore";
 
 describe("migrateChatStore", () => {
   it("migrates v1 {items,history}", () => {
@@ -54,5 +54,18 @@ describe("conversation management", () => {
     const lastRemoved = removeConversation(removed, removed.activeId);
     expect(lastRemoved.conversations).toHaveLength(1);
     expect(lastRemoved.activeId).toBe(lastRemoved.conversations[0].id);
+  });
+
+  it("pins conversations, sorts them first and enforces the plan limit", () => {
+    let store = addConversation(addConversation(migrateChatStore(null)));
+    const [first, second, third] = store.conversations;
+    store = setConversationPinned(store, third.id, true, 1);
+    expect(pinnedConversationCount(store)).toBe(1);
+    const blocked = setConversationPinned(store, second.id, true, 1);
+    expect(pinnedConversationCount(blocked)).toBe(1);
+    expect(sortConversations(blocked.conversations)[0].id).toBe(third.id);
+    const unpinned = setConversationPinned(blocked, third.id, false, 1);
+    expect(pinnedConversationCount(unpinned)).toBe(0);
+    expect(first.id).toBeTruthy();
   });
 });

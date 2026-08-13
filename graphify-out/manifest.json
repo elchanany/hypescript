@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786662282.3572476,
-    "ast_hash": "9723e922b29f830fd04336b242c239bd",
+    "mtime": 1786664345.4357462,
+    "ast_hash": "8bcc4c87f13a97db4d6251b1046f49c3",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -185,13 +185,13 @@
     "semantic_hash": ""
   },
   "web/lib/agent/chatStore.test.ts": {
-    "mtime": 1786458542.965175,
-    "ast_hash": "75d70d2edb90b1675da10e2a928d09a2",
+    "mtime": 1786664200.9214027,
+    "ast_hash": "0bde9b83f56da506d71d81842b9dd732",
     "semantic_hash": ""
   },
   "web/lib/agent/chatStore.ts": {
-    "mtime": 1786458542.9631734,
-    "ast_hash": "5019ba27954beb982363dde411839876",
+    "mtime": 1786664200.920401,
+    "ast_hash": "9d9637eafb7c94ee2224e16191949cf7",
     "semantic_hash": ""
   },
   "web/lib/agent/collapseTools.test.ts": {
@@ -1890,8 +1890,8 @@
     "semantic_hash": ""
   },
   "web/components/icons.tsx": {
-    "mtime": 1786656695.0353985,
-    "ast_hash": "414bc22603b1204b94876e3a4b967ca7",
+    "mtime": 1786664200.9184022,
+    "ast_hash": "7c7349c3db186290e2927dbd4b1d6c91",
     "semantic_hash": ""
   },
   "web/lib/creative/catalog.test.ts": {
@@ -2147,6 +2147,16 @@
   "web/lib/projects/navigation.ts": {
     "mtime": 1786663838.6428747,
     "ast_hash": "db125b5ec2f7687e01e3ad3d847101da",
+    "semantic_hash": ""
+  },
+  "web/lib/billing/conversationLimits.test.ts": {
+    "mtime": 1786664200.9234016,
+    "ast_hash": "48bda8d56411de6b0ca9f76f582dc7ec",
+    "semantic_hash": ""
+  },
+  "web/lib/billing/conversationLimits.ts": {
+    "mtime": 1786664200.922402,
+    "ast_hash": "2f0bd8fbeb075d4757bf961969f73591",
     "semantic_hash": ""
   }
 }

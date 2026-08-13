@@ -68,6 +68,7 @@ import {
   PaperclipIcon,
   PauseIcon,
   PencilSimpleIcon,
+  PushPinIcon,
   PlayIcon,
   PlusIcon,
   PulseIcon,
@@ -199,6 +200,7 @@ export const Pause = defineIcon(PauseIcon, "Pause");
 export const Pencil = defineIcon(PencilSimpleIcon, "Pencil");
 export const Play = defineIcon(PlayIcon, "Play");
 export const Plus = defineIcon(PlusIcon, "Plus");
+export const Pin = defineIcon(PushPinIcon, "Pin");
 export const Quote = defineIcon(QuotesIcon, "Quote");
 export const Redo2 = defineIcon(ArrowClockwiseIcon, "Redo2");
 export const RefreshCw = defineIcon(ArrowClockwiseIcon, "RefreshCw");
