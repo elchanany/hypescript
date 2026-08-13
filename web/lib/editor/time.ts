@@ -42,9 +42,9 @@ export function quotePlaceText(s: number): string {
   return `[ציטוט ${formatQuoteTime(t)}]`;
 }
 
-/** גבולות זום טיימליין — מזעור עמוק עד הגדלה קיצונית (CapCut-class). */
-export const ZOOM_MIN = 0.05;
-export const ZOOM_MAX = 400;
+/** גבולות זום טיימליין — טווח לוגריתמי עמוק, בלי להיתקע סביב Fit. */
+export const ZOOM_MIN = 0.001;
+export const ZOOM_MAX = 2000;
 export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 export type SnapResult = { time: number; snapped: boolean; target: number | null };

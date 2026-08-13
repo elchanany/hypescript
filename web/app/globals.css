@@ -1935,7 +1935,7 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
   .shell-body[data-mobile-surface="timeline"] .tl-toolbar::-webkit-scrollbar { display: none; }
   .shell-body[data-mobile-surface="timeline"] .tl-scroll { overscroll-behavior: contain; }
   .shell-body[data-mobile-surface="timeline"] .tl-head2 { width: 74px; min-width: 74px; }
-  .shell-body[data-mobile-surface="timeline"] .tl-inner { min-width: 680px; }
+  .shell-body[data-mobile-surface="timeline"] .tl-inner { min-width: 0; }
 
   .shell-body[data-mobile-surface="inspector"] .upper { flex: 1; min-height: 0; display: flex; }
   .shell-body[data-mobile-surface="inspector"] .center-col,

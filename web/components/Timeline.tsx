@@ -144,7 +144,9 @@ export default function Timeline(p: Props) {
       const z = zoomRef.current;
       const port = el.clientWidth;
       const next = nextZoom(z, delta, true, port);
-      if (Math.abs(next - z) < 1e-4) return;
+      // At deep zoom levels even a meaningful relative step is numerically
+      // smaller than 1e-4. Only stop when the clamp produced the exact value.
+      if (next === z) return;
       pendingScroll.current = scrollLeftAfterZoom({
         oldZoom: z,
         newZoom: next,

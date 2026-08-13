@@ -7,8 +7,8 @@ import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "./time";
 /** רוחב כותרת רצועה / פינת הסרגל — חייב להתאים ל-CSS (.tl-head2 / .tl-corner2). */
 export const TIMELINE_GUTTER = 136;
 
-/** מינימום רוחב ל-lane (אחרי gutter) — מונע קריסת פריסה בזום קיצוני החוצה. */
-export const MIN_LANE_PX = 48;
+/** פיקסל יחיד משאיר יעד אינטראקטיבי גם במזעור הקיצוני ביותר. */
+export const MIN_LANE_PX = 1;
 
 /**
  * גורם זום מ-deltaY (אפשר מצטבר על פני כמה אירועי wheel באותו frame).
@@ -25,7 +25,8 @@ export function zoomFactorFromWheel(deltaY: number, pinch = false): number {
 /** זום מינימלי אפקטיבי לרוחב viewport — מתחתיו ה-lane קטן מדי. */
 export function effectiveZoomMin(portWidth: number, gutter = TIMELINE_GUTTER): number {
   if (!(portWidth > 0)) return ZOOM_MIN;
-  return Math.max(ZOOM_MIN, (gutter + MIN_LANE_PX) / portWidth);
+  const laneAtFit = Math.max(1, portWidth - gutter);
+  return Math.max(ZOOM_MIN, MIN_LANE_PX / laneAtFit);
 }
 
 export function clampZoomForPort(z: number, portWidth: number, gutter = TIMELINE_GUTTER): number {
@@ -42,7 +43,8 @@ export function nextZoom(current: number, deltaY: number, pinch = false, portWid
 export function timelineContentWidth(portWidth: number, zoom: number, gutter = TIMELINE_GUTTER): number {
   if (!(portWidth > 0)) return 0;
   const z = clampZoomForPort(zoom, portWidth, gutter);
-  return Math.max(portWidth, portWidth * z, gutter + MIN_LANE_PX);
+  const laneAtFit = Math.max(1, portWidth - gutter);
+  return gutter + Math.max(MIN_LANE_PX, laneAtFit * z);
 }
 
 /**

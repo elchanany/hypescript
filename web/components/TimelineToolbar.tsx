@@ -18,6 +18,11 @@ export default function TimelineToolbar({
 }) {
   const toSlider = (z: number) => Math.log(Math.max(ZOOM_MIN, z) / ZOOM_MIN) / Math.log(ZOOM_MAX / ZOOM_MIN);
   const fromSlider = (t: number) => clampZoom(ZOOM_MIN * Math.pow(ZOOM_MAX / ZOOM_MIN, t));
+  const zoomPercent = zoom < 0.01
+    ? `${(zoom * 100).toFixed(2)}%`
+    : zoom < 0.1
+      ? `${(zoom * 100).toFixed(1)}%`
+      : `${Math.round(zoom * 100)}%`;
 
   return (
     <div className="tl-toolbar" dir="ltr">
@@ -49,7 +54,7 @@ export default function TimelineToolbar({
           aria-label="זום ציר זמן" />
         <IconButton icon={ZoomIn} tip="הגדל תצוגה" tipPos="up" disabled={zoom >= ZOOM_MAX - 1e-6}
           onClick={() => onZoom(clampZoom(zoom * 1.25))} />
-        <span className="tl-zoom-pct" title="Pinch / Ctrl+גלגלת = זום · שתי אצבעות לצד = גלילה">{Math.round(zoom * 100)}%</span>
+        <span className="tl-zoom-pct" title="Pinch / Ctrl+גלגלת = זום · שתי אצבעות לצד = גלילה">{zoomPercent}</span>
         <IconButton icon={Maximize2} tip="התאם לרוחב" tipPos="up" onClick={onFit} />
       </div>
     </div>

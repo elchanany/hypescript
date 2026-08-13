@@ -22,25 +22,26 @@ describe("timeline zoom", () => {
     expect(z).toBe(ZOOM_MIN);
   });
 
-  it("keeps the timeline canvas filling the viewport when zoomed out", () => {
+  it("really shrinks the time lane below fit while keeping the gutter fixed", () => {
     const port = 1000;
     const w1 = timelineContentWidth(port, 1);
     const wHalf = timelineContentWidth(port, 0.5);
     expect(w1).toBe(port);
-    expect(wHalf).toBe(port);
+    expect(wHalf).toBe(TIMELINE_GUTTER + (port - TIMELINE_GUTTER) * 0.5);
+    expect(wHalf).toBeLessThan(port);
   });
 
   it("zooms in far — content much wider than viewport", () => {
     const port = 800;
-    expect(timelineContentWidth(port, 50)).toBe(port * 50);
-    expect(timelineContentWidth(port, ZOOM_MAX)).toBe(port * ZOOM_MAX);
+    expect(timelineContentWidth(port, 50)).toBe(TIMELINE_GUTTER + (port - TIMELINE_GUTTER) * 50);
+    expect(timelineContentWidth(port, ZOOM_MAX)).toBe(TIMELINE_GUTTER + (port - TIMELINE_GUTTER) * ZOOM_MAX);
   });
 
   it("never shrinks below gutter + min lane", () => {
     const port = 1000;
     const floor = TIMELINE_GUTTER + MIN_LANE_PX;
     expect(timelineContentWidth(port, 0.01)).toBeGreaterThanOrEqual(floor);
-    expect(effectiveZoomMin(port)).toBeCloseTo(floor / port, 5);
+    expect(effectiveZoomMin(port)).toBeCloseTo(Math.max(ZOOM_MIN, MIN_LANE_PX / (port - TIMELINE_GUTTER)), 6);
   });
 
   it("keeps scroll at 0 when zooming from the start — start stays at start", () => {
@@ -56,8 +57,8 @@ describe("timeline zoom", () => {
     const oldZoom = 1;
     const newZoom = 2;
     const scrollLeft = 200;
-    const oldLaneW = portWidth * oldZoom - gutter;
-    const newLaneW = portWidth * newZoom - gutter;
+    const oldLaneW = (portWidth - gutter) * oldZoom;
+    const newLaneW = (portWidth - gutter) * newZoom;
     const next = scrollLeftAfterZoom({
       oldZoom, newZoom, scrollLeft, portWidth, gutter,
     });
@@ -70,7 +71,23 @@ describe("timeline zoom", () => {
     const next = scrollLeftAfterZoom({
       oldZoom: 2, newZoom: 0.5, scrollLeft: 100, portWidth, gutter,
     });
-    expect(timelineContentWidth(portWidth, 0.5)).toBe(portWidth);
+    expect(timelineContentWidth(portWidth, 0.5)).toBeLessThan(portWidth);
     expect(next).toBe(0);
+  });
+
+  it("keeps changing through hundreds of deep zoom-out and zoom-in steps", () => {
+    const port = 1200;
+    let z = 1;
+    let previousWidth = timelineContentWidth(port, z);
+    for (let i = 0; i < 80 && z > effectiveZoomMin(port); i++) {
+      z = nextZoom(z, 80, true, port);
+      const width = timelineContentWidth(port, z);
+      expect(width).toBeLessThanOrEqual(previousWidth);
+      previousWidth = width;
+    }
+    expect(z).toBeCloseTo(effectiveZoomMin(port), 8);
+
+    for (let i = 0; i < 160; i++) z = nextZoom(z, -80, true, port);
+    expect(z).toBe(ZOOM_MAX);
   });
 });
