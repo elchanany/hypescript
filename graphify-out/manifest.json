@@ -480,8 +480,8 @@
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
-    "mtime": 1786582542.423234,
-    "ast_hash": "1ee29e5a8a06536f3739ce280c4968b7",
+    "mtime": 1786582765.008762,
+    "ast_hash": "4d8a73d0552abc4a97aa9630afa3daae",
     "semantic_hash": ""
   },
   "web/vitest.config.ts": {
