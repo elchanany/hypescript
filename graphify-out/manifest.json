@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786663471.3075824,
-    "ast_hash": "9a82848b6cfc7e10af872b039a89cd57",
+    "mtime": 1786663838.6538734,
+    "ast_hash": "076b763a14c90eca0baa3b41974257fc",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "web/app/dashboard/page.tsx": {
-    "mtime": 1786662506.4097176,
-    "ast_hash": "12e94eb3522d7b60c06e382e3e4fb910",
+    "mtime": 1786663838.6528752,
+    "ast_hash": "584adc3ebd35fa390f44e5c5e8301129",
     "semantic_hash": ""
   },
   "web/app/login/page.tsx": {
@@ -2137,6 +2137,16 @@
   "web/components/MobileEditorNav.tsx": {
     "mtime": 1786662994.392066,
     "ast_hash": "d435afe790e23626a6ed0abed6099235",
+    "semantic_hash": ""
+  },
+  "web/lib/projects/navigation.test.ts": {
+    "mtime": 1786663838.6498747,
+    "ast_hash": "a4549907daf2a45a63b4f92e2438fbc6",
+    "semantic_hash": ""
+  },
+  "web/lib/projects/navigation.ts": {
+    "mtime": 1786663838.6428747,
+    "ast_hash": "db125b5ec2f7687e01e3ad3d847101da",
     "semantic_hash": ""
   }
 }

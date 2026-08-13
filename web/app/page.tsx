@@ -44,6 +44,7 @@ import EditorTour from "@/components/EditorTour";
 import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
 import { clampRatio, type TransferProgress } from "@/lib/ui/progress";
 import MobileEditorNav, { type MobileEditorSurface } from "@/components/MobileEditorNav";
+import { PROJECT_QUERY_KEY, requestedProjectId } from "@/lib/projects/navigation";
 
 ensureBuiltinCommands();
 
@@ -419,17 +420,24 @@ export default function EditorPage() {
     (async () => {
       const existing = await listProjects();
       if (!existing.length) { window.location.replace("/dashboard?welcome=1"); return; }
-      const id = await ensureProject();
-      setProjects(await listProjects());
+      const requested = requestedProjectId(existing, new URLSearchParams(window.location.search).get(PROJECT_QUERY_KEY));
+      const id = requested || await ensureProject();
+      if (requested) {
+        await setCurrentProject(requested);
+        window.history.replaceState({}, "", "/");
+      }
+      setProjects(existing);
       setProjectId(id);
     })();
   }, []);
 
   useEffect(() => {
     if (!projectId) return;
+    let cancelled = false;
     setRestored(false);
     (async () => {
       const sm = await kvGet<any[]>(pk(projectId, "media"));
+      if (cancelled) return;
       setMedia((prev) => {
         prev.forEach((m) => { if (m.url) URL.revokeObjectURL(m.url); });
         if (!sm?.length) return [];
@@ -454,12 +462,14 @@ export default function EditorPage() {
           if (raw && Object.keys(raw).length > 0) await kvSet(pk(projectId, "state"), raw);
         } catch { /* local cache remains usable while offline */ }
       }
+      if (cancelled) return;
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
       resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas, captionStyle: st.captionStyle });
       setCur(0); setSelectedId(null); setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack(null);
       setRestored(true);
     })();
+    return () => { cancelled = true; };
   }, [projectId]);
 
   useEffect(() => {
@@ -491,16 +501,29 @@ export default function EditorPage() {
     return () => clearTimeout(t);
   }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId]);
 
-  const switchProject = async (id: string) => { if (id === projectId) return; await setCurrentProject(id); setProjectId(id); };
+  const switchProject = async (id: string) => {
+    if (id === projectId) return;
+    setRestored(false);
+    await setCurrentProject(id);
+    setProjectId(id);
+  };
   const newProject = () => setProjDlg("create");
   const renameCurrent = () => { if (projectId) setProjDlg("rename"); };
   const deleteCurrent = () => { if (projectId) setProjDlg("delete"); };
 
   const submitCreate = async (name: string) => {
-    setProjDlg("none");
-    const id = await createProjectWithPolicy({ name: name || "פרויקט", policy: DEFAULT_POLICY() });
-    setProjects(await listProjects()); setProjectId(id);
-    toast.success("הפרויקט נוצר", name);
+    try {
+      const id = await createProjectWithPolicy({ name: name || "פרויקט", policy: DEFAULT_POLICY() });
+      await setCurrentProject(id);
+      const nextProjects = await listProjects();
+      setRestored(false);
+      setProjects(nextProjects);
+      setProjectId(id);
+      setProjDlg("none");
+      toast.success("הפרויקט נוצר ונפתח", name);
+    } catch (cause) {
+      toast.error("יצירת הפרויקט נכשלה", cause instanceof Error ? cause.message : undefined);
+    }
   };
   const submitRename = async (name: string) => {
     if (!projectId) return;

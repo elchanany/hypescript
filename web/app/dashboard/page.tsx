@@ -25,6 +25,7 @@ import { deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
 import { LoadingState } from "@/components/LoadingState";
+import { editorProjectUrl } from "@/lib/projects/navigation";
 
 function fmtDate(ms: number) {
   try {
@@ -269,7 +270,7 @@ export default function DashboardPage() {
 
   const openProject = async (id: string) => {
     await setCurrentProject(id);
-    window.location.href = "/";
+    window.location.assign(editorProjectUrl(id));
   };
 
   const onCreateWizard = async (result: { name: string; policy: import("@/lib/projects/types").ProjectExecutionPolicy }) => {
