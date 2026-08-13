@@ -5,6 +5,7 @@ import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
+  ArrowRightIcon,
   ArrowSquareOutIcon,
   ArrowsLeftRightIcon,
   ArrowsOutCardinalIcon,
@@ -130,6 +131,7 @@ function defineIcon(Source: PhosphorIcon, displayName: string) {
 export const Activity = defineIcon(PulseIcon, "Activity");
 export const AlertTriangle = defineIcon(WarningIcon, "AlertTriangle");
 export const ArrowLeft = defineIcon(ArrowLeftIcon, "ArrowLeft");
+export const ArrowRight = defineIcon(ArrowRightIcon, "ArrowRight");
 export const ArrowLeftRight = defineIcon(ArrowsLeftRightIcon, "ArrowLeftRight");
 export const AtSign = defineIcon(AtIcon, "AtSign");
 export const AudioLines = defineIcon(WaveformIcon, "AudioLines");

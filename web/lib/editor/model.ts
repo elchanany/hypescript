@@ -36,6 +36,10 @@ export interface Clip {
   opacity?: number; // 0..1 שקיפות ויזואלית (ברירת מחדל 1)
   contrast?: number; // 0.5..2 (ברירת מחדל 1)
   saturation?: number; // 0..3 (ברירת מחדל 1)
+  /** מזהה לוק מקטלוג האפקטים (web/lib/creative/effects.ts). */
+  effectId?: string;
+  /** עוצמת הלוק 0..1 (ברירת מחדל 1). */
+  effectAmount?: number;
 }
 
 export const clipEnabled = (c: Clip): boolean => c.enabled !== false;
@@ -66,6 +70,8 @@ export const clipOpacity = (c: Clip): number => {
 };
 export const clipContrast = (c: Clip): number => Number.isFinite(c.contrast) ? Math.max(0.5, Math.min(2, c.contrast!)) : 1;
 export const clipSaturation = (c: Clip): number => Number.isFinite(c.saturation) ? Math.max(0, Math.min(3, c.saturation!)) : 1;
+export const clipEffectAmount = (c: Clip): number =>
+  Number.isFinite(c.effectAmount) ? Math.max(0, Math.min(1, c.effectAmount!)) : 1;
 
 export function uid(prefix = "c"): string {
   return prefix + Math.random().toString(36).slice(2, 9);

@@ -1,9 +1,10 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipContrast, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
+import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
 import { audioFadeFactor, edgeFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
+import { clipLook } from "@/lib/creative/clipLook";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
@@ -109,8 +110,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const visualFades = activeClip ? clipVisualFades(activeClip) : { fadeIn: 0, fadeOut: 0 };
   const activeVisualFactor = activeClip ? edgeFadeFactor(clipOffset, clipDur(activeClip), visualFades.fadeIn, visualFades.fadeOut) : 1;
   const activeOpacity = (activeClip ? clipOpacity(activeClip) : 1) * activeVisualFactor;
-  const activeContrast = activeClip ? clipContrast(activeClip) : 1;
-  const activeSaturation = activeClip ? clipSaturation(activeClip) : 1;
+  // אותו resolver שמזין את הייצוא — כך התצוגה לא יכולה לסטות מהקובץ הסופי
+  const activeFilter = activeClip ? clipLook(activeClip).css : "none";
   const activeTransform = `scaleX(${activeClip && clipFlipX(activeClip) ? -1 : 1}) scaleY(${activeClip && clipFlipY(activeClip) ? -1 : 1})`;
 
   const activeMedia = () => mediaRefs[activeSlotRef.current].current;
@@ -388,9 +389,9 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
           onPlay={() => { if (slot !== activeSlotRef.current) return; setPlaying(true); syncExtraAudio(t, true); startVideoClock(slot); }}
           onPause={() => { if (slot === activeSlotRef.current) setPlaying(false); }}
           onClick={() => { onSelectOverlay?.(null); onSelectSub?.(null); toggle(); }}
-          style={{ visibility: activeKind === "video" && activeSlot === slot ? "visible" : "hidden", opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />)}
+          style={{ visibility: activeKind === "video" && activeSlot === slot ? "visible" : "hidden", opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />)}
         <audio ref={extraAudioRef} onEnded={() => syncExtraAudio(t, playing)} />
-        {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: `contrast(${activeContrast}) saturate(${activeSaturation})`, transform: activeTransform }} />}
+        {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />}
         {activeKind === "audio" && <div className="pv-audio-only"><Music size={46} /><span>אודיו מתנגן</span></div>}
         {activeKind === "missing" && <div className="pv-missing"><Film size={42} /><strong>קובץ המדיה חסר</strong><span>אפשר לקשר אותו מחדש מספריית המדיה</span></div>}
         {activeKind === "gap" && <div className="pv-gap" aria-hidden />}
