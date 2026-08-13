@@ -3,11 +3,14 @@
 import { NextResponse } from "next/server";
 import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
 import { KNOWN_STT_MODELS, KNOWN_TTS_MODELS } from "@/lib/elevenlabs/constants";
+import { requireCloudUser } from "@/lib/cloud/auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
+    const auth = await requireCloudUser();
+    if (auth.response) return auth.response;
     let resp: Response;
     try {
       resp = await elevenLabsFetch("/v1/models", { method: "GET" });

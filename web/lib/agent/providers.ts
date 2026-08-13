@@ -77,10 +77,11 @@ export async function callProvider(
   provider: Provider,
   messages: ChatMessage[],
   tools: ToolSchema[],
+  override?: { apiKey?: string; model?: string },
 ): Promise<AgentResponse> {
-  const key = providerKey(provider);
+  const key = override?.apiKey?.trim() || providerKey(provider);
   if (!key) throw new Error(`לא מוגדר מפתח ל-${provider}. הוסף אותו כמשתנה סביבה ב-Vercel.`);
-  const model = providerModel(provider);
+  const model = override?.model?.trim() || providerModel(provider);
 
   if (provider === "deepseek" || provider === "openai") return callOpenAICompat(provider, key, model, messages, tools);
   if (provider === "anthropic") return callAnthropic(key, model, messages, tools);

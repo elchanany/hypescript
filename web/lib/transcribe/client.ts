@@ -22,8 +22,8 @@ export interface TranscribeMediaOpts {
 export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Word[]> {
   const {
     file, durationSec,
-    provider = "groq",
-    model = "whisper-large-v3",
+    provider = "auto",
+    model = "",
     language = "he",
     formExtras,
     signal,
@@ -68,6 +68,9 @@ export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Wo
       const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: local.signal });
       data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
+      if (resp.headers.get("X-Hypescript-Transcription-Quality") === "reduced") {
+        onPhase?.("התמלול הושלם במנוע הגיבוי. האיכות עשויה להיות נמוכה יותר; Pro עם מכסה זמינה משתמש ב־ElevenLabs.");
+      }
     } catch (e: any) {
       if (e?.name === "AbortError") {
         throw new Error(signal?.aborted ? "התמלול בוטל." : "התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר.");

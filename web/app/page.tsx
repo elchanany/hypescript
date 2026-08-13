@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { Word } from "@/lib/models";
 import {
   assembledStart, Clip, MediaAsset, MediaKind, firstVideo, mediaById, totalDur, trimClip, uid,
@@ -41,6 +40,7 @@ import { getProjectPolicy } from "@/lib/projects/policy";
 import { deleteCloudProject, getCloudProject, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
 import { createProjectWithPolicy } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
+import EditorTour from "@/components/EditorTour";
 
 ensureBuiltinCommands();
 
@@ -94,6 +94,7 @@ export default function EditorPage() {
   const renderAbortRef = useRef<AbortController | null>(null);
   const renderStartedAtRef = useRef(0);
   const [groqOk, setGroqOk] = useState(true);
+  const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
     if (!rendering) return;
@@ -118,7 +119,7 @@ export default function EditorPage() {
 
   // layout state
   const [leftTab, setLeftTab] = useState<LeftTab>("media");
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [chatWidth, setChatWidth] = useState(460);
   const chatWidthRef = useRef(460); chatWidthRef.current = chatWidth;
@@ -278,7 +279,9 @@ export default function EditorPage() {
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
-    const o = localStorage.getItem("hs_chatOpen"); if (o !== null) setChatOpen(o === "1");
+    const firstVisit = localStorage.getItem("hs_editor_tour_pending") === "1";
+    const o = localStorage.getItem("hs_chatOpen"); if (o !== null && !firstVisit) setChatOpen(o === "1");
+    if (firstVisit) { setChatOpen(true); setTourOpen(true); localStorage.setItem("hs_chatOpen", "1"); }
     const focus = localStorage.getItem("hs_chatFocus"); if (focus === "1") { setFocusMode(true); setChatOpen(true); }
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
@@ -369,9 +372,8 @@ export default function EditorPage() {
   useEffect(() => {
     (async () => {
       const existing = await listProjects();
-      const id = existing.length
-        ? await ensureProject()
-        : await createProjectWithPolicy({ name: "פרויקט 1", policy: DEFAULT_POLICY() });
+      if (!existing.length) { window.location.replace("/dashboard?welcome=1"); return; }
+      const id = await ensureProject();
       setProjects(await listProjects());
       setProjectId(id);
     })();
@@ -733,8 +735,7 @@ export default function EditorPage() {
         ws = await transcribeMediaFile({
           file: main.file,
           durationSec: duration || main.duration || 0,
-          provider: "groq",
-          model: "whisper-large-v3",
+          provider: "auto",
           onPhase: setPhase,
           onProgress: setProgress,
         });
@@ -977,7 +978,7 @@ export default function EditorPage() {
   const agentDock = chatOpen ? (
     <>
       {dockSide === "right" && dockHandle}
-      <aside className="agent-dock" style={{ width: chatWidth }}>
+      <aside className="agent-dock" style={{ width: chatWidth }} data-tour="chat">
         <Chat media={media} onAddMedia={addFiles} onClose={toggleChat} words={words} clips={clips} subs={subs}
           script={script} overlays={overlays} canvas={canvas} projectId={projectId}
           captionStyle={captionStyle}
@@ -1093,7 +1094,9 @@ export default function EditorPage() {
         canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
       />
 
-      {!groqOk && <div className="banner2">GROQ_API_KEY לא מוגדר ב-Vercel. <Link href="/settings">הגדרות</Link></div>}
+      {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}
+
+      <EditorTour open={tourOpen} onClose={() => { setTourOpen(false); localStorage.removeItem("hs_editor_tour_pending"); localStorage.setItem("hs_editor_tour_done", "1"); }} />
 
       <ExportDialog
         open={exportOpen}
@@ -1143,7 +1146,7 @@ export default function EditorPage() {
         {dockSide === "left" && agentDock}
         <ToolRail active={leftTab} onSelect={setLeftTab} />
 
-        <div className="leftpanel" style={{ width: leftW }}>
+        <div className="leftpanel" style={{ width: leftW }} data-tour="media">
           {leftTab === "media" ? (
             <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
@@ -1173,7 +1176,7 @@ export default function EditorPage() {
 
         <div className="main-area">
           <div className="upper">
-            <div className="center-col">
+            <div className="center-col" data-tour="preview">
               <VideoPreview ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
                 selectedSubId={selectedSubId} onSelectSub={selectSub} onEditSub={editSub}
                 onCaptionPosition={(position) => {
@@ -1231,7 +1234,7 @@ export default function EditorPage() {
             />
           </div>
 
-          <div className="timeline-region" style={{ height: tlHeight }}>
+          <div className="timeline-region" style={{ height: tlHeight }} data-tour="timeline">
             <div className="tl-resize" onPointerDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
               title="גרור לשינוי גובה · חצים למעלה/למטה · דאבל-קליק לאיפוס" role="separator" tabIndex={0}
               aria-orientation="horizontal" aria-label="שינוי הגובה בין הנגן לטיימליין"><span /></div>

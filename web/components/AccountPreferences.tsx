@@ -24,12 +24,14 @@ type State = {
 export default function AccountPreferences() {
   const [v, setV] = useState<State | null>(null),
     [busy, setBusy] = useState(false),
-    [unavailable, setUnavailable] = useState(false);
+    [unavailable, setUnavailable] = useState(false),
+    [canUseByok, setCanUseByok] = useState(false);
   useEffect(() => {
     fetch("/api/account")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setV)
       .catch(() => setUnavailable(true));
+    fetch("/api/providers/byok").then((r) => r.ok ? r.json() : null).then((data) => setCanUseByok(data?.canUseByok === true)).catch(() => {});
   }, []);
   if (unavailable)
     return <section className="account-preferences"><strong>הגדרות החשבון יופעלו לאחר עדכון מסד הנתונים</strong><p>המנוי והפרויקטים ממשיכים לעבוד כרגיל.</p></section>;
@@ -171,6 +173,7 @@ export default function AccountPreferences() {
         <label className="settings-switch">
           <input
             type="checkbox"
+            disabled={!canUseByok}
             checked={v.settings.provider_mode === "byok"}
             onChange={(e) =>
               setV({
@@ -182,7 +185,7 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>BYOK — שימוש במפתחות שלי</span>
+          <span>{canUseByok ? "BYOK — שימוש במפתחות שלי" : "BYOK — זמין במסלול Pro"}</span>
         </label>
       </div>
       <div className="account-data-actions">

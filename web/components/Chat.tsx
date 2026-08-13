@@ -7,9 +7,7 @@ import { EditorApi } from "@/lib/editor/commands";
 import { TrackMeta, defaultTracks } from "@/lib/editor/project";
 import { AgentMode, AgentUsage, Provider, PROVIDER_LABELS } from "@/lib/agent/types";
 import { repairToolMessages } from "@/lib/agent/normalize";
-import { getProviderStatus, isProviderUsable } from "@/lib/providers/health";
-import { LLM_PROVIDERS, PROVIDER_BY_ID } from "@/lib/providers/registry";
-import { isProviderBillingApproved, setProviderBillingApproval } from "@/lib/providers/policy";
+import { LLM_PROVIDERS } from "@/lib/providers/registry";
 import { PROVIDER_PREF } from "@/lib/keys";
 import { Word } from "@/lib/models";
 import { Clip, MediaAsset, firstVideo } from "@/lib/editor/model";
@@ -30,7 +28,7 @@ import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock,
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -145,9 +143,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [usage, setUsage] = useState<AgentUsage>({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
-  const [configured, setConfigured] = useState<Record<string, boolean>>({});
-  const [configLoaded, setConfigLoaded] = useState(false);
   const [canChooseProvider, setCanChooseProvider] = useState(false);
+  const [providerMode, setProviderMode] = useState<"managed" | "byok">("managed");
+  const [byokOpen, setByokOpen] = useState(false);
+  const [byokProviders, setByokProviders] = useState<Provider[]>([]);
+  const [byokDraft, setByokDraft] = useState<Partial<Record<Provider, string>>>({});
+  const [byokBusy, setByokBusy] = useState<Provider | null>(null);
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false);
   const [uploading, setUploading] = useState<{ count: number; progress: number } | null>(null);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
@@ -317,29 +318,27 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((d) => setConfigured(d.providers || {}))
-      .catch(() => {})
-      .finally(() => setConfigLoaded(true));
-    Promise.all([
-      fetch("/api/account").then((r) => r.ok ? r.json() : null).catch(() => null),
-      fetch("/api/billing/status").then((r) => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([account, billing]) => {
-      setCanChooseProvider(account?.settings?.provider_mode === "byok" || billing?.subscription?.plan_id === "pro");
-    }).finally(() => setEntitlementsLoaded(true));
+    fetch("/api/providers/byok")
+      .then((r) => r.ok ? r.json() : null)
+      .then((access) => {
+        const can = access?.canUseByok === true;
+        const mode = access?.providerMode === "byok" && can ? "byok" : "managed";
+        setCanChooseProvider(can);
+        setProviderMode(mode);
+        setByokProviders(Array.isArray(access?.providers) ? access.providers : []);
+      })
+      .finally(() => setEntitlementsLoaded(true));
   }, []);
 
   useEffect(() => {
-    if (!configLoaded) return;
-    const current = getProviderStatus(provider, configured);
-    if (isProviderUsable(current)) return;
-    const fallback = LLM_PROVIDERS.find((candidate) => isProviderUsable(getProviderStatus(candidate.id, configured)));
+    if (!entitlementsLoaded || providerMode !== "byok") return;
+    if (byokProviders.includes(provider)) return;
+    const fallback = LLM_PROVIDERS.find((candidate) => byokProviders.includes(candidate.id));
     if (!fallback) return;
     setProvider(fallback.id);
     localStorage.setItem(PROVIDER_PREF, fallback.id);
     if (runnerRef.current) runnerRef.current.provider = fallback.id;
-  }, [configLoaded, configured, provider]);
+  }, [entitlementsLoaded, provider, providerMode, byokProviders]);
   const displayItems = useMemo(() => collapseConsecutiveTools(items), [items]);
   // תמיד מציגים נקודות חשיבה כל עוד יש בקשה פתוחה (גם בזמן כלי רץ)
   const showThinking = running && !ask;
@@ -409,7 +408,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           : { kind: "assistant", text, time: now() }]),
         onToolStart: (call, toolProvider) => {
           const m = TOOL_BY_NAME[call.name];
-          setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: PROVIDER_LABELS[toolProvider], args: { ...call.arguments }, startedAt: Date.now() }]);
+            setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: providerMode === "byok" ? PROVIDER_LABELS[toolProvider] : undefined, args: { ...call.arguments }, startedAt: Date.now() }]);
         },
         onToolStatus: (id, status) => setItems((p) => p.map((it) => (it.kind === "tool" && it.id === id ? { ...it, status } : it))),
         onToolEnd: (id, ok, summary) => {
@@ -464,25 +463,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       runnerRef.current?.injectMessage(text);
       return;
     }
-    if (!configLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק עדיין את סטטוס המפתחות. נסה שוב בעוד רגע.", time: now() }]); return; }
-    const status = getProviderStatus(provider, configured);
-    if (!isProviderUsable(status)) { setItems((p) => [...p, { kind: "error", text: `לספק ${status.labelHe} אין מפתח פעיל. ${status.reasonHe}. ראה הגדרות.`, time: now() }]); return; }
-    if (!isProviderBillingApproved(provider)) {
-      const definition = PROVIDER_BY_ID[provider];
-      setItems((p) => [...p, {
-        kind: "provider_approval", id: `approval_${Date.now()}`, provider, providerLabel: definition.labelHe,
-        prompt: text, note: definition.billingNoteHe, state: "pending", time: now(),
-      }]);
-      setInput("");
-      return;
+    if (providerMode === "byok") {
+      if (!entitlementsLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק את הגדרות ה־BYOK. נסה שוב בעוד רגע.", time: now() }]); return; }
+      if (!byokProviders.includes(provider)) { setItems((p) => [...p, { kind: "error", text: "יש לשמור מפתח לספק שנבחר בהגדרות ה־AI.", time: now() }]); setByokOpen(true); return; }
     }
     sendAgentRequest(text);
   };
 
   const changeProvider = (p: Provider) => {
-    const status = getProviderStatus(p, configured);
-    if (configLoaded && !isProviderUsable(status)) {
-      setItems((prev) => [...prev, { kind: "error", text: `${status.labelHe} לא זמין כרגע: ${status.reasonHe}.`, time: now() }]);
+    if (providerMode === "byok" && !byokProviders.includes(p)) {
+      setItems((prev) => [...prev, { kind: "error", text: "לספק הזה עדיין לא נשמר מפתח BYOK.", time: now() }]);
       return;
     }
     setProvider(p); localStorage.setItem(PROVIDER_PREF, p); if (runnerRef.current) runnerRef.current.provider = p;
@@ -545,17 +535,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setInput("עדכן את התוכנית הזו כך ש");
     requestAnimationFrame(() => taRef.current?.focus());
   };
-  const approveProviderUse = (approval: Extract<Item, { kind: "provider_approval" }>) => {
-    if (running || approval.state !== "pending") return;
-    setProviderBillingApproval(approval.provider, true);
-    setProvider(approval.provider);
-    localStorage.setItem(PROVIDER_PREF, approval.provider);
-    setItems((p) => p.map((it) => it.kind === "provider_approval" && it.id === approval.id ? { ...it, state: "approved" as const } : it));
-    sendAgentRequest(approval.prompt, approval.provider);
-  };
-  const declineProviderUse = (approval: Extract<Item, { kind: "provider_approval" }>) => {
-    if (running || approval.state !== "pending") return;
-    setItems((p) => p.map((it) => it.kind === "provider_approval" && it.id === approval.id ? { ...it, state: "declined" as const } : it));
+  const saveByok = async (selected: Provider) => {
+    const apiKey = String(byokDraft[selected] || "").trim();
+    if (!apiKey) return;
+    setByokBusy(selected);
+    const response = await fetch("/api/providers/byok", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ provider: selected, apiKey }) });
+    setByokBusy(null);
+    if (!response.ok) { setItems((p) => [...p, { kind: "error", text: response.status === 403 ? "BYOK זמין במסלול Pro פעיל." : "שמירת המפתח נכשלה.", time: now() }]); return; }
+    setByokProviders((current) => current.includes(selected) ? current : [...current, selected]);
+    setByokDraft((current) => ({ ...current, [selected]: "" }));
+    setProvider(selected); localStorage.setItem(PROVIDER_PREF, selected);
   };
 
   // --- Composer: זיהוי / (פקודות) ו-@ (אזכורים) בזמן הקלדה ---
@@ -604,14 +593,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         <span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span>
         <div className="actions" style={{ gap: 4 }}>
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
-          {canChooseProvider && <label className="chat-model-picker" data-tip="בחירת מנוע AI זמינה ב־Pro או במצב BYOK" data-tippos="down"><Sparkles size={13} /><span>מנוע</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="מנוע AI לשיחה">
+          {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
             {LLM_PROVIDERS.map((p) => {
-              const status = getProviderStatus(p.id, configured);
-              const disabled = configLoaded && !isProviderUsable(status);
-              return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}</option>;
+              const disabled = !byokProviders.includes(p.id);
+              return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}{disabled ? " · חסר מפתח" : ""}</option>;
             })}
           </select><ChevronDown size={12} /></label>}
-          {canChooseProvider && usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()} · עלות כספית אינה מחושבת בלי rate card מאומת`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
+          {providerMode === "byok" && usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()}`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
+          <button className="iconbtn" data-tip="הגדרות AI" data-tippos="down" onClick={() => setByokOpen((value) => !value)} aria-expanded={byokOpen} aria-label="הגדרות AI"><Settings size={16} /></button>
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
               onClick={onToggleDock} aria-label="החלף צד עגינה">
@@ -640,6 +629,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         </div>
         <button className="chat-new" onClick={startNewChat}><MessageSquarePlus size={15} />שיחה חדשה</button>
       </div>
+
+      {byokOpen && <section className="chat-ai-settings" aria-label="הגדרות AI">
+        <div className="chat-ai-settings-head"><div><strong>{providerMode === "managed" ? "AI מנוהל" : "BYOK פעיל"}</strong><span>{providerMode === "managed" ? "Hypescript בוחר אוטומטית שירות זמין. אין צורך במפתח או בבחירת מודל." : "הקריאות נעשות עם המפתח המוצפן שלך."}</span></div><button className="iconbtn" onClick={() => setByokOpen(false)} aria-label="סגור"><X size={14} /></button></div>
+        {!canChooseProvider ? <div className="chat-ai-locked"><Lock size={16} /><span><strong>BYOK ובחירת ספק זמינים ב־Pro</strong><small>במצב הרגיל הכול מנוהל עבורך ואין צורך לדעת באיזה מודל נעשה שימוש.</small></span><a href="/account#plans">שדרוג ל־Pro</a></div> : <>
+          <div className="chat-ai-mode"><button className={providerMode === "managed" ? "active" : ""} onClick={async () => { await fetch("/api/providers/byok", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "managed" }) }); setProviderMode("managed"); }}>מנוהל</button><button className={providerMode === "byok" ? "active" : ""} onClick={async () => { await fetch("/api/providers/byok", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "byok" }) }); setProviderMode("byok"); }}>המפתחות שלי</button></div>
+          {providerMode === "byok" && <div className="chat-byok-list">{LLM_PROVIDERS.map((definition) => <label key={definition.id}><span><strong>{definition.labelHe}</strong><small>{byokProviders.includes(definition.id) ? "מפתח מוצפן שמור" : "לא הוגדר"}</small></span><input type="password" value={byokDraft[definition.id] || ""} onChange={(event) => setByokDraft((current) => ({ ...current, [definition.id]: event.target.value }))} placeholder="הדבק מפתח חדש" autoComplete="off" /><button className="btn sm" disabled={!byokDraft[definition.id]?.trim() || byokBusy === definition.id} onClick={() => void saveByok(definition.id)}>{byokBusy === definition.id ? "שומר…" : "שמור"}</button></label>)}</div>}
+        </>}
+      </section>}
 
       <div className="agent-modes" role="tablist" aria-label="מצב סוכן">
         {MODES.map((m) => (
@@ -732,19 +729,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           }
           if (it.kind === "provider_approval") {
             return (
-              <div key={it.id} className="msg2 assistant" role="alert" aria-label="אישור שימוש בספק חיצוני">
+              <div key={it.id} className="msg2 assistant" role="note" aria-label="הודעת ספק ישנה">
                 <div className="b">
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><AlertTriangle size={15} />אישור שימוש ב־{it.providerLabel}</div>
-                  <div>{it.note}</div>
-                  <div style={{ color: "var(--text-muted)", marginTop: 5 }}>לא תישלח קריאה חיצונית לפני אישור.</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                    {it.state === "pending" && <>
-                      <button className="btn primary sm" onClick={() => approveProviderUse(it)} disabled={running}>מאשר ושולח</button>
-                      <button className="btn sm" onClick={() => declineProviderUse(it)} disabled={running}>ביטול</button>
-                    </>}
-                    {it.state === "approved" && <span className="ctx-chip on"><Check size={12} />אושר</span>}
-                    {it.state === "declined" && <span className="ctx-chip muted">בוטל ללא שליחה</span>}
-                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><Info size={15} />הודעה משיחה קודמת</div>
+                  <div>אין עוד צורך באישור ספק במצב המנוהל. שלח את ההוראה מחדש והיא תטופל אוטומטית.</div>
                 </div>
                 <span className="t">{it.time}</span>
               </div>

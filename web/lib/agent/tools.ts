@@ -3,14 +3,7 @@
 
 import { isSpeechWord, Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
-import { TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
-import {
-  defaultModelFor,
-  resolveTranscribeProvider,
-  type TranscribeProviderId,
-  type TranscribeProviderPref,
-} from "@/lib/elevenlabs/prefs";
-import { DEFAULT_STT_MODEL, DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
+import { DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
   addClip, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
@@ -45,9 +38,8 @@ import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
 import { getActiveBrandKit, brandKitPrompt, summarizeBrandKit } from "@/lib/brand/kit";
 import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
-import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline } from "@/lib/editor/tracks";
+import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline, projectDuration } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
-import { ensureProviderBillingApproval } from "@/lib/providers/policy";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
 import { colorPreset } from "@/lib/editor/colorPresets";
 import { buildMicroEdl } from "@/lib/render/timelineFrame";
@@ -235,44 +227,13 @@ async function fetchTranscribeConfigured(): Promise<{ elevenlabs: boolean; groq:
   }
 }
 
-function readTranscribePref(): TranscribeProviderPref {
-  try {
-    const v = localStorage.getItem(TRANSCRIBE_PREF) as TranscribeProviderPref | null;
-    if (v === "elevenlabs" || v === "groq" || v === "auto") return v;
-  } catch { /* ignore */ }
-  return "auto";
-}
-
-function readTranscribeModelPref(): string {
-  try { return (localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "").trim(); } catch { return ""; }
-}
-
 async function resolveSttChoice(
-  providerArg?: string,
-  modelArg?: string,
-): Promise<{ provider: TranscribeProviderId; model: string }> {
+  _providerArg?: string,
+  _modelArg?: string,
+): Promise<{ provider: "auto"; model: string }> {
   const configured = await fetchTranscribeConfigured();
-  const prefRaw = String(providerArg || readTranscribePref() || "auto").toLowerCase();
-  const pref: TranscribeProviderPref =
-    prefRaw === "elevenlabs" || prefRaw === "groq" || prefRaw === "auto" ? prefRaw : "auto";
-  const provider = resolveTranscribeProvider(pref, configured);
-  if (!provider) {
-    if (pref === "elevenlabs") {
-      throw new Error("ElevenLabs לא מוגדר. הוסף ELEVENLABS_API_KEY ב-Vercel או ב-web/.env.local.");
-    }
-    if (pref === "groq") {
-      throw new Error("Groq לא מוגדר. הוסף GROQ_API_KEY ב-Vercel או ב-web/.env.local.");
-    }
-    throw new Error(
-      "אין ספק תמלול מוגדר. הוסף ELEVENLABS_API_KEY ו/או GROQ_API_KEY ב-Vercel או ב-web/.env.local.",
-    );
-  }
-  const model =
-    String(modelArg || "").trim() ||
-    readTranscribeModelPref() ||
-    defaultModelFor(provider) ||
-    (provider === "elevenlabs" ? DEFAULT_STT_MODEL : "whisper-large-v3");
-  return { provider, model };
+  if (!configured.elevenlabs && !configured.groq) throw new Error("שירות התמלול המנוהל אינו זמין כרגע.");
+  return { provider: "auto", model: "" };
 }
 
 function findRanges(words: Word[], query: string, max = 6) {
@@ -619,17 +580,14 @@ export const TOOLS: ToolMeta[] = [
       if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
-      await ensureProviderBillingApproval(provider === "elevenlabs" ? "elevenlabs-transcribe" : "groq-transcribe", ctx.askUser);
-      const explicitProvider = String(a.provider || "").toLowerCase();
-      const wantsSpecific = explicitProvider === "elevenlabs" || explicitProvider === "groq";
+      const wantsSpecific = false;
 
       // אם המשתמש ביקש ספק ספציפי — לא מחזירים תמלול ישן מספק אחר
       if (!a.force && ctx.transcripts[asset.id]) {
         const meta = ctx.transcriptMeta?.[asset.id];
         if (!wantsSpecific || (meta && providerMatches(meta.provider, provider))) {
           const n = ctx.transcripts[asset.id].filter(isSpeechWord).length;
-          const who = meta ? ` (${meta.provider}/${meta.model || "?"})` : "";
-          return `"${asset.name}" כבר תומלל${who}: ${n} מילים. להחלפה/ספק אחר: force=true או provider=...`;
+          return `"${asset.name}" כבר תומלל: ${n} מילים. לתמלול מחדש השתמש ב-force=true.`;
         }
       }
       const isMain = asset.id === mainVideo(ctx)?.id;
@@ -641,24 +599,22 @@ export const TOOLS: ToolMeta[] = [
           if (!ctx.transcriptMeta) ctx.transcriptMeta = {};
           ctx.transcriptMeta[asset.id] = { provider: cached.provider, model: cached.model };
           if (isMain) { ctx.words = cached.words; if (!ctx.duration) ctx.duration = asset.duration; }
-          return `נטען תמלול שמור ל-"${asset.name}" (${cached.provider}/${cached.model || "?"}, ${cached.words.filter(isSpeechWord).length} מילים).`;
+          return `נטען תמלול שמור ל-"${asset.name}" (${cached.words.filter(isSpeechWord).length} מילים).`;
         }
       }
       try { await import("@/lib/ffmpeg"); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב. אל תנסה שוב בלי רענון."); }
 
-      report(`מתמלל ${asset.name} ב-${provider} / ${model}…`);
+      report(`מתמלל ${asset.name} במנוע האיכותי…`);
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
       try { ({ transcribeMediaFile } = await import("@/lib/transcribe/client")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) ואז הרץ תמלול שוב."); }
 
       const formExtras: Record<string, string> = {};
-      if (provider === "elevenlabs") {
-        if (a.tag_audio_events === false) formExtras.tag_audio_events = "false";
-        if (a.diarize === false) formExtras.diarize = "false";
-        if (a.num_speakers != null) formExtras.num_speakers = String(a.num_speakers);
-        if (a.keyterms) formExtras.keyterms = String(a.keyterms);
-      }
+      if (a.tag_audio_events === false) formExtras.tag_audio_events = "false";
+      if (a.diarize === false) formExtras.diarize = "false";
+      if (a.num_speakers != null) formExtras.num_speakers = String(a.num_speakers);
+      if (a.keyterms) formExtras.keyterms = String(a.keyterms);
       const words = await transcribeMediaFile({
         file: asset.file,
         durationSec: asset.duration || 0,
@@ -679,7 +635,7 @@ export const TOOLS: ToolMeta[] = [
         events ? `${events} אירועי-שמע` : "",
         speakers.size ? `${speakers.size} דוברים` : "",
       ].filter(Boolean).join(", ");
-      return `תומלל "${asset.name}" ב-${provider}/${model}: ${speech} מילים${extras ? ` (+ ${extras})` : ""} (נשמר).`;
+      return `תומלל "${asset.name}" במנוע המנוהל: ${speech} מילים${extras ? ` (+ ${extras})` : ""} (נשמר).`;
     },
   },
   {
@@ -900,7 +856,6 @@ export const TOOLS: ToolMeta[] = [
       catch { throw new Error("נפרסה גרסה חדשה — רענן את הדף (Ctrl+Shift+R) ואז נסה שוב."); }
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
-      await ensureProviderBillingApproval(provider === "elevenlabs" ? "elevenlabs-transcribe" : "groq-transcribe", ctx.askUser);
       report(`בונה אודיו זמני מהעריכה…`);
       let extractAssembledAudio: typeof import("@/lib/ffmpeg").extractAssembledAudio;
       let transcribeMediaFile: typeof import("@/lib/transcribe/client").transcribeMediaFile;
@@ -913,7 +868,7 @@ export const TOOLS: ToolMeta[] = [
 
       const { blob, durationSec } = await extractAssembledAudio(ctx.media, ctx.clips, () => {});
       const file = new File([blob], "edited_timeline.mp3", { type: "audio/mpeg" });
-      report(`מתמלל את האודיו הערוך ב-${provider}/${model}…`);
+      report("מתמלל את האודיו הערוך במנוע האיכותי…");
       const words = await transcribeMediaFile({
         file,
         durationSec,
@@ -924,7 +879,7 @@ export const TOOLS: ToolMeta[] = [
       ctx.assembledWords = words;
       const n = words.filter(isSpeechWord).length;
       return {
-        text: `תומלל הציר הערוך מחדש ב-${provider}/${model}: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`,
+        text: `תומלל הציר הערוך מחדש: ${n} מילים על ${durationSec.toFixed(1)}s. האודיו הזמני זמין להורדה בצ'אט. קרא עם get_transcript(timeline=true).`,
         artifacts: [{ blob, name: "edited_timeline.mp3", kind: "audio" }],
       };
     },
@@ -2217,26 +2172,13 @@ export const TOOLS: ToolMeta[] = [
     },
     run: async () => {
       const configured = await fetchTranscribeConfigured();
-      const pref = readTranscribePref();
-      const resolved = resolveTranscribeProvider(pref, configured);
-      const modelPref = readTranscribeModelPref();
-      let stt: Array<{ id: string; name: string; descriptionHe?: string; description?: string }> = [];
-      try {
-        const data = await fetch("/api/elevenlabs/models").then((r) => r.json());
-        stt = data.stt || [];
-      } catch { /* ignore */ }
-      const lines = stt.map((m) => `• ${m.id} — ${m.name}${m.descriptionHe || m.description ? `: ${m.descriptionHe || m.description}` : ""}`);
-      return [
-        `העדפת תמלול: ${pref}${resolved ? ` → בפועל ${resolved}` : " (אין מפתח)"}`,
-        `מודל מועדף: ${modelPref || "(ברירת מחדל לספק)"}`,
-        `Groq: ${configured.groq ? "מוכן" : "חסר מפתח"} · ElevenLabs: ${configured.elevenlabs ? "מוכן" : "חסר מפתח"}`,
-        "",
-        "מודלי STT (ElevenLabs):",
-        lines.length ? lines.join("\n") : "• scribe_v2 (ברירת מחדל)\n• scribe_v1",
-        "",
-        "Groq: whisper-large-v3",
-        "לבחירה: transcribe_video(provider=..., model=...) או שנה בהגדרות.",
-      ].join("\n");
+      if (configured.elevenlabs) {
+        return "התמלול האיכותי מוכן. Hypescript בוחר ומנהל את המנוע אוטומטית; במקרה של עומס או סיום מכסה יופעל מנוע גיבוי ותוצג אזהרת איכות.";
+      }
+      if (configured.groq) {
+        return "מנוע הגיבוי זמין כרגע. איכות התמלול עשויה להיות נמוכה יותר עד ששירות התמלול האיכותי יחזור.";
+      }
+      return "שירות התמלול אינו זמין כרגע.";
     },
   },
   {
@@ -2271,6 +2213,35 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "generate_background_music", label: "יצירת מוזיקת רקע", color: "#0ea5e9", icon: "🎵",
+    schema: {
+      name: "generate_background_music",
+      description: "יוצר מוזיקת רקע מקורית ומורשית דרך ElevenLabs באורך מדויק לציר. השתמש במקום הורדת שיר מוכר ללא רישיון. התאם מצב רוח, קצב ועוצמה לתוכן, וברירת המחדל אינסטרומנטלית כדי לא להתחרות בדיבור.",
+      parameters: { type: "object", properties: {
+        prompt: { type: "string", description: "תיאור מוזיקלי מפורט ללא שמות אמנים, שירים או מילים מוגנות" },
+        duration_seconds: { type: "number", description: "משך מדויק; ברירת מחדל סוף הציר" },
+        instrumental: { type: "boolean", description: "ללא שירה (ברירת מחדל true)" },
+      }, required: ["prompt"] },
+    },
+    run: async (a, ctx, report) => {
+      const prompt = String(a.prompt || "").trim();
+      if (!prompt) return "שגיאה: חסר תיאור מוזיקלי.";
+      if (/(בסגנון של|שיר של|artist\s*:|song by)/i.test(prompt)) return "לא ניתן לחקות אמן או שיר מוגן. תאר ז׳אנר, מצב רוח, כלים וקצב בלי שם מסחרי.";
+      const timeline = Math.max(3, projectDuration(ctx.clips || [], ctx.tracks || []), ctx.duration || 0);
+      const duration = Math.max(3, Math.min(600, Number(a.duration_seconds) || timeline));
+      report(`יוצר מוזיקת רקע מקורית באורך ${duration.toFixed(1)} שניות…`);
+      const response = await fetch("/api/elevenlabs/music", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, durationSec: duration, instrumental: a.instrumental !== false }) });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "יצירת המוזיקה נכשלה."); }
+      const blob = await response.blob();
+      const { contextualFileName } = await import("@/lib/chat/markdown");
+      const name = contextualFileName(prompt, "audio", "background_music.mp3");
+      const file = new File([blob], name, { type: blob.type || "audio/mpeg" });
+      const asset: MediaAsset = { id: uid("music"), name, kind: "audio", file, duration, url: URL.createObjectURL(file) };
+      const { asset: registered } = registerMediaAsset(ctx, asset);
+      return { text: `מוזיקת רקע מקורית נוצרה באורך ${duration.toFixed(1)} שניות ונוספה למדיה כ־@media:${registered.id}. אפשר להוסיף אותה לרצועת האודיו ולהנמיך מתחת לדיבור.`, artifacts: [{ blob, name, kind: "audio" }] };
+    },
+  },
+  {
     name: "generate_narration", label: "יצירת קריינות", color: "#a855f7", icon: "🗣️",
     schema: {
       name: "generate_narration",
@@ -2297,7 +2268,6 @@ export const TOOLS: ToolMeta[] = [
       const voiceId = String(a.voice_id || "").trim();
       if (!text) return "שגיאה: חסר טקסט.";
       if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices ובחר קול.";
-      await ensureProviderBillingApproval("elevenlabs-voice", ctx.askUser);
       report("יוצר קריינות ב-ElevenLabs…");
       const resp = await fetch("/api/elevenlabs/tts", {
         method: "POST",
@@ -2394,7 +2364,6 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx, report) => {
       const prompt = String(a.prompt || "").trim();
       if (!prompt) return "שגיאה: חסר prompt לתיאור התמונה.";
-      await ensureProviderBillingApproval("openai-image", ctx.askUser);
       const kit = ctx.brandKit ?? (await getActiveBrandKit());
       const useBrand = a.use_brand !== false;
       const finalPrompt = buildImagePrompt(prompt, kit, useBrand);
@@ -2487,7 +2456,7 @@ export const TOOLS: ToolMeta[] = [
 export const TOOL_SCHEMAS = TOOLS.map((t) => t.schema);
 export const TOOL_BY_NAME: Record<string, ToolMeta> = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 
-export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית של hypescript. אתה עורך שיעורי רב ותכנים דבורים: חותך לפי טקסט, מנקה, מכתיב ומייצא.
+export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hypescript. אתה עורך בשיחה סרטונים מכל סוג — תוכן בעברית, רשתות, עסקים, אירועים, משפחה, הרצאות ופודקאסטים — מחומר גלם ועד ייצוא מוכן.
 
 ═══ מה נחשב הצלחה ═══
 הפלט מכיל **בדיוק** את הטקסט שהמשתמש ביקש — לא מילה פחות ולא מילה יותר; כל קאט נופל בשקט מדוד ולא באמצע הברה; הכתוביות קריאות ומכובדות. אם אחד מהשלושה לא מתקיים — העבודה לא הסתיימה, גם אם כל הכלים "הצליחו". אל תדווח הצלחה לפני audit_edit.
@@ -2551,6 +2520,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת וידאו בעברית
 - set_clip_audio_fades / set_clip_visual_fades / set_clip_color / set_clip_volume.
 - get_brand_kit → use_brand_asset ללוגו אמיתי. generate_image רק כשאין נכס מתאים; לעולם לא לצייר לוגו.
 - list_voices → generate_narration(text, voice_id) → add_clip(@media:<id>, timeline_start, track=אודיו).
+- generate_background_music(prompt, duration_seconds) יוצר מוזיקה מקורית באורך הציר. אסור להוריד או לחקות שירים מוכרים ללא רישיון; למדיה מסחרית השתמש רק בקטלוג מורשה שהמשתמש חיבר.
 - capture_frame(timeline=true) — אימות ויזואלי אחרי שינוי משמעותי. פעם אחת לנקודה, זה רינדור יקר.
 - render_video / export_srt — התוצר חוזר ככרטיס בצ'אט; הפנה אליו, אל תמציא נתיב.
 

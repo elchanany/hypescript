@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
+import { getAiAccess } from "@/lib/billing/aiAccess.server";
 
 export async function GET() {
   const auth = await requireCloudUser();
@@ -33,6 +34,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireCloudUser();
   if (auth.response) return auth.response;
   const body = await req.json().catch(() => ({}));
+  const aiAccess = await getAiAccess(auth.supabase, auth.user);
   const profile = {
     display_name: String(body.profile?.display_name || "")
       .trim()
@@ -56,7 +58,7 @@ export async function PATCH(req: NextRequest) {
     high_contrast: !!s.high_contrast,
     font_scale: Math.max(0.85, Math.min(1.35, Number(s.font_scale) || 1)),
     marketing_email: !!s.marketing_email,
-    provider_mode: s.provider_mode === "byok" ? "byok" : "managed",
+    provider_mode: s.provider_mode === "byok" && aiAccess.canUseByok ? "byok" : "managed",
     updated_at: new Date().toISOString(),
   };
   const [p, u] = await Promise.all([

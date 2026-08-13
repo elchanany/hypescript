@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
-import { postLoginPath } from "@/lib/auth/session";
+import { postLoginPath, postLoginPathForUser } from "@/lib/auth/session";
 import { authIssueMessage, type AuthDiagnostics } from "@/lib/auth/config";
+import { getSupabaseBrowser } from "@/lib/auth/supabase";
 
 type Tab = "login" | "signup" | "magic" | "reset";
 
@@ -60,7 +61,9 @@ function LoginInner() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(postLoginPath(next));
+      const sb = getSupabaseBrowser();
+      if (!sb) router.replace(postLoginPath(next));
+      else void postLoginPathForUser(sb, next).then((path) => router.replace(path));
     }
   }, [loading, user, router, next]);
 
@@ -72,7 +75,8 @@ function LoginInner() {
         const ok = await signInWithPassword(email, password);
         if (ok) {
           // Don't wait only on useEffect — navigate once session exists
-          router.replace(postLoginPath(next));
+          const sb = getSupabaseBrowser();
+          router.replace(sb ? await postLoginPathForUser(sb, next) : postLoginPath(next));
         }
       } else if (tab === "signup") {
         const ok = await signUpWithPassword(email, password);

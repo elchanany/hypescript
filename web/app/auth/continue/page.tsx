@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabaseBrowser } from "@/lib/auth/supabase";
-import { postLoginPath, waitForSession } from "@/lib/auth/session";
+import { postLoginPathForUser, waitForSession } from "@/lib/auth/session";
 
 /**
  * Post-OAuth landing after server exchanged the code into cookies.
@@ -33,7 +33,7 @@ function ContinueInner() {
         return;
       }
       try { sessionStorage.setItem("hs_just_logged_in", "1"); } catch { /* ignore */ }
-      router.replace(postLoginPath(next));
+      router.replace(await postLoginPathForUser(sb, next));
     })();
     return () => { cancelled = true; };
   }, [router, next]);

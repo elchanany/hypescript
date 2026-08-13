@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
 import { DEFAULT_STT_MODEL, DEFAULT_STT_OPTIONS } from "@/lib/elevenlabs/constants";
 import { normalizeElevenLabsStt, toCompatResponse } from "@/lib/elevenlabs/normalize";
+import { requireCloudUser } from "@/lib/cloud/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,28 +18,46 @@ const OPENAI_COMPAT: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireCloudUser();
+    if (auth.response) return auth.response;
     const form = await req.formData();
     const file = form.get("file");
-    const provider = String(form.get("provider") || "groq").toLowerCase();
+    const requested = String(form.get("provider") || "auto").toLowerCase();
     const language = String(form.get("language") || "he");
 
     if (!(file instanceof Blob)) {
       return NextResponse.json({ error: "לא התקבל קובץ אודיו." }, { status: 400 });
     }
 
-    if (provider === "elevenlabs") {
-      return await transcribeElevenLabs(form, file, language);
+    if (requested === "auto") {
+      if ((process.env.ELEVENLABS_API_KEY || "").trim()) {
+        const primary = await transcribeElevenLabs(form, file, language);
+        if (primary.ok || primary.status < 429) return withQuality(primary, "premium", "elevenlabs");
+      }
+      if ((process.env.GROQ_API_KEY || "").trim()) {
+        return withQuality(await transcribeOpenAiCompat(form, file, "groq", language), "reduced", "groq");
+      }
+      return NextResponse.json({ error: "שירות התמלול אינו זמין כרגע." }, { status: 503 });
     }
 
-    return await transcribeOpenAiCompat(form, file, provider, language);
+    if (requested === "elevenlabs") {
+      return withQuality(await transcribeElevenLabs(form, file, language), "premium", "elevenlabs");
+    }
+    return withQuality(await transcribeOpenAiCompat(form, file, requested, language), "reduced", requested);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `שגיאת שרת: ${message}` }, { status: 500 });
   }
 }
 
+function withQuality(response: NextResponse, quality: "premium" | "reduced", provider: string): NextResponse {
+  response.headers.set("X-Hypescript-Transcription-Quality", quality);
+  response.headers.set("X-Hypescript-Transcription-Provider", provider);
+  return response;
+}
+
 async function transcribeElevenLabs(form: FormData, file: Blob, language: string) {
-  const model = String(form.get("model") || DEFAULT_STT_MODEL);
+  const model = String(form.get("model") || "").trim() || DEFAULT_STT_MODEL;
   const tagEvents = String(form.get("tag_audio_events") ?? "true") !== "false";
   const diarize = String(form.get("diarize") ?? "true") !== "false";
   const noVerbatim = String(form.get("no_verbatim") ?? "false") === "true";
@@ -105,7 +124,7 @@ async function transcribeOpenAiCompat(
   provider: string,
   language: string,
 ) {
-  const model = String(form.get("model") || "whisper-large-v3");
+  const model = String(form.get("model") || "").trim() || "whisper-large-v3";
   const envKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
   const apiKey = (envKey || String(form.get("apiKey") || "")).trim();
 

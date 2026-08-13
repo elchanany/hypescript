@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useTheme, ThemeMode } from "@/lib/theme/ThemeProvider";
+import { getSupabaseBrowser } from "@/lib/auth/supabase";
 
 type Step = 1 | 2 | 3;
 
@@ -15,7 +16,6 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>(1);
   const [displayName, setDisplayName] = useState("");
   const [usageType, setUsageType] = useState("personal");
-  const [projectMode, setProjectMode] = useState("ask");
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +37,26 @@ export default function OnboardingPage() {
     if (!accepted) { setError("יש לאשר את תנאי השימוש ומדיניות הפרטיות."); return; }
     setBusy(true); setError(null);
     try {
+      const sb = getSupabaseBrowser();
+      if (sb && user) {
+        const { error: profileError } = await sb.from("profiles").update({
+          display_name: displayName.trim(),
+          usage_type: usageType,
+          onboarding_completed: true,
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", user.id);
+        if (profileError) throw profileError;
+      }
       localStorage.setItem("hs_onboarding_done", "1");
       localStorage.setItem("hs_display_name", displayName.trim());
       localStorage.setItem("hs_usage_type", usageType);
-      localStorage.setItem("hs_default_project_mode", projectMode);
-      const next = sessionStorage.getItem("hs_post_onboarding") || "/dashboard";
+      localStorage.setItem("hs_default_project_mode", "cloud");
+      localStorage.setItem("hs_first_project_flow", "1");
+      const next = "/dashboard?welcome=1";
       sessionStorage.removeItem("hs_post_onboarding");
-      router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+      router.replace(next);
     } catch (e: any) {
       setError(e?.message || "שגיאה בשמירה");
     } finally {
@@ -89,15 +102,7 @@ export default function OnboardingPage() {
                 <option value="light">בהיר</option>
               </select>
             </label>
-            <label className="dlg-field">
-              ברירת מחדל לפרויקטים
-              <select value={projectMode} onChange={(e) => setProjectMode(e.target.value)}>
-                <option value="ask">שאל בכל פרויקט</option>
-                <option value="local">Local</option>
-                <option value="cloud">Cloud</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
-            </label>
+            <div className="onb-managed-note"><strong>הכול מוכן בשבילך</strong><span>פרויקטים נשמרים בענן ו־Hypescript מנהל את שירותי ה־AI. לא צריך לבחור מודל, ספק או מפתח.</span></div>
             <div className="onb-actions">
               <button className="btn" onClick={() => setStep(1)}>חזרה</button>
               <button className="btn primary" onClick={() => setStep(3)}>המשך</button>
@@ -115,7 +120,7 @@ export default function OnboardingPage() {
             <div className="onb-actions">
               <button className="btn" onClick={() => setStep(2)}>חזרה</button>
               <button className="btn primary" disabled={busy || !accepted} onClick={finish}>
-                {busy ? "שומר…" : "ללוח הבקרה"}
+                {busy ? "מכין את סביבת העבודה…" : "צור את הפרויקט הראשון"}
               </button>
             </div>
           </div>

@@ -15,7 +15,7 @@ const TABS: { id: LeftTab; icon: typeof Film; label: string }[] = [
 
 export default function ToolRail({ active, onSelect }: { active: LeftTab; onSelect: (t: LeftTab) => void }) {
   return (
-    <div className="toolrail">
+    <div className="toolrail" data-tour="tools">
       {TABS.map((t) => (
         <button key={t.id} className={`rail-btn ${active === t.id ? "on" : ""}`} data-tip={t.label} data-tippos="right"
           onClick={() => onSelect(t.id)} aria-label={t.label}>

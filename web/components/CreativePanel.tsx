@@ -1,9 +1,12 @@
 "use client";
 
-import { Blend, Check, Sparkles, WandSparkles } from "@/components/icons";
+import { useMemo, useState } from "react";
+import { Blend, Check, Search, Sparkles, WandSparkles } from "@/components/icons";
 import type { Clip } from "@/lib/editor/model";
+import { EFFECT_CATEGORIES, searchEffects } from "@/lib/creative/effects";
+import { searchTransitions, TRANSITION_CATEGORIES } from "@/lib/creative/transitions";
 
-type ClipPatch = Partial<Pick<Clip, "contrast" | "saturation" | "visualFadeIn" | "visualFadeOut">>;
+type ClipPatch = Partial<Pick<Clip, "contrast" | "saturation" | "effectId" | "effectAmount" | "visualFadeIn" | "visualFadeOut">>;
 
 const LOOKS = [
   { id: "clean", name: "נקי", note: "מאוזן וטבעי", contrast: 1, saturation: 1, className: "clean" },
@@ -21,22 +24,24 @@ const FADES = [
 ] as const;
 
 export default function CreativePanel({ kind, clip, onApply }: { kind: "effects" | "transitions"; clip: Clip | null; onApply: (patch: ClipPatch) => void }) {
+  const [query, setQuery] = useState("");
+  const effects = useMemo(() => searchEffects(query), [query]);
+  const transitions = useMemo(() => searchTransitions(query), [query]);
   return <>
     <div className="panel-header"><span className="title">{kind === "effects" ? <WandSparkles size={15} /> : <Blend size={15} />}{kind === "effects" ? "אפקטים" : "מעברים"}</span></div>
     <div className="panel-scroll creative-panel">
+      <label className="creative-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`חיפוש ב־${kind === "effects" ? "52 אפקטים" : "57 מעברים"}`} /></label>
       {!clip ? <div className="panel-empty">בחר קטע וידאו בטיימליין כדי להחיל {kind === "effects" ? "מראה" : "מעבר"}.</div> : kind === "effects" ? <>
         <div className="creative-head"><Sparkles size={15} /><div><strong>מראות</strong><span>נשמרים בקטע ומופיעים גם בייצוא</span></div></div>
-        <div className="creative-grid">{LOOKS.map((look) => {
-          const active = Math.abs((clip.contrast ?? 1) - look.contrast) < .01 && Math.abs((clip.saturation ?? 1) - look.saturation) < .01;
-          return <button key={look.id} className={`creative-card ${look.className} ${active ? "active" : ""}`} onClick={() => onApply({ contrast: look.contrast, saturation: look.saturation })}><i />{active && <Check size={14} />}<strong>{look.name}</strong><span>{look.note}</span></button>;
-        })}</div>
+        {EFFECT_CATEGORIES.map((category) => { const group = effects.filter((effect) => effect.category === category.id); return group.length ? <section className="creative-catalog-group" key={category.id}><h3>{category.labelHe}</h3><div className="creative-grid">{group.map((effect) => <button key={effect.id} className={`creative-card ${clip.effectId === effect.id ? "active" : ""}`} onClick={() => onApply({ effectId: effect.id, effectAmount: 1 })}><i style={{ filter: effect.css }} /><strong>{effect.labelHe}</strong><span>{effect.adjustable ? "עוצמה ניתנת לכוונון" : "מראה קבוע"}</span>{clip.effectId === effect.id && <Check size={13} />}</button>)}</div></section> : null; })}
       </> : <>
         <div className="creative-head"><Blend size={15} /><div><strong>Fade כניסה ויציאה</strong><span>מעבר אמיתי ב־Preview ובייצוא</span></div></div>
         <div className="transition-list">{FADES.map((fade) => {
           const active = Math.abs((clip.visualFadeIn ?? 0) - fade.seconds) < .01 && Math.abs((clip.visualFadeOut ?? 0) - fade.seconds) < .01;
           return <button key={fade.id} className={active ? "active" : ""} onClick={() => onApply({ visualFadeIn: fade.seconds, visualFadeOut: fade.seconds })}><span className={`transition-preview ${fade.id}`}><i /></span><span><strong>{fade.name}</strong><small>{fade.seconds ? `${fade.seconds}s` : "חיתוך ישיר"}</small></span>{active && <Check size={14} />}</button>;
         })}</div>
-        <p className="creative-footnote">מעברי סצנה מורכבים יתווספו לקטלוג רק כשהם שקולים בנגן ובייצוא — לא תצוגה מדומה.</p>
+        {TRANSITION_CATEGORIES.map((category) => { const group = transitions.filter((item) => item.category === category.id); return group.length ? <section className="creative-catalog-group" key={category.id}><h3>{category.labelHe}</h3><div className="transition-catalog">{group.map((item) => <button key={item.id} title="קטלוג מאומת; חיבור מלא לצומת החיתוך בחבילת הרינדור הבאה" disabled><span className={`transition-preview ${item.category}`}><i /></span><strong>{item.labelHe}</strong><small>{item.defaultDuration.toFixed(2)}s</small></button>)}</div></section> : null; })}
+        <p className="creative-footnote">57 המעברים עברו ולידציית FFmpeg. עד חיבור xfade לצומת החיתוך הם מוצגים כקטלוג נעול ולא ככפתור מדומה.</p>
       </>}
     </div>
   </>;

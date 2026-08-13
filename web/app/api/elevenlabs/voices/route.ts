@@ -2,11 +2,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
+import { requireCloudUser } from "@/lib/cloud/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireCloudUser();
+    if (auth.response) return auth.response;
     const sp = req.nextUrl.searchParams;
     const pageSize = sp.get("page_size") || "30";
     const search = sp.get("search") || "";

@@ -274,7 +274,7 @@ export class AgentRunner {
           catch {
             const hint = raw.slice(0, 160).replace(/\s+/g, " ");
             if (resp.status === 503 || /too busy|service_unavailable/i.test(hint)) {
-              this.events.onError("הספק עמוס (503). נסה שוב בעוד רגע או החלף מודל/ספק.");
+              this.events.onError("שירות העריכה החכם עמוס. נסה שוב בעוד רגע.");
             } else {
               this.events.onError(resp.ok
                 ? `תשובת הסוכן אינה JSON תקין: ${hint || "(ריק)"}`
@@ -282,7 +282,7 @@ export class AgentRunner {
             }
             break;
           }
-          if (data.usage) this.events.onUsage?.(data.usage, this.provider, data.model);
+          if (data.providerMode === "byok" && data.usage) this.events.onUsage?.(data.usage, this.provider, data.model);
           if (!resp.ok) {
             this.events.onError(formatLlmError(resp.status, data.error || data.message || JSON.stringify(data).slice(0, 200)));
             break;

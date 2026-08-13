@@ -62,7 +62,7 @@ export default function InspectorPanel(p: Props) {
     : titleFor(focus);
 
   return (
-    <aside className="inspector2" style={p.width ? { width: p.width } : undefined}>
+    <aside className="inspector2" style={p.width ? { width: p.width } : undefined} data-tour="inspector">
       <div className="panel-header">
         <span className="title"><SlidersHorizontal size={15} strokeWidth={1.75} />{title}</span>
       </div>

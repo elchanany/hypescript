@@ -65,8 +65,8 @@ export default function NewProjectWizard({ open, initialName = "פרויקט ח�
         <div className="wiz-head">
           <BrandLogo variant="icon" size="sm" decorative />
           <div>
-            <h2 id="wiz-title">פרויקט חדש</h2>
-            <p className="wiz-sub">שם, פורמט — ומתחילים לערוך.</p>
+            <h2 id="wiz-title">{initialName === "הסרטון הראשון שלי" ? "בוא ניצור את הסרטון הראשון" : "פרויקט חדש"}</h2>
+            <p className="wiz-sub">נותנים שם ובוחרים פורמט. מיד אחר כך הצ׳אט יוביל אותך בתוך העורך.</p>
           </div>
           <button type="button" className="wiz-close" onClick={onClose} aria-label="סגור">×</button>
         </div>
@@ -114,7 +114,7 @@ export default function NewProjectWizard({ open, initialName = "פרויקט ח�
             </label>
           </div>
 
-          <div className="wiz-agent-note"><Sparkles size={16} />אפשר לשנות ספקי AI, תמלול, אחסון ורינדור בכל רגע מתוך ההגדרות.</div>
+          <div className="wiz-agent-note"><Sparkles size={16} />שירותי ה־AI, התמלול והשמירה כבר מוכנים. פשוט מעלים סרטון וכותבים מה לערוך.</div>
           {error && <div className="auth-error" role="alert">
             {upgradeMessage || error}
             {upgradeMessage && <> <Link href="/account#plans" className="quota-inline-link">לצפייה במסלולים</Link></>}

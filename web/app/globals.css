@@ -217,7 +217,12 @@ html[data-theme="light"] {
 .msg2.assistant .b::after { inset-inline-end: -5px; border-inline-end: inherit; transform: rotate(-38deg); }
 .msg2.user .b { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 24%, var(--border)); }
 .msg2.assistant .b { background: var(--panel); }
-.ask2 { align-self: flex-start; max-width: 92%; border: 0; border-inline-start: 3px solid var(--accent); border-radius: 16px; background: var(--panel); box-shadow: 0 9px 28px rgba(4,12,28,.08); animation: hs-arrive .24s ease-out; }
+.ask2 { align-self: flex-start; width: min(92%, 520px); border: 1px solid var(--border); border-radius: 16px; background: var(--panel); box-shadow: 0 9px 28px rgba(4,12,28,.08); animation: hs-arrive .24s ease-out; direction: rtl; text-align: right; }
+.ask2 .q { padding: 13px 14px 9px; color: var(--text); font-weight: 650; line-height: 1.65; unicode-bidi: plaintext; }
+.ask2 .opts { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 7px; padding: 0 14px 10px; }
+.ask2 .free { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; padding: 0 14px 13px; }
+.ask2 .free input { min-width: 0; text-align: right; direction: rtl; }
+.creative-card.active { border-color: color-mix(in srgb, var(--accent) 58%, var(--border)); box-shadow: 0 0 0 2px var(--accent-tint); }
 .ask2 .opts .btn { border-radius: 999px; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .ask2 .opts .btn:hover { color: var(--accent); background: var(--accent-tint); transform: translateY(-1px); }
 .composer { padding-top: 2px; background: linear-gradient(180deg, transparent, var(--panel) 18%); }
@@ -2264,3 +2269,45 @@ html[data-theme="dark"] .onboarding-card { box-shadow: 0 22px 64px rgba(0, 0, 0,
     transition-duration: .01ms !important;
   }
 }
+/* First-run guidance and managed AI controls */
+.onb-managed-note { display:grid; gap:6px; padding:16px; border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border)); border-radius:var(--radius-lg); background:color-mix(in srgb,var(--accent) 8%,var(--card)); }
+.onb-managed-note strong { color:var(--text); }
+.onb-managed-note span { color:var(--text-2); line-height:1.6; }
+.editor-tour { position:fixed; inset:0; z-index:10000; pointer-events:none; background:rgba(11,10,18,.2); backdrop-filter:blur(1px); }
+.editor-tour-card { pointer-events:auto; position:absolute; inset-inline-end:24px; inset-block-start:88px; width:min(390px,calc(100vw - 32px)); padding:22px; border:1px solid color-mix(in srgb,var(--accent) 42%,var(--border)); border-radius:var(--radius-xl); background:var(--panel); box-shadow:0 24px 70px rgba(20,16,40,.26); }
+.editor-tour-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,var(--card)); }
+.editor-tour-close { position:absolute; inset-inline-end:14px; inset-block-start:14px; border:0; background:transparent; color:var(--text-muted); }
+.editor-tour-count { display:block; margin-top:15px; color:var(--accent); font-size:12px; font-weight:700; }
+.editor-tour h2 { margin:6px 0; font-size:21px; }
+.editor-tour p { margin:0; color:var(--text-2); line-height:1.65; }
+.editor-tour-progress { display:flex; gap:5px; margin:18px 0; }
+.editor-tour-progress i { flex:1; height:3px; border-radius:9px; background:var(--border); }
+.editor-tour-progress i.on { background:var(--accent); }
+.editor-tour-actions { display:flex; justify-content:flex-end; gap:8px; }
+.tour-target { position:relative; z-index:9999; outline:3px solid color-mix(in srgb,var(--accent) 76%,white); outline-offset:3px; border-radius:var(--radius-lg); box-shadow:0 0 0 9999px rgba(11,10,18,.32),0 0 30px color-mix(in srgb,var(--accent) 42%,transparent); }
+.chat-ai-settings { border-bottom:1px solid var(--border); padding:12px; background:var(--card); display:grid; gap:10px; }
+.chat-ai-settings-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.chat-ai-settings-head > div { display:grid; gap:3px; }
+.chat-ai-settings-head span,.chat-ai-locked small,.chat-byok-list small { color:var(--text-muted); font-size:12px; line-height:1.45; }
+.chat-ai-locked { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; padding:12px; border-radius:var(--radius-lg); background:var(--card-2); }
+.chat-ai-locked span { display:grid; gap:3px; }
+.chat-ai-locked a { color:var(--accent); font-weight:700; font-size:12px; }
+.chat-ai-mode { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; border-radius:12px; background:var(--card-2); }
+.chat-ai-mode button { border:0; border-radius:9px; padding:7px; color:var(--text-2); background:transparent; }
+.chat-ai-mode button.active { background:var(--panel); color:var(--text); box-shadow:var(--shadow-sm); }
+.chat-byok-list { display:grid; gap:8px; }
+.chat-byok-list label { display:grid; grid-template-columns:minmax(92px,.7fr) minmax(100px,1.4fr) auto; align-items:center; gap:7px; }
+.chat-byok-list label > span { display:grid; }
+.chat-byok-list input { min-width:0; }
+.managed-provider-summary { display:grid; gap:8px; }
+.managed-provider-summary > div { display:grid; grid-template-columns:minmax(110px,.4fr) minmax(180px,1fr) auto; align-items:center; gap:12px; padding:13px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--card-2); }
+.managed-provider-summary span { color:var(--text-2); }
+.creative-search { display:flex; align-items:center; gap:7px; margin:10px 12px 4px; padding:7px 9px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); }
+.creative-search input { width:100%; border:0; outline:0; background:transparent; color:var(--text); }
+.creative-catalog-group { display:grid; gap:7px; margin-top:12px; }
+.creative-catalog-group h3 { margin:0; font-size:12px; color:var(--text-muted); }
+.transition-catalog { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.transition-catalog button { display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:7px; padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); color:var(--text); text-align:start; }
+.transition-catalog button:disabled { opacity:.68; cursor:not-allowed; }
+.transition-catalog small { color:var(--text-muted); }
+@media(max-width:760px){.editor-tour-card{inset-inline:16px;inset-block-start:auto;bottom:16px;width:auto}.managed-provider-summary>div{grid-template-columns:1fr}.chat-byok-list label{grid-template-columns:1fr auto}.chat-byok-list input{grid-column:1/-1}}

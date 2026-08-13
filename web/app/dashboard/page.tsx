@@ -207,6 +207,7 @@ export default function DashboardPage() {
   const [dlg, setDlg] = useState<DialogState>({ kind: "none" });
   const [userOpen, setUserOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [firstProject, setFirstProject] = useState(false);
   const userMenuRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const welcomed = useRef(false);
 
@@ -242,7 +243,15 @@ export default function DashboardPage() {
       sessionStorage.removeItem("hs_after_login");
       setDlg({ kind: "create" });
     }
-  }, [loading, user]);
+    const queryWelcome = new URLSearchParams(window.location.search).get("welcome") === "1";
+    const onboardingFlow = localStorage.getItem("hs_first_project_flow") === "1";
+    if ((queryWelcome || onboardingFlow) && projects.length === 0) {
+      localStorage.removeItem("hs_first_project_flow");
+      setFirstProject(true);
+      setDlg({ kind: "create" });
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [loading, user, projects.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -264,6 +273,7 @@ export default function DashboardPage() {
       const id = await createProjectWithPolicy(result);
       setDlg({ kind: "none" });
       toast.success("הפרויקט נוצר", `${result.name} · ${result.policy.dataMode}`);
+      if (firstProject) localStorage.setItem("hs_editor_tour_pending", "1");
       await openProject(id);
     } catch (e) {
       toast.error("יצירת הפרויקט נכשלה", e instanceof Error ? e.message : undefined);
@@ -466,7 +476,7 @@ export default function DashboardPage() {
 
       <NewProjectWizard
         open={dlg.kind === "create"}
-        initialName={`פרויקט ${projects.length + 1}`}
+        initialName={firstProject ? "הסרטון הראשון שלי" : `פרויקט ${projects.length + 1}`}
         onClose={() => setDlg({ kind: "none" })}
         onCreate={onCreateWizard}
       />

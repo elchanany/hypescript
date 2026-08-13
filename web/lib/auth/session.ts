@@ -48,3 +48,21 @@ export function postLoginPath(next?: string | null): string {
   if (n.startsWith("/") && !n.startsWith("//")) return n;
   return "/dashboard";
 }
+
+/** Durable first-run routing. Local storage remains only a fast fallback. */
+export async function postLoginPathForUser(sb: SupabaseClient, next?: string | null): Promise<string> {
+  const { data: userData } = await sb.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) return "/login";
+  const { data, error } = await sb
+    .from("profiles")
+    .select("onboarding_completed")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!error && data?.onboarding_completed) {
+    try { globalThis.localStorage?.setItem("hs_onboarding_done", "1"); } catch { /* ignore */ }
+    const n = (next || "").trim();
+    return n.startsWith("/") && !n.startsWith("//") ? n : "/dashboard";
+  }
+  return postLoginPath(next);
+}

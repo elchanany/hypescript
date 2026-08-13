@@ -3,13 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { DEFAULT_DATA_MODE_PREF, PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF } from "@/lib/keys";
-import { Provider } from "@/lib/agent/types";
+import { DEFAULT_DATA_MODE_PREF } from "@/lib/keys";
 import { flattenApiConfig, getProviderStatuses, type ApiConfigShape } from "@/lib/providers/health";
-import { LLM_PROVIDERS, PROVIDER_REGISTRY } from "@/lib/providers/registry";
-import { getProviderApprovals, setProviderBillingApproval } from "@/lib/providers/policy";
-import type { ProviderId, ProviderStatusInfo } from "@/lib/providers/types";
-import type { TranscribeProviderPref } from "@/lib/elevenlabs/prefs";
+import { PROVIDER_REGISTRY } from "@/lib/providers/registry";
+import type { ProviderStatusInfo } from "@/lib/providers/types";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 import type { DataMode } from "@/lib/projects/types";
 
@@ -23,52 +20,22 @@ interface CloudStatus {
 
 export default function SettingsPage() {
   const { mode, setMode } = useTheme();
-  const [provider, setProvider] = useState<Provider>("deepseek");
-  const [transcribePref, setTranscribePref] = useState<TranscribeProviderPref>("auto");
-  const [transcribeModel, setTranscribeModel] = useState("");
   const [cfg, setCfg] = useState<ApiConfigShape>({});
-  const [billingApprovals, setBillingApprovals] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
   const [defaultDataMode, setDefaultDataMode] = useState<DataMode>("cloud");
 
   useEffect(() => {
-    setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
-    const tp = localStorage.getItem(TRANSCRIBE_PREF) as TranscribeProviderPref | null;
-    if (tp === "auto" || tp === "elevenlabs" || tp === "groq") setTranscribePref(tp);
-    setTranscribeModel(localStorage.getItem(TRANSCRIBE_MODEL_PREF) || "");
     const savedMode = localStorage.getItem(DEFAULT_DATA_MODE_PREF);
     if (savedMode === "cloud" || savedMode === "local" || savedMode === "hybrid") setDefaultDataMode(savedMode);
     fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
     fetch("/api/cloud/status").then((r) => r.json()).then(setCloud).catch(() => setCloud(null));
-    const approvals = getProviderApprovals().approved;
-    setBillingApprovals(Object.fromEntries(Object.keys(approvals).map((id) => [id, true])));
   }, []);
-
-  const save = (p: Provider) => {
-    setProvider(p);
-    localStorage.setItem(PROVIDER_PREF, p);
-  };
-
-  const saveTranscribePref = (p: TranscribeProviderPref) => {
-    setTranscribePref(p);
-    localStorage.setItem(TRANSCRIBE_PREF, p);
-  };
-
-  const saveTranscribeModel = (m: string) => {
-    setTranscribeModel(m);
-    if (m.trim()) localStorage.setItem(TRANSCRIBE_MODEL_PREF, m.trim());
-    else localStorage.removeItem(TRANSCRIBE_MODEL_PREF);
-  };
 
   const saveDefaultDataMode = (mode: DataMode) => {
     setDefaultDataMode(mode);
     localStorage.setItem(DEFAULT_DATA_MODE_PREF, mode);
   };
 
-  const setBillingApproval = (id: ProviderId, approved: boolean) => {
-    setProviderBillingApproval(id, approved);
-    setBillingApprovals((current) => ({ ...current, [id]: approved }));
-  };
 
   const statuses = getProviderStatuses(flattenApiConfig(cfg));
   const statusById = Object.fromEntries(statuses.map((status) => [status.id, status])) as Record<string, ProviderStatusInfo>;
@@ -80,15 +47,6 @@ export default function SettingsPage() {
         ? <span title={status.reasonHe}>◐ מוגדר · לא נבדק</span>
       : <span className="err">— {status.status === "missing_key" ? "חסר מפתח" : "לא זמין"}</span>;
 
-  const BillingApproval = ({ id }: { id: ProviderId }) => {
-    const definition = PROVIDER_REGISTRY.find((item) => item.id === id)!;
-    return (
-      <label className="check" title={definition.billingNoteHe} style={{ fontSize: 12 }}>
-        <input type="checkbox" checked={!!billingApprovals[id]} onChange={(event) => setBillingApproval(id, event.target.checked)} />
-        אישור שימוש במכסה/חיוב חיצוני
-      </label>
-    );
-  };
 
   return (
     <div>
@@ -205,114 +163,14 @@ export default function SettingsPage() {
       </div>
 
       <div className="card" id="providers">
-        <h2>תמלול</h2>
-        {PROVIDER_REGISTRY.filter((p) => p.kind === "transcribe").map((p) => {
-          const status = statusById[p.id];
-          return (
-            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
-              <span>{p.labelHe} · משתנה <code>{p.envKeys.join(" / ")}</code></span>
-              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
-            </div>
-          );
-        })}
-        <div className="hint" style={{ marginTop: 10 }}>
-          Groq חינם: console.groq.com/keys · ElevenLabs (בתשלום, מדויק יותר): elevenlabs.io/app/developers/api-keys
+        <h2>AI ותמלול מנוהלים</h2>
+        <p style={{ color: "var(--text-2)", marginTop: 0 }}>למשתמש רגיל אין שום מפתח להגדיר ושום מודל לבחור. Hypescript משתמש במפתחות השרת ומחליף ספק אוטומטית במקרה תקלה.</p>
+        <div className="managed-provider-summary">
+          <div><strong>תמלול ראשי</strong><span>ElevenLabs Scribe — חותמות מילה, דוברים ואירועי שמע.</span><Status status={statusById["elevenlabs-transcribe"]} /></div>
+          <div><strong>גיבוי תמלול</strong><span>Groq Whisper — מופעל רק כש־ElevenLabs אינו זמין; תוצג אזהרת איכות מופחתת.</span><Status status={statusById["groq-transcribe"]} /></div>
+          <div><strong>עריכה חכמה</strong><span>ספק מנוהל וזמין נבחר בשרת. שם הספק והמודל אינם חלק מחוויית המשתמש.</span></div>
         </div>
-
-        <h3 style={{ marginTop: 18, marginBottom: 8 }}>ספק תמלול ברירת מחדל</h3>
-        <div className="controls">
-          {([
-            ["auto", "אוטומטי (ElevenLabs אם קיים, אחרת Groq)"],
-            ["elevenlabs", "ElevenLabs Scribe"],
-            ["groq", "Groq Whisper"],
-          ] as const).map(([id, label]) => (
-            <label key={id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: transcribePref === id ? "var(--card-2)" : "transparent" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="radio" name="tx" checked={transcribePref === id} onChange={() => saveTranscribePref(id)} />
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <label style={{ display: "block", marginTop: 14, color: "var(--text-2)" }}>
-          מודל תמלול ספציפי (אופציונלי)
-          <input
-            type="text"
-            value={transcribeModel}
-            onChange={(e) => saveTranscribeModel(e.target.value)}
-            placeholder="למשל scribe_v2 או whisper-large-v3 — ריק = ברירת מחדל"
-            style={{ display: "block", width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--card-2)", color: "inherit" }}
-          />
-        </label>
-        <div className="hint" style={{ marginTop: 8 }}>
-          הסוכן יכול גם לקבל מודל/ספק בכל קריאה ל-<code>transcribe_video</code>. מודלים מומלצים: <code>scribe_v2</code> (ElevenLabs), <code>whisper-large-v3</code> (Groq).
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>קריינות (ElevenLabs)</h2>
-        {PROVIDER_REGISTRY.filter((p) => p.kind === "voice").map((p) => {
-          const status = statusById[p.id];
-          return (
-            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
-              <span>{p.labelHe} · אותו משתנה <code>{p.envKeys.join(" / ")}</code></span>
-              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
-            </div>
-          );
-        })}
-        <div className="hint" style={{ marginTop: 10 }}>
-          אותו מפתח מאפשר גם קריינות (TTS), רשימת קולות ומודלים. הרשאות מומלצות במפתח: Speech to Text, Text to Speech, Voices Read, Models Access.
-          פירוט מלא: <code>docs/ElevenLabs_API_HypeScript_2026-08-04.md</code>.
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>יצירת תמונות (OpenAI GPT Image)</h2>
-        {PROVIDER_REGISTRY.filter((p) => p.kind === "image").map((p) => {
-          const status = statusById[p.id];
-          return (
-            <div key={p.id} className="row" style={{ justifyContent: "space-between" }}>
-              <span>{p.labelHe} · אותו משתנה <code>{p.envKeys.join(" / ")}</code></span>
-              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={status} /><BillingApproval id={p.id} /></span>
-            </div>
-          );
-        })}
-        <div className="hint" style={{ marginTop: 10 }}>
-          אותו מפתח OpenAI (OPENAI_API_KEY) מאפשר גם את הסוכן. אישור החיוב נפרד מאישור ה-LLM — הסוכן ישאל לפני יצירת תמונה ראשונה.
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>ספק ה-AI לסוכן</h2>
-        <p style={{ color: "var(--text-2)", marginTop: 0 }}>בחר ספק, ודא שהמפתח שלו מוגדר ב-Vercel. הסוכן ישתמש בספק שנבחר.</p>
-        <div className="controls">
-          {LLM_PROVIDERS.map((p) => (
-            <label key={p.id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: provider === p.id ? "var(--card-2)" : "transparent" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="radio" name="prov" checked={provider === p.id} onChange={() => save(p.id)} />
-                {p.labelHe}
-              </span>
-              <span style={{ display: "grid", justifyItems: "end", gap: 5 }}><Status status={statusById[p.id]} /><BillingApproval id={p.id} /></span>
-            </label>
-          ))}
-        </div>
-        <div className="hint" style={{ marginTop: 12 }}>
-          משתני הסביבה: {LLM_PROVIDERS.map((p, i) => (
-            <span key={p.id}>{i > 0 ? ", " : ""}<code>{p.envKeys.join(" / ")}</code></span>
-          ))}.
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>איך מגדירים מפתח</h2>
-        <ol style={{ color: "var(--text-2)", lineHeight: 1.9, margin: 0, paddingInlineStart: 20 }}>
-          <li>Vercel → הפרויקט → Settings → Environment Variables.</li>
-          <li>הוסף את שם המשתנה (למשל <code>ELEVENLABS_API_KEY</code> או <code>DEEPSEEK_API_KEY</code>) ואת הערך, ושמור.</li>
-          <li>Redeploy כדי שהמפתח ייכנס לתוקף.</li>
-          <li>הרצה מקומית: הוסף אותם ל-<code>web/.env.local</code>.</li>
-          <li>ל-ElevenLabs: צור מפתח מוגבל (<code>hypescript-runtime</code>) עם הרשאות מינימליות בלבד — ראה המפרט ב-<code>docs/</code>.</li>
-        </ol>
+        <div className="hint" style={{ marginTop: 12 }}>מנויי Pro יכולים לעבור ל־BYOK ולהזין מפתחות מוצפנים מתוך הגדרות ה־AI הקטנות בצ׳אט. רק אז מוצגת בחירת ספק.</div>
       </div>
       </div>
     </div>

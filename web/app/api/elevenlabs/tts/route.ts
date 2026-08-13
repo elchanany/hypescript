@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
 import { DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
+import { requireCloudUser } from "@/lib/cloud/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,6 +13,8 @@ const MAX_TEXT_CHARS = 10_000;
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireCloudUser();
+    if (auth.response) return auth.response;
     const body = await req.json() as {
       text?: string;
       voice_id?: string;
