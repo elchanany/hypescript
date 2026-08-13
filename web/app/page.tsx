@@ -279,7 +279,7 @@ export default function EditorPage() {
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
-    const firstVisit = localStorage.getItem("hs_editor_tour_pending") === "1";
+    const firstVisit = localStorage.getItem("hs_editor_tour_pending") === "1" && localStorage.getItem("hs_editor_tour_done") !== "1";
     const o = localStorage.getItem("hs_chatOpen"); if (o !== null && !firstVisit) setChatOpen(o === "1");
     if (firstVisit) { setChatOpen(true); setTourOpen(true); localStorage.setItem("hs_chatOpen", "1"); }
     const focus = localStorage.getItem("hs_chatFocus"); if (focus === "1") { setFocusMode(true); setChatOpen(true); }

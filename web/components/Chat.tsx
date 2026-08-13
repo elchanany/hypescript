@@ -163,6 +163,17 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const composeHRef = useRef(COMPOSE_H_DEFAULT);
   composeHRef.current = composeH;
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const useTourExample = (event: Event) => {
+      const text = String((event as CustomEvent<string>).detail || "").trim();
+      if (!text) return;
+      setInput(text);
+      window.setTimeout(() => taRef.current?.focus(), 0);
+    };
+    window.addEventListener("hypescript:chat-example", useTourExample);
+    return () => window.removeEventListener("hypescript:chat-example", useTourExample);
+  }, []);
   const storeRef = useRef(store);
   storeRef.current = store;
 
