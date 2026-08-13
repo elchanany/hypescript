@@ -60,11 +60,23 @@ export default function TopBar({
   return (
     <div className="topbar2">
       <KeyboardShortcutsModal open={kbdOpen} onClose={() => setKbdOpen(false)} />
-      <div className="tb-group tb-brand">
-        <Link href="/dashboard" className="tb-logo" title="Hypescript — לוח פרויקטים" aria-label="Hypescript">
-          <BrandLogo variant="icon" size="sm" decorative priority />
-        </Link>
+      <div className="tb-group tb-primary-slot" aria-label="פרויקט וחשבון">
+        {authOn && user && <div className={`tb-account-wrap${userOpen ? " is-open" : ""}`} ref={userRef}>
+          <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu" data-tip="פרופיל, מנוי והגדרות">
+            {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" /> : <UserRound size={16} />}
+            <span>{userName.split(" ")[0]}</span><ChevronDown size={13} />
+          </button>
+          {userOpen && <div className="tb-account-menu" role="menu">
+            <div className="tb-account-meta"><strong>{userName}</strong><span>{user.email}</span></div>
+            <Link href="/account" role="menuitem"><CreditCard size={15} />חשבון ומנוי</Link>
+            <Link href="/settings" role="menuitem"><Settings size={15} />הגדרות</Link>
+            {isAdmin && <Link href="/admin" role="menuitem"><ShieldCheck size={15} />מרכז ניהול</Link>}
+            <button role="menuitem" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />התנתקות</button>
+          </div>}
+        </div>}
+        {authOn && !user && <Link href="/login" className="iconbtn tb-login" data-tip="התחברות" aria-label="התחברות"><LogIn size={16} strokeWidth={1.75} /></Link>}
         <button className="tb-project" onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left, y: r.bottom + 4 }); }}>
+          <FolderOpen size={15} strokeWidth={1.75} />
           <span className="pname">{projectName || "פרויקט"}</span>
           <ChevronDown size={15} strokeWidth={1.75} />
         </button>
@@ -73,12 +85,13 @@ export default function TopBar({
 
       <div className="tb-spacer" />
 
-      <div className="tb-group">
+      <div className="tb-group tb-action-slot">
+        <Link href="/dashboard" className="tb-logo" title="Hypescript — לוח פרויקטים" aria-label="Hypescript">
+          <BrandLogo variant="icon" size="sm" decorative priority />
+        </Link>
         <IconButton icon={Undo2} tip="בטל (Ctrl+Z)" disabled={!canUndo} onClick={onUndo} />
         <IconButton icon={Redo2} tip="בצע מחדש (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo} />
       </div>
-
-      <div className="tb-spacer" />
 
       <div className="tb-group">
         <IconButton icon={Command} tip="מפת קיצורי מקשים (Ctrl+K)" onClick={() => setKbdOpen(true)} />
@@ -94,22 +107,6 @@ export default function TopBar({
           onClick={() => setMode(resolved === "dark" ? "light" : "dark")}
         />
         <Link href="/settings" className="iconbtn" data-tip="הגדרות" aria-label="הגדרות"><Settings size={16} strokeWidth={1.75} /></Link>
-        {authOn && !user && (
-          <Link href="/login" className="iconbtn" data-tip="התחברות" aria-label="התחברות"><LogIn size={16} strokeWidth={1.75} /></Link>
-        )}
-        {authOn && user && <div className="tb-account-wrap" ref={userRef}>
-          <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu">
-            {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" /> : <UserRound size={16} />}
-            <span>{userName.split(" ")[0]}</span><ChevronDown size={13} />
-          </button>
-          {userOpen && <div className="tb-account-menu" role="menu">
-            <div className="tb-account-meta"><strong>{userName}</strong><span>{user.email}</span></div>
-            <Link href="/account" role="menuitem"><CreditCard size={15} />חשבון ומנוי</Link>
-            <Link href="/settings" role="menuitem"><Settings size={15} />הגדרות</Link>
-            {isAdmin && <Link href="/admin" role="menuitem"><ShieldCheck size={15} />מרכז ניהול</Link>}
-            <button role="menuitem" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />התנתקות</button>
-          </div>}
-        </div>}
         <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={rendering ? "פתח את מצב הייצוא" : "ייצוא הווידאו הערוך"}>
           {rendering ? <Loader2 size={16} strokeWidth={2} className="spin" /> : <Download size={16} strokeWidth={2} />}
           {rendering ? `מרנדר ${Math.max(0, Math.min(100, Math.round(renderProgress * 100)))}%` : "ייצוא"}

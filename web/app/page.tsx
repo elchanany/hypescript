@@ -127,6 +127,7 @@ export default function EditorPage() {
   const dockSideRef = useRef<"left" | "right">("right"); dockSideRef.current = dockSide;
   const [tlHeight, setTlHeight] = useState(380);
   const tlHeightRef = useRef(380); tlHeightRef.current = tlHeight;
+  const [resizingTimeline, setResizingTimeline] = useState(false);
   const [leftW, setLeftW] = useState(264);
   const leftWRef = useRef(264); leftWRef.current = leftW;
   const [inspW, setInspW] = useState(300);
@@ -286,8 +287,8 @@ export default function EditorPage() {
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
     const h = parseInt(localStorage.getItem("hs_tlh") || "0", 10);
-    const maxTimeline = Math.max(260, window.innerHeight - 300);
-    if (h >= 220) setTlHeight(Math.min(maxTimeline, h));
+    const maxTimeline = Math.max(220, window.innerHeight - 230);
+    if (h >= 180) setTlHeight(Math.min(maxTimeline, h));
     else setTlHeight(Math.max(280, Math.min(maxTimeline, Math.round(window.innerHeight * 0.38))));
     const lw = parseInt(localStorage.getItem("hs_leftw") || "0", 10); if (lw >= 220) setLeftW(Math.min(440, lw));
     const iw = parseInt(localStorage.getItem("hs_inspw") || "0", 10); if (iw >= 260) setInspW(Math.min(460, iw));
@@ -315,11 +316,31 @@ export default function EditorPage() {
   const toggleDockSide = () => setDockSide((s) => { const n = s === "right" ? "left" : "right"; localStorage.setItem("hs_dockside", n); return n; });
   const startResizeTL = (e: React.PointerEvent) => {
     e.preventDefault();
+    const handle = e.currentTarget as HTMLDivElement;
+    const pointerId = e.pointerId;
     const startY = e.clientY; const startH = tlHeightRef.current;
-    const onMove = (ev: PointerEvent) => setTlHeight(Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), startH + (startY - ev.clientY))));
-    const onUp = () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); localStorage.setItem("hs_tlh", String(tlHeightRef.current)); document.body.style.userSelect = ""; };
+    const clampHeight = (height: number) => Math.max(180, Math.min(Math.max(220, window.innerHeight - 230), height));
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId === pointerId) setTlHeight(clampHeight(startH + (startY - ev.clientY)));
+    };
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+      localStorage.setItem("hs_tlh", String(tlHeightRef.current));
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      setResizingTimeline(false);
+    };
     document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "ns-resize";
+    setResizingTimeline(true);
+    handle.setPointerCapture(pointerId);
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
   };
   const startResizeLeft = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -330,13 +351,13 @@ export default function EditorPage() {
     window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
   };
   const resetTimeline = () => {
-    const next = Math.max(280, Math.min(Math.max(260, window.innerHeight - 300), Math.round(window.innerHeight * 0.38)));
+    const next = Math.max(280, Math.min(Math.max(220, window.innerHeight - 230), Math.round(window.innerHeight * 0.38)));
     setTlHeight(next); localStorage.setItem("hs_tlh", String(next));
   };
   const resizeTimelineByKey = (e: React.KeyboardEvent) => {
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
     e.preventDefault();
-    const next = Math.max(240, Math.min(Math.max(260, window.innerHeight - 300), tlHeightRef.current + (e.key === "ArrowUp" ? 24 : -24)));
+    const next = Math.max(180, Math.min(Math.max(220, window.innerHeight - 230), tlHeightRef.current + (e.key === "ArrowUp" ? 24 : -24)));
     setTlHeight(next); localStorage.setItem("hs_tlh", String(next));
   };
   const resetLeft = () => { setLeftW(264); localStorage.setItem("hs_leftw", "264"); };
@@ -1237,7 +1258,7 @@ export default function EditorPage() {
           </div>
 
           <div className="timeline-region" style={{ height: tlHeight }} data-tour="timeline">
-            <div className="tl-resize" onPointerDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
+            <div className={`tl-resize${resizingTimeline ? " is-resizing" : ""}`} onPointerDown={startResizeTL} onDoubleClick={resetTimeline} onKeyDown={resizeTimelineByKey}
               title="גרור לשינוי גובה · חצים למעלה/למטה · דאבל-קליק לאיפוס" role="separator" tabIndex={0}
               aria-orientation="horizontal" aria-label="שינוי הגובה בין הנגן לטיימליין"><span /></div>
             <TimelineToolbar
