@@ -132,8 +132,8 @@ function ChatUserText({ text }: { text: string }) {
     : part)}</>;
 }
 const COMPOSE_H_KEY = "hs_compose_h";
-const COMPOSE_H_DEFAULT = 96;
-const COMPOSE_H_MIN = 72;
+const COMPOSE_H_DEFAULT = 82;
+const COMPOSE_H_MIN = 64;
 const COMPOSE_H_MAX = 280;
 
 export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle, latestExport }: ChatProps) {
@@ -157,6 +157,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [mode, setMode] = useState<AgentMode>("act");
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
   const [composeH, setComposeH] = useState(COMPOSE_H_DEFAULT);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [threadTitle, setThreadTitle] = useState("");
@@ -351,12 +353,43 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     if (runnerRef.current) runnerRef.current.provider = fallback.id;
   }, [entitlementsLoaded, provider, providerMode, byokProviders]);
   const displayItems = useMemo(() => collapseConsecutiveTools(items), [items]);
+  const suggestionTurns = useMemo(() => items
+    .filter((item) => item.kind === "user" || item.kind === "assistant")
+    .slice(-10)
+    .map((item) => ({ role: item.kind as "user" | "assistant", content: "text" in item ? item.text : "" })), [items]);
+  const suggestionKey = useMemo(() => suggestionTurns.map((message) => `${message.role}:${message.content}`).join("\n").slice(-7000), [suggestionTurns]);
   // תמיד מציגים נקודות חשיבה כל עוד יש בקשה פתוחה (גם בזמן כלי רץ)
   const showThinking = running && !ask;
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [displayItems, ask, showThinking]);
+
+  useEffect(() => {
+    if (running || input.trim() || !suggestionTurns.some((message) => message.role === "user") || !suggestionTurns.some((message) => message.role === "assistant")) {
+      if (!running && suggestionTurns.length < 2) setSuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSuggestionsLoading(true);
+      try {
+        const response = await fetch("/api/agent/suggestions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ messages: suggestionTurns, ...(providerMode === "byok" ? { provider } : {}) }),
+        });
+        const data = response.ok ? await response.json() : null;
+        if (!controller.signal.aborted) setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions.slice(0, 3) : []);
+      } catch {
+        if (!controller.signal.aborted) setSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setSuggestionsLoading(false);
+      }
+    }, 650);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [suggestionKey, running, input, providerMode, provider]);
 
   // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
   const insertQuote = useCallback((seconds: number) => {
@@ -718,6 +751,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "plan") {
             return (
               <div key={it.id} className="msg2 assistant" role="region" aria-label="תוכנית עריכה לאישור">
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><ClipboardList size={15} />תוכנית עריכה</div>
                   {it.steps.length > 0 ? (
@@ -741,6 +775,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "provider_approval") {
             return (
               <div key={it.id} className="msg2 assistant" role="note" aria-label="הודעת ספק ישנה">
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><Info size={15} />הודעה משיחה קודמת</div>
                   <div>אין עוד צורך באישור ספק במצב המנוהל. שלח את ההוראה מחדש והיא תטופל אוטומטית.</div>
@@ -754,6 +789,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           }
           return (
             <div key={i} className={`msg2 ${it.kind}`}>
+              {(it.kind === "user" || it.kind === "assistant") && <div className="msg-speaker">
+                <span className={`msg-avatar ${it.kind === "assistant" ? "agent" : "user"}`} aria-hidden="true">{it.kind === "assistant" ? "H" : "א"}</span>
+                <strong>{it.kind === "assistant" ? "Hypescript" : "אתה"}</strong>
+              </div>}
               <div className="b">
                 {it.kind === "error" && <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6, color: "var(--danger)" }} />}
                 {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.kind === "user" ? <ChatUserText text={it.text} /> : it.text}
@@ -764,8 +803,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           );
         })}
         {showThinking && (
-          <div className="think2 skeleton-shimmer" aria-live="polite" aria-label="הסוכן חושב">
-            <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
+          <div className="msg2 assistant thinking-message" aria-live="polite" aria-label="Hypescript חושב">
+            <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
+            <div className="b think2">
+              <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
+              <span className="sr-only">חושב</span>
+            </div>
           </div>
         )}
         {latestExport && (
@@ -788,7 +831,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         )}
       </div>
 
-        <div className="composer">
+      <div className="composer">
         {pop && pop.kind === "slash" && slashList.length > 0 && (
           <div className="cmd-pop" role="listbox" aria-label="פקודות">
             {slashList.map((c) => (
@@ -827,22 +870,19 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.map((token, index) => <span key={`${token}-${index}`}>{token.startsWith("[ציטוט") ? <Quote size={12} /> : <AtSign size={12} />}{token}</span>)}
         </div> : null}
 
-        {!input.trim() && !running && (
-          <div className="chat-mentions" aria-label="הצעות מהירות לסוכן" style={{ marginBottom: "6px" }}>
-            <button type="button" onClick={() => { setInput("הסר שתיקות ונשימות מכל הווידאו."); taRef.current?.focus(); }}>
-              <Sparkles size={12} style={{ color: "var(--accent)" }} /> הסר שתיקות
-            </button>
-            <button type="button" onClick={() => { setInput("צור כתוביות מסונכרנות בעברית."); taRef.current?.focus(); }}>
-              <Captions size={12} style={{ color: "var(--accent)" }} /> צור כתוביות RTL
-            </button>
-            <button type="button" onClick={() => { setInput("הוסף לוגו בפינה השמאלית העליונה."); taRef.current?.focus(); }}>
-              <ImageIcon size={12} style={{ color: "var(--accent)" }} /> לוגו בפינה
-            </button>
-            <button type="button" onClick={() => { setInput("השאר רק את החלקים לפי הסקריפט."); taRef.current?.focus(); }}>
-              <Scissors size={12} style={{ color: "var(--accent)" }} /> חתוך לפי סקריפט
-            </button>
+        {!input.trim() && !running && (suggestionTurns.length >= 2 || suggestionsLoading) && <section className="chat-suggestions" aria-label="הצעות להמשך השיחה">
+          <header><span><Sparkles size={13} />הצעות לפי השיחה</span><small>נוצרו מההקשר האחרון</small></header>
+          <div className="chat-suggestion-list">
+            {suggestionsLoading && suggestions.length === 0
+              ? <><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></>
+              : suggestions.map((suggestion, index) => <button type="button" key={`${suggestion}-${index}`} onClick={() => { setInput(suggestion); taRef.current?.focus(); }}><span>{index + 1}</span>{suggestion}</button>)}
           </div>
-        )}
+        </section>}
+
+        {!input.trim() && !running && suggestionTurns.length < 2 && <div className="chat-starters" aria-label="פעולות התחלה מהירה">
+          <span>התחלה מהירה</span>
+          {["הסר שתיקות ונשימות מכל הווידאו.", "צור כתוביות מסונכרנות בעברית.", "השאר רק את החלקים לפי הסקריפט."].map((starter) => <button type="button" key={starter} onClick={() => { setInput(starter); taRef.current?.focus(); }}>{starter}</button>)}
+        </div>}
 
         <div className="chat-compose">
           <div className="chat-compose-tools">

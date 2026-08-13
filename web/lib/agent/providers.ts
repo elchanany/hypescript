@@ -77,15 +77,16 @@ export async function callProvider(
   provider: Provider,
   messages: ChatMessage[],
   tools: ToolSchema[],
-  override?: { apiKey?: string; model?: string },
+  override?: { apiKey?: string; model?: string; maxTokens?: number },
 ): Promise<AgentResponse> {
   const key = override?.apiKey?.trim() || providerKey(provider);
   if (!key) throw new Error(`לא מוגדר מפתח ל-${provider}. הוסף אותו כמשתנה סביבה ב-Vercel.`);
   const model = override?.model?.trim() || providerModel(provider);
 
-  if (provider === "deepseek" || provider === "openai") return callOpenAICompat(provider, key, model, messages, tools);
-  if (provider === "anthropic") return callAnthropic(key, model, messages, tools);
-  return callGemini(key, model, messages, tools);
+  const maxTokens = override?.maxTokens;
+  if (provider === "deepseek" || provider === "openai") return callOpenAICompat(provider, key, model, messages, tools, maxTokens);
+  if (provider === "anthropic") return callAnthropic(key, model, messages, tools, maxTokens);
+  return callGemini(key, model, messages, tools, maxTokens);
 }
 
 // --------------------------------------------------------------------------- #
@@ -97,7 +98,7 @@ const OPENAI_BASE: Record<string, string> = {
 };
 
 async function callOpenAICompat(
-  provider: string, key: string, model: string, messages: ChatMessage[], tools: ToolSchema[],
+  provider: string, key: string, model: string, messages: ChatMessage[], tools: ToolSchema[], maxTokens?: number,
 ): Promise<AgentResponse> {
   const body: any = {
     model,
@@ -122,6 +123,7 @@ async function callOpenAICompat(
       return { role: m.role, content: m.content || "" };
     }),
   };
+  if (maxTokens) body.max_tokens = maxTokens;
   if (tools.length) {
     body.tools = tools.map((t) => ({ type: "function", function: t }));
     body.tool_choice = "auto";
@@ -146,7 +148,7 @@ async function callOpenAICompat(
 // Anthropic
 // --------------------------------------------------------------------------- #
 async function callAnthropic(
-  key: string, model: string, messages: ChatMessage[], tools: ToolSchema[],
+  key: string, model: string, messages: ChatMessage[], tools: ToolSchema[], maxTokens?: number,
 ): Promise<AgentResponse> {
   const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n") || undefined;
   const conv: any[] = [];
@@ -162,7 +164,7 @@ async function callAnthropic(
       conv.push({ role: "user", content: [{ type: "tool_result", tool_use_id: m.tool_call_id, content: asText(m.content) }] });
     }
   }
-  const body: any = { model, max_tokens: 4096, messages: conv };
+  const body: any = { model, max_tokens: maxTokens || 4096, messages: conv };
   if (system) body.system = system;
   if (tools.length) body.tools = tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));
 
@@ -187,7 +189,7 @@ async function callAnthropic(
 // Gemini
 // --------------------------------------------------------------------------- #
 async function callGemini(
-  key: string, model: string, messages: ChatMessage[], tools: ToolSchema[],
+  key: string, model: string, messages: ChatMessage[], tools: ToolSchema[], maxTokens?: number,
 ): Promise<AgentResponse> {
   const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
   const contents: any[] = [];
@@ -204,6 +206,7 @@ async function callGemini(
     }
   }
   const body: any = { contents };
+  if (maxTokens) body.generationConfig = { maxOutputTokens: maxTokens };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
   if (tools.length) body.tools = [{ functionDeclarations: tools.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })) }];
 
