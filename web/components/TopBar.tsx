@@ -93,7 +93,7 @@ export default function TopBar({
         <IconButton icon={Redo2} tip="בצע מחדש (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo} />
       </div>
 
-      <div className="tb-group">
+      <div className="tb-group tb-utility-slot">
         <IconButton icon={Command} tip="מפת קיצורי מקשים (Ctrl+K)" onClick={() => setKbdOpen(true)} />
         <Link href="/dashboard" className="iconbtn" data-tip="לוח פרויקטים" aria-label="לוח פרויקטים"><LayoutGrid size={16} strokeWidth={1.75} /></Link>
         <IconButton icon={MessageCircle} tip="פתח שיחה לצד העורך" active={chatOpen && !focusMode} onClick={onToggleChat} />

@@ -36,4 +36,16 @@ describe("חוקת העיצוב", () => {
     expect(css).toContain("--sidebar: var(--panel)");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
   });
+
+  it("מספקת מעטפת מובייל ייעודית עם safe-area ומשטחי עבודה", () => {
+    const css = readFileSync(join(root, "app", "globals.css"), "utf8");
+    const layout = readFileSync(join(root, "app", "layout.tsx"), "utf8");
+    const editor = readFileSync(join(root, "app", "page.tsx"), "utf8");
+    expect(css).toContain(".mobile-editor-nav");
+    expect(css).toContain("env(safe-area-inset-bottom)");
+    expect(css).toContain('data-mobile-surface="timeline"');
+    expect(layout).toContain('viewportFit: "cover"');
+    expect(layout).toContain('interactiveWidget: "resizes-content"');
+    expect(editor).toContain("<MobileEditorNav");
+  });
 });

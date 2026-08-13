@@ -90,13 +90,13 @@
     "semantic_hash": ""
   },
   "web/app/layout.tsx": {
-    "mtime": 1786581390.3703153,
-    "ast_hash": "02b62b5ddea282d82935a76f2448b3ff",
+    "mtime": 1786662994.4040778,
+    "ast_hash": "854f2c666efecb018a09bed5643d974c",
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786662506.4037173,
-    "ast_hash": "1b945ace4aeea02ab47c27c35f4813ff",
+    "mtime": 1786663471.3075824,
+    "ast_hash": "9a82848b6cfc7e10af872b039a89cd57",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "web/components/TopBar.tsx": {
-    "mtime": 1786661967.6204224,
-    "ast_hash": "3306e999070b8a4249573d6320024662",
+    "mtime": 1786662994.4010825,
+    "ast_hash": "dd4f6b2e6afcac4d63a6b86eb65d6190",
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
@@ -1915,8 +1915,8 @@
     "semantic_hash": ""
   },
   "web/lib/ui/designSystem.test.ts": {
-    "mtime": 1786581635.0240304,
-    "ast_hash": "82b3604c5ed05d1981bd3c2eeb927ff4",
+    "mtime": 1786663377.8251963,
+    "ast_hash": "bef5d86d6101077e8ed01bddd72f9bb0",
     "semantic_hash": ""
   },
   "web/lib/utils.ts": {
@@ -2132,6 +2132,11 @@
   "web/lib/ui/progress.ts": {
     "mtime": 1786662212.1318195,
     "ast_hash": "4481d1a53730403d0162a982dd421b78",
+    "semantic_hash": ""
+  },
+  "web/components/MobileEditorNav.tsx": {
+    "mtime": 1786662994.392066,
+    "ast_hash": "d435afe790e23626a6ed0abed6099235",
     "semantic_hash": ""
   }
 }

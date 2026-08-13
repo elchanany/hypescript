@@ -43,6 +43,7 @@ import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
 import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
 import { clampRatio, type TransferProgress } from "@/lib/ui/progress";
+import MobileEditorNav, { type MobileEditorSurface } from "@/components/MobileEditorNav";
 
 ensureBuiltinCommands();
 
@@ -98,6 +99,7 @@ export default function EditorPage() {
   const renderStartedAtRef = useRef(0);
   const [groqOk, setGroqOk] = useState(true);
   const [tourOpen, setTourOpen] = useState(false);
+  const [mobileSurface, setMobileSurface] = useState<MobileEditorSurface>("preview");
 
   useEffect(() => {
     if (!rendering) return;
@@ -386,12 +388,32 @@ export default function EditorPage() {
     setInspW(next); localStorage.setItem("hs_inspw", String(next));
   };
   const toggleChat = () => setChatOpen((o) => { localStorage.setItem("hs_chatOpen", o ? "0" : "1"); return !o; });
+  const selectMobileSurface = (surface: MobileEditorSurface) => {
+    setMobileSurface(surface);
+    localStorage.setItem("hs_mobile_surface", surface);
+    if (surface === "chat" && !chatOpen) {
+      setChatOpen(true);
+      localStorage.setItem("hs_chatOpen", "1");
+    }
+  };
   const toggleFocusMode = () => setFocusMode((current) => {
     const next = !current;
     localStorage.setItem("hs_chatFocus", next ? "1" : "0");
     if (next) { setChatOpen(true); localStorage.setItem("hs_chatOpen", "1"); }
     return next;
   });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("hs_mobile_surface") as MobileEditorSurface | null;
+    if (saved && ["preview", "tools", "timeline", "inspector", "chat"].includes(saved)) setMobileSurface(saved);
+  }, []);
+
+  useEffect(() => {
+    if (!chatOpen && mobileSurface === "chat") {
+      setMobileSurface("preview");
+      localStorage.setItem("hs_mobile_surface", "preview");
+    }
+  }, [chatOpen, mobileSurface]);
 
   useEffect(() => {
     (async () => {
@@ -1179,9 +1201,9 @@ export default function EditorPage() {
         </aside>
       </div>}
 
-      {!focusMode && <div className="shell-body">
+      {!focusMode && <div className="shell-body" data-mobile-surface={mobileSurface}>
         {dockSide === "left" && agentDock}
-        <ToolRail active={leftTab} onSelect={setLeftTab} />
+        <ToolRail active={leftTab} onSelect={(tab) => { setLeftTab(tab); selectMobileSurface("tools"); }} />
 
         <div className="leftpanel" style={{ width: leftW }} data-tour="media">
           {leftTab === "media" ? (
@@ -1330,6 +1352,12 @@ export default function EditorPage() {
 
         {dockSide === "right" && agentDock}
       </div>}
+
+      {!focusMode && <MobileEditorNav
+        active={mobileSurface}
+        onSelect={selectMobileSurface}
+        hasSelection={!!selectedClip || !!selectedOverlay || !!selectedSub}
+      />}
 
       {clipMenu && menuClip && <ContextMenu x={clipMenu.x} y={clipMenu.y} items={clipMenuItems} onClose={() => setClipMenu(null)} />}
       {commandMenu && <ContextMenu
