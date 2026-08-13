@@ -21,6 +21,7 @@ export type CommandId =
   | "clip.replaceAll"
   | "clip.moveToTrack"
   | "clip.moveAtTimeline"
+  | "clip.detachAudio"
   | "gap.close"
   | "overlay.delete"
   | "overlay.addText"
@@ -129,10 +130,11 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "clip.delete.ripple": schema(["id"], { id }), "clip.delete.leaveGap": schema(["id"], { id }),
   "clip.splitAtPlayhead": schema(), "clip.split": schema(["id", "at_source"], { id, at_source: num }),
   "clip.trim": schema(["id"], { id, start: num, end: num }), "clip.move": schema(["id", "to_index"], { id, to_index: num }),
-  "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, trackId: id, at_index: num, timeline_start: num }),
+  "clip.add": schema(["sourceId"], { sourceId: id, start: num, end: num, duration_seconds: num, trackId: id, at_index: num, timeline_start: num }),
   "clip.replaceAll": schema(["clips"], { clips: arr }),
   "clip.moveToTrack": schema(["id", "trackId"], { id, trackId: id }), "gap.close": schema(["id"], { id }),
   "clip.moveAtTimeline": schema(["id", "trackId", "timeline_start"], { id, trackId: id, timeline_start: num }),
+  "clip.detachAudio": schema(["id"], { id }),
   "overlay.delete": schema(["id"], { id }), "overlay.addText": schema([], { text: str, start: num, end: num, preset: str }),
   "overlay.addImage": schema(["assetId"], { assetId: id, overlayId: id, start: num, end: num, width: num, height: num, preset: str, x: num, y: num, w: num, h: num, borderRadius: num, opacity: num, fadeIn: num, fadeOut: num, locked: bool }),
   "overlay.update": schema(["id", "patch"], { id, patch: obj }),

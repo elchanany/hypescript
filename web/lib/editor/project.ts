@@ -47,7 +47,7 @@ export function defaultTracks(): TrackMeta[] {
   return [
     { id: "trk_video", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
     { id: "trk_audio", name: "אודיו", type: "audio", order: 1, height: 56, locked: false, muted: false },
-    { id: "trk_caption", name: "כתוביות", type: "caption", order: 2, height: 48, locked: false, muted: false },
+    { id: "trk_caption", name: "כתוביות", type: "caption", order: 2, height: 32, locked: false, muted: false },
   ];
 }
 
@@ -69,7 +69,7 @@ export function sortedTracks(t: TrackMeta[]): TrackMeta[] {
 
 function clampHeight(type: TrackType, height: number | undefined, fallback: number): number {
   if (typeof height !== "number" || !Number.isFinite(height)) return fallback;
-  const min = type === "caption" ? 44 : 48;
+  const min = type === "caption" ? 30 : 48;
   return Math.max(min, Math.min(140, height));
 }
 

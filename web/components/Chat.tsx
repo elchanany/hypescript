@@ -163,6 +163,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [threadTitle, setThreadTitle] = useState("");
   const composeHRef = useRef(COMPOSE_H_DEFAULT);
+  const suggestionFetchedKeyRef = useRef("");
   composeHRef.current = composeH;
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -367,11 +368,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   useEffect(() => {
     if (running || input.trim() || !suggestionTurns.some((message) => message.role === "user") || !suggestionTurns.some((message) => message.role === "assistant")) {
+      setSuggestionsLoading(false);
       if (!running && suggestionTurns.length < 2) setSuggestions([]);
       return;
     }
+    if (suggestionFetchedKeyRef.current === suggestionKey) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
+      suggestionFetchedKeyRef.current = suggestionKey;
       setSuggestionsLoading(true);
       try {
         const response = await fetch("/api/agent/suggestions", {
@@ -383,7 +387,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         const data = response.ok ? await response.json() : null;
         if (!controller.signal.aborted) setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions.slice(0, 3) : []);
       } catch {
-        if (!controller.signal.aborted) setSuggestions([]);
+        if (!controller.signal.aborted) {
+          suggestionFetchedKeyRef.current = "";
+          setSuggestions([]);
+        }
       } finally {
         if (!controller.signal.aborted) setSuggestionsLoading(false);
       }

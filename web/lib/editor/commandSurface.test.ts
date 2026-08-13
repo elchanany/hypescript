@@ -8,7 +8,10 @@ function api(): EditorApi {
   return {
     getClips: () => clips, setClips: () => {}, getOverlays: () => [], setOverlays: () => {},
     updateOverlay: () => {}, removeOverlay: () => {}, addOverlay: () => {}, updateClip: () => {},
-    getMedia: () => [], getSubs: () => [], getTracks: () => [], setTracks: () => {},
+    getMedia: () => [{ id: "m1", name: "video.mp4", kind: "video", file: new File([], "video.mp4"), duration: 2, url: "blob:test" }], getSubs: () => [], getTracks: () => [
+      { id: "v1", name: "וידאו", type: "video", order: 0, height: 64, locked: false, muted: false },
+      { id: "a1", name: "אודיו", type: "audio", order: 1, height: 56, locked: false, muted: false },
+    ], setTracks: () => {},
     getCanvas: () => ({ width: 1280, height: 720 }), selectClip: () => {}, selectOverlay: () => {}, seek: () => {}, getPlayhead: () => 1,
   };
 }
@@ -34,6 +37,7 @@ describe("dynamic command surface", () => {
     expect(normal.map((entry) => entry.command.id)).toEqual([
       "clip.duplicate",
       "clip.splitAtPlayhead",
+      "clip.detachAudio",
       "clip.setEnabled",
       "clip.delete.leaveGap",
       "clip.delete.ripple",

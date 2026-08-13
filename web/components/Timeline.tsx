@@ -88,6 +88,7 @@ export default function Timeline(p: Props) {
   } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredSubId, setHoveredSubId] = useState<string | null>(null);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
   const drag = useRef<{
     kind: "clip" | "overlay";
     mode: "move" | "l" | "r";
@@ -627,8 +628,8 @@ export default function Timeline(p: Props) {
           const tClips = track.type === "video" ? clipsOf(track.id) : track.type === "audio" && dedicatedAudio.length ? dedicatedAudio : primaryClips;
           const tLocked = !!track.locked;
           return (
-            <div className="tl-rowline" key={track.id} style={{ height: track.height }}>
-              <div className="tl-head2" onContextMenu={(event) => { event.preventDefault(); p.onTrackMenu?.(track.id, event.clientX, event.clientY); }}>
+            <div className={`tl-rowline ${track.type === "caption" ? `caption-row ${captionExpanded ? "expanded" : "collapsed"}` : ""}`} key={track.id} style={{ height: track.type === "caption" ? (captionExpanded ? Math.max(64, track.height) : 30) : track.height }}>
+              <div className="tl-head2" onClick={() => { if (track.type === "caption") setCaptionExpanded((value) => !value); }} onContextMenu={(event) => { event.preventDefault(); p.onTrackMenu?.(track.id, event.clientX, event.clientY); }} aria-expanded={track.type === "caption" ? captionExpanded : undefined}>
                 <div className="hd-top">
                   <TypeIcon className="hd-type" size={14} strokeWidth={1.75} />
                   <span className="hd-name" title="לחיצה כפולה לשינוי שם"

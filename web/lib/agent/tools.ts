@@ -1141,16 +1141,18 @@ export const TOOLS: ToolMeta[] = [
     name: "add_clip", label: "הוספת קליפ", color: "#10b981", icon: "➕",
     schema: {
       name: "add_clip",
-      description: "מוסיף וידאו/תמונה כקליפ מלא ברצועת וידאו, אודיו ברצועת אודיו, או תמונה כשכבת לוגו. source לפי שם, id או אינדקס.",
+      description: "מוסיף וידאו/תמונה כקליפ מלא ברצועת וידאו, אודיו ברצועת אודיו, או תמונה כשכבת לוגו. source לפי שם, id או אינדקס. באאוטרו עם תמונה+קריינות: הוסף קודם קריינות לרצועת אודיו ואז תמונה placement=timeline עם אותו timeline_start ואותו duration_seconds המדויק; לעולם אל תשתמש במשך הסרטון המקורי.",
       parameters: {
         type: "object",
         properties: {
           source: { type: "string", description: "שם המקור או אינדקס (1-based)" },
           start: { type: "number" },
           end: { type: "number" },
+          duration_seconds: { type: "number", description: "משך הקליפ על הציר. לתמונה+קריינות העבר בדיוק את משך הקריינות לשניהם." },
+          match_source: { type: "string", description: "מקור אחר שהמשך שלו קובע את משך הקליפ (למשל @media של הקריינות עבור תמונת סיום). עדיף על ניחוש duration_seconds." },
           at_index: { type: "number", description: "מיקום ברצועה (1-based, אופציונלי)" },
           timeline_start: { type: "number", description: "זמן מדויק בציר הסופי; מפצל קליפ קיים או מוסיף רווח לפי הצורך" },
-          placement: { type: "string", enum: ["timeline", "overlay"], description: "לתמונה בלבד: קליפ מלא או שכבת לוגו (ברירת מחדל overlay לתאימות)" },
+          placement: { type: "string", enum: ["timeline", "overlay"], description: "לתמונה בלבד: קליפ מלא או שכבת overlay. ברירת מחדל timeline; ללוגו השתמש add_image_overlay." },
           track: { type: "string", description: "שם או id של רצועת היעד" },
         },
         required: ["source"],
@@ -1159,9 +1161,17 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, a.source);
       if (!asset) return `לא נמצא מקור "${a.source}". השתמש ב-list_media.`;
-      if (asset.kind === "image" && String(a.placement || "overlay") !== "timeline") {
+      const matchAsset = a.match_source != null ? resolveAsset(ctx, a.match_source) : undefined;
+      if (a.match_source != null && !matchAsset) return `לא נמצא מקור התאמה "${a.match_source}". השתמש ב-list_media.`;
+      const matchedDuration = matchAsset && Number.isFinite(matchAsset.duration) && matchAsset.duration > 0 ? matchAsset.duration : 0;
+      if (asset.kind === "image" && String(a.placement || "timeline") === "overlay") {
         const start = a.timeline_start != null ? Math.max(0, +a.timeline_start) : a.start != null ? Math.max(0, +a.start) : 0;
-        const end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+        const duration = Number(a.duration_seconds);
+        const end = matchedDuration > 0
+          ? start + matchedDuration
+          : Number.isFinite(duration) && duration > 0
+          ? start + duration
+          : a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
         const commandError = dispatch(ctx, "overlay.addImage", { assetId: asset.id, start, end });
         if (commandError === "NO_API") {
           const canvas = ctx.canvas || defaultCanvasFor();
@@ -1179,12 +1189,17 @@ export const TOOLS: ToolMeta[] = [
         trackId = t.id;
       }
       const start = a.start != null ? Math.max(0, +a.start) : 0;
-      const end = a.end != null ? Math.min(asset.duration, +a.end) : asset.duration;
+      const requestedDuration = Number(a.duration_seconds);
+      const effectiveDuration = matchedDuration > 0 ? matchedDuration : requestedDuration;
+      const end = Number.isFinite(effectiveDuration) && effectiveDuration > 0
+        ? (asset.kind === "image" ? start + effectiveDuration : Math.min(asset.duration, start + effectiveDuration))
+        : a.end != null ? (asset.kind === "image" ? +a.end : Math.min(asset.duration, +a.end)) : asset.duration;
       if (ctx.editorApi) {
         const e = dispatch(ctx, "clip.add", {
           sourceId: asset.id,
           start,
           end: Math.max(start + 0.1, end),
+          duration_seconds: Number.isFinite(effectiveDuration) && effectiveDuration > 0 ? effectiveDuration : undefined,
           trackId,
           at_index: a.at_index != null ? (a.at_index | 0) - 1 : undefined,
           timeline_start: a.timeline_start != null ? Math.max(0, +a.timeline_start) : undefined,
@@ -2519,7 +2534,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 - add_clip(placement="timeline"|"overlay", timeline_start) · add_image_overlay(preset="logo_top_left|logo_top_right|fit_canvas", match_clip_id, locked) · add_text_overlay(preset="source_popup|speaker_card|dedication_card") · update_overlay/delete_overlay (overlay_id + expected_source חובה).
 - set_clip_audio_fades / set_clip_visual_fades / set_clip_color / set_clip_volume.
 - get_brand_kit → use_brand_asset ללוגו אמיתי. generate_image רק כשאין נכס מתאים; לעולם לא לצייר לוגו.
-- list_voices → generate_narration(text, voice_id) → add_clip(@media:<id>, timeline_start, track=אודיו).
+- list_voices → generate_narration(text, voice_id) → add_clip(@media:<id>, timeline_start, track=אודיו). תמונת סיום שחופפת לקריינות: add_clip(image, placement="timeline", timeline_start=אותו זמן, match_source="@media:<id הקריינות>"). כך משך התמונה נלקח מהקריינות בלי ניחוש. ודא ב-list_clips ששני הטווחים זהים.
 - generate_background_music(prompt, duration_seconds) יוצר מוזיקה מקורית באורך הציר. אסור להוריד או לחקות שירים מוכרים ללא רישיון; למדיה מסחרית השתמש רק בקטלוג מורשה שהמשתמש חיבר.
 - capture_frame(timeline=true) — אימות ויזואלי אחרי שינוי משמעותי. פעם אחת לנקודה, זה רינדור יקר.
 - render_video / export_srt — התוצר חוזר ככרטיס בצ'אט; הפנה אליו, אל תמציא נתיב.

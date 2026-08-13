@@ -948,7 +948,9 @@ export default function EditorPage() {
   const working = busy || rendering;
   const dedicatedAudioClips = clips && audioTrack(tracks) ? clipsOnTrack(clips, audioTrack(tracks)!.id, primaryVideoTrackId(tracks)) : [];
   const totalEdited = clips ? Math.max(projectDuration(clips, tracks), totalDur(dedicatedAudioClips)) : duration;
-  const timelineDuration = Math.max(duration, totalEdited, ...overlays.map((o) => o.end), 0.001);
+  // Once an EDL exists, its assembled time is the source of truth. Including
+  // the unedited source duration here stretched a 60s edit across a 1048s ruler.
+  const timelineDuration = Math.max(clips ? totalEdited : duration, ...overlays.map((o) => o.end), 0.001);
   const vLocked = videoLocked(tracks);
   const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay

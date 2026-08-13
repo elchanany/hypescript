@@ -905,6 +905,12 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .cue2.overlap { border-color: #f59e0b; background: repeating-linear-gradient(135deg, rgba(168,85,247,.35) 0 7px, rgba(245,158,11,.32) 7px 14px); }
 .cue-overlap-count { flex: 0 0 auto; margin-inline: 3px; padding: 0 3px; border-radius: 3px; background: #7c4a03; color: #fff3c4; font-size: 8px; line-height: 12px; }
 .cue2 .cue-txt { direction: rtl; color: #f2e9ff; font-size: 10.5px; line-height: 1.2; padding: 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.caption-row .tl-head2 .hd-ctrls { opacity:.45; }
+.caption-row .cue2 { top:3px!important; height:15px!important; bottom:auto; }
+.caption-row .cue2 .cue-txt { font-size:9.5px; }
+.caption-row .tl-head2 { cursor:pointer; }
+.caption-row.collapsed .hd-ctrls { display:none; }
+.caption-row.expanded .cue2 { top:5px!important; height:17px!important; }
 
 /* drag ghost + drop indicator (timeline move) — כרטיס תצוגה מקדימה */
 .tl-ghost {

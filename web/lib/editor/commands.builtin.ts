@@ -4,7 +4,7 @@ import type { Sub } from "./subtitlesEdl";
 import { clampOverlayTransform, imageOverlayGeometry, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset, type TitlePopupPreset } from "./overlay";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
-import { createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
+import { audioTrack, createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
 import { clipTrackId, clipsOnTrack, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, replaceTrackClips } from "./tracks";
 import { registerCommand } from "./commands";
 
@@ -154,6 +154,43 @@ export function ensureBuiltinCommands() {
       api.addOverlay(overlay);
       api.selectOverlay(overlay.id);
       if (api.getPlayhead() < overlay.start || api.getPlayhead() > overlay.end) api.seek(overlay.start);
+    },
+  });
+
+  registerCommand({
+    id: "clip.detachAudio",
+    label: "Detach audio",
+    labelHe: "הפרד וידאו ואודיו",
+    contexts: ["editor", "context-menu"],
+    presentation: {
+      target: "clip", icon: "volume", order: 25, separatorBefore: true, disableWhenVideoLocked: true,
+      isVisible: (api, args) => {
+        const clip = api.getClips()?.find((item) => item.id === String(args.id || ""));
+        return !!clip && api.getMedia().find((asset) => asset.id === clip.sourceId)?.kind === "video" && clip.volume !== 0;
+      },
+    },
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clips = api.getClips();
+      if (!clips) throw new Error("אין קליפים");
+      const clip = clips.find((item) => item.id === id);
+      const asset = clip && api.getMedia().find((item) => item.id === clip.sourceId);
+      if (!clip || asset?.kind !== "video" || isGapClip(clip)) throw new Error("יש לבחור קליפ וידאו");
+      const tracks = api.getTracks();
+      const primary = primaryVideoTrackId(tracks);
+      const audioId = audioTrack(tracks)?.id;
+      if (!audioId) throw new Error("רצועת אודיו לא נמצאה");
+      const sourceTrack = clipTrackId(clip, primary);
+      const sourceClips = clipsOnTrack(clips, sourceTrack, primary);
+      const sourceIndex = sourceClips.findIndex((item) => item.id === id);
+      const timelineStart = sourceClips.slice(0, Math.max(0, sourceIndex)).reduce((sum, item) => sum + clipDur(item), 0);
+      const audioClip: Clip = { ...clip, id: uid("a"), trackId: audioId, volume: clip.volume ?? 1, visualFadeIn: undefined, visualFadeOut: undefined };
+      const audioClips = clipsOnTrack(clips, audioId, primary);
+      const placedAudio = insertClipAtTimeline(audioClips, audioClip, timelineStart, audioId);
+      const mutedVisual = clips.map((item) => item.id === id ? { ...item, volume: 0 } : item);
+      api.setClips(replaceTrackClips(mutedVisual, audioId, placedAudio, primary));
+      api.selectClip(audioClip.id);
+      api.seek(timelineStart);
     },
   });
 
@@ -323,8 +360,12 @@ export function ensureBuiltinCommands() {
         throw new Error(expectedType === "audio" ? "רצועת אודיו לא נמצאה" : "רצועת וידאו לא נמצאה");
       }
       const start = args?.start != null ? Math.max(0, Number(args.start)) : 0;
+      const requestedDuration = Number(args?.duration_seconds);
       const sourceDuration = Math.max(0.1, media.duration || (media.kind === "image" ? 5 : 0.1));
-      const end = args?.end != null ? Math.min(sourceDuration, Number(args.end)) : sourceDuration;
+      const requestedEnd = Number.isFinite(requestedDuration) && requestedDuration > 0 ? start + requestedDuration : Number(args?.end);
+      const end = Number.isFinite(requestedEnd)
+        ? (media.kind === "image" ? requestedEnd : Math.min(sourceDuration, requestedEnd))
+        : sourceDuration;
       const clip = {
         id: uid(),
         sourceId,

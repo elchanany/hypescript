@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786659350.1619315,
-    "ast_hash": "b5fadce5de92505178fb868c30adee70",
+    "mtime": 1786660825.2961304,
+    "ast_hash": "df724da3f632d8e6c1230daae4459bec",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786660030.1830294,
-    "ast_hash": "27c94cc7990b74249cb9cab974477840",
+    "mtime": 1786660459.5912993,
+    "ast_hash": "b7f3d8f42e87b20d183a6374c9482c4f",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "web/components/Timeline.tsx": {
-    "mtime": 1786581322.2233155,
-    "ast_hash": "af6df62d402046065d56fe3a10934831",
+    "mtime": 1786660983.59687,
+    "ast_hash": "0d6d9520012756bf780bcd23053d52e3",
     "semantic_hash": ""
   },
   "web/components/TimelineToolbar.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786658535.652539,
-    "ast_hash": "d7709439a5daecbd4cb97e86ebbf909a",
+    "mtime": 1786660983.593109,
+    "ast_hash": "52534063c1f0881201c3647d576be1b9",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.builtin.ts": {
-    "mtime": 1786484556.3132808,
-    "ast_hash": "cb830286fdb4bd3740d7e83a261fd88a",
+    "mtime": 1786660825.242846,
+    "ast_hash": "e83b9bb6a1b9aa20fa5597de37bbe23e",
     "semantic_hash": ""
   },
   "web/lib/editor/commands.test.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commands.ts": {
-    "mtime": 1786331983.6184268,
-    "ast_hash": "9f0232ae6f1c8b332ae0f2d17855bf7e",
+    "mtime": 1786660825.2895892,
+    "ast_hash": "6494f51fa1e0b5b9262ac344dcae7e20",
     "semantic_hash": ""
   },
   "web/lib/editor/history.test.ts": {
@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/project.ts": {
-    "mtime": 1786189582.515215,
-    "ast_hash": "90a63f06694562d7f56382f46a34b99f",
+    "mtime": 1786660898.0856044,
+    "ast_hash": "fe5701da582cedf9d61057f2d974f1ca",
     "semantic_hash": ""
   },
   "web/lib/editor/scriptClips.ts": {
@@ -1255,8 +1255,8 @@
     "semantic_hash": ""
   },
   "web/lib/editor/commandSurface.test.ts": {
-    "mtime": 1786194606.558604,
-    "ast_hash": "4dc92fe5f7ed35e21cf04283387f347d",
+    "mtime": 1786660898.0941486,
+    "ast_hash": "a8933085f1b32eb36aca7f03d2c92a2e",
     "semantic_hash": ""
   },
   "web/lib/editor/commandSurface.ts": {
@@ -2107,6 +2107,11 @@
   "web/lib/agent/suggestions.ts": {
     "mtime": 1786659744.827366,
     "ast_hash": "ad4678352ba99f24593482a608506db3",
+    "semantic_hash": ""
+  },
+  "web/lib/editor/mediaComposition.test.ts": {
+    "mtime": 1786660898.097148,
+    "ast_hash": "0a50715a9779c9c3e827ed28109b69d9",
     "semantic_hash": ""
   }
 }
