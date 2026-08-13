@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Download, Save, Trash2 } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
+import { LoadingState } from "@/components/LoadingState";
 type State = {
   profile: {
     display_name: string;
@@ -35,7 +36,7 @@ export default function AccountPreferences() {
   }, []);
   if (unavailable)
     return <section className="account-preferences"><strong>הגדרות החשבון יופעלו לאחר עדכון מסד הנתונים</strong><p>המנוי והפרויקטים ממשיכים לעבוד כרגיל.</p></section>;
-  if (!v) return <div className="account-skeleton">טוען הגדרות חשבון…</div>;
+  if (!v) return <LoadingState label="טוען הגדרות חשבון…" lines={3} compact />;
   const save = async () => {
     setBusy(true);
     const r = await fetch("/api/account", {

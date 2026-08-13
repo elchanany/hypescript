@@ -4,6 +4,7 @@ import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import { Activity, BarChart3, Cloud, Coins, CreditCard, ExternalLink, RefreshCw, Save, Search, ShieldCheck, Users } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
+import { LoadingState } from "@/components/LoadingState";
 
 type PriceMap = Record<"creator" | "pro", { monthlyIls: number; yearlyIls: number }>;
 type AdminData = { users: number; projects: number; uniqueVisitors: number; subscriptions: any[]; events: any[]; eventCounts: Record<string, number>; usersList: any[]; creditLiabilityIls: number };
@@ -37,7 +38,7 @@ export default function AdminPage() {
     <header className="account-nav"><BrandLogo variant="horizontal" size="sm" decorative /><div className="admin-head-actions"><button className="btn secondary" onClick={load}><RefreshCw size={14} />רענון</button><Link href="/dashboard" className="btn secondary">חזרה למוצר</Link></div></header>
     <section className="admin-shell">
       <span className="account-eyebrow">ניהול מערכת</span><h1>Hypescript Control Center</h1><p>משתמשים, ביקורים, מנויים, תמחור ושימוש — ממקור הנתונים האמיתי.</p>
-      {error ? <div className="auth-error">אין הרשאת מנהל. החשבון חייב לקבל תפקיד system_owner או system_admin בטבלת user_roles.</div> : !data ? <div className="account-skeleton">טוען נתוני מערכת…</div> : <>
+      {error ? <div className="auth-error">אין הרשאת מנהל. החשבון חייב לקבל תפקיד system_owner או system_admin בטבלת user_roles.</div> : !data ? <LoadingState label="טוען ומנתח את נתוני המערכת…" lines={5} /> : <>
         <div className="admin-metrics">
           <article><Users /><strong>{data.users}</strong><span>משתמשים רשומים</span></article>
           <article><BarChart3 /><strong>{data.uniqueVisitors}</strong><span>משתמשים פעילים ב־30 יום</span></article>

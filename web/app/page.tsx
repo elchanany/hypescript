@@ -41,6 +41,8 @@ import { deleteCloudProject, getCloudProject, renameCloudProject, renderCloudPro
 import { createProjectWithPolicy } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
+import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
+import { clampRatio, type TransferProgress } from "@/lib/ui/progress";
 
 ensureBuiltinCommands();
 
@@ -85,6 +87,7 @@ export default function EditorPage() {
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<TransferProgress | null>(null);
   const [error, setError] = useState("");
   const [rendering, setRendering] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -510,24 +513,32 @@ export default function EditorPage() {
   const addFiles = async (files: FileList | File[] | null, onProgress?: (ratio: number) => void) => {
     if (!files) return false;
     const arr = Array.from(files);
+    if (!arr.length) return false;
+    const totalBytes = arr.reduce((sum, file) => sum + file.size, 0);
+    const startedAt = Date.now();
+    const loadedByFile = new Map<string, number>();
+    const publishProgress = (file: File, ratio: number) => {
+      loadedByFile.set(`${file.name}:${file.size}:${file.lastModified}`, file.size * clampRatio(ratio));
+      const loadedBytes = Array.from(loadedByFile.values()).reduce((sum, value) => sum + value, 0);
+      const next = { count: arr.length, fileName: file.name, loadedBytes, totalBytes, ratio: totalBytes ? loadedBytes / totalBytes : 1, startedAt };
+      setUploadProgress(next); setProgress(next.ratio); onProgress?.(next.ratio);
+    };
     const policy = projectId ? await getProjectPolicy(projectId) : null;
     const shouldUpload = !!policy?.cloudProjectId && policy.storageBackend === "r2" && policy.dataMode !== "local";
     try {
-      onProgress?.(0.02);
-      if (shouldUpload) setPhase("מעלה מדיה מוצפנת לענן…");
-      const assets = await Promise.all(arr.map(async (f, index) => {
+      setPhase(shouldUpload ? "מעלה מדיה מוצפנת לענן…" : "מכין מדיה ומחלץ פרטים…");
+      const assets = await Promise.all(arr.map(async (f) => {
+        publishProgress(f, shouldUpload ? 0 : 0.08);
         const kind = kindOf(f);
         const matchingMissing = mediaRef.current.find((item) => item.missing && item.name === f.name && item.kind === kind);
         const asset: MediaAsset = { id: matchingMissing?.id || uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f), missing: false };
         if (shouldUpload && policy?.cloudProjectId) {
-          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => {
-            const totalProgress = (index + ratio) / arr.length;
-            setProgress(totalProgress); onProgress?.(totalProgress);
-          });
+          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => publishProgress(f, ratio));
           asset.cloudAssetId = cloud.assetId;
           asset.cloudObjectKey = cloud.objectKey;
           asset.cloudState = "available";
         }
+        publishProgress(f, 1);
         return asset;
       }));
       setMedia((current) => {
@@ -542,7 +553,8 @@ export default function EditorPage() {
       setError(message);
       return false;
     } finally {
-      if (shouldUpload) { setPhase(""); setProgress(0); }
+      window.setTimeout(() => setUploadProgress(null), 900);
+      setPhase(""); setProgress(0);
     }
   };
 
@@ -1117,6 +1129,8 @@ export default function EditorPage() {
         canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
       />
 
+      {!restored && <div className="editor-hydration-loading"><LoadingState label="טוען את הפרויקט, המדיה וציר הזמן…" lines={4} /></div>}
+
       {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}
 
       <EditorTour open={tourOpen} onClose={() => { setTourOpen(false); localStorage.removeItem("hs_editor_tour_pending"); localStorage.setItem("hs_editor_tour_done", "1"); }} />
@@ -1171,7 +1185,7 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }} data-tour="media">
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia} onRelink={relinkMedia}
+            <MediaPanel media={media} mainId={main?.id} uploadProgress={uploadProgress} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
@@ -1223,6 +1237,7 @@ export default function EditorPage() {
                   {working && <div className="s-bar"><div style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
                 </div>
               )}
+              {uploadProgress && <div className="preview-upload-float"><UploadProgressCard value={uploadProgress} /></div>}
             </div>
 
             <div className="col-resize" onPointerDown={startResizeInsp} onDoubleClick={resetInsp} onKeyDown={resizeInspectorByKey} tabIndex={0}

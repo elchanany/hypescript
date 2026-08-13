@@ -5,6 +5,8 @@ import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
 import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "@/components/icons";
 import { IconButton } from "@/components/ui";
+import { UploadProgressCard } from "@/components/LoadingState";
+import type { TransferProgress } from "@/lib/ui/progress";
 
 const KIND_ICON = { video: Film, image: ImageIcon, audio: Music } as const;
 const KIND_LABEL = { video: "וידאו", image: "תמונה", audio: "שמע" } as const;
@@ -42,9 +44,10 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 }
 
 export default function MediaPanel({
-  media, mainId, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onRelink, onAssetMenu,
+  media, mainId, uploadProgress, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onRelink, onAssetMenu,
 }: {
   media: MediaAsset[]; mainId?: string;
+  uploadProgress?: TransferProgress | null;
   onUpload: (files: FileList | File[] | null) => void;
   onAddClip: (asset: MediaAsset) => void;
   onAddOverlay: (asset: MediaAsset) => void;
@@ -122,6 +125,8 @@ export default function MediaPanel({
         onChange={(e) => { onUpload(e.target.files); e.currentTarget.value = ""; }} />
       <input ref={relinkRef} type="file" accept="video/*,image/*,audio/*" hidden
         onChange={(e) => { const file = e.target.files?.[0]; const id = relinkId.current; if (file && id) onRelink(id, file); e.currentTarget.value = ""; relinkId.current = null; }} />
+
+      {uploadProgress && <UploadProgressCard value={uploadProgress} compact />}
 
       <div className="panel-scroll"
         onDragOver={(e) => {

@@ -32,6 +32,8 @@ import {
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
+import { UploadProgressCard } from "@/components/LoadingState";
+import type { TransferProgress } from "@/lib/ui/progress";
 import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
 
@@ -150,7 +152,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [byokDraft, setByokDraft] = useState<Partial<Record<Provider, string>>>({});
   const [byokBusy, setByokBusy] = useState<Provider | null>(null);
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false);
-  const [uploading, setUploading] = useState<{ count: number; progress: number } | null>(null);
+  const [uploading, setUploading] = useState<TransferProgress | null>(null);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
   const [askText, setAskText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
@@ -532,14 +534,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const attachRef = useRef<HTMLInputElement>(null);
   const handleAttachments = async (files: FileList | null) => {
     if (!files?.length) return;
-    setUploading({ count: files.length, progress: 0 });
+    const selected = Array.from(files);
+    const totalBytes = selected.reduce((sum, file) => sum + file.size, 0);
+    const startedAt = Date.now();
+    const updateUpload = (ratio: number) => setUploading({ count: selected.length, fileName: selected[0].name, loadedBytes: totalBytes * ratio, totalBytes, ratio, startedAt });
+    updateUpload(0);
     try {
-      const uploaded = await Promise.resolve(onAddMedia(files, (progress) => setUploading({ count: files.length, progress })));
+      const uploaded = await Promise.resolve(onAddMedia(files, updateUpload));
       if (uploaded === false) {
         setUploading(null);
         return;
       }
-      setUploading({ count: files.length, progress: 1 });
+      updateUpload(1);
       window.setTimeout(() => setUploading(null), 900);
     } catch {
       setUploading(null);
@@ -872,7 +878,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           aria-orientation="horizontal"
           aria-label="שינוי גובה תיבת ההודעה"
         />
-        {uploading && <div className="chat-upload-progress" role="status"><span><Paperclip size={13} />מעלה {uploading.count === 1 ? "קובץ" : `${uploading.count} קבצים`}</span><b>{Math.round(uploading.progress * 100)}%</b><i><em style={{ width: `${Math.round(uploading.progress * 100)}%` }} /></i></div>}
+        {uploading && <UploadProgressCard value={uploading} compact />}
         {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.length ? <div className="composer-references" aria-label="הפניות בהודעה">
           {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.map((token, index) => <span key={`${token}-${index}`}>{token.startsWith("[ציטוט") ? <Quote size={12} /> : <AtSign size={12} />}{token}</span>)}
         </div> : null}

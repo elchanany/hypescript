@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { BILLING_PLANS, BillingInterval, BillingPlanId, TRIAL_OFFER } from "@/lib/billing/plans";
 import { toast } from "@/lib/ui/toast";
 import AccountPreferences from "@/components/AccountPreferences";
+import { LoadingState } from "@/components/LoadingState";
 
 type BillingStatus = {
   subscription: {
@@ -129,7 +130,7 @@ export default function AccountPage() {
           <UsageBar icon={Video} label="רינדור" used={status.usage.renderSeconds.used} limit={status.usage.renderSeconds.limit} value={`${min(status.usage.renderSeconds.used)} מתוך ${min(status.usage.renderSeconds.limit)}`} />
           <UsageBar icon={HardDrive} label="אחסון" used={status.usage.storageBytes.used} limit={status.usage.storageBytes.limit} value={`${gb(status.usage.storageBytes.used)} מתוך ${gb(status.usage.storageBytes.limit)}`} />
           <UsageBar icon={Cloud} label="פרויקטים" used={status.usage.projects.used} limit={status.usage.projects.limit} value={`${status.usage.projects.used} מתוך ${status.usage.projects.limit}`} />
-        </div> : <div className="account-skeleton">טוען שימוש…</div>}
+        </div> : <LoadingState label="טוען שימוש ומכסות…" lines={3} compact />}
       </article>
 
       <article className="account-card billing-card">

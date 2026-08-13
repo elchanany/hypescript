@@ -24,6 +24,7 @@ import { ensureCloudProjectMirror } from "@/lib/projects/create";
 import { deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
+import { LoadingState } from "@/components/LoadingState";
 
 function fmtDate(ms: number) {
   try {
@@ -203,6 +204,7 @@ type DialogState =
 export default function DashboardPage() {
   const { configured, loading, user, signOut, signInWithGoogle, error: authError } = useAuth();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [dlg, setDlg] = useState<DialogState>({ kind: "none" });
   const [userOpen, setUserOpen] = useState(false);
@@ -212,13 +214,16 @@ export default function DashboardPage() {
   const welcomed = useRef(false);
 
   const refresh = async () => {
-    if (user) {
-      try {
-        const cloud = await listCloudProjects();
-        await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
-      } catch { /* show local cache while offline */ }
-    }
-    setProjects(await listProjects());
+    setProjectsLoading(true);
+    try {
+      if (user) {
+        try {
+          const cloud = await listCloudProjects();
+          await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
+        } catch { /* show local cache while offline */ }
+      }
+      setProjects(await listProjects());
+    } finally { setProjectsLoading(false); }
   };
 
   useEffect(() => { if (!loading) refresh(); }, [loading, user?.id]);
@@ -449,7 +454,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {projects.length === 0 ? (
+        {loading || projectsLoading ? <div className="dash-project-loading"><LoadingState label="טוען ומסנכרן את הפרויקטים…" lines={4} /></div> : projects.length === 0 ? (
           <div className="dash-empty">
             <FolderOpen size={40} strokeWidth={1.25} />
             <p>אין פרויקטים עדיין.</p>

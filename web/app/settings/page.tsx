@@ -9,6 +9,7 @@ import { PROVIDER_REGISTRY } from "@/lib/providers/registry";
 import type { ProviderStatusInfo } from "@/lib/providers/types";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 import type { DataMode } from "@/lib/projects/types";
+import { LoadingState } from "@/components/LoadingState";
 
 interface CloudStatus {
   configured: boolean;
@@ -22,13 +23,16 @@ export default function SettingsPage() {
   const { mode, setMode } = useTheme();
   const [cfg, setCfg] = useState<ApiConfigShape>({});
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
+  const [servicesLoading, setServicesLoading] = useState(true);
   const [defaultDataMode, setDefaultDataMode] = useState<DataMode>("cloud");
 
   useEffect(() => {
     const savedMode = localStorage.getItem(DEFAULT_DATA_MODE_PREF);
     if (savedMode === "cloud" || savedMode === "local" || savedMode === "hybrid") setDefaultDataMode(savedMode);
-    fetch("/api/config").then((r) => r.json()).then(setCfg).catch(() => {});
-    fetch("/api/cloud/status").then((r) => r.json()).then(setCloud).catch(() => setCloud(null));
+    Promise.allSettled([
+      fetch("/api/config").then((r) => r.json()).then(setCfg),
+      fetch("/api/cloud/status").then((r) => r.json()).then(setCloud),
+    ]).finally(() => setServicesLoading(false));
   }, []);
 
   const saveDefaultDataMode = (mode: DataMode) => {
@@ -99,6 +103,8 @@ export default function SettingsPage() {
           <Link href="/settings/brand" className="btn primary" style={{ textDecoration: "none" }}>ניהול ערכת מותג</Link>
         </div>
       </div>
+
+      {servicesLoading && <LoadingState label="בודק שירותי ענן, אחסון וספקי AI…" lines={3} />}
 
       <div className="card" id="workspace-storage">
         <h2>שמירת פרויקטים</h2>
