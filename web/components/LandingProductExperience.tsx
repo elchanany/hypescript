@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "lucide-react";
+import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "@/components/icons";
 
 const modes = [
   { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "הטקסט והווידאו מסונכרנים" },

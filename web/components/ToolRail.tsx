@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Captions, Type, Settings, Blend, WandSparkles } from "lucide-react";
+import { Film, Captions, Type, Settings, Blend, WandSparkles } from "@/components/icons";
 
 export type LeftTab = "media" | "text" | "captions" | "transitions" | "effects";
 

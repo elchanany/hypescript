@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { CheckCircle2, Download, Film, Loader2, RotateCcw, Square, X } from "lucide-react";
+import { CheckCircle2, Download, Film, Loader2, RotateCcw, Square, X } from "@/components/icons";
 import { estimateRemainingSeconds, exportPercent, formatBytes, formatDurationHe } from "@/lib/render/exportProgress";
 
 export interface ExportResult {

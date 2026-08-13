@@ -1,6 +1,6 @@
 "use client";
 
-import { Blend, Check, Sparkles, WandSparkles } from "lucide-react";
+import { Blend, Check, Sparkles, WandSparkles } from "@/components/icons";
 import type { Clip } from "@/lib/editor/model";
 
 type ClipPatch = Partial<Pick<Clip, "contrast" | "saturation" | "visualFadeIn" | "visualFadeOut">>;

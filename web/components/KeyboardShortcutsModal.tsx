@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { X, Command, Scissors, Trash2, Play, ZoomIn, ZoomOut, Undo2, Redo2, Layers, Sparkles, MessageCircle } from "lucide-react";
+import { X, Command, Scissors, Trash2, Play, ZoomIn, ZoomOut, Undo2, Redo2, Layers, Sparkles, MessageCircle } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
 
 interface ShortcutGroup {

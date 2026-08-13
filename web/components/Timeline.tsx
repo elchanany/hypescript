@@ -10,7 +10,7 @@ import { isGapClip } from "@/lib/editor/timelineOps";
 import { formatTimecode, MagneticTarget, snapRangeStart, snapToMagneticTarget } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, timelineContentWidth, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
-import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
+import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "@/components/icons";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";

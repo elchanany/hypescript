@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";

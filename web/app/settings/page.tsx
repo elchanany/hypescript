@@ -105,7 +105,7 @@ export default function SettingsPage() {
       <div className="hero">
         <h1>הגדרות</h1>
         <p>המפתחות נשמרים כמשתני-סביבה ב-Vercel (או ב-<code>web/.env.local</code> להרצה מקומית) — לא בדפדפן ולא בקוד.</p>
-        <p style={{ color: "var(--muted)", fontSize: 13 }}>
+        <p style={{ color: "var(--text-2)", fontSize: 13 }}>
           התחברות Google (אופציונלי): ראה מדריך <Link href="https://github.com/elchanany/hypescript/blob/main/docs/SETUP_AUTH.md">SETUP_AUTH.md</Link>
           {" · "}
           <Link href="/dashboard">לוח פרויקטים</Link>
@@ -134,7 +134,7 @@ export default function SettingsPage() {
 
       <div className="card">
         <h2>ערכת מותג</h2>
-        <p style={{ color: "var(--muted)" }}>
+        <p style={{ color: "var(--text-2)" }}>
           פרופיל ארגון לשיתוף בין הפרויקטים: צבעים, הנחיות ניסוח, לוגו ותמונות ייחוס — נשמר מקומית במכשיר בלבד, זמין לסוכן.
         </p>
         <div className="row">
@@ -144,7 +144,7 @@ export default function SettingsPage() {
 
       <div className="card" id="workspace-storage">
         <h2>שמירת פרויקטים</h2>
-        <p style={{ color: "var(--muted)", marginTop: 0 }}>
+        <p style={{ color: "var(--text-2)", marginTop: 0 }}>
           ברירת המחדל היא ענן: מסמך העריכה ב־Supabase, קובצי המקור ב־Cloudflare R2 ורינדור ב־Cloud Run. הבחירה חלה על פרויקטים חדשים.
         </p>
         <div className="settings-choice-grid">
@@ -165,7 +165,7 @@ export default function SettingsPage() {
 
       <div className="card" id="appearance">
         <h2>ענן ורינדור</h2>
-        <p style={{ color: "var(--muted)" }}>
+        <p style={{ color: "var(--text-2)" }}>
           פרויקטים ונכסים פרטיים ב־Supabase + Cloudflare R2, ורינדור FFmpeg ב־Google Cloud Run. המפתחות נשארים בצד השרת בלבד.
         </p>
         {!cloud ? (
@@ -235,7 +235,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <label style={{ display: "block", marginTop: 14, color: "var(--muted)" }}>
+        <label style={{ display: "block", marginTop: 14, color: "var(--text-2)" }}>
           מודל תמלול ספציפי (אופציונלי)
           <input
             type="text"
@@ -285,7 +285,7 @@ export default function SettingsPage() {
 
       <div className="card">
         <h2>ספק ה-AI לסוכן</h2>
-        <p style={{ color: "var(--muted)", marginTop: 0 }}>בחר ספק, ודא שהמפתח שלו מוגדר ב-Vercel. הסוכן ישתמש בספק שנבחר.</p>
+        <p style={{ color: "var(--text-2)", marginTop: 0 }}>בחר ספק, ודא שהמפתח שלו מוגדר ב-Vercel. הסוכן ישתמש בספק שנבחר.</p>
         <div className="controls">
           {LLM_PROVIDERS.map((p) => (
             <label key={p.id} className="check" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", background: provider === p.id ? "var(--card-2)" : "transparent" }}>
@@ -306,7 +306,7 @@ export default function SettingsPage() {
 
       <div className="card">
         <h2>איך מגדירים מפתח</h2>
-        <ol style={{ color: "var(--muted)", lineHeight: 1.9, margin: 0, paddingInlineStart: 20 }}>
+        <ol style={{ color: "var(--text-2)", lineHeight: 1.9, margin: 0, paddingInlineStart: 20 }}>
           <li>Vercel → הפרויקט → Settings → Environment Variables.</li>
           <li>הוסף את שם המשתנה (למשל <code>ELEVENLABS_API_KEY</code> או <code>DEEPSEEK_API_KEY</code>) ואת הערך, ושמור.</li>
           <li>Redeploy כדי שהמפתח ייכנס לתוקף.</li>

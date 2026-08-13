@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Cloud, HardDrive, Sparkles } from "lucide-react";
+import { Cloud, HardDrive, Sparkles } from "@/components/icons";
 import BrandLogo from "@/components/BrandLogo";
 import { quotaMessage } from "@/lib/billing/quotaMessaging";
 import {

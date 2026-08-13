@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Captions, Download, ExternalLink, Film, Image as ImageIcon, Maximize, Music, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Captions, Download, ExternalLink, Film, Image as ImageIcon, Maximize, Music, Pause, Play, Volume2, VolumeX } from "@/components/icons";
 import { safeDownloadName } from "@/lib/render/videoCard";
 
 type MKind = "video" | "audio" | "image" | "srt";

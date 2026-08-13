@@ -31,10 +31,10 @@ import {
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
   PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles,
-} from "lucide-react";
+} from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
-import { LucideIcon } from "lucide-react";
+import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
 
 type Item = ChatItem;
@@ -43,7 +43,7 @@ type ToolItem = Extract<Item, { kind: "tool" }>;
 const now = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
 // tool name -> icon (single consistent family; falls back to a generic wrench).
-const TOOL_ICON: Record<string, LucideIcon> = {
+const TOOL_ICON: Record<string, AppIcon> = {
   get_video_info: Info, list_media: Layers, rename_media: Pencil, transcribe_video: Type, find_in_transcript: Search, get_transcript: Type,
   transcribe_timeline: Type,
   keep_by_script: Scissors, remove_segments: Scissors, add_clip: Plus, list_clips: Layers, split_clip: Scissors,
@@ -59,14 +59,14 @@ const toolIcon = (name: string) => TOOL_ICON[name] || Wrench;
 const KIND_ICON = { video: FilmIcon, image: ImageIcon, audio: Music } as const;
 
 // שלושת מצבי הסוכן — Ask/Plan אינם מקבלים כלים (אכיפה ב-runtime), Act מבצע.
-const MODES: { id: AgentMode; label: string; icon: LucideIcon; tip: string }[] = [
+const MODES: { id: AgentMode; label: string; icon: AppIcon; tip: string }[] = [
   { id: "ask", label: "שאל", icon: Eye, tip: "שאלות והסברים — ללא שינוי בפרויקט" },
   { id: "plan", label: "תכנן", icon: ClipboardList, tip: "תכנון עריכה — ללא ביצוע" },
   { id: "act", label: "בצע", icon: Play, tip: "ביצוע עריכות בפועל" },
 ];
 
 // פקודות Slash. enabled=false מוצג מעומעם עם סיבה (בלי להעמיד פנים שעובד).
-interface SlashCmd { cmd: string; label: string; icon: LucideIcon; enabled: boolean; reason?: string; kind: "mode" | "prompt"; mode?: AgentMode; template?: string; }
+interface SlashCmd { cmd: string; label: string; icon: AppIcon; enabled: boolean; reason?: string; kind: "mode" | "prompt"; mode?: AgentMode; template?: string; }
 const SLASH: SlashCmd[] = [
   { cmd: "/ask", label: "מצב שאלות", icon: Eye, enabled: true, kind: "mode", mode: "ask" },
   { cmd: "/plan", label: "מצב תכנון", icon: ClipboardList, enabled: true, kind: "mode", mode: "plan" },
@@ -194,7 +194,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   // ישויות זמינות ל-@mention (נבנות מהפרויקט האמיתי — ללא Mock)
   const mentionItems = useMemo(() => {
-    const out: { token: string; label: string; icon: LucideIcon; hint?: string }[] = [];
+    const out: { token: string; label: string; icon: AppIcon; hint?: string }[] = [];
     for (const m of [...media].reverse()) out.push({ token: `@media:${m.id}`, label: m.name, icon: KIND_ICON[m.kind], hint: m.kind });
     out.push(
       { token: "@project", label: "הפרויקט כולו", icon: Layers },

@@ -10,7 +10,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { CaptionBg, CaptionPosition, CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { formatTimecode } from "@/lib/editor/time";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "@/components/icons";
 import { Section, Toggle } from "@/components/ui";
 import { CLIP_COLOR_PRESETS, matchingColorPreset } from "@/lib/editor/colorPresets";
 

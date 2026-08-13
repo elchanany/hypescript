@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, CreditCard, Download, Eye, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, MousePointer2, Play, ScanText, Scissors, ShieldCheck, Sparkles, WandSparkles, Zap } from "lucide-react";
+import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, CreditCard, Download, Eye, Film, Gauge, Layers3, LockKeyhole, MessageSquareText, MousePointer2, Play, ScanText, Scissors, ShieldCheck, Sparkles, WandSparkles, Zap } from "@/components/icons";
 import BrandLogo from "@/components/BrandLogo";
 import LandingProductExperience from "@/components/LandingProductExperience";
 import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";

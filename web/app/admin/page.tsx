@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { Activity, BarChart3, Cloud, Coins, CreditCard, ExternalLink, RefreshCw, Save, Search, ShieldCheck, Users } from "lucide-react";
+import { Activity, BarChart3, Cloud, Coins, CreditCard, ExternalLink, RefreshCw, Save, Search, ShieldCheck, Users } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
 
 type PriceMap = Record<"creator" | "pro", { monthlyIls: number; yearlyIls: number }>;

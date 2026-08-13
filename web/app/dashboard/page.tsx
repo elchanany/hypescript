@@ -6,7 +6,7 @@ import {
   FolderOpen, Plus, LogIn, LogOut, Settings, Film,
   Pencil, Trash2, MoreHorizontal, Clapperboard, CreditCard,
   Clock3, ShieldCheck,
-} from "lucide-react";
+} from "@/components/icons";
 import {
   deleteProject, listProjects, ProjectMeta,
   renameProject, setCurrentProject,

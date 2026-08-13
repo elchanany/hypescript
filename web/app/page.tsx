@@ -21,7 +21,7 @@ import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/
 import { TitlePopupPreset } from "@/lib/editor/overlay";
 import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "lucide-react";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "@/components/icons";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";

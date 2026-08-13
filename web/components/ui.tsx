@@ -1,8 +1,7 @@
 "use client";
 
 // Shared UI primitives for the editor. One consistent set — no per-component variants.
-import { LucideIcon } from "lucide-react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, type AppIcon } from "@/components/icons";
 import { ReactNode, useEffect, useRef, useState } from "react";
 
 export const ICON = 16;
@@ -13,7 +12,7 @@ type TipPos = "up" | "down" | "right" | "left";
 export function IconButton({
   icon: Icon, tip, tipPos = "down", active, danger, disabled, onClick, size = "sm", className = "",
 }: {
-  icon: LucideIcon; tip?: string; tipPos?: TipPos; active?: boolean; danger?: boolean;
+  icon: AppIcon; tip?: string; tipPos?: TipPos; active?: boolean; danger?: boolean;
   disabled?: boolean; onClick?: (e: React.MouseEvent) => void; size?: "sm" | "lg"; className?: string;
 }) {
   return (
@@ -31,7 +30,7 @@ export function IconButton({
 export function Button({
   children, icon: Icon, variant = "secondary", size, disabled, onClick, tip, className = "",
 }: {
-  children?: ReactNode; icon?: LucideIcon; variant?: "primary" | "secondary" | "ghost" | "danger";
+  children?: ReactNode; icon?: AppIcon; variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "tall"; disabled?: boolean; onClick?: (e: React.MouseEvent) => void; tip?: string; className?: string;
 }) {
   const autoTip = tip || (typeof children === "string" ? children : undefined);
@@ -74,7 +73,7 @@ export function Section({ title, children, defaultOpen = true, right }: { title:
 }
 
 export interface CtxItem {
-  label: string; icon?: LucideIcon; onClick?: () => void; danger?: boolean; disabled?: boolean; kbd?: string; sep?: boolean;
+  label: string; icon?: AppIcon; onClick?: () => void; danger?: boolean; disabled?: boolean; kbd?: string; sep?: boolean;
 }
 
 // Lightweight context / dropdown menu anchored at a screen point.

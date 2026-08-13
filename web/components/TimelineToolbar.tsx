@@ -1,6 +1,6 @@
 "use client";
 
-import { Scissors, Trash2, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart, Link2, Unlink2 } from "lucide-react";
+import { Scissors, Trash2, ZoomIn, ZoomOut, Maximize2, SquareDashed, ArrowLeftRight, BetweenHorizontalStart, Link2, Unlink2 } from "@/components/icons";
 import { IconButton } from "@/components/ui";
 import { clampZoom, ZOOM_MAX, ZOOM_MIN } from "@/lib/editor/time";
 

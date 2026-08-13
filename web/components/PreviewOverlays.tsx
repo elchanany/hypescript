@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { MediaAsset, mediaById } from "@/lib/editor/model";
 import { clampOverlayTransform, Overlay, overlayVisibleAt } from "@/lib/editor/overlay";
 import { CanvasSize, rotatePoint } from "@/lib/editor/canvasCoords";
-import { RotateCw } from "lucide-react";
+import { RotateCw } from "@/components/icons";
 
 type Handle = "nw" | "ne" | "se" | "sw" | "rot";
 const CORNERS: { h: Handle; cx: number; cy: number; cursor: string }[] = [

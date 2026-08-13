@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, MessageSquareText, Play, Send, Sparkles, WandSparkles } from "lucide-react";
+import { Check, MessageSquareText, Play, Send, Sparkles, WandSparkles } from "@/components/icons";
 import { useState } from "react";
 
 export default function LandingDeviceShowcase() {

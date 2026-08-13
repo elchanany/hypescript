@@ -5,6 +5,8 @@ import ToastHost from "@/components/ToastHost";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { BRAND_NAME, BRAND_PATHS, BRAND_TAGLINE_EN, BRAND_TAGLINE_HE } from "@/lib/brand/assets";
 import CookieConsent from "@/components/CookieConsent";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
@@ -56,7 +58,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
         {/* Prevent theme flash before React hydrates */}
         <script

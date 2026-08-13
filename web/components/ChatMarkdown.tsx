@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@/components/icons";
 import { MdPart, parseChatMarkdown } from "@/lib/chat/markdown";
 
 function Inline({ parts }: { parts: MdPart[] }) {

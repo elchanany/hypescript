@@ -10,7 +10,7 @@ import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { audioTrack, primaryVideoTrackId, TrackMeta, videoTracks } from "@/lib/editor/project";
 import { clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import PreviewOverlays from "@/components/PreviewOverlays";
 

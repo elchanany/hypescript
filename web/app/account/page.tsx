@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Check, Cloud, CreditCard, ExternalLink, HardDrive, LockKeyhole, LogOut, Sparkles, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, Cloud, CreditCard, ExternalLink, HardDrive, LockKeyhole, LogOut, Sparkles, Video } from "@/components/icons";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { BILLING_PLANS, BillingInterval, BillingPlanId, TRIAL_OFFER } from "@/lib/billing/plans";

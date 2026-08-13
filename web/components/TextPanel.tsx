@@ -1,6 +1,6 @@
 "use client";
 
-import { Type } from "lucide-react";
+import { Type } from "@/components/icons";
 import { Button, Section } from "@/components/ui";
 
 export default function TextPanel({ onAddText, onAddPopup }: { onAddText: () => void; onAddPopup: (preset: "source_popup" | "speaker_card" | "dedication_card") => void }) {

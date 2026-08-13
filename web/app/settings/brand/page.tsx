@@ -210,7 +210,7 @@ export default function BrandSettingsPage() {
             פרופיל ארגון לשיתוף בין הפרויקטים: שם, סלוגן, פלטת צבעים, הנחיות ניסוח, לוגו ותמונות ייחוס.
             הסוכן קורא את הערכה הפעילה ומשתמש בנכסים שלה.
           </p>
-          <p style={{ color: "var(--muted)", fontSize: 13 }}>
+          <p style={{ color: "var(--text-2)", fontSize: 13 }}>
             <span className="ok">✓ נשמר מקומית במכשיר בלבד (IndexedDB) — לא נשלח לענן, לא למערכת ההזדהות, ואין סנכרון ענן.</span>
           </p>
         </div>
@@ -243,15 +243,15 @@ export default function BrandSettingsPage() {
         {kit && (
           <div className="card">
             <h2>עריכת הערכה</h2>
-            <label style={{ display: "block", marginBottom: 10, color: "var(--muted)" }}>
+            <label style={{ display: "block", marginBottom: 10, color: "var(--text-2)" }}>
               שם הארגון / שם הערכה
               <input type="text" value={draft.organization} onChange={(e) => setDraft((d) => ({ ...d, organization: e.target.value }))} style={inputStyle} />
             </label>
-            <label style={{ display: "block", marginBottom: 10, color: "var(--muted)" }}>
+            <label style={{ display: "block", marginBottom: 10, color: "var(--text-2)" }}>
               סלוגן (אופציונלי)
               <input type="text" value={draft.tagline} onChange={(e) => setDraft((d) => ({ ...d, tagline: e.target.value }))} style={inputStyle} placeholder="למשל: תוכן עברי שנשמע ונראה מצוין" />
             </label>
-            <label style={{ display: "block", marginBottom: 10, color: "var(--muted)" }}>
+            <label style={{ display: "block", marginBottom: 10, color: "var(--text-2)" }}>
               הנחיות ניסוח / כתיבה (הסוכן עוקב אחריהן)
               <textarea rows={5} value={draft.writingGuidelines} onChange={(e) => setDraft((d) => ({ ...d, writingGuidelines: e.target.value }))} style={inputStyle} placeholder="למשל: פנייה בגוף שני, שפה פשוטה, פתיחה עם ברכה, קריאה לפעולה בסוף…" />
             </label>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
-import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "lucide-react";
+import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "@/components/icons";
 import { IconButton } from "@/components/ui";
 
 const KIND_ICON = { video: Film, image: ImageIcon, audio: Music } as const;

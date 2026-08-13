@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Captions, FileDown, FileUp, Trash2, Wand2 } from "lucide-react";
+import { Captions, FileDown, FileUp, Trash2, Wand2 } from "@/components/icons";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CaptionBg, CaptionPosition, CaptionStyle } from "@/lib/editor/captionStyle";
 import { Button, IconButton, Section, Toggle } from "@/components/ui";

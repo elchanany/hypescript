@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Download, Save, Trash2 } from "lucide-react";
+import { Download, Save, Trash2 } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
 type State = {
   profile: {

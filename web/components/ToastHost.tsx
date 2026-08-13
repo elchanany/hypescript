@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { CheckCircle2, Info, X, XCircle } from "@/components/icons";
 import { dismissToast, subscribeToasts, ToastItem } from "@/lib/ui/toast";
 
 const ICONS = {
