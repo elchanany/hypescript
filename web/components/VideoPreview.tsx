@@ -271,7 +271,14 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
 
   const seekTo = (assembled: number) => {
     const next = Math.max(0, Math.min(total, assembled)); clearClock(); setPlaying(false); activeMedia()?.pause();
-    if (!edl.length) { publishTime(next, false); return; }
+    if (!edl.length) {
+      extraAudioRef.current?.pause();
+      idx.current = 0;
+      setActiveImageUrl(null);
+      setActiveKind("gap");
+      publishTime(0, false);
+      return;
+    }
     const { index, source } = assembledToSource(edl, Math.min(next, Math.max(0, total - 0.0001)));
     idx.current = Math.max(0, index);
     const clip = edl[idx.current], asset = clip ? byId(clip.sourceId) : null;

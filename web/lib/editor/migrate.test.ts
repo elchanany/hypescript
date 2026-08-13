@@ -17,6 +17,13 @@ describe("project migration", () => {
     expect(p.clips).toBeNull();
     expect(p.subs).toBeNull();
     expect(p.tracks).toHaveLength(3);
+    expect(p.overlays).toEqual([]);
+  });
+
+  it("keeps a never-used project empty instead of creating a missing-media reference", () => {
+    const p = migrateState(null);
+    expect(p.clips).toBeNull();
+    expect(p.overlays).toEqual([]);
   });
 
   it("does not lose clips on malformed track data", () => {

@@ -501,9 +501,36 @@ export default function EditorPage() {
     return () => clearTimeout(t);
   }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId]);
 
+  const clearProjectWorkspace = () => {
+    // A project switch used to leave the previous project's clips alive for one
+    // render while its media list was already empty. That transient combination
+    // looked exactly like deleted media. Clear both sides atomically before the
+    // new project is selected; real missing references are restored afterwards.
+    setRestored(false);
+    setMedia((current) => {
+      current.forEach((asset) => { if (asset.url) URL.revokeObjectURL(asset.url); });
+      return [];
+    });
+    setWords(null);
+    const empty = migrateState(null);
+    resetEditor({
+      clips: empty.clips,
+      subs: empty.subs,
+      tracks: empty.tracks,
+      overlays: empty.overlays,
+      canvas: empty.canvas,
+      captionStyle: empty.captionStyle,
+    });
+    setCur(0);
+    setSelectedId(null);
+    setSelectedOverlayId(null);
+    setSelectedSubId(null);
+    setSelectionTrack(null);
+  };
+
   const switchProject = async (id: string) => {
     if (id === projectId) return;
-    setRestored(false);
+    clearProjectWorkspace();
     await setCurrentProject(id);
     setProjectId(id);
   };
@@ -516,7 +543,7 @@ export default function EditorPage() {
       const id = await createProjectWithPolicy({ name: name || "פרויקט", policy: DEFAULT_POLICY() });
       await setCurrentProject(id);
       const nextProjects = await listProjects();
-      setRestored(false);
+      clearProjectWorkspace();
       setProjects(nextProjects);
       setProjectId(id);
       setProjDlg("none");
@@ -542,6 +569,7 @@ export default function EditorPage() {
     if (policy?.cloudProjectId) await deleteCloudProject(policy.cloudProjectId);
     await deleteProject(projectId);
     const list = await listProjects(); setProjects(list);
+    clearProjectWorkspace();
     if (list.length) { await setCurrentProject(list[0].id); setProjectId(list[0].id); }
     else { const id = await createProjectWithPolicy({ name: "פרויקט 1", policy: DEFAULT_POLICY() }); setProjects(await listProjects()); setProjectId(id); }
     toast.success("הפרויקט נמחק", oldName);
