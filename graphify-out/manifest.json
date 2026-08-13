@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "web/lib/agent/tools.ts": {
-    "mtime": 1786657776.0327036,
-    "ast_hash": "72ebf46f0b0ca87ac4a95daa58fb8fbf",
+    "mtime": 1786658535.652539,
+    "ast_hash": "d7709439a5daecbd4cb97e86ebbf909a",
     "semantic_hash": ""
   },
   "web/lib/agent/types.ts": {
@@ -480,8 +480,8 @@
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
-    "mtime": 1786607437.6933308,
-    "ast_hash": "274649c24556590be319ad729e07ac44",
+    "mtime": 1786658295.502635,
+    "ast_hash": "1e995ddc8a7a5a87cb7488395672c176",
     "semantic_hash": ""
   },
   "web/vitest.config.ts": {
