@@ -10,12 +10,15 @@ import {
   openaiImageErrorHe,
   parseImageRequest,
 } from "@/lib/openai/images";
+import { requireCloudUser } from "@/lib/cloud/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireCloudUser();
+    if (auth.response) return auth.response;
     const body = await req.json().catch(() => null);
     const parsed = parseImageRequest(body);
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
