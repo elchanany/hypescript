@@ -14,12 +14,20 @@ function Filmstrip({ file, sourceIn, sourceOut, height = 44 }: {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [urls, setUrls] = useState<(string | null)[]>([]);
   const [failed, setFailed] = useState(false);
+  const [count, setCount] = useState(1);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const measure = () => setCount(filmstripCount(el.clientWidth, THUMB_W, 64));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    const el = wrapRef.current;
-    const width = el?.clientWidth || 0;
-    const count = filmstripCount(width, THUMB_W);
     const times = thumbTimes(sourceIn, sourceOut, count);
     setUrls(new Array(count).fill(null));
     (async () => {
@@ -36,7 +44,7 @@ function Filmstrip({ file, sourceIn, sourceOut, height = 44 }: {
       if (!cancelled && !anyOk) setFailed(true); // no frames captured -> fall back to plain fill
     })().catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
-  }, [file, sourceIn, sourceOut, height]);
+  }, [file, sourceIn, sourceOut, height, count]);
 
   if (failed) return null; // fall back to the clip's plain fill
   return (

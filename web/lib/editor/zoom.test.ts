@@ -44,25 +44,27 @@ describe("timeline zoom", () => {
     expect(effectiveZoomMin(port)).toBeCloseTo(Math.max(ZOOM_MIN, MIN_LANE_PX / (port - TIMELINE_GUTTER)), 6);
   });
 
-  it("keeps scroll at 0 when zooming from the start — start stays at start", () => {
+  it("keeps scroll at 0 when the pointer anchors the start", () => {
     const next = scrollLeftAfterZoom({
-      oldZoom: 1, newZoom: 4, scrollLeft: 0, portWidth: 800, gutter: TIMELINE_GUTTER,
+      oldZoom: 1, newZoom: 4, scrollLeft: 0, portWidth: 800, gutter: TIMELINE_GUTTER, anchorViewportX: TIMELINE_GUTTER,
     });
     expect(next).toBe(0);
   });
 
-  it("scales scroll by lane growth when already panned (left-edge time stays)", () => {
+  it("keeps the time below the pointer stable while zooming", () => {
     const portWidth = 1000;
     const gutter = TIMELINE_GUTTER;
     const oldZoom = 1;
     const newZoom = 2;
     const scrollLeft = 200;
+    const anchorViewportX = 600;
     const oldLaneW = (portWidth - gutter) * oldZoom;
     const newLaneW = (portWidth - gutter) * newZoom;
+    const anchorInLane = anchorViewportX - gutter;
     const next = scrollLeftAfterZoom({
-      oldZoom, newZoom, scrollLeft, portWidth, gutter,
+      oldZoom, newZoom, scrollLeft, portWidth, gutter, anchorViewportX,
     });
-    expect(next).toBeCloseTo((scrollLeft / oldLaneW) * newLaneW, 5);
+    expect(next).toBeCloseTo(((scrollLeft + anchorInLane) / oldLaneW) * newLaneW - anchorInLane, 5);
   });
 
   it("preserves left-edge anchor when zooming out below fit", () => {

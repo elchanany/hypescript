@@ -1,4 +1,4 @@
-// זום טיימליין — חישוב גורם מגלגלת + עגינה לשמאל (התחלה נשארת בהתחלה).
+// זום טיימליין — חישוב גורם מגלגלת + עגינה לנקודה שהמשתמש מצביע עליה.
 // כותרות הרצועות (sticky) ברוחב קבוע — רק אזור ה-lane משתנה עם הזום.
 // zoom < 1 changes the time scale while the canvas still fills the viewport.
 
@@ -48,9 +48,9 @@ export function timelineContentWidth(portWidth: number, zoom: number, gutter = T
 }
 
 /**
- * אחרי זום: שומרים את הזמן בקצה השמאלי של ה-lane (ליד הכותרות).
- * כש-scrollLeft=0 — נשאר 0: קו ההתחלה לא נדחף שמאלה מתחת לנעילה.
- * לא מעגנים למיקום העכבר (זה גרם לדילוג אחורה ולצורך לגלול ימינה).
+ * אחרי זום: שומרים את הזמן שמתחת לסמן באותה נקודה במסך.
+ * anchorViewportX הוא מיקום אופקי בתוך אזור הגלילה. כשהוא חסר משתמשים
+ * במרכז ה-lane — התנהגות נכונה גם לכפתורי +/- ולמחוות נגישות.
  */
 export function scrollLeftAfterZoom(opts: {
   oldZoom: number;
@@ -58,10 +58,11 @@ export function scrollLeftAfterZoom(opts: {
   scrollLeft: number;
   portWidth: number;
   gutter?: number;
+  anchorViewportX?: number;
 }): number {
   const {
     oldZoom, newZoom, scrollLeft, portWidth,
-    gutter = TIMELINE_GUTTER,
+    gutter = TIMELINE_GUTTER, anchorViewportX,
   } = opts;
   if (!(oldZoom > 0) || !(newZoom > 0) || !(portWidth > 0)) return scrollLeft;
 
@@ -70,11 +71,12 @@ export function scrollLeftAfterZoom(opts: {
   const oldLaneW = Math.max(1, oldContentW - gutter);
   const newLaneW = Math.max(1, newContentW - gutter);
 
-  // השבר שמוצג בקצה השמאלי של ה-lane (viewport אחרי gutter)
-  // רעש קטן ליד 0 → נשארים בהתחלה (לא דוחפים את קו 0 שמאלה)
-  if (scrollLeft < 1) return 0;
-  const frac = Math.min(1, Math.max(0, scrollLeft / oldLaneW));
-  const next = frac * newLaneW;
+  const laneViewportW = Math.max(1, portWidth - gutter);
+  const anchor = Math.max(gutter, Math.min(portWidth, anchorViewportX ?? (gutter + laneViewportW / 2)));
+  const anchorInLane = anchor - gutter;
+  const oldTimePx = Math.max(0, scrollLeft + anchorInLane);
+  const frac = Math.min(1, Math.max(0, oldTimePx / oldLaneW));
+  const next = frac * newLaneW - anchorInLane;
   const maxScroll = Math.max(0, newContentW - portWidth);
   return Math.max(0, Math.min(maxScroll, next));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Clip, MediaAsset, assembledStart, assembledToSource, clipAudioFades, clipDur, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipVisualFades, clipVolume, totalDur } from "@/lib/editor/model";
 import { audioFadeFactor, edgeFadeFactor, previewAudioGain } from "@/lib/editor/previewAudio";
 import { isGapClip } from "@/lib/editor/timelineOps";
@@ -60,6 +60,10 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const canvasBoxRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const videoRafRef = useRef<number | null>(null);
+  const meterRafRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const meterSourcesRef = useRef<MediaElementAudioSourceNode[]>([]);
   const idx = useRef(0);
   const activeSlotRef = useRef<0 | 1>(0);
   const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
@@ -74,6 +78,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [activeKind, setActiveKind] = useState<"video" | "image" | "audio" | "gap" | "missing">("gap");
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+  const [audioLevels, setAudioLevels] = useState([0.12, 0.2, 0.16, 0.24, 0.14]);
 
   const primaryId = tracks?.length ? primaryVideoTrackId(tracks) : "trk_video";
   const visualClips = useMemo(() => {
@@ -120,6 +125,54 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     if (videoRafRef.current != null) cancelAnimationFrame(videoRafRef.current);
     rafRef.current = null;
     videoRafRef.current = null;
+  };
+  const ensureAudioMeter = () => {
+    if (typeof window === "undefined") return;
+    if (!audioContextRef.current) {
+      const Ctx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.72;
+      analyser.connect(ctx.destination);
+      for (const el of [...mediaRefs.map((item) => item.current), extraAudioRef.current]) {
+        if (!el) continue;
+        const source = ctx.createMediaElementSource(el);
+        source.connect(analyser);
+        meterSourcesRef.current.push(source);
+      }
+      audioContextRef.current = ctx;
+      analyserRef.current = analyser;
+    }
+    if (audioContextRef.current.state === "suspended") void audioContextRef.current.resume();
+  };
+  const stopAudioMeter = () => {
+    if (meterRafRef.current != null) cancelAnimationFrame(meterRafRef.current);
+    meterRafRef.current = null;
+    setAudioLevels([0.1, 0.14, 0.12, 0.16, 0.1]);
+  };
+  const startAudioMeter = () => {
+    const analyser = analyserRef.current;
+    if (!analyser || meterRafRef.current != null) return;
+    const bins = new Uint8Array(analyser.frequencyBinCount);
+    let lastPaint = 0;
+    const tick = (now: number) => {
+      analyser.getByteFrequencyData(bins);
+      if (now - lastPaint > 55) {
+        lastPaint = now;
+        const band = Math.max(1, Math.floor(bins.length / 5));
+        setAudioLevels(Array.from({ length: 5 }, (_, group) => {
+          let total = 0;
+          const start = group * band;
+          const end = group === 4 ? bins.length : Math.min(bins.length, start + band);
+          for (let i = start; i < end; i++) total += bins[i];
+          return Math.max(0.08, Math.min(1, (total / Math.max(1, end - start)) / 150));
+        }));
+      }
+      meterRafRef.current = requestAnimationFrame(tick);
+    };
+    meterRafRef.current = requestAnimationFrame(tick);
   };
   const syncExtraAudio = (assembled: number, shouldPlay: boolean) => {
     const el = extraAudioRef.current;
@@ -291,6 +344,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
 
   const toggle = () => {
     if (!edl.length) return;
+    ensureAudioMeter();
     if (playing) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); return; }
     if (t >= total - 0.001) { idx.current = 0; advanceFrom(0, true); return; }
     const clip = edl[idx.current], start = assembledStart(edl, idx.current), asset = byId(clip?.sourceId || "");
@@ -301,7 +355,14 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   };
   useImperativeHandle(ref, () => ({ seek: seekTo, toggle }));
 
-  useEffect(() => () => clearClock(), []);
+  useEffect(() => () => {
+    clearClock();
+    if (meterRafRef.current != null) cancelAnimationFrame(meterRafRef.current);
+    meterSourcesRef.current.forEach((source) => source.disconnect());
+    analyserRef.current?.disconnect();
+    void audioContextRef.current?.close();
+  }, []);
+  useEffect(() => { if (playing) startAudioMeter(); else stopAudioMeter(); }, [playing]);
   useEffect(() => {
     const el = stageRef.current; if (!el) return;
     const measure = () => setStageSize({ w: el.clientWidth, h: el.clientHeight }); measure();
@@ -448,7 +509,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
         <button className="tp-play" onClick={toggle} disabled={!hasPlayable} data-tip={playing ? "השהה (Space)" : "נגן (Space)"} data-tippos="up">{playing ? <Pause size={18} /> : <Play size={18} />}</button>
         <IconButton icon={SkipForward} tip="פריים קדימה" tipPos="up" onClick={() => step(1)} disabled={!hasPlayable} />
         <span className="tp-time">
-          {playing && <span className="audio-eq-bars" title="אודיו מתנגן"><i /><i /><i /><i /><i /></span>}
+          {playing && <span className="audio-eq-bars" title="עוצמת השמע בזמן אמת">{audioLevels.map((level, index) => <i key={index} style={{ "--level": `${Math.round(level * 100)}%` } as CSSProperties} />)}</span>}
           {fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span>
         </span>
       </div><div className="tp-grow" />

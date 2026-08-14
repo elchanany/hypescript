@@ -81,7 +81,9 @@ export async function uploadCloudAsset(projectId: string, file: File, onProgress
 
 export async function renderCloudProject(input: {
   projectId: string;
-  clips: Array<{ assetId: string; start: number; end: number }>;
+  clips: Array<{ assetId?: string; start: number; end: number; gap?: boolean }>;
+  audioClips?: Array<{ assetId: string; start: number; end: number; timelineStart: number; volume?: number; fadeIn?: number; fadeOut?: number }>;
+  overlays?: Array<{ assetId: string; start: number; end: number; x: number; y: number; width: number; height: number; rotation?: number; opacity?: number; fadeIn?: number; fadeOut?: number }>;
   target?: { width: number; height: number; fps: number };
 }, onProgress?: (ratio: number) => void, signal?: AbortSignal): Promise<Blob> {
   const submitted = await json<{ jobId: string }>(await fetch("/api/cloud/render", {

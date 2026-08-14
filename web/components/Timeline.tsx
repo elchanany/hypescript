@@ -10,10 +10,11 @@ import { isGapClip } from "@/lib/editor/timelineOps";
 import { formatTimecode, MagneticTarget, snapRangeStart, snapToMagneticTarget } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, timelineContentWidth, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
-import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "@/components/icons";
+import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus, Eye } from "@/components/icons";
 import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";
+import StillStrip from "@/components/StillStrip";
 
 interface Props {
   media: MediaAsset[];
@@ -53,6 +54,9 @@ interface Props {
   onOverlayTrim?: (id: string, start: number, end: number) => void;
   onOverlayTrimEnd?: () => void;
   onOverlayMove?: (id: string, start: number, end: number) => void;
+  onOverlayToggleLock?: (id: string) => void;
+  onOverlayToggleVisibility?: (id: string) => void;
+  onOverlayReorder?: (id: string, dir: -1 | 1) => void;
   renameTrack: (id: string, name: string) => void;
   onRequestRenameTrack?: (id: string, name: string) => void;
   toggleLock: (id: string) => void;
@@ -80,6 +84,7 @@ export default function Timeline(p: Props) {
   const pendingScroll = useRef<number | null>(null);
   const zoomAcc = useRef(0);
   const zoomRaf = useRef(0);
+  const zoomAnchorX = useRef<number | undefined>(undefined);
   const [dragLabel, setDragLabel] = useState<{
     name: string;
     dur: number;
@@ -132,7 +137,7 @@ export default function Timeline(p: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // wheel: pinch/Ctrl = זום (מצטבר ל-rAF, עוגן לשמאל); שתי אצבעות לצד / Shift = גלילה
+  // wheel: pinch/Ctrl = זום סביב הסמן; שתי אצבעות לצד / Shift = גלילה
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -153,6 +158,7 @@ export default function Timeline(p: Props) {
         scrollLeft: el.scrollLeft,
         portWidth: port,
         gutter: TIMELINE_GUTTER,
+        anchorViewportX: zoomAnchorX.current,
       });
       zoomRef.current = next;
       onZoomRef.current(next);
@@ -161,6 +167,8 @@ export default function Timeline(p: Props) {
       const pinch = e.ctrlKey || e.metaKey;
       if (pinch) {
         e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        zoomAnchorX.current = e.clientX - rect.left;
         zoomAcc.current += e.deltaY;
         if (!zoomRaf.current) zoomRaf.current = requestAnimationFrame(flushZoom);
         return;
@@ -628,6 +636,13 @@ export default function Timeline(p: Props) {
           const TypeIcon = TYPE_ICON[track.type];
           const dedicatedAudio = clipsOf(audioId);
           const tClips = track.type === "video" ? clipsOf(track.id) : track.type === "audio" && dedicatedAudio.length ? dedicatedAudio : primaryClips;
+          const linkedAudio = primaryClips.filter((clip) => {
+            const asset = mediaById(media, clip.sourceId);
+            return isGapClip(clip) || asset?.kind === "video";
+          });
+          const audioLayers = track.type === "audio"
+            ? (dedicatedAudio.length ? [{ clips: linkedAudio, linked: true }, { clips: dedicatedAudio, linked: false }] : [{ clips: linkedAudio, linked: true }])
+            : [];
           const tLocked = !!track.locked;
           return (
             <div className={`tl-rowline ${track.type === "caption" ? `caption-row ${captionExpanded ? "expanded" : "collapsed"}` : ""}`} key={track.id} style={{ height: track.type === "caption" ? (captionExpanded ? Math.max(64, track.height) : 30) : track.height }}>
@@ -699,7 +714,7 @@ export default function Timeline(p: Props) {
                         title={`${short} · ${asset?.kind === "image" ? "תמונה מלאה ברצועה — לא לוגו" : "קליפ וידאו"} · ${clipDur(c).toFixed(1)}s`}>
                         <div className="clip-fill" style={{ background: colorOf(c.sourceId) }} />
                         {asset?.kind === "video" && !asset.missing && <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />}
-                        {asset?.kind === "image" && !asset.missing && <img className="clip-image" src={asset.url} alt="" draggable={false} />}
+                        {asset?.kind === "image" && !asset.missing && <StillStrip src={asset.url} />}
                         <span className="clip-accent" style={{ background: colorOf(c.sourceId) }} />
                         {!tLocked && <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "video", track.id)} />}
                         <span className="clip-label"><span>{!asset || asset.missing ? `מדיה חסרה · ${short || c.sourceId}` : asset.kind === "image" ? `תמונה מלאה · ${short}` : (short || `קטע ${i + 1}`)}</span><span className="cl-dur">{clipDur(c).toFixed(1)}s</span></span>
@@ -720,15 +735,19 @@ export default function Timeline(p: Props) {
                   onDragLeave={onLaneDragLeave}
                   onDrop={(e) => onLaneDrop(e, audioId)}>
                   <Grid />
-                  {tClips.map((c, i) => {
+                  {audioLayers.flatMap((layer, layerIndex) => layer.clips.map((c, i) => {
                     const gap = isGapClip(c);
                     const asset = mediaById(media, c.sourceId);
+                    const layerCount = audioLayers.length;
+                    const layerTop = layerCount > 1 ? (layerIndex === 0 ? 3 : "50%") : 4;
+                    const layerBottom = layerCount > 1 ? (layerIndex === 0 ? "50%" : 3) : 4;
+                    const layerTrackId = layer.linked ? primaryId : audioId;
                     return (
                       <div
-                        key={c.id}
-                        className={`clip-audio ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || vLocked ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""}`}
-                        style={{ left: `${pct(assembledStart(tClips, i))}%`, width: `${pct(clipDur(c))}%` }}
-                        onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio", audioId); }}
+                        key={`${layer.linked ? "linked" : "extra"}-${c.id}`}
+                        className={`clip-audio ${layer.linked ? "linked" : "extra"} ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || (layer.linked && vLocked) ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""}`}
+                        style={{ left: `${pct(assembledStart(layer.clips, i))}%`, width: `${pct(clipDur(c))}%`, top: layerTop, bottom: layerBottom }}
+                        onMouseDown={(e) => { if (!gap) onDown(e, c, "move", "audio", layerTrackId); }}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredId(c.id)}
                         onMouseLeave={() => setHoveredId((h) => (h === c.id ? null : h))}
@@ -738,15 +757,16 @@ export default function Timeline(p: Props) {
                         {!gap && asset && !asset.missing && (asset.kind === "video" || asset.kind === "audio") && (
                           <Waveform file={asset.file} sourceIn={c.start} sourceOut={c.end} />
                         )}
-                        {!gap && !tLocked && !vLocked && (
+                        {!gap && <span className="audio-clip-label">{(asset?.name || "אודיו").replace(/\.[^.]+$/, "")}</span>}
+                        {!gap && !tLocked && !(layer.linked && vLocked) && (
                           <>
-                            <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "audio", primaryId)} />
-                            <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "audio", primaryId)} />
+                            <span className="trim l" onMouseDown={(e) => onDown(e, c, "l", "audio", layerTrackId)} />
+                            <span className="trim r" onMouseDown={(e) => onDown(e, c, "r", "audio", layerTrackId)} />
                           </>
                         )}
                       </div>
                     );
-                  })}
+                  }))}
                   <Playhead laneEl={null} />
                 </div>
               )}
@@ -787,8 +807,12 @@ export default function Timeline(p: Props) {
                 <Layers className="hd-type" size={14} strokeWidth={1.75} />
                 <span className="hd-name">{rowIndex === 0 ? "שכבות" : `שכבה ${rowIndex + 1}`}</span>
               </div>
-              <div className="hd-ctrls" dir="ltr" aria-hidden>
-                <span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" /><span className="hd-slot" />
+              <div className="hd-ctrls" dir="ltr">
+                {rowOverlay ? <IconButton icon={rowOverlay.locked ? Lock : Unlock} tip={rowOverlay.locked ? "שחרר שכבה" : "נעל שכבה"} tipPos="up" active={rowOverlay.locked} onClick={() => p.onOverlayToggleLock?.(rowOverlay.id)} /> : <span className="hd-slot" />}
+                {rowOverlay ? <IconButton icon={Eye} tip={rowOverlay.hidden ? "הצג שכבה" : "הסתר שכבה"} tipPos="up" active={rowOverlay.hidden} onClick={() => p.onOverlayToggleVisibility?.(rowOverlay.id)} /> : <span className="hd-slot" />}
+                <span className="hd-slot" />
+                {rowOverlay ? <IconButton icon={ChevronDown} tip="העבר שכבה למטה" tipPos="up" onClick={() => p.onOverlayReorder?.(rowOverlay.id, -1)} /> : <span className="hd-slot" />}
+                {rowOverlay ? <IconButton icon={ChevronUp} tip="העבר שכבה למעלה" tipPos="up" onClick={() => p.onOverlayReorder?.(rowOverlay.id, 1)} /> : <span className="hd-slot" />}
               </div>
             </div>
             <div className="tl-lane2" ref={rowIndex === 0 ? overlayLaneRef : undefined} onClick={(e) => { p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); }}>

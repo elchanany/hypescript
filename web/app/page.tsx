@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, firstVideo, mediaById, totalDur, trimClip, uid,
+  assembledStart, Clip, MediaAsset, MediaKind, clipAudioFades, clipVolume, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
   audioMuted, audioTrack, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
@@ -16,8 +16,8 @@ import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
-import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/tracks";
-import { TitlePopupPreset } from "@/lib/editor/overlay";
+import { clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
+import { Overlay, TitlePopupPreset } from "@/lib/editor/overlay";
 import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil } from "@/components/icons";
@@ -83,6 +83,7 @@ export default function EditorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+  const editorClipboardRef = useRef<{ kind: "clip"; value: Clip } | { kind: "overlay"; value: Overlay } | { kind: "sub"; value: Sub } | null>(null);
   /** Which track the clip was clicked on — inspector title (וידאו/שמע). */
   const [selectionTrack, setSelectionTrack] = useState<"video" | "audio" | null>(null);
   const [avLinked, setAvLinked] = useState(true);
@@ -601,7 +602,7 @@ export default function EditorPage() {
     const policy = projectId ? await getProjectPolicy(projectId) : null;
     const shouldUpload = !!policy?.cloudProjectId && policy.storageBackend === "r2" && policy.dataMode !== "local";
     try {
-      setPhase(shouldUpload ? "מעלה מדיה מוצפנת לענן…" : "מכין מדיה ומחלץ פרטים…");
+      setPhase(shouldUpload ? "מעלה את הקבצים…" : "מכין את הקבצים…");
       const assets = await Promise.all(arr.map(async (f) => {
         publishProgress(f, shouldUpload ? 0 : 0.08);
         const kind = kindOf(f);
@@ -621,10 +622,13 @@ export default function EditorPage() {
         return [...current.filter((item) => !restoredIds.has(item.id)), ...assets];
       });
       onProgress?.(1);
-      if (shouldUpload) toast.success("ההעלאה לענן הושלמה", `${arr.length} קבצים נשמרו ב־R2 פרטי`);
+      if (shouldUpload) toast.success("הקבצים הועלו בהצלחה", arr.length === 1 ? arr[0].name : `${arr.length} קבצים מוכנים לעריכה`);
       return true;
     } catch (uploadError) {
-      const message = uploadError instanceof Error ? uploadError.message : "העלאה לענן נכשלה";
+      const technical = uploadError instanceof Error ? uploadError.message : "";
+      const message = technical.includes("too_large") ? "הקובץ גדול מהמכסה הזמינה בחשבון."
+        : technical.includes("network") ? "החיבור נקטע בזמן ההעלאה. אפשר לנסות שוב."
+          : "לא הצלחנו להעלות את הקובץ. העותק המקומי נשמר ואפשר לנסות שוב.";
       setError(message);
       return false;
     } finally {
@@ -882,20 +886,37 @@ export default function EditorPage() {
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
       const policy = projectId ? await getProjectPolicy(projectId) : null;
       const cloudCapable = policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId
-        && edl.every((clip) => mediaById(media, clip.sourceId)?.cloudAssetId)
-        && !audioClips.length && !overlays.length && !(burnCaptions && subs?.length);
+        && edl.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
+        && audioClips.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
+        && overlays.every((overlay) => overlay.kind === "image" && !!mediaById(media, overlay.assetId || "")?.cloudAssetId)
+        && !(burnCaptions && subs?.length);
       let blob: Blob;
       if (cloudCapable && policy?.cloudProjectId) {
-        setPhase("שולח לרינדור מדויק בענן…");
+        setPhase("מכין את הסרטון בשרת המהיר…");
         blob = await renderCloudProject({
           projectId: policy.cloudProjectId,
-          clips: edl.map((clip) => ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
+          clips: edl.map((clip) => isGapClip(clip)
+            ? ({ gap: true, start: 0, end: clip.end - clip.start })
+            : ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
+          audioClips: (() => { let timelineStart = 0; return audioClips.flatMap((clip) => {
+            const duration = clip.end - clip.start;
+            const startAt = timelineStart;
+            timelineStart += duration;
+            if (isGapClip(clip)) return [];
+            const fades = clipAudioFades(clip);
+            return [{ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end, timelineStart: startAt, volume: clipVolume(clip), ...fades }];
+          }); })(),
+          overlays: [...overlays].sort((a, b) => a.zIndex - b.zIndex).map((overlay) => ({
+            assetId: mediaById(media, overlay.assetId || "")!.cloudAssetId!, start: overlay.start, end: overlay.end,
+            x: overlay.transform.x, y: overlay.transform.y, width: overlay.transform.w, height: overlay.transform.h,
+            rotation: overlay.transform.rotation, opacity: overlay.transform.opacity, fadeIn: overlay.fadeIn, fadeOut: overlay.fadeOut,
+          })),
           target: { width: canvas.width, height: canvas.height, fps: policy.fps },
-        }, (r) => { setPhase("מרנדר בענן…"); setProgress(r); }, controller.signal);
+        }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
       } else {
         const { getRenderBackend } = await import("@/lib/render/RenderBackend");
         const backend = getRenderBackend();
-        setPhase(policy?.capabilities.render?.execution === "cloud" ? "שכבות מורכבות: מרנדר מקומית לשמירת נאמנות מלאה…" : "מכין קבצים לרינדור מקומי…");
+        setPhase("מכין את הסרטון…");
         blob = await backend.renderProject(
           { media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas, audioClips, subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length },
           (r) => { setPhase("מרנדר את הסרטון…"); setProgress(Math.min(1, r)); },
@@ -998,6 +1019,16 @@ export default function EditorPage() {
   const toggleLock = (id: string) => { const api = editorApiRef.current; const t = tracks.find((x) => x.id === id); if (!api || !t) return; const r = runCommand("track.setLocked", api, { trackId: id, locked: !t.locked }); if (!r.ok) setError(r.error); };
   const toggleMute = (id: string) => { const api = editorApiRef.current; const t = tracks.find((x) => x.id === id); if (!api || !t) return; const r = runCommand("track.setMuted", api, { trackId: id, muted: !t.muted }); if (!r.ok) setError(r.error); };
   const reorderTrack = (id: string, direction: -1 | 1) => { const api = editorApiRef.current; if (!api) return; const r = runCommand("track.reorder", api, { trackId: id, direction }); if (!r.ok && !r.error.includes("כבר בקצה") && !r.error.includes("מאותו סוג")) setError(r.error); };
+  const toggleOverlayLock = (id: string) => { const item = overlays.find((o) => o.id === id); if (item) updateOverlay(id, { locked: !item.locked }); };
+  const toggleOverlayVisibility = (id: string) => { const item = overlays.find((o) => o.id === id); if (item) updateOverlay(id, { hidden: !item.hidden }); };
+  const reorderOverlay = (id: string, dir: -1 | 1) => {
+    const ordered = [...overlays].sort((a, b) => a.zIndex - b.zIndex);
+    const index = ordered.findIndex((o) => o.id === id);
+    const other = ordered[index + dir];
+    const current = ordered[index];
+    if (!current || !other) return;
+    setOverlays(overlays.map((o) => o.id === current.id ? { ...o, zIndex: other.zIndex } : o.id === other.id ? { ...o, zIndex: current.zIndex } : o));
+  };
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
@@ -1016,6 +1047,41 @@ export default function EditorPage() {
     ? (tracks.find((t) => t.type === "audio")?.name || "אודיו")
     : (videoTrack(tracks)?.name || "וידאו");
 
+  const copySelection = () => {
+    if (selectedOverlay) editorClipboardRef.current = { kind: "overlay", value: { ...selectedOverlay, transform: { ...selectedOverlay.transform } } };
+    else if (selectedSub) editorClipboardRef.current = { kind: "sub", value: { ...selectedSub } };
+    else if (selectedClip) editorClipboardRef.current = { kind: "clip", value: { ...selectedClip } };
+    else return false;
+    return true;
+  };
+  const pasteSelection = () => {
+    const item = editorClipboardRef.current;
+    if (!item) return false;
+    if (item.kind === "clip") {
+      const id = uid("c");
+      const clone = { ...item.value, id };
+      setClips((current) => {
+        if (!current) return [clone];
+        const primary = primaryVideoTrackId(tracks);
+        const trackId = clone.trackId || primary;
+        const onTrack = clipsOnTrack(current, trackId, primary);
+        const sourceIndex = Math.max(0, onTrack.findIndex((clip) => clip.id === item.value.id));
+        return replaceTrackClips(current, trackId, [...onTrack.slice(0, sourceIndex + 1), clone, ...onTrack.slice(sourceIndex + 1)], primary);
+      });
+      setSelectedId(id); setSelectionTrack((clone.trackId || "").includes("audio") ? "audio" : "video");
+    } else if (item.kind === "overlay") {
+      const id = uid("ov");
+      const offset = 0.1;
+      addOverlay({ ...item.value, id, start: item.value.start + offset, end: item.value.end + offset, zIndex: Math.max(0, ...overlays.map((o) => o.zIndex)) + 1, transform: { ...item.value.transform } });
+      setSelectedOverlayId(id);
+    } else {
+      const id = uid("sub");
+      setSubs((current) => [...(current || []), { ...item.value, id, start: item.value.start + 0.1, end: item.value.end + 0.1 }]);
+      setSelectedSubId(id);
+    }
+    return true;
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -1024,6 +1090,9 @@ export default function EditorPage() {
       if (meta && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandMenu({ x: Math.max(12, window.innerWidth / 2 - 150), y: Math.max(12, window.innerHeight / 3) }); }
       else if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
+      else if (meta && e.key.toLowerCase() === "c" && copySelection()) { e.preventDefault(); }
+      else if (meta && e.key.toLowerCase() === "x" && copySelection()) { e.preventDefault(); deleteSel(false); }
+      else if (meta && e.key.toLowerCase() === "v" && pasteSelection()) { e.preventDefault(); }
       else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
       else if (e.key === "ArrowLeft" && !e.altKey) { e.preventDefault(); seek(Math.max(0, curRef.current - (e.shiftKey ? 1 : 1 / 30))); }
       else if (e.key === "ArrowRight" && !e.altKey) { e.preventDefault(); seek(Math.min(timelineDuration, curRef.current + (e.shiftKey ? 1 : 1 / 30))); }
@@ -1400,6 +1469,9 @@ export default function EditorPage() {
                 onOverlayTrim={setOverlayRangeLive}
                 onOverlayTrimEnd={commitTransaction}
                 onOverlayMove={setOverlayMoveLive}
+                onOverlayToggleLock={toggleOverlayLock}
+                onOverlayToggleVisibility={toggleOverlayVisibility}
+                onOverlayReorder={reorderOverlay}
                 renameTrack={renameTrack}
                 onRequestRenameTrack={(id, name) => setNameDlg({ kind: "track", id, name })}
                 toggleLock={toggleLock} toggleMute={toggleMute}
