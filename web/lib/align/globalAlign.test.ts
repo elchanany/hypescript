@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isParticleVariant, phoneticFold, tokenizeHebrew, tokenSimilarity } from "./hebrew";
+import { SIMILARITY, isParticleVariant, phoneticFold, tokenizeHebrew, tokenSimilarity } from "./hebrew";
 import { alignTokens, findUniqueAnchors, summarizeAlignment } from "./globalAlign";
 
 const toks = tokenizeHebrew;
@@ -41,6 +41,31 @@ describe("נרמול עברי", () => {
     const [a] = toks("שריפה");
     const [b] = toks("חורבן");
     expect(tokenSimilarity(a, b)).toBeLessThan(0.5);
+  });
+
+  it("שגיאת אות אחת נתפסת גם במילה קצרה", () => {
+    // נמצא על ההקלטה האמיתית: הסקריפט אמר "תהיה", התמלול "יהיה".
+    // ניקוד לפי יחס-אורך נתן 0.75 ונפל מתחת לסף; ניקוד לפי מספר עריכות תופס.
+    const sim = (a: string, b: string) => tokenSimilarity(toks(a)[0], toks(b)[0]);
+    expect(sim("תהיה", "יהיה")).toBeGreaterThanOrEqual(SIMILARITY.floor);
+    expect(sim("שאם", "שאדם")).toBeGreaterThanOrEqual(SIMILARITY.floor);
+    expect(sim("לישועות", "לישורות")).toBeGreaterThanOrEqual(SIMILARITY.floor);
+  });
+
+  it("מילים קצרות מדי אינן מותאמות על סמך עריכה אחת", () => {
+    // "בן"/"בת" נבדלות באות אחת אבל קצרות מכדי להסיק שיבוש
+    const sim = (a: string, b: string) => tokenSimilarity(toks(a)[0], toks(b)[0]);
+    expect(sim("בן", "בת")).toBeLessThan(SIMILARITY.floor);
+    expect(sim("של", "אל")).toBeLessThan(SIMILARITY.floor);
+  });
+
+  it("התאמה חלשה מדווחת בנפרד ואינה נבלעת", () => {
+    const asr = "הנצחת השיעור היום יהיה לעילוי";
+    const script = "הנצחת השיעור היום תהיה לעילוי";
+    const { script: scriptTokens, report } = align(asr, script);
+    expect(report.missingScript).toEqual([]);
+    expect(report.weakMatches.length).toBe(1);
+    expect(scriptTokens[report.weakMatches[0]].raw).toBe("תהיה");
   });
 });
 

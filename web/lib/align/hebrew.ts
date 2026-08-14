@@ -186,11 +186,28 @@ export const SIMILARITY = {
  * הסולם מדורג בכוונה: התאמה מדויקת גוברת על אות שימוש, שגוברת על פונטיקה,
  * שגוברת על קרבת-כתיב. כך היישור הגלובלי בוחר את ההתאמה הטובה כשיש כמה.
  */
+/**
+ * מתחת לזה התאמה נחשבת "חלשה" — היא מתקבלת, אבל מדווחת לבדיקה אנושית.
+ * שגיאת אות אחת יכולה להיות שיבוש תמלול (תהיה/יהיה) או הבדל אמיתי
+ * (תשפ"ו/תשע"ו), ואי-אפשר להכריע ביניהם אקוסטית.
+ */
+export const WEAK_MATCH = 0.82;
+
 export function tokenSimilarity(a: HebrewToken, b: HebrewToken): number {
   if (a.base === b.base) return SIMILARITY.exact;
   if (isParticleVariant(a.base, b.base)) return SIMILARITY.particle;
   if (a.stem && a.stem === b.stem) return SIMILARITY.particle - 0.02;
   if (a.phonetic && a.phonetic === b.phonetic) return SIMILARITY.phonetic;
+
+  // ניקוד לפי *מספר* העריכות ולא לפי יחסן לאורך. יחס מעניש מילים קצרות
+  // שלא בצדק: שגיאת אות אחת ב"תהיה"→"יהיה" נותנת יחס 0.75 בלבד, בעוד
+  // שאותה שגיאה במילה בת עשר אותיות נותנת 0.9 — למרות שהיא אותה שגיאה.
+  const longest = Math.max(a.base.length, b.base.length);
+  const distance = levenshtein(a.base, b.base, 3);
+  if (distance === 1 && longest >= 3) return 0.8;
+  if (distance === 2 && longest >= 6) return 0.72;
+  if (distance === 3 && longest >= 9) return 0.66;
+
   const ratio = levenshteinRatio(a.base, b.base);
   if (ratio >= 0.8) return 0.6 + ratio * 0.25;
   const phoneticRatio = levenshteinRatio(a.phonetic, b.phonetic);

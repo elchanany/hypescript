@@ -90,6 +90,8 @@ export interface ScriptCutPlan {
   alignment: AlignmentReport;
   /** מילות סקריפט שלא נמצאו בתמלול — הליבה של "נעלמו לי מילים". */
   missingScript: Array<{ scriptIndex: number; text: string }>;
+  /** מילים שהותאמו בדמיון נמוך — התקבלו כדי לא לאבד אותן, אך ראויות לבדיקה. */
+  weakMatches: Array<{ scriptIndex: number; text: string }>;
   /** מילים שנאמרו והוסרו כי אינן בסקריפט. */
   removedSpeech: Array<{ text: string; start: number; end: number }>;
   boundaries: CutBoundaryReport[];
@@ -176,6 +178,7 @@ export function planScriptCut(
     clips: [],
     alignment,
     missingScript: alignment.missingScript.map((i) => ({ scriptIndex: i, text: scriptTokens[i]?.raw ?? "" })),
+    weakMatches: alignment.weakMatches.map((i) => ({ scriptIndex: i, text: scriptTokens[i]?.raw ?? "" })),
     removedSpeech: [],
     boundaries: [],
     events: [],
@@ -375,6 +378,7 @@ export function planScriptCut(
     clips,
     alignment,
     missingScript: alignment.missingScript.map((i) => ({ scriptIndex: i, text: scriptTokens[i]?.raw ?? "" })),
+    weakMatches: alignment.weakMatches.map((i) => ({ scriptIndex: i, text: scriptTokens[i]?.raw ?? "" })),
     removedSpeech,
     boundaries,
     events,

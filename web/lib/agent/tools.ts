@@ -326,6 +326,12 @@ function summarizePlan(plan: ScriptCutPlan, sourceName: string, measured: boolea
   } else {
     lines.push("כיסוי הטקסט: 100% — כל מילה שביקשת נמצאה.");
   }
+  if (plan.weakMatches.length) {
+    lines.push(
+      `${plan.weakMatches.length} מילים נבדקו בדמיון נמוך — נשמרו כדי לא לאבד אותן, אך ייתכן שנאמרו אחרת: `
+      + `${plan.weakMatches.slice(0, 8).map((w) => w.text).join(", ")}. שווה להאזין ולוודא.`,
+    );
+  }
   const labelled = plan.events.filter((e) => e.label !== "silence" && e.label !== "unknown_nonspeech");
   if (labelled.length) {
     const counts = new Map<string, number>();

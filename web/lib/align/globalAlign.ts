@@ -11,7 +11,7 @@
 // לקלט ארוך משתמשים בעוגני-ייחוד: מילים שמופיעות פעם אחת בשני הצדדים מפרקות
 // את הבעיה לבלוקים קטנים שמיושרים במלואם. מהיר יותר וגם מדויק יותר.
 
-import { HebrewToken, SIMILARITY, tokenSimilarity } from "./hebrew";
+import { HebrewToken, SIMILARITY, WEAK_MATCH, tokenSimilarity } from "./hebrew";
 
 export interface AlignPair {
   /** אינדקס בטוקני ה-ASR, או null כשמילת הסקריפט לא נמצאה. */
@@ -317,6 +317,11 @@ export interface AlignmentReport {
   missingScript: number[];
   /** אינדקסי ASR שנאמרו ואינם בסקריפט (מיועדים לחיתוך). */
   droppedAsr: number[];
+  /**
+   * אינדקסי סקריפט שהותאמו בדמיון נמוך — התקבלו כדי לא לאבד מילה, אבל
+   * ייתכן שהמילה נאמרה אחרת ממה שנכתב. ראויים לבדיקה אנושית.
+   */
+  weakMatches: number[];
   coverage: number;
   /** דמיון ממוצע על הזוגות שהותאמו. */
   meanSimilarity: number;
@@ -326,10 +331,12 @@ export function summarizeAlignment(pairs: AlignPair[], scriptLength: number): Al
   const matchedScript: number[] = [];
   const missingScript: number[] = [];
   const droppedAsr: number[] = [];
+  const weakMatches: number[] = [];
   let similaritySum = 0;
   for (const pair of pairs) {
     if (pair.asrIndex != null && pair.scriptIndex != null) {
       matchedScript.push(pair.scriptIndex);
+      if (pair.similarity < WEAK_MATCH) weakMatches.push(pair.scriptIndex);
       similaritySum += pair.similarity;
     } else if (pair.scriptIndex != null) {
       missingScript.push(pair.scriptIndex);
@@ -342,6 +349,7 @@ export function summarizeAlignment(pairs: AlignPair[], scriptLength: number): Al
     matchedScript,
     missingScript,
     droppedAsr,
+    weakMatches,
     coverage: scriptLength ? matchedScript.length / scriptLength : 1,
     meanSimilarity: matchedScript.length ? similaritySum / matchedScript.length : 0,
   };
