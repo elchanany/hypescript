@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, MessageSquareText, Play, Send, Sparkles, WandSparkles } from "@/components/icons";
+import { Check, Play, Send, Sparkles, WandSparkles } from "@/components/icons";
 import { useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function LandingDeviceShowcase() {
   const [prompt, setPrompt] = useState(0);
@@ -26,9 +27,9 @@ export default function LandingDeviceShowcase() {
         <div className="hsx-tablet">
           <i className="hsx-tablet-camera" />
           <div className="hsx-tablet-ui">
-            <header><b>Hypescript</b><span>גרסת Reels</span><button type="button">ייצוא</button></header>
+            <header><div className="hsx-tablet-brand"><BrandLogo variant="icon" size="xs" decorative /><b>Hypescript</b></div><span>גרסת Reels</span><button type="button">ייצוא</button></header>
             <div className="hsx-tablet-work">
-              <div className="hsx-tablet-video"><img src="/brand/landing-creator-male.webp" alt="יוצר תוכן עורך סרטון הסבר בטאבלט" /><button type="button" aria-label="הפעלת תצוגה"><Play size={18} fill="currentColor" /></button><strong>בקשה אחת. סרטון מוכן.</strong></div>
+              <div className="hsx-tablet-video"><img src="/brand/landing-creator-male.webp" alt="יוצר תוכן עורך סרטון הסבר בטאבלט" /><span className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></span><button type="button" aria-label="הפעלת תצוגה"><Play size={18} fill="currentColor" /></button><strong>בקשה אחת. סרטון מוכן.</strong></div>
               <aside><span><Sparkles size={12} />Hype AI</span><p>{prompts[prompt].ask}</p><div><Check size={12} />{prompts[prompt].done}</div></aside>
             </div>
             <div className="hsx-tablet-timeline"><i /><i /><i /><i /><i /><b /></div>
@@ -37,8 +38,8 @@ export default function LandingDeviceShowcase() {
 
         <div className="hsx-phone">
           <div className="hsx-phone-notch" />
-          <header><span><MessageSquareText size={13} /></span><div><b>Hype AI</b><small>מחובר לפרויקט</small></div><i /></header>
-          <div className="hsx-phone-preview"><img src="/brand/landing-creator-male.webp" alt="תצוגה מקדימה של סרטון הסבר בטלפון" /><span>00:35</span></div>
+          <header><span><BrandLogo variant="icon" size="xs" decorative /></span><div><b>Hype AI</b><small>מחובר לפרויקט</small></div><i /></header>
+          <div className="hsx-phone-preview"><img src="/brand/landing-creator-male.webp" alt="תצוגה מקדימה של סרטון הסבר בטלפון" /><i className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></i><span>00:35</span></div>
           <div className="hsx-phone-chat">
             <p className="user">{prompts[prompt].ask}</p>
             <p className="agent"><WandSparkles size={12} />{prompts[prompt].done}</p>

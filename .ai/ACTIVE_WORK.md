@@ -154,3 +154,10 @@ Continue the professional editor roadmap from a verified baseline: chat-first UX
 - Regenerated favicon, PWA, Apple, social, raster lockups and plan cards from the same geometry; the shared lockup now uses explicit readable typography at every size.
 - Enlarged branding in the editor top bar, landing navigation/footer, auth, dashboard, account, settings and legal surfaces.
 - Verification: 60 Vitest files / 464 tests pass, `tsc --noEmit` is clean, CSS parses, and the 16px favicon remains legible. Live Next browser QA was blocked at server startup by the existing shared workspace process contention.
+
+## 2026-08-14 — approved Brain + Play raster brand rollout
+
+- Adopted the approved raster master: two slim mirrored brain rails forming an H around an isolated rounded play triangle, on the existing navy surface.
+- The deterministic Pillow pipeline now derives UI/PWA/favicon sizes, full-name light/dark lockups, social previews and Creator/Pro plan artwork from that single source.
+- `BrandLogo` uses a lightweight 256px raster in compact UI and real raster wordmarks where width permits; the landing laptop, tablet, phone and video previews now show the same mark instead of placeholder letters/icons.
+- Verification: focused brand tests (4/4), `tsc --noEmit`, isolated production build, and local Chrome screenshot of `/welcome` all pass.

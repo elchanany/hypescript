@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "@/components/icons";
+import BrandLogo from "@/components/BrandLogo";
 
 const modes = [
   { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "הטקסט והווידאו מסונכרנים" },
@@ -69,7 +70,7 @@ export default function LandingProductExperience() {
           <div className="hsx-camera" />
           <div className="hsx-app">
             <header className="hsx-appbar">
-              <div className="hsx-app-brand"><i>H</i><b>Hypescript</b></div>
+              <div className="hsx-app-brand"><BrandLogo variant="icon" size="xs" decorative /><b>Hypescript</b></div>
               <span>פרק 24 · איך רעיון הופך לסיפור</span>
               <button type="button">ייצוא</button>
             </header>
@@ -85,6 +86,7 @@ export default function LandingProductExperience() {
               <div className="hsx-canvas">
                 <div className="hsx-video-frame">
                   <img src="/brand/landing-creator-frame.webp" alt="יוצרת תוכן באולפן, בתוך תצוגת עורך Hypescript" />
+                  <span className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></span>
                   <div className={`hsx-caption ${mode === "captions" ? "is-active" : ""}`}>סיפור טוב מתחיל במשפט אחד מדויק.</div>
                   <button type="button" className="hsx-play" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "עצירת ההדגמה" : "הפעלת ההדגמה"}>
                     {playing ? <span className="hsx-pause" /> : <Play size={18} fill="currentColor" />}

@@ -6,10 +6,11 @@ export const BRAND_TAGLINE_HE = "עורך הווידאו AI שפשוט מדבר�
 export const BRAND_TAGLINE_EN = "The AI video editor you simply talk to";
 
 export const BRAND_PATHS = {
-  icon: "/brand/hypescript-mark-v3.png",
-  horizontal: "/brand/hypescript-wordmark-dark.svg",
-  dark: "/brand/hypescript-wordmark-dark.svg",
-  light: "/brand/hypescript-wordmark-light.svg",
+  // The 256px derivative keeps repeated UI logos crisp without shipping the 2K master.
+  icon: "/brand/icons/icon-256.png",
+  horizontal: "/brand/hypescript-logo-dark.png",
+  dark: "/brand/hypescript-logo-dark.png",
+  light: "/brand/hypescript-logo-light.png",
   favicon16: "/favicon-16.png",
   favicon32: "/favicon-32.png",
   appleTouch: "/apple-touch-icon.png",
@@ -43,7 +44,7 @@ export const BRAND_SIZE_PX: Record<BrandVariant, Record<BrandSize, { w: number; 
     lg: { w: 52, h: 52 },
     xl: { w: 80, h: 80 },
   },
-  // Native SVG viewBox is 318×64 (4.96875:1), including the AI-video descriptor.
+  // Native raster lockup is 1272×256 (4.96875:1), including the AI-video descriptor.
   horizontal: {
     xs: { w: 160, h: 32 },
     sm: { w: 225, h: 45 },

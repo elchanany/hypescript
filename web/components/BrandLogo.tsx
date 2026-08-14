@@ -39,17 +39,18 @@ export default function BrandLogo({
 
   if (variant === "horizontal") {
     return (
-      <span
-        className={`brand-lockup brand-logo-${size} ${className}`.trim()}
-        role={decorative ? undefined : "img"}
-        aria-label={decorative ? undefined : alt}
+      // The approved raster lockup keeps the Brain + Play mark and product name inseparable.
+      <img
+        src={brandSrc("horizontal", effective)}
+        alt={alt}
+        width={dim.w}
+        height={dim.h}
+        className={`brand-logo brand-logo-horizontal brand-logo-${size} ${className}`.trim()}
+        decoding="async"
+        loading={priority ? "eager" : "lazy"}
+        draggable={false}
         aria-hidden={decorative || undefined}
-        style={{ width: dim.w, height: dim.h }}
-      >
-        {/* Raster mark stays crisp in tiny UI surfaces; live type keeps the lockup readable. */}
-        <img src={brandSrc("icon", effective)} alt="" decoding="async" loading={priority ? "eager" : "lazy"} draggable={false} />
-        <span className="brand-lockup-copy"><b>Hypescript</b><small>AI VIDEO EDITOR</small></span>
-      </span>
+      />
     );
   }
 

@@ -104,7 +104,7 @@ export default function WelcomePage() {
         <div className="hsx-scroll-head"><span>בקשה. עריכה. תוצאה.</span><h2>כך המוצר עובד באמת.</h2></div>
         <div className="hsx-scroll-rail">
           <article><b>01</b><div><ScanText size={22} /><h3>כותבים את התוצאה הרצויה</h3><p>“הכן סרטון קצר, הוסף כתוביות ולוגו” — בלי לחפש איפה נמצא כל כלי.</p></div><div className="hsx-text-sculpture"><span>קצר</span><span className="muted">+</span><span>כתוביות</span><span>9:16</span></div></article>
-          <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><strong>H</strong></div></article>
+          <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><BrandLogo variant="icon" size="sm" decorative /></div></article>
           <article><b>03</b><div><WandSparkles size={22} /><h3>העורך מבצע. אתם בשליטה.</h3><p>כל פעולה מגיעה עם תצוגה מקדימה, הסבר ואפשרות ביטול.</p></div><div className="hsx-decision"><span><Check size={14} />הגרסה מוכנה לבדיקה</span><button type="button">החל הכול</button></div></article>
         </div>
       </section>
@@ -181,7 +181,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-icon"><Film size={24} /></div><span>הסרטון הראשון מתחיל כאן</span><h2>מעלים. מבקשים.<br />מקבלים סרטון מוכן.</h2><p>מתחילים בחודש ניסיון, מדברים עם עורך הווידאו ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
+      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span>הסרטון הראשון מתחיל כאן</span><h2>מעלים. מבקשים.<br />מקבלים סרטון מוכן.</h2><p>מתחילים בחודש ניסיון, מדברים עם עורך הווידאו ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
       <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy">פרטיות</Link><Link href="/legal/terms">תנאי שימוש</Link><Link href="/login">התחברות</Link></nav></footer>
     </main>
   );

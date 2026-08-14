@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 318 64" role="img" aria-label="Hypescript AI video editor">
-  <rect x="3" y="3" width="58" height="58" rx="16" fill="#0B1733"/>
-  <rect x="17" y="16" width="8" height="32" rx="4" fill="#35D59A"/><rect x="38" y="16" width="8" height="32" rx="4" fill="#35D59A"/>
-  <path d="m21.5 25 21 7-21 7Z" fill="#35D59A"/>
-  <text x="78" y="37" fill="#F7FAFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="780" letter-spacing="-1.2">Hypescript</text>
-  <text x="80" y="53" fill="#35D59A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="8.5" font-weight="700" letter-spacing="2.1">AI VIDEO EDITOR</text>
-</svg>
