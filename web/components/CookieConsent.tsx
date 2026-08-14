@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 export default function CookieConsent() {
+  const { t } = useI18n();
   const [show, setShow] = useState(false);
   useEffect(() => setShow(!localStorage.getItem("hs_cookie_consent")), []);
   const choose = (v: "essential" | "analytics") => {
@@ -10,21 +12,18 @@ export default function CookieConsent() {
   };
   if (!show) return null;
   return (
-    <aside className="cookie-consent" role="dialog" aria-label="העדפות פרטיות">
+    <aside className="cookie-consent" role="dialog" aria-label={t("privacy.label")}>
       <div>
-        <strong>הפרטיות שלך, הבחירה שלך</strong>
-        <p>
-          קוקיז חיוניים מפעילים התחברות ושמירה. ניתוח שימוש אופציונלי עוזר לנו
-          לשפר את העורך ואינו מופעל בלי אישור.
-        </p>
-        <Link href="/legal/privacy">מדיניות פרטיות</Link>
+        <strong>{t("privacy.title")}</strong>
+        <p>{t("privacy.copy")}</p>
+        <Link href="/legal/privacy">{t("auth.privacy")}</Link>
       </div>
       <div>
         <button className="btn secondary" onClick={() => choose("essential")}>
-          חיוניים בלבד
+          {t("privacy.essential")}
         </button>
         <button className="btn primary" onClick={() => choose("analytics")}>
-          אישור ניתוח שימוש
+          {t("privacy.analytics")}
         </button>
       </div>
     </aside>

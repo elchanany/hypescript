@@ -130,11 +130,42 @@ interface ChatProps {
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-const REF_TOKEN = /(\[ציטוט\s+[^\]]+\]|@media:[\w-]+)/g;
+const REF_TOKEN = /(\[@media:[^\]]+\]|\[⏱️[^\]]+\]|\[מיקום:[^\]]+\]|\[ציטוט[^\]]+\]|@media:[\w-]+)/g;
 function ChatUserText({ text }: { text: string }) {
-  return <>{text.split(REF_TOKEN).map((part, index) => /^(?:\[ציטוט\s+[^\]]+\]|@media:[\w-]+)$/.test(part)
-    ? <span className="chat-inline-ref" key={`${part}-${index}`}>{part.startsWith("[ציטוט") ? <Quote size={11} /> : <AtSign size={11} />}{part}</span>
-    : part)}</>;
+  return (
+    <>
+      {text.split(REF_TOKEN).map((part, index) => {
+        if (!part) return null;
+        if (part.startsWith("[@media:") || part.startsWith("@media:")) {
+          const nameMatch = part.match(/"([^"]+)"/);
+          const label = nameMatch ? nameMatch[1] : part.replace(/[\[\]]/g, "");
+          return (
+            <span className="chat-inline-ref media" key={`${part}-${index}`}>
+              <Film size={12} />
+              <span>{label}</span>
+            </span>
+          );
+        }
+        if (part.startsWith("[⏱️") || part.startsWith("[מיקום:")) {
+          return (
+            <span className="chat-inline-ref time" key={`${part}-${index}`}>
+              <MapPin size={12} />
+              <span>{part.replace(/[\[\]]/g, "")}</span>
+            </span>
+          );
+        }
+        if (part.startsWith("[ציטוט")) {
+          return (
+            <span className="chat-inline-ref quote" key={`${part}-${index}`}>
+              <Quote size={12} />
+              <span>{part.replace(/[\[\]]/g, "")}</span>
+            </span>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
 }
 const COMPOSE_H_KEY = "hs_compose_h";
 const COMPOSE_H_DEFAULT = 82;
@@ -402,7 +433,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   // תמיד מציגים נקודות חשיבה כל עוד יש בקשה פתוחה (גם בזמן כלי רץ)
   const showThinking = running && !ask;
 
-  useEffect(() => {
+    useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [displayItems, ask, showThinking]);
 
@@ -438,40 +469,47 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [suggestionKey, suggestionContext, running, input, providerMode, provider]);
 
-  // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
-  const insertQuote = useCallback((seconds: number) => {
-    const snippet = quotePlaceText(seconds);
-    setComposerReferences((current) => addComposerReference(current, {
-      token: snippet,
-      label: `מיקום ${formatQuoteTime(seconds)}`,
-      kind: "time",
-    }));
-    // אחרי שה-state מתעדכן — פוקוס לתיבה (גם אם הצ'אט זה עתה נפתח)
+  const insertInlineTag = useCallback((tag: string) => {
+    const ta = taRef.current;
+    if (!ta) {
+      setInput((prev) => (prev ? prev + " " + tag : tag));
+      return;
+    }
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? ta.value.length;
+    const val = ta.value;
+    const before = val.slice(0, start);
+    const after = val.slice(end);
+    const prefix = before.length > 0 && !before.endsWith(" ") ? " " : "";
+    const suffix = after.length > 0 && !after.startsWith(" ") ? " " : " ";
+    const fullInserted = prefix + tag + suffix;
+    const nextVal = before + fullInserted + after;
+    setInput(nextVal);
     setTimeout(() => {
-      const ta = taRef.current;
-      if (!ta) return;
       ta.focus();
-      const end = ta.value.length;
-      ta.selectionStart = ta.selectionEnd = end;
+      const newPos = start + fullInserted.length;
+      ta.selectionStart = ta.selectionEnd = newPos;
     }, 0);
   }, []);
+
+  // ציטוט מקום → משובץ כעת כתווית בתוך הטקסט
+  const insertQuote = useCallback((seconds: number) => {
+    const timeFormatted = formatQuoteTime(seconds);
+    const tag = `[⏱️ ${timeFormatted} (${seconds.toFixed(2)}s)]`;
+    insertInlineTag(tag);
+  }, [insertInlineTag]);
+
+  const insertMediaMention = useCallback((asset: MediaAsset) => {
+    const tag = `[@media:${asset.id} "${asset.name}"]`;
+    insertInlineTag(tag);
+    setPop(null);
+  }, [insertInlineTag]);
 
   useEffect(() => {
     fetch("/api/billing/status")
       .then((response) => response.ok ? response.json() : null)
       .then((status) => setPinLimit(conversationPinLimit(status?.subscription?.plan_id)))
       .catch(() => setPinLimit(conversationPinLimit("free")));
-  }, []);
-
-  const insertMediaMention = useCallback((asset: MediaAsset) => {
-    const token = `@media:${asset.id}`;
-    setComposerReferences((current) => addComposerReference(current, { token, label: asset.name, kind: "media" }));
-    setPop(null);
-    setTimeout(() => {
-      const ta = taRef.current;
-      if (!ta) return;
-      ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length;
-    }, 0);
   }, []);
 
   useEffect(() => {
@@ -587,20 +625,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   };
   const copy = (t: string, i: number) => { navigator.clipboard?.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1200); };
   const quoteMessage = (item: { kind: "user" | "assistant"; text: string; time: string }) => {
-    const authorLabel = item.kind === "user" ? "אני" : "עוזר AI";
     const clean = item.text.trim();
     if (!clean) return;
-    const preview = clean.replace(/\s+/g, " ").slice(0, 150);
-    const token = `[ציטוט הודעה מאת ${authorLabel}, ${item.time}]\n${clean}\n[/ציטוט]`;
-    setComposerReferences((current) => addComposerReference(current, {
-      token,
-      label: `הודעה של ${authorLabel}`,
-      kind: "message",
-      preview,
-      author: item.kind,
-      time: item.time,
-    }));
-    window.setTimeout(() => taRef.current?.focus(), 0);
+    const preview = clean.replace(/\s+/g, " ").slice(0, 75);
+    const tag = `[ציטוט: "${preview}"]`;
+    insertInlineTag(tag);
   };
   const attachRef = useRef<HTMLInputElement>(null);
   const handleAttachments = async (files: FileList | null) => {
@@ -984,13 +1013,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         </div>}
 
         <div className="chat-compose">
-          {composerReferences.length > 0 && <div className="composer-references" aria-label="קבצים וציטוטים מצורפים">
-            {composerReferences.map((reference) => <span key={reference.token} className={`composer-reference ${reference.kind}`}>
-              {reference.kind === "time" || reference.kind === "message" ? <Quote size={13} /> : reference.kind === "media" ? <Paperclip size={13} /> : <AtSign size={13} />}
-              <span><b>{reference.label}</b>{reference.kind === "message" && reference.preview ? <small>{reference.preview}</small> : null}</span>
-              <button type="button" aria-label={`הסר ${reference.label}`} onClick={() => setComposerReferences((current) => current.filter((item) => item.token !== reference.token))}><X size={12} /></button>
-            </span>)}
-          </div>}
+
           <div className="chat-compose-tools">
             <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
             <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { void handleAttachments(e.target.files); e.currentTarget.value = ""; }} />

@@ -839,6 +839,29 @@ export default function Timeline(p: Props) {
             </div>
           </div>
         ))}
+        {/* Dynamic empty layer rows extending downwards (CapCut style) */}
+        {[1, 2, 3].map((layerNum) => (
+          <div className="tl-rowline empty-layer-row" style={{ height: 44 }} key={`empty-lane-${layerNum}`}>
+            <div className="tl-head2">
+              <div className="hd-top">
+                <Layers className="hd-type" size={14} strokeWidth={1.75} style={{ opacity: 0.4 }} />
+                <span className="hd-name" style={{ opacity: 0.5 }}>{`שכבה ריקה ${layerNum}`}</span>
+              </div>
+              <div className="hd-ctrls" dir="ltr">
+                <IconButton icon={Plus} tip="הוסף שכבה חדשה" tipPos="up" onClick={() => p.onAddVideoTrack?.()} />
+              </div>
+            </div>
+            <div className="tl-lane2 empty-lane"
+              onClick={(e) => { if (!drag.current) { p.onSelect(null); p.onSelectSub?.(null); p.onSelectOverlay?.(null); seekFromRow(e, e.currentTarget); } }}
+              onDragOver={(e) => onLaneDragOver(e, primaryId)}
+              onDragLeave={onLaneDragLeave}
+              onDrop={(e) => onLaneDrop(e, primaryId)}>
+              <Grid />
+              <div className="empty-lane-hint"><span>גרור מדיה או שכבה לכאן</span></div>
+              <Playhead laneEl={null} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

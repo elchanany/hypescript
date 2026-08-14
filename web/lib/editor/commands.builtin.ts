@@ -833,4 +833,21 @@ export function ensureBuiltinCommands() {
     },
   });
 
+  registerCommand({
+    id: "canvas.setAspectRatio",
+    label: "Set canvas aspect ratio",
+    labelHe: "שנה יחס תצוגה / פורמט",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const w = Number(args?.width);
+      const h = Number(args?.height);
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+        throw new Error("מידות קנבס לא תקינות");
+      }
+      if (api.setCanvas) {
+        api.setCanvas({ width: Math.round(w), height: Math.round(h) });
+      }
+    },
+  });
+
 }

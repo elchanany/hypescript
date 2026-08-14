@@ -198,10 +198,6 @@ export default function EditorPage() {
           ? items.map((item) => item.id === id ? { ...item, file: new File([], item.name, { type: item.file.type }), url: "", missing: true } : item)
           : items.filter((item) => item.id !== id);
       }),
-      // Browser-only I/O: assets imported from a brand kit / agent land here so
-      // they persist (media → kvSet effect) and appear in the media panel.
-      // נגזר את האוסף הבא באופן סינכרוני מ-mediaRef.current ומעדכנים אותו לפני
-      // setMedia — כך getMedia רואה את המערך החדש מייד, בלי למוטט את מערך ה-state.
       addMediaAsset: (asset) => {
         const next = mediaRef.current.some((item) => item.id === asset.id)
           ? mediaRef.current
@@ -214,6 +210,13 @@ export default function EditorPage() {
       getTracks: () => tracksRef.current,
       setTracks: (next) => { tracksRef.current = next; setTracks(next); },
       getCanvas: () => canvasRef.current,
+      setCanvas: (next) => { canvasRef.current = next; setCanvas(next); },
+      addVideoTrack: () => {
+        const { tracks: next, track } = createVideoTrack(tracksRef.current);
+        tracksRef.current = next;
+        setTracks(next);
+        return track.id;
+      },
       selectClip: (id) => {
         setSelectedId(id);
         if (id) { setSelectedOverlayId(null); setSelectedSubId(null); setSelectionTrack("video"); }
@@ -1273,6 +1276,7 @@ export default function EditorPage() {
       setCommandMenu({ x: e.clientX, y: e.clientY });
     }}>
       <TopBar
+        canvas={canvas} onChangeCanvas={setCanvas}
         projectName={projectName} projects={projects} projectId={projectId} saving={saving}
         onSwitch={switchProject} onNew={newProject} onRename={renameCurrent} onDelete={deleteCurrent}
         canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
@@ -1414,6 +1418,7 @@ export default function EditorPage() {
               }}
               onUpdateSub={(patch) => selectedSub && updateSubFromInspector(selectedSub, patch)}
               canvas={canvas}
+              onChangeCanvas={setCanvas}
               captionStyle={captionStyle}
               onCaptionStyle={(patch) => {
                 if (!editorApiRef.current) return;

@@ -13,6 +13,7 @@ import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "@/components/icons";
 import { Section, Toggle } from "@/components/ui";
 import { CLIP_COLOR_PRESETS, matchingColorPreset } from "@/lib/editor/colorPresets";
+import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 
 export type InspectorFocus = "project" | "video" | "audio" | "caption" | "overlay";
 
@@ -32,6 +33,7 @@ interface Props {
   onUpdateOverlay?: (patch: Partial<Overlay>) => void;
   onUpdateSub?: (patch: Partial<Sub>) => void;
   canvas?: CanvasSize;
+  onChangeCanvas?: (canvas: CanvasSize) => void;
   captionStyle?: CaptionStyle;
   onCaptionStyle?: (patch: Partial<CaptionStyle>) => void;
   // project fallback
@@ -83,9 +85,18 @@ export default function InspectorPanel(p: Props) {
             <div className="prop"><span className="k">אורך מקור</span><span className="v mono">{formatTimecode(p.sourceDuration)}</span></div>
             <div className="prop"><span className="k">אורך ערוך</span><span className="v mono">{formatTimecode(p.editedDuration)}</span></div>
             {p.canvas && (
-              <div className="prop"><span className="k">קנבס</span><span className="v mono">{p.canvas.width}×{p.canvas.height}</span></div>
+              <div className="prop" style={{ alignItems: "center" }}>
+                <span className="k">פורמט ויחס מסך</span>
+                <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
+                  {p.onChangeCanvas ? (
+                    <AspectRatioPicker currentCanvas={p.canvas} onChangeCanvas={p.onChangeCanvas} />
+                  ) : (
+                    <span className="mono">{p.canvas.width}×{p.canvas.height}</span>
+                  )}
+                </span>
+              </div>
             )}
-            {p.mediaCount === 0 && <div className="insp-empty" style={{ padding: "12px 0 0" }}>בחר קטע בציר הזמן כדי לערוך את מאפייניו.</div>}
+            {p.mediaCount === 0 && <div className="insp-empty" style={{ padding: "12px 0 0" }}>יש לבחור קטע בציר הזמן כדי לערוך את המאפיינים.</div>}
           </Section>
         ) : (
           <ClipInspector {...p} clip={clip} focus={focus} />
@@ -160,6 +171,7 @@ function SubInspector({ sub, onUpdate, captionStyle, onCaptionStyle }: {
 
 function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
   overlay: Overlay; onUpdate: (patch: Partial<Overlay>) => void; assetName: string; canvas?: CanvasSize;
+  onChangeCanvas?: (canvas: CanvasSize) => void;
 }) {
   const t = overlay.transform;
   const setT = (patch: Partial<Overlay["transform"]>) => onUpdate({ transform: { ...t, ...patch } });
@@ -302,7 +314,7 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
   );
 
   const visualSection = p.assetKind !== "audio" && (
-    <Section title="תצוגה">
+    <Section title="תצוגה והיפוך (Mirroring)">
       <div className="prop"><span className="k">שקיפות</span><span className="v mono">{Math.round(clipOpacity(clip) * 100)}%</span></div>
       <input type="range" min={0} max={1} step={0.01} value={clipOpacity(clip)}
         onChange={(e) => p.onUpdate({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
@@ -330,8 +342,26 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
       <div className="prop-input"><label className="k" htmlFor={`visual-fade-out-${clip.id}`}>Fade out חזותי (שנ׳)</label>
         <input id={`visual-fade-out-${clip.id}`} type="number" min={0} max={dur} step={0.05} value={+clipVisualFades(clip).fadeOut.toFixed(2)}
           onChange={(e) => p.onUpdate({ visualFadeOut: +e.target.value })} /></div>
-      <label className="prop"><span className="k">היפוך אופקי</span><input type="checkbox" checked={clipFlipX(clip)} onChange={(e) => p.onUpdate({ flipX: e.target.checked })} /></label>
-      <label className="prop"><span className="k">היפוך אנכי</span><input type="checkbox" checked={clipFlipY(clip)} onChange={(e) => p.onUpdate({ flipY: e.target.checked })} /></label>
+      
+      <div className="prop" style={{ marginTop: 8 }}><span className="k">היפוך מראה (Mirror)</span></div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <button
+          type="button"
+          className={`btn sm ${clipFlipX(clip) ? "primary" : ""}`}
+          onClick={() => p.onUpdate({ flipX: !clipFlipX(clip) })}
+          data-tip="היפוך אופקי ימין-שמאל (מראה)"
+        >
+          ↔ היפוך אופקי {clipFlipX(clip) ? "✓" : ""}
+        </button>
+        <button
+          type="button"
+          className={`btn sm ${clipFlipY(clip) ? "primary" : ""}`}
+          onClick={() => p.onUpdate({ flipY: !clipFlipY(clip) })}
+          data-tip="היפוך אנכי מעלה-מטה"
+        >
+          ↕ היפוך אנכי {clipFlipY(clip) ? "✓" : ""}
+        </button>
+      </div>
     </Section>
   );
 

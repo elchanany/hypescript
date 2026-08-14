@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { normalizeSupabaseUrl } from "@/lib/auth/config";
+import { LOCALE_COOKIE, resolveInitialLocale } from "@/lib/i18n/config";
 
 /**
  * 1) Refresh Supabase auth cookies (PKCE / session) on navigations.
@@ -17,6 +18,26 @@ export async function middleware(req: NextRequest) {
     request: { headers: req.headers },
   });
 
+  const existingLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  const detectedLocale = existingLocale || resolveInitialLocale({
+    acceptLanguage: req.headers.get("accept-language"),
+    country: req.headers.get("x-vercel-ip-country"),
+  });
+  const applyDetectedLocale = <T extends NextResponse>(target: T): T => {
+    if (!existingLocale) {
+      target.cookies.set(LOCALE_COOKIE, detectedLocale, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
+    return target;
+  };
+  if (!existingLocale) {
+    applyDetectedLocale(response);
+  }
+
   if (authConfigured) {
     const supabase = createServerClient(url, anon, {
       cookies: {
@@ -30,6 +51,7 @@ export async function middleware(req: NextRequest) {
           response = NextResponse.next({
             request: { headers: req.headers },
           });
+          applyDetectedLocale(response);
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
@@ -56,7 +78,7 @@ export async function middleware(req: NextRequest) {
   const welcome = req.nextUrl.clone();
   welcome.pathname = "/welcome";
   welcome.search = "";
-  return NextResponse.redirect(welcome);
+  return applyDetectedLocale(NextResponse.redirect(welcome));
 }
 
 export const config = {

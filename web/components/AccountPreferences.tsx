@@ -3,10 +3,13 @@ import { useEffect, useState } from "react";
 import { Download, Save, Trash2 } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
 import { LoadingState } from "@/components/LoadingState";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import { SUPPORTED_LOCALES, type AddressForm, type AppLocale } from "@/lib/i18n/config";
 type State = {
   profile: {
     display_name: string;
     locale: string;
+    address_form: AddressForm;
     timezone: string;
     usage_type: string | null;
   };
@@ -23,6 +26,7 @@ type State = {
   };
 };
 export default function AccountPreferences() {
+  const { locale, addressForm, setLocale, setAddressForm, t } = useI18n();
   const [v, setV] = useState<State | null>(null),
     [busy, setBusy] = useState(false),
     [unavailable, setUnavailable] = useState(false),
@@ -30,13 +34,17 @@ export default function AccountPreferences() {
   useEffect(() => {
     fetch("/api/account")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(setV)
+      .then((data) => {
+        setV(data);
+        if (SUPPORTED_LOCALES.includes(data.profile?.locale)) setLocale(data.profile.locale as AppLocale);
+        if (data.profile?.address_form) setAddressForm(data.profile.address_form);
+      })
       .catch(() => setUnavailable(true));
     fetch("/api/providers/byok").then((r) => r.ok ? r.json() : null).then((data) => setCanUseByok(data?.canUseByok === true)).catch(() => {});
   }, []);
   if (unavailable)
-    return <section className="account-preferences"><strong>הגדרות החשבון יופעלו לאחר עדכון מסד הנתונים</strong><p>המנוי והפרויקטים ממשיכים לעבוד כרגיל.</p></section>;
-  if (!v) return <LoadingState label="טוען הגדרות חשבון…" lines={3} compact />;
+    return <section className="account-preferences"><strong>{t("account.schemaPending")}</strong><p>{t("account.continues")}</p></section>;
+  if (!v) return <LoadingState label={t("account.loading")} lines={3} compact />;
   const save = async () => {
     setBusy(true);
     const r = await fetch("/api/account", {
@@ -45,34 +53,34 @@ export default function AccountPreferences() {
       body: JSON.stringify(v),
     });
     setBusy(false);
-    r.ok ? toast.success("ההגדרות נשמרו") : toast.error("השמירה נכשלה");
+    r.ok ? toast.success(t("common.saved")) : toast.error(t("common.saveFailed"));
   };
   const del = async () => {
     if (
       !confirm(
-        "למחוק לצמיתות את החשבון, הפרויקטים והמדיה? אי אפשר לבטל פעולה זו.",
+        t("account.deleteConfirm"),
       )
     )
       return;
     const r = await fetch("/api/account", { method: "DELETE" });
     if (r.ok) location.href = "/welcome";
-    else toast.error("לא ניתן למחוק את החשבון");
+    else toast.error(t("account.deleteFailed"));
   };
   return (
     <section className="account-preferences">
       <div className="account-section-head">
         <div>
-          <span className="account-eyebrow">פרופיל ופרטיות</span>
-          <h2>החשבון בשליטתך</h2>
+          <span className="account-eyebrow">{t("account.profilePrivacy")}</span>
+          <h2>{t("account.control")}</h2>
         </div>
         <button className="btn primary" onClick={save} disabled={busy}>
           <Save size={15} />
-          {busy ? "שומר…" : "שמור"}
+          {busy ? t("common.saving") : t("common.save")}
         </button>
       </div>
       <div className="account-settings-grid">
         <label>
-          שם להצגה
+          {t("account.displayName")}
           <input
             value={v.profile.display_name || ""}
             onChange={(e) =>
@@ -84,7 +92,30 @@ export default function AccountPreferences() {
           />
         </label>
         <label>
-          סוג שימוש
+          {t("language.label")}
+          <select value={locale} onChange={(e) => {
+            const next = e.target.value as AppLocale;
+            setLocale(next);
+            setV({ ...v, profile: { ...v.profile, locale: next } });
+          }}>
+            {SUPPORTED_LOCALES.map((item) => <option key={item} value={item}>{t(`language.${item}` as const)}</option>)}
+          </select>
+        </label>
+        <label>
+          {t("address.label")}
+          <select value={addressForm} onChange={(e) => {
+            const next = e.target.value as AddressForm;
+            setAddressForm(next);
+            setV({ ...v, profile: { ...v.profile, address_form: next } });
+          }}>
+            <option value="male">{t("address.male")}</option>
+            <option value="female">{t("address.female")}</option>
+            <option value="plural">{t("address.plural")}</option>
+            <option value="unspecified">{t("address.unspecified")}</option>
+          </select>
+        </label>
+        <label>
+          {t("account.usageType")}
           <select
             value={v.profile.usage_type || "personal"}
             onChange={(e) =>
@@ -94,14 +125,14 @@ export default function AccountPreferences() {
               })
             }
           >
-            <option value="personal">אישי</option>
-            <option value="business">עסק</option>
-            <option value="nonprofit">עמותה</option>
-            <option value="team">צוות</option>
+            <option value="personal">{t("usage.personal")}</option>
+            <option value="business">{t("usage.business")}</option>
+            <option value="nonprofit">{t("usage.nonprofit")}</option>
+            <option value="team">{t("usage.team")}</option>
           </select>
         </label>
         <label>
-          גודל טקסט
+          {t("account.textSize")}
           <input
             type="range"
             min=".85"
@@ -127,7 +158,7 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>ניגודיות גבוהה</span>
+          <span>{t("account.highContrast")}</span>
         </label>
         <label className="settings-switch">
           <input
@@ -140,7 +171,7 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>הפחתת תנועה</span>
+          <span>{t("account.reduceMotion")}</span>
         </label>
         <label className="settings-switch">
           <input
@@ -156,7 +187,7 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>ניתוח שימוש לשיפור המוצר</span>
+          <span>{t("account.analytics")}</span>
         </label>
         <label className="settings-switch">
           <input
@@ -169,7 +200,7 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>עדכונים והצעות באימייל</span>
+          <span>{t("account.marketing")}</span>
         </label>
         <label className="settings-switch">
           <input
@@ -186,17 +217,17 @@ export default function AccountPreferences() {
               })
             }
           />
-          <span>{canUseByok ? "BYOK — שימוש במפתחות שלי" : "BYOK — זמין במסלול Pro"}</span>
+          <span>{canUseByok ? t("account.byok") : t("account.byokPro")}</span>
         </label>
       </div>
       <div className="account-data-actions">
         <a className="btn secondary" href="/api/analytics">
           <Download size={15} />
-          ייצוא נתוני שימוש
+          {t("account.export")}
         </a>
         <button className="btn danger" onClick={del}>
           <Trash2 size={15} />
-          מחיקת חשבון וכל הנתונים
+          {t("account.delete")}
         </button>
       </div>
     </section>

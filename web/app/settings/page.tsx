@@ -10,6 +10,7 @@ import type { ProviderStatusInfo } from "@/lib/providers/types";
 import { useTheme, type ThemeMode } from "@/lib/theme/ThemeProvider";
 import type { DataMode } from "@/lib/projects/types";
 import { LoadingState } from "@/components/LoadingState";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface CloudStatus {
   configured: boolean;
@@ -74,6 +75,11 @@ export default function SettingsPage() {
           {" · "}
           <Link href="/login">התחברות</Link>
         </p>
+      </div>
+
+      <div className="card">
+        <h2>שפה</h2>
+        <LanguageSwitcher />
       </div>
 
       <div className="card">

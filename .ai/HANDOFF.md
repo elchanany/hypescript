@@ -2,15 +2,14 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
-- 2026-08-12: `main` now contains missing-media recovery, real player volume, dynamic overlay lanes, chat entitlement gating, upload progress, visible selected answers/quotes, Hebrew-first marketing copy and a repaired unified motion system.
-- The editing agent now uses global Hebrew script alignment, measured waveform boundaries, explicit non-speech classification, non-overlapping caption segmentation and a mandatory edit audit instead of claiming success from transcript timestamps alone.
-- Verification: 60 Vitest files / 464 tests pass, 31 Python tests pass, CSS parses and `tsc` is clean. `next build` could not obtain the shared `.next` workspace while another Next process was running; no compiler error was emitted.
-- `main` @ f233969: manual render now auto-opens the chat dock and passes `exportResult` into Chat as `latestExport`, rendered as a pinned ChatMediaCard (page-owned state, survives dock close/reopen in-session).
-- ChatMediaCard video is a custom player: play/pause (button + click video), seek slider, current/total time, mute toggle, fullscreen, error state; `controlsList=nodownload`; download uses `safeDownloadName` (.mp4 sanitized) plus a "פתח בחלון חדש" fallback anchor (target=_blank rel=noopener).
-- page.tsx URL lifecycle split: abort cleanup is unmount-only; previous export blob URL revoked when replaced, current on unmount — no premature revocation.
-- New pure helpers `web/lib/render/videoCard.ts` (formatTime, safeDownloadName) + 7 tests.
-- Earlier CTA asset pipeline (persisted narration + GPT images) remains merged on main.
-- Production Supabase auth key still broken; no cloud sync.
+- 2026-08-15: CapCut-style Editor UX, Aspect Ratios, Infinite Grid, Top Tooltips & Inline Composer Mentions implemented and verified.
+  1. Global floating tooltips rendered through top-level portal (`z-index: 999999`) preventing tooltip clipping.
+  2. Inline Composer tags/mentions (`[⏱️ ...]`, `[@media:...]`) inserted cleanly inside prompt text and parsed into structured references.
+  3. Infinite checkerboard timeline background grid extending across the whole workspace.
+  4. Unlimited multi-layer video/audio tracks with "+ הוסף שכבה" button and seamless multi-track dragging.
+  5. Direct Aspect Ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Inspector, plus horizontal/vertical mirroring controls.
+  6. AI Agent full tool awareness (`set_aspect_ratio`, `add_track`, `set_clip_flip`).
+- Full verification: 72 Vitest files / 554 tests passing (100% green), Next.js isolated multi-agent build (`agent-build.mjs`) passing with 45/45 static pages and clean TypeScript validation.
 
 # Active Files
 - `web/app/page.tsx`: render auto-opens chat, passes `latestExport`; URL lifecycle split (revoke previous on replace, current on unmount).

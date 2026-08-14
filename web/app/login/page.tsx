@@ -8,10 +8,12 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { postLoginPath, postLoginPathForUser } from "@/lib/auth/session";
 import { authIssueMessage, type AuthDiagnostics } from "@/lib/auth/config";
 import { getSupabaseBrowser } from "@/lib/auth/supabase";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type Tab = "login" | "signup" | "magic" | "reset";
 
 function LoginInner() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
@@ -32,15 +34,15 @@ function LoginInner() {
 
   useEffect(() => {
     if (urlError) {
-      const raw = urlMsg ? decodeURIComponent(urlMsg) : "ההתחברות נכשלה. נסה שוב.";
+      const raw = urlMsg ? decodeURIComponent(urlMsg) : t("auth.failed");
       // Prefer Hebrew guidance for the common Vercel misconfig.
       if (/invalid api key/i.test(raw)) {
-        setLocalError("מפתח Supabase לא תקין. ב-Vercel חייב להיות Publishable/anon ב־NEXT_PUBLIC_SUPABASE_ANON_KEY (לא Secret), מאותו פרויקט כמו ה-URL, בלי מרכאות — ואז Redeploy.");
+        setLocalError(t("auth.invalidKey"));
       } else {
         setLocalError(raw);
       }
     }
-  }, [urlError, urlMsg]);
+  }, [urlError, urlMsg, t]);
 
   useEffect(() => {
     fetch("/api/config")
@@ -80,13 +82,13 @@ function LoginInner() {
         }
       } else if (tab === "signup") {
         const ok = await signUpWithPassword(email, password);
-        if (ok) setInfo("נשלח אימייל אימות (אם נדרש). אפשר גם להתחבר עם Google.");
+        if (ok) setInfo(t("auth.verifySent"));
       } else if (tab === "magic") {
         const ok = await signInWithMagicLink(email);
-        if (ok) setInfo("נשלח קישור התחברות לאימייל שלך.");
+        if (ok) setInfo(t("auth.magicSent"));
       } else if (tab === "reset") {
         const ok = await resetPassword(email);
-        if (ok) setInfo("נשלח קישור לאיפוס סיסמה.");
+        if (ok) setInfo(t("auth.resetSent"));
       }
     } finally {
       setBusy(false);
@@ -101,33 +103,31 @@ function LoginInner() {
         <div className="auth-brand-row">
           <BrandLogo variant="horizontal" size="md" theme="auto" priority />
         </div>
-        <h1>התחברות ל־Hypescript</h1>
-        <p className="auth-sub">
-          הפרויקטים נשמרים בענן מאובטח כברירת מחדל, ותמיד אפשר לבחור שמירה מקומית בהגדרות.
-        </p>
+        <h1>{t("auth.title")}</h1>
+        <p className="auth-sub">{t("auth.subtitle")}</p>
 
         {!configured || authDiag?.issue ? (
           <div className="auth-warn">
-            <strong>{authDiag?.issue ? "הגדרות ההתחברות לא תקינות" : "התחברות עדיין לא מופעלת."}</strong>
+            <strong>{authDiag?.issue ? t("auth.configInvalid") : t("auth.configDisabled")}</strong>
             <p>
               {authIssueMessage(authDiag?.issue ?? "missing_both") ||
-                "הגדר Supabase לפי docs/SETUP_AUTH.md."}
+                t("auth.configGuide")}
             </p>
             {authDiag?.urlHost && (
               <p className="hint" style={{ marginTop: 8 }}>
-                פרויקט מזוהה: <code dir="ltr">{authDiag.urlHost}</code>
-                {authDiag.keyKind ? <> · סוג מפתח: <code dir="ltr">{authDiag.keyKind}</code></> : null}
-                {authDiag.keyLen ? <> · אורך: {authDiag.keyLen}</> : null}
+                {t("auth.projectDetected")}: <code dir="ltr">{authDiag.urlHost}</code>
+                {authDiag.keyKind ? <> · {t("auth.keyType")}: <code dir="ltr">{authDiag.keyKind}</code></> : null}
+                {authDiag.keyLen ? <> · {t("auth.length")}: {authDiag.keyLen}</> : null}
               </p>
             )}
             <p style={{ marginTop: 8 }}>
-              ב-Vercel → Settings → Environment Variables:
+              Vercel → Settings → Environment Variables:
               <br />1) <code dir="ltr">NEXT_PUBLIC_SUPABASE_URL</code> = <code dir="ltr">https://xxxx.supabase.co</code>
-              <br />2) <code dir="ltr">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> = Publishable / anon בלבד
+              <br />2) <code dir="ltr">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> = Publishable / anon
               <br />3) Save → Deployments → Redeploy
             </p>
             <Link href="/" className="btn primary tall" style={{ marginTop: 12, display: "inline-flex" }}>
-              המשך בלי התחברות (עורך מקומי)
+              {t("auth.continueLocal")}
             </Link>
           </div>
         ) : (
@@ -137,17 +137,17 @@ function LoginInner() {
               onClick={() => signInWithGoogle(next)}
               disabled={loading || busy}
             >
-              המשך עם Google
+              {t("auth.google")}
             </button>
 
-            <div className="auth-divider"><span>או באימייל</span></div>
+            <div className="auth-divider"><span>{t("auth.orEmail")}</span></div>
 
             <div className="auth-tabs" role="tablist">
               {([
-                ["login", "התחברות"],
-                ["signup", "הרשמה"],
-                ["magic", "קישור"],
-                ["reset", "איפוס"],
+                ["login", t("auth.login")],
+                ["signup", t("auth.signup")],
+                ["magic", t("auth.magic")],
+                ["reset", t("auth.reset")],
               ] as const).map(([id, label]) => (
                 <button
                   key={id}
@@ -164,7 +164,7 @@ function LoginInner() {
 
             <form className="auth-form" onSubmit={onSubmit}>
               <label className="dlg-field">
-                אימייל
+                {t("auth.email")}
                 <input
                   type="email"
                   required
@@ -177,7 +177,7 @@ function LoginInner() {
               </label>
               {(tab === "login" || tab === "signup") && (
                 <label className="dlg-field">
-                  סיסמה
+                  {t("auth.password")}
                   <input
                     type="password"
                     required
@@ -190,7 +190,7 @@ function LoginInner() {
                 </label>
               )}
               <button className="btn primary tall" type="submit" disabled={busy}>
-                {busy ? "רגע…" : tab === "login" ? "התחבר" : tab === "signup" ? "הרשמה" : tab === "magic" ? "שלח קישור" : "שלח איפוס"}
+                {busy ? t("auth.wait") : tab === "login" ? t("auth.login") : tab === "signup" ? t("auth.signup") : tab === "magic" ? t("auth.sendLink") : t("auth.sendReset")}
               </button>
             </form>
 
@@ -198,7 +198,7 @@ function LoginInner() {
             {info && <div className="auth-info" role="status">{info}</div>}
 
             <p className="auth-legal">
-              בהמשך השימוש אתה מאשר את <a href="/legal/terms">תנאי השימוש</a> ואת <a href="/legal/privacy">מדיניות הפרטיות</a>.
+              {t("auth.legal")} <a href="/legal/terms">{t("auth.terms")}</a> · <a href="/legal/privacy">{t("auth.privacy")}</a>
             </p>
           </>
         )}
@@ -208,6 +208,7 @@ function LoginInner() {
 }
 
 export default function LoginPage() {
+  const { t } = useI18n();
   return (
     <Suspense fallback={
       <div className="auth-shell">
@@ -215,7 +216,7 @@ export default function LoginPage() {
           <div className="auth-brand-row">
             <BrandLogo variant="horizontal" size="md" theme="auto" priority decorative />
           </div>
-          <p className="auth-sub">טוען…</p>
+          <p className="auth-sub">{t("auth.loading")}</p>
         </div>
       </div>
     }>

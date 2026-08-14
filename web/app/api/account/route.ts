@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { getAiAccess } from "@/lib/billing/aiAccess.server";
+import { isLocale, normalizedAddressForm } from "@/lib/i18n/config";
 
 export async function GET() {
   const auth = await requireCloudUser();
   if (auth.response) return auth.response;
-  const [profileResult, settingsResult] = await Promise.all([
+  let [profileResult, settingsResult] = await Promise.all([
     auth.supabase
       .from("profiles")
-      .select("email,display_name,avatar_url,locale,timezone,usage_type")
+      .select("email,display_name,avatar_url,locale,timezone,usage_type,address_form")
       .eq("id", auth.user.id)
       .single(),
     auth.supabase
@@ -20,6 +21,18 @@ export async function GET() {
       .eq("user_id", auth.user.id)
       .single(),
   ]);
+  // Deploys are not atomic across Vercel and Supabase. Keep account settings
+  // available while the additive address_form migration is still propagating.
+  if (profileResult.error?.code === "42703") {
+    const legacyProfile = await auth.supabase
+      .from("profiles")
+      .select("email,display_name,avatar_url,locale,timezone,usage_type")
+      .eq("id", auth.user.id)
+      .single();
+    profileResult = legacyProfile.error
+      ? profileResult
+      : { ...legacyProfile, data: { ...legacyProfile.data, address_form: "unspecified" } };
+  }
   if (profileResult.error || settingsResult.error)
     return NextResponse.json(
       { error: "account_schema_pending" },
@@ -39,7 +52,8 @@ export async function PATCH(req: NextRequest) {
     display_name: String(body.profile?.display_name || "")
       .trim()
       .slice(0, 80),
-    locale: body.profile?.locale === "en" ? "en" : "he",
+    locale: isLocale(body.profile?.locale) ? body.profile.locale : "he",
+    address_form: normalizedAddressForm(body.profile?.address_form),
     timezone: String(body.profile?.timezone || "Asia/Jerusalem").slice(0, 64),
     usage_type: ["personal", "nonprofit", "business", "team"].includes(
       body.profile?.usage_type,
@@ -61,13 +75,14 @@ export async function PATCH(req: NextRequest) {
     provider_mode: s.provider_mode === "byok" && aiAccess.canUseByok ? "byok" : "managed",
     updated_at: new Date().toISOString(),
   };
-  const [p, u] = await Promise.all([
+  let [p, u] = await Promise.all([
     auth.supabase.from("profiles").update(profile).eq("id", auth.user.id),
-    auth.supabase
-      .from("user_settings")
-      .update(settings)
-      .eq("user_id", auth.user.id),
+    auth.supabase.from("user_settings").update(settings).eq("user_id", auth.user.id),
   ]);
+  if (p.error?.code === "42703") {
+    const { address_form: _pendingMigration, ...legacyProfile } = profile;
+    p = await auth.supabase.from("profiles").update(legacyProfile).eq("id", auth.user.id);
+  }
   if (p.error || u.error)
     return NextResponse.json(
       { error: "account_update_failed" },

@@ -51,7 +51,8 @@ export type CommandId =
   | "track.setLocked"
   | "track.setMuted"
   | "track.setHeight"
-  | "track.reorder";
+  | "track.reorder"
+  | "canvas.setAspectRatio";
 
 export interface EditorApi {
   getClips(): Clip[] | null;
@@ -76,6 +77,8 @@ export interface EditorApi {
   getTracks(): TrackMeta[];
   setTracks(tracks: TrackMeta[]): void;
   getCanvas(): CanvasSize;
+  setCanvas?(canvas: CanvasSize): void;
+  addVideoTrack?(): string;
   selectClip(id: string | null): void;
   selectOverlay(id: string | null): void;
   seek(t: number): void;
@@ -150,8 +153,9 @@ const INPUT_SCHEMAS: Record<CommandId, CommandSchema> = {
   "track.rename": schema(["trackId", "name"], { trackId: id, name: str }), "track.setLocked": schema(["trackId", "locked"], { trackId: id, locked: bool }),
   "track.setMuted": schema(["trackId", "muted"], { trackId: id, muted: bool }), "track.setHeight": schema(["trackId", "height"], { trackId: id, height: num }),
   "track.reorder": schema(["trackId", "direction"], { trackId: id, direction: num }),
+  "canvas.setAspectRatio": schema(["width", "height"], { width: num, height: num }),
 };
-const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.replaceAll", "clip.moveToTrack", "clip.moveAtTimeline", "clip.setEnabled", "clip.setVolume", "clip.setAudioFades", "clip.setOpacity", "clip.setColorAdjustments", "clip.setEffect", "clip.setVisualFades", "clip.setFlip", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "subtitle.replaceAll", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder"]);
+const AGENT_COMMANDS = new Set<CommandId>(["clip.split", "clip.trim", "clip.move", "clip.add", "clip.replaceAll", "clip.moveToTrack", "clip.moveAtTimeline", "clip.setEnabled", "clip.setVolume", "clip.setAudioFades", "clip.setOpacity", "clip.setColorAdjustments", "clip.setEffect", "clip.setVisualFades", "clip.setFlip", "overlay.addText", "overlay.addImage", "overlay.update", "overlay.delete", "subtitle.edit", "subtitle.delete", "subtitle.retime", "subtitle.clear", "subtitle.replaceAll", "track.addVideo", "track.removeVideo", "track.rename", "track.setLocked", "track.setMuted", "track.setHeight", "track.reorder", "canvas.setAspectRatio"]);
 const RESULT_SCHEMA = schema(["ok"], { ok: bool });
 
 const registry = new Map<CommandId, CommandDef>();

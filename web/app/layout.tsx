@@ -3,8 +3,10 @@ import "./globals.css";
 import ChunkReload from "@/components/ChunkReload";
 import ToastHost from "@/components/ToastHost";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { BRAND_NAME, BRAND_PATHS, BRAND_TAGLINE_EN, BRAND_TAGLINE_HE } from "@/lib/brand/assets";
 import CookieConsent from "@/components/CookieConsent";
+import GlobalTooltip from "@/components/GlobalTooltip";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
@@ -49,8 +51,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#111317" },
-    { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
+    { media: "(prefers-color-scheme: dark)", color: "#07111D" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F8F7" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -65,17 +67,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Prevent theme flash before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=localStorage.getItem('hs_theme')||'light';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+            __html: `(function(){try{var m=localStorage.getItem('hs_theme')||'light';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var c=document.cookie.match(/(?:^|; )hs_locale=([^;]+)/);var l=localStorage.getItem('hs_locale')||(c&&c[1])||'he';var rtl=l==='he'||l==='ar';document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light';document.documentElement.dataset.locale=l;document.documentElement.lang=l;document.documentElement.dir=rtl?'rtl':'ltr';}catch(e){}})();`,
           }}
         />
       </head>
       <body>
-        <ThemeProvider>
-          <ChunkReload />
-          {children}
-          <ToastHost />
-          <CookieConsent />
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider>
+            <ChunkReload />
+            {children}
+            <GlobalTooltip />
+            <ToastHost />
+            <CookieConsent />
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

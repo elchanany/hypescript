@@ -41,7 +41,7 @@ import {
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
 import { getActiveBrandKit, brandKitPrompt, summarizeBrandKit } from "@/lib/brand/kit";
-import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks } from "@/lib/editor/project";
+import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks, createVideoTrack } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline, projectDuration } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
@@ -1636,6 +1636,72 @@ export const TOOLS: ToolMeta[] = [
       } else if (commandError) return `שגיאה: ${commandError}`;
       const updated = ctx.clips![i];
       return `היפוך קטע ${a.index}: אופקי ${updated.flipX ? "כן" : "לא"}, אנכי ${updated.flipY ? "כן" : "לא"}.`;
+    },
+  },
+  {
+    name: "set_aspect_ratio", label: "יחס תצוגה", color: "#ec4899", icon: "📐",
+    schema: {
+      name: "set_aspect_ratio",
+      description: "משנה את יחס התצוגה / פורמט הקנבס של הפרויקט (למשל: 9:16 לטיקטוק/רילס/שורטס, 16:9 ליוטיוב/מחשב, 1:1 לאינסטגרם, 4:5, 4:3, 21:9). אפשר להעביר preset (למשל '9:16', '16:9', '1:1', 'tiktok', 'reels', 'youtube', 'instagram') או width ו-height מפורשים.",
+      parameters: {
+        type: "object",
+        properties: {
+          preset: { type: "string", description: "שם הפורמט: '9:16' (TikTok/Shorts), '16:9' (YouTube), '1:1' (Instagram), '4:5', '4:3', '21:9'" },
+          width: { type: "number", description: "רוחב בפיקסלים" },
+          height: { type: "number", description: "גובה בפיקסלים" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      let w = a.width, h = a.height;
+      if (a.preset) {
+        const p = a.preset.toLowerCase().trim();
+        if (p.includes("9:16") || p.includes("tiktok") || p.includes("reels") || p.includes("shorts") || p.includes("טיקטוק") || p.includes("סטורי")) {
+          w = 1080; h = 1920;
+        } else if (p.includes("16:9") || p.includes("youtube") || p.includes("יוטיוב") || p.includes("landscape") || p.includes("רוחב")) {
+          w = 1920; h = 1080;
+        } else if (p.includes("1:1") || p.includes("square") || p.includes("ריבוע")) {
+          w = 1080; h = 1080;
+        } else if (p.includes("4:5") || p.includes("feed")) {
+          w = 1080; h = 1350;
+        } else if (p.includes("4:3")) {
+          w = 1440; h = 1080;
+        } else if (p.includes("21:9") || p.includes("cinema") || p.includes("קולנוע")) {
+          w = 2560; h = 1080;
+        }
+      }
+      if (!w || !h || w <= 0 || h <= 0) {
+        return "יש לציין preset חוקי (כגון '9:16', '16:9', '1:1') או width ו-height חיוביים.";
+      }
+      w = Math.round(w);
+      h = Math.round(h);
+      const commandError = dispatch(ctx, "canvas.setAspectRatio", { width: w, height: h });
+      if (commandError === "NO_API") {
+        if (ctx.editorApi?.setCanvas) {
+          ctx.editorApi.setCanvas({ width: w, height: h });
+        } else {
+          ctx.canvas = { width: w, height: h };
+        }
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      return `יחס התצוגה שונה בהצלחה ל-${w}×${h} (${w < h ? "9:16 לאורך / TikTok & Reels" : w === h ? "1:1 ריבוע" : "16:9 לרוחב"}).`;
+    },
+  },
+  {
+    name: "add_track", label: "הוספת רצועה/שכבה", color: "#3b82f6", icon: "➕",
+    schema: {
+      name: "add_track",
+      description: "מוסיף רצועת וידאו/שכבה חדשה לציר הזמן של הפרויקט.",
+      parameters: { type: "object", properties: { name: { type: "string", description: "שם הרצועה (אופציונלי)" } } },
+    },
+    run: async (a, ctx) => {
+      const err = requireClips(ctx); if (err) return err;
+      const commandError = dispatch(ctx, "track.addVideo", { name: a.name });
+      if (commandError === "NO_API") {
+        const { tracks: next, track } = createVideoTrack(ctx.tracks || [], a.name);
+        setTracks(ctx, next);
+        return `נוספה רצועת וידאו/שכבה חדשה: ${track.name}.`;
+      } else if (commandError) return `שגיאה: ${commandError}`;
+      return `נוספה רצועת וידאו/שכבה חדשה.`;
     },
   },
   {

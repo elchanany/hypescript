@@ -31,7 +31,7 @@ export default function CreativePanel({ kind, clip, onApply }: { kind: "effects"
     <div className="panel-header"><span className="title">{kind === "effects" ? <WandSparkles size={15} /> : <Blend size={15} />}{kind === "effects" ? "אפקטים" : "מעברים"}</span></div>
     <div className="panel-scroll creative-panel">
       <label className="creative-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`חיפוש ב־${kind === "effects" ? "52 אפקטים" : "57 מעברים"}`} /></label>
-      {!clip ? <div className="panel-empty">בחר קטע וידאו בטיימליין כדי להחיל {kind === "effects" ? "מראה" : "מעבר"}.</div> : kind === "effects" ? <>
+      {!clip ? <div className="panel-empty">יש לבחור קטע וידאו בטיימליין כדי להחיל {kind === "effects" ? "מראה" : "מעבר"}.</div> : kind === "effects" ? <>
         <div className="creative-head"><Sparkles size={15} /><div><strong>מראות</strong><span>נשמרים בקטע ומופיעים גם בייצוא</span></div></div>
         {EFFECT_CATEGORIES.map((category) => { const group = effects.filter((effect) => effect.category === category.id); return group.length ? <section className="creative-catalog-group" key={category.id}><h3>{category.labelHe}</h3><div className="creative-grid">{group.map((effect) => <button key={effect.id} className={`creative-card ${clip.effectId === effect.id ? "active" : ""}`} onClick={() => onApply({ effectId: effect.id, effectAmount: 1 })}><i style={{ filter: effect.css }} /><strong>{effect.labelHe}</strong><span>{effect.adjustable ? "עוצמה ניתנת לכוונון" : "מראה קבוע"}</span>{clip.effectId === effect.id && <Check size={13} />}</button>)}</div></section> : null; })}
       </> : <>

@@ -6,6 +6,9 @@ import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useTheme, ThemeMode } from "@/lib/theme/ThemeProvider";
 import { getSupabaseBrowser } from "@/lib/auth/supabase";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { type AddressForm } from "@/lib/i18n/config";
 
 type Step = 1 | 2 | 3;
 
@@ -13,6 +16,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading, configured } = useAuth();
   const { mode, setMode } = useTheme();
+  const { locale, addressForm, setAddressForm, t, addressed } = useI18n();
   const [step, setStep] = useState<Step>(1);
   const [displayName, setDisplayName] = useState("");
   const [usageType, setUsageType] = useState("personal");
@@ -34,31 +38,39 @@ export default function OnboardingPage() {
   }, [user]);
 
   const finish = async () => {
-    if (!accepted) { setError("יש לאשר את תנאי השימוש ומדיניות הפרטיות."); return; }
+    if (!accepted) { setError(t("onboarding.accept")); return; }
     setBusy(true); setError(null);
     try {
       const sb = getSupabaseBrowser();
       if (sb && user) {
-        const { error: profileError } = await sb.from("profiles").update({
+        const profileUpdate = {
           display_name: displayName.trim(),
           usage_type: usageType,
+          locale,
+          address_form: addressForm,
           onboarding_completed: true,
           terms_accepted_at: new Date().toISOString(),
           privacy_accepted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq("id", user.id);
+        };
+        let { error: profileError } = await sb.from("profiles").update(profileUpdate).eq("id", user.id);
+        if (profileError?.code === "42703") {
+          const { address_form: _pendingMigration, ...legacyProfileUpdate } = profileUpdate;
+          ({ error: profileError } = await sb.from("profiles").update(legacyProfileUpdate).eq("id", user.id));
+        }
         if (profileError) throw profileError;
       }
       localStorage.setItem("hs_onboarding_done", "1");
       localStorage.setItem("hs_display_name", displayName.trim());
       localStorage.setItem("hs_usage_type", usageType);
+      localStorage.setItem("hs_address_form", addressForm);
       localStorage.setItem("hs_default_project_mode", "cloud");
       localStorage.setItem("hs_first_project_flow", "1");
       const next = "/dashboard?welcome=1";
       sessionStorage.removeItem("hs_post_onboarding");
       router.replace(next);
     } catch (e: any) {
-      setError(e?.message || "שגיאה בשמירה");
+      setError(e?.message || t("onboarding.saveError"));
     } finally {
       setBusy(false);
     }
@@ -70,42 +82,53 @@ export default function OnboardingPage() {
         <div className="auth-brand-row">
           <BrandLogo variant={step === 1 ? "horizontal" : "icon"} size={step === 1 ? "md" : "sm"} theme="dark" priority />
         </div>
-        <h1>ברוך הבא ל־Hypescript</h1>
-        <p className="auth-sub">הגדרה קצרה לפני שמתחילים. אפשר לשנות הכל אחר כך בהגדרות.</p>
+        <h1>{addressed({ male: "onboarding.welcome.male", female: "onboarding.welcome.female", plural: "onboarding.welcome.plural" })}</h1>
+        <p className="auth-sub">{t("onboarding.subtitle")}</p>
 
         {step === 1 && (
           <div className="onb-step">
             <label className="dlg-field">
-              שם תצוגה
-              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="השם שלך" />
+              {t("onboarding.displayName")}
+              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={t("onboarding.namePlaceholder")} />
+            </label>
+            <LanguageSwitcher />
+            <label className="dlg-field">
+              {t("address.label")}
+              <select value={addressForm} onChange={(e) => setAddressForm(e.target.value as AddressForm)}>
+                <option value="male">{t("address.male")}</option>
+                <option value="female">{t("address.female")}</option>
+                <option value="plural">{t("address.plural")}</option>
+                <option value="unspecified">{t("address.unspecified")}</option>
+              </select>
+              <small>{t("address.help")}</small>
             </label>
             <label className="dlg-field">
-              סוג שימוש
+              {t("onboarding.usage")}
               <select value={usageType} onChange={(e) => setUsageType(e.target.value)}>
-                <option value="personal">אישי</option>
-                <option value="nonprofit">עמותה</option>
-                <option value="business">עסק</option>
-                <option value="team">צוות</option>
+                <option value="personal">{t("usage.personal")}</option>
+                <option value="nonprofit">{t("usage.nonprofit")}</option>
+                <option value="business">{t("usage.business")}</option>
+                <option value="team">{t("usage.team")}</option>
               </select>
             </label>
-            <button className="btn primary tall" disabled={!displayName.trim()} onClick={() => setStep(2)}>המשך</button>
+            <button className="btn primary tall" disabled={!displayName.trim()} onClick={() => setStep(2)}>{t("common.continue")}</button>
           </div>
         )}
 
         {step === 2 && (
           <div className="onb-step">
             <label className="dlg-field">
-              מראה
+              {t("onboarding.appearance")}
               <select value={mode} onChange={(e) => setMode(e.target.value as ThemeMode)}>
-                <option value="system">לפי המערכת</option>
-                <option value="dark">כהה</option>
-                <option value="light">בהיר</option>
+                <option value="system">{t("theme.system")}</option>
+                <option value="dark">{t("theme.dark")}</option>
+                <option value="light">{t("theme.light")}</option>
               </select>
             </label>
-            <div className="onb-managed-note"><strong>הכול מוכן בשבילך</strong><span>פרויקטים נשמרים בענן ו־Hypescript מנהל את שירותי ה־AI. לא צריך לבחור מודל, ספק או מפתח.</span></div>
+            <div className="onb-managed-note"><strong>{t("onboarding.ready")}</strong><span>{t("onboarding.managed")}</span></div>
             <div className="onb-actions">
-              <button className="btn" onClick={() => setStep(1)}>חזרה</button>
-              <button className="btn primary" onClick={() => setStep(3)}>המשך</button>
+              <button className="btn" onClick={() => setStep(1)}>{t("common.back")}</button>
+              <button className="btn primary" onClick={() => setStep(3)}>{t("common.continue")}</button>
             </div>
           </div>
         )}
@@ -114,13 +137,13 @@ export default function OnboardingPage() {
           <div className="onb-step">
             <label className="check">
               <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-              <span>אני מסכים/ה ל<a href="/legal/terms" target="_blank" rel="noreferrer">תנאי השימוש</a> ול<a href="/legal/privacy" target="_blank" rel="noreferrer">מדיניות הפרטיות</a>.</span>
+              <span>{t("onboarding.terms")} <a href="/legal/terms" target="_blank" rel="noreferrer">↗ Terms</a> · <a href="/legal/privacy" target="_blank" rel="noreferrer">↗ Privacy</a></span>
             </label>
             {error && <div className="auth-error">{error}</div>}
             <div className="onb-actions">
-              <button className="btn" onClick={() => setStep(2)}>חזרה</button>
+              <button className="btn" onClick={() => setStep(2)}>{t("common.back")}</button>
               <button className="btn primary" disabled={busy || !accepted} onClick={finish}>
-                {busy ? "מכין את סביבת העבודה…" : "צור את הפרויקט הראשון"}
+                {busy ? t("onboarding.preparing") : t("onboarding.create")}
               </button>
             </div>
           </div>

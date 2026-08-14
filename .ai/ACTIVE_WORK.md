@@ -1,12 +1,16 @@
 # ACTIVE_WORK.md
 
-## 2026-08-14 — chat conversation grammar and contextual suggestions
+## 2026-08-15 — CapCut-style Editor UX, Aspect Ratios, Infinite Grid, Top Tooltips & Inline Composer Mentions
 
-- User messages now live on the right and assistant messages on the left with stable RTL speech tails, explicit `אני` / `עוזר AI` identity, timestamp, quote and copy actions.
-- Quoted messages are stored as structured composer references, rendered as compact quote cards, and serialized with speaker/time/full text into the agent request.
-- Assistant provider/model metadata is persisted and shown only for entitled BYOK sessions; managed mode remains provider-opaque.
-- Follow-up suggestions now receive bounded conversation plus real project context (media, brief, format, timeline state) and are prompted to offer a next step, goal-specific polish and one discoverable supported capability. UI is reduced to secondary chips.
-- Verification: 71 Vitest files / 537 tests, `tsc --noEmit`, isolated production build. Local browser loaded without console errors, but auth redirected before a live saved conversation could be visually inspected.
+- **Global Tooltips (`GlobalTooltip.tsx`)**: Rendered through a top-level React portal at `z-index: 999999` with pointer-events pass-through, eliminating tooltip clipping underneath modal/dock layers.
+- **Inline Composer Quotes & Mentions (`Chat.tsx`)**: Replaced top reference banners with inline badge pills (`[⏱️ 00:15 (15.00s)]`, `[@media:id "name"]`) inserted at cursor position and parsed accurately for the AI agent.
+- **Infinite Timeline Grid (`globals.css`)**: Implemented continuous infinite checkerboard grid background extending seamlessly across the timeline canvas regardless of media length.
+- **CapCut-style Unlimited Layers (`Timeline.tsx`)**: Added empty layer rows at the bottom with layer header icons and "+ הוסף שכבה" for multi-track video and audio layout.
+- **Aspect Ratio Picker & Video Transformations (`AspectRatioPicker.tsx`, `canvasCoords.ts`, `InspectorPanel.tsx`, `TopBar.tsx`)**:
+  - Direct aspect ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Project Inspector.
+  - Video mirror flipping controls (↔ היפוך אופקי, ↕ היפוך אנכי) in Inspector and direct video controls.
+  - Full AI Agent awareness: registered `canvas.setAspectRatio` command and `set_aspect_ratio` + `add_track` agent tools.
+- **Verification**: 72 Vitest files / 554 tests passing (100% green), isolated Next.js multi-agent build (`agent-build.mjs`) passing with 45/45 static pages and clean TypeScript validation.
 
 ## 2026-08-13 — Rhea visual-system refactor
 
@@ -161,3 +165,11 @@ Continue the professional editor roadmap from a verified baseline: chat-first UX
 - The deterministic Pillow pipeline now derives UI/PWA/favicon sizes, full-name light/dark lockups, social previews and Creator/Pro plan artwork from that single source.
 - `BrandLogo` uses a lightweight 256px raster in compact UI and real raster wordmarks where width permits; the landing laptop, tablet, phone and video previews now show the same mark instead of placeholder letters/icons.
 - Verification: focused brand tests (4/4), `tsc --noEmit`, isolated production build, and local Chrome screenshot of `/welcome` all pass.
+
+## 2026-08-14 — Brain+Play theme and account language foundation
+
+- Replaced remaining purple/indigo product accents with the approved navy, smoky-blue, turquoise, mint and lime semantic palette across editor, auth, account, marketing and brand-preset surfaces.
+- Added Hebrew-default locale negotiation for Hebrew, English, Arabic, Russian and Hindi: an explicit/profile choice wins, then browser language, Vercel country header, and finally Hebrew. Only the derived locale is stored; no raw IP is retained.
+- Added account address preference (`male`, `female`, `plural`, `unspecified`) with plural/neutral fallback, persisted in Supabase and exposed during onboarding and account settings.
+- Localized onboarding, account preferences, sign-in, cookie consent and the editor top bar; remaining product surfaces must move into the same typed catalog before claiming complete five-language coverage.
+- Supabase migration `locale_address_preferences` applied and schema verified. Verification: 10 focused tests plus the new locale normalization test, `tsc --noEmit`, isolated production build, and Playwright HE/EN/AR/RU/HI direction/auth checks.

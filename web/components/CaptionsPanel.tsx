@@ -121,7 +121,7 @@ export default function CaptionsPanel({
                 ))}
               </div>
             ) : (
-              <div className="cap-hint">אין כתוביות עדיין. תמלל ואז לחץ “צור”, או ייבא קובץ SRT.</div>
+              <div className="cap-hint">אין כתוביות עדיין. לאחר תמלול אפשר לבחור “יצירה”, או לייבא קובץ SRT.</div>
             )}
           </div>
         </Section>

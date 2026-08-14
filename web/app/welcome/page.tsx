@@ -4,6 +4,8 @@ import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, 
 import BrandLogo from "@/components/BrandLogo";
 import LandingProductExperience from "@/components/LandingProductExperience";
 import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import T from "@/components/LandingText";
 import "./landing-v2.css";
 
 export const metadata: Metadata = {
@@ -54,26 +56,27 @@ export default function WelcomePage() {
       <header className="marketing-nav">
         <Link href="/welcome" aria-label="Hypescript"><BrandLogo variant="horizontal" size="sm" theme="light" priority decorative /></Link>
         <nav aria-label="ניווט ראשי">
-          <a href="#features">יכולות</a>
-          <a href="#how">איך זה עובד</a>
-          <a href="#for-whom">למי זה מתאים</a>
-          <a href="#pricing">מסלולים</a>
+          <a href="#features"><T id="nav.features" /></a>
+          <a href="#how"><T id="nav.how" /></a>
+          <a href="#for-whom"><T id="nav.audience" /></a>
+          <a href="#pricing"><T id="nav.plans" /></a>
         </nav>
         <div className="marketing-actions">
-          <Link href="/login" className="btn ghost">התחברות</Link>
-          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary"><span>חודש ראשון חינם</span><ArrowLeft size={15} /></Link>
+          <LanguageSwitcher compact />
+          <Link href="/login" className="btn ghost"><T id="nav.login" /></Link>
+          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary"><span><T id="nav.trial" /></span><ArrowLeft size={15} /></Link>
         </div>
       </header>
 
       <section className="marketing-hero">
-        <div className="marketing-kicker"><Sparkles size={14} />עורך וידאו AI בעברית — בלי ללמוד תוכנה מסובכת</div>
-        <h1>עורך הווידאו<br /><span>שפשוט מדברים איתו.</span></h1>
-        <p>מעלים וידאו וכותבים מה רוצים: לקצר, לסדר, להוסיף כתוביות, תמונות, מוזיקה ולוגו, לשנות פורמט או להכין גרסה לרשתות. Hypescript מבצע הכול — ואתם רואים ומאשרים כל שינוי.</p>
+        <div className="marketing-kicker"><Sparkles size={14} /><T id="hero.kicker" /></div>
+        <h1><T id="hero.line1" /><br /><span><T id="hero.line2" /></span></h1>
+        <p><T id="hero.copy" /></p>
         <div className="marketing-hero-actions">
-          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link>
-          <a href="#how" className="btn secondary marketing-cta"><Play size={16} />ראה איך זה עובד</a>
+          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link>
+          <a href="#how" className="btn secondary marketing-cta"><Play size={16} /><T id="hero.see" /></a>
         </div>
-        <div className="marketing-trust"><LockKeyhole size={15} />נדרש כרטיס לאימות · אפשר לבטל לפני החיוב הראשון · מכסת ניסיון מוגנת</div>
+        <div className="marketing-trust"><LockKeyhole size={15} /><T id="hero.trust" /></div>
 
         <LandingProductExperience />
       </section>
@@ -121,7 +124,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section" id="features">
-        <div className="marketing-section-head"><span>כלי עבודה אמיתיים</span><h2>כל מה שצריך כדי להגיע לגרסה הסופית</h2><p>פחות חלונות, פחות ייצוא־ייבוא, פחות תיקונים ידניים.</p></div>
+        <div className="marketing-section-head"><span><T id="features.eyebrow" /></span><h2><T id="features.title" /></h2><p><T id="features.copy" /></p></div>
         <div className="marketing-feature-grid">
           {features.map(({ icon: Icon, title, text }, index) => <article key={title} className={`feature-${index + 1}`}><Icon size={22} /><small>0{index + 1}</small><h3>{title}</h3><p>{text}</p></article>)}
         </div>
@@ -137,7 +140,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section marketing-how" id="how">
-        <div className="marketing-section-head"><span>פשוט להתחיל</span><h2>מחומר גלם לסרטון מוכן בשלושה צעדים</h2></div>
+        <div className="marketing-section-head"><span><T id="how.eyebrow" /></span><h2><T id="how.title" /></h2></div>
         <div className="marketing-steps">
           <article><b>01</b><Film size={24} /><h3>מעלים</h3><p>וידאו, אודיו, תמונות ולוגו נשמרים ישירות בפרויקט הענן.</p></article>
           <article><b>02</b><MessageSquareText size={24} /><h3>מבקשים</h3><p>מתארים בשיחה את הסרטון הרצוי, או עורכים ידנית בטקסט ובטיימליין.</p></article>
@@ -146,14 +149,14 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section" id="for-whom">
-        <div className="marketing-section-head"><span>נבנה לעבודה אמיתית</span><h2>אותו כלי, שלושה קצבי יצירה</h2></div>
+        <div className="marketing-section-head"><span><T id="audience.eyebrow" /></span><h2><T id="audience.title" /></h2></div>
         <div className="marketing-use-cases">{useCases.map((item, index) => <article key={item.title}><b>0{index + 1}</b><WandSparkles size={21} /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
 
       <LandingDeviceShowcase />
 
       <section className="marketing-section" id="pricing">
-        <div className="marketing-section-head"><span>מתחילים בלי סיכון</span><h2>מסלול שמתאים לקצב שלך</h2><p>לא מחייבים על שימוש מעבר למכסה בלי אישור ומנוי פעיל.</p></div>
+        <div className="marketing-section-head"><span><T id="pricing.eyebrow" /></span><h2><T id="pricing.title" /></h2><p><T id="pricing.copy" /></p></div>
         <div className="marketing-pricing">
           {plans.map((plan) => <article key={plan.name} className={plan.featured ? "featured" : ""}>{plan.featured && <em>הכי מתאים ליוצרים</em>}<h3>{plan.name}</h3>{plan.intro && <div className="marketing-intro-price">{plan.intro}</div>}<div className="marketing-price">{plan.price}<small>{plan.suffix}</small></div><p>{plan.text}</p><ul>{plan.items.map((item) => <li key={item}><Check size={15} />{item}</li>)}</ul><Link href={plan.href} className={`btn ${plan.featured ? "primary" : "secondary"}`}>{plan.cta}</Link>{plan.intro && <small className="marketing-card-note"><CreditCard size={12} />כרטיס נדרש · המכסה המלאה נפתחת בחיוב הראשון</small>}</article>)}
         </div>
@@ -161,7 +164,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section marketing-faq">
-        <div className="marketing-section-head"><span>לפני שמתחילים</span><h2>שאלות קצרות, תשובות ברורות</h2></div>
+        <div className="marketing-section-head"><span><T id="faq.eyebrow" /></span><h2><T id="faq.title" /></h2></div>
         <div className="marketing-faq-list">
           <details><summary>מתי מחייבים את הכרטיס?</summary><p>לא במהלך חודש הניסיון. לאחר מכן המנוי מתחדש לפי המסלול שבחרת, אלא אם ביטלת לפני מועד החיוב.</p></details>
           <details><summary>למה מכסת הניסיון קטנה יותר?</summary><p>כדי לאפשר לבדוק את כל הזרימה בלי לפתוח שימוש ענן בלתי מוגבל. עם תחילת המנוי נפתחת המכסה המלאה.</p></details>
@@ -181,8 +184,8 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span>הסרטון הראשון מתחיל כאן</span><h2>מעלים. מבקשים.<br />מקבלים סרטון מוכן.</h2><p>מתחילים בחודש ניסיון, מדברים עם עורך הווידאו ורואים כל שינוי לפני שמפרסמים.</p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta">התחל חודש חינם <ArrowLeft size={17} /></Link><small>כרטיס נדרש לאימות · אפשר לבטל לפני החיוב הראשון</small></section>
-      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy">פרטיות</Link><Link href="/legal/terms">תנאי שימוש</Link><Link href="/login">התחברות</Link></nav></footer>
+      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
+      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
     </main>
   );
 }

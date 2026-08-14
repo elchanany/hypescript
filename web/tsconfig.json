@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["dom", "dom.iterable", "ES2020"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2020"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -13,9 +17,39 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./*"] }
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "**/*.test.ts", "vitest.config.ts"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next-agent-calibration/types/**/*.ts",
+    ".next-agent-catalog/types/**/*.ts",
+    ".next-agent-managed-ai-onboarding-2/types/**/*.ts",
+    ".next-agent-coach-marks/types/**/*.ts",
+    ".next-agent-media-rename-chat-reference/types/**/*.ts",
+    ".next-agent-timeline-cloud-render/types/**/*.ts",
+    ".next-agent-verify/types/**/*.ts",
+    ".next-agent-looks/types/**/*.ts",
+    ".next-agent-chat-conversation-ux/types/**/*.ts",
+    ".next-agent-brain-play-brand/types/**/*.ts",
+    ".next-agent-brain-play-brand-final/types/**/*.ts",
+    ".next-agent-brand-locale-system/types/**/*.ts",
+    ".next-agent-editor-ux-upgrade/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "vitest.config.ts"
+  ]
 }

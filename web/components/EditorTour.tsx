@@ -8,7 +8,7 @@ const STEPS = [
   { target: "media", title: "הקבצים של הפרויקט", text: "כאן מעלים וידאו, תמונות, לוגואים ואודיו. אפשר גם לצרף אותם ישירות מתוך הצ׳אט." },
   { target: "preview", title: "רואים כל שינוי", text: "הנגן מציג את העריכה, הכתוביות והשכבות. אפשר לבחור ולגרור אלמנטים ישירות על התמונה." },
   { target: "timeline", title: "ציר הזמן", text: "כאן נמצאים הקטעים, האודיו, הכתוביות והשכבות. הסוכן עובד על אותו ציר שאתה רואה." },
-  { target: "inspector", title: "שליטה מדויקת", text: "בחר קטע או שכבה כדי לשנות מיקום, גודל, שקיפות, עוצמת קול, fades ועוד." },
+  { target: "inspector", title: "שליטה מדויקת", text: "בחירת קטע או שכבה מאפשרת שינוי מיקום, גודל, שקיפות, עוצמת קול, fades ועוד." },
   { target: "tools", title: "ספריית היצירה", text: "מדיה, טקסט, כתוביות, מעברים ואפקטים נמצאים בסרגל הזה. תמיד אפשר לחזור להדרכה מהעזרה." },
 ] as const;
 
@@ -92,7 +92,7 @@ export default function EditorTour({ open, onClose }: { open: boolean; onClose: 
       <button className="editor-tour-close" onClick={onClose} aria-label="דלג על ההדרכה"><X size={16} /></button>
       <span className="editor-tour-count">{index + 1} מתוך {STEPS.length}</span>
       <h2 id="editor-tour-title">{step.title}</h2><p>{step.text}</p>
-      {"example" in step && <div className="editor-tour-example"><span>לדוגמה</span><q>{step.example}</q><button className="btn" onClick={tryExample}>נסה את הדוגמה בצ׳אט</button></div>}
+      {"example" in step && <div className="editor-tour-example"><span>לדוגמה</span><q>{step.example}</q><button className="btn" onClick={tryExample}>פתיחת הדוגמה בצ׳אט</button></div>}
       <div className="editor-tour-progress">{STEPS.map((_, item) => <i key={item} className={item <= index ? "on" : ""} />)}</div>
       <div className="editor-tour-actions">
         <button className="btn ghost editor-tour-skip" onClick={onClose}>דלג על ההדרכה</button>

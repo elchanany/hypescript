@@ -4,7 +4,7 @@
   --hs-paper: #f6f7f2;
   --hs-lime: #b9f65d;
   --hs-mint: #22d3a6;
-  --hs-blue: #5672ff;
+  --hs-blue: #35d59a;
   overflow: clip;
   background:
     radial-gradient(circle at 8% 12%, rgba(185, 246, 93, .16), transparent 25rem),
@@ -19,7 +19,7 @@
   mask-image: linear-gradient(to bottom, transparent, black 20%, transparent 92%);
 }
 .marketing-hero h1 { letter-spacing: -.065em; line-height: .92; text-wrap: balance; }
-.marketing-hero h1 span { background: linear-gradient(105deg, #0d8f76, #5672ff 60%, #101d2c); -webkit-background-clip: text; color: transparent; }
+.marketing-hero h1 span { background: linear-gradient(105deg, #0d8f76, #35d59a 60%, #101d2c); -webkit-background-clip: text; color: transparent; }
 
 .hsx-product-stage {
   width: min(1240px, calc(100% - 2rem)); min-height: 690px; margin: 4.2rem auto 0; position: relative;
@@ -80,7 +80,7 @@
 .hsx-style-panel label i { flex: 1; height: 3px; background: #344255; position: relative; }
 .hsx-style-panel label i b { position: absolute; right: 55%; top: 50%; width: 8px; aspect-ratio: 1; border-radius: 50%; background: #b9f65d; translate: 50% -50%; }
 .hsx-style-panel label span { width: 14px; aspect-ratio: 1; border-radius: 50%; background: #fff; }
-.hsx-style-panel label span:nth-last-child(2) { background: #b9f65d; }.hsx-style-panel label span:last-child { background: #5672ff; }
+.hsx-style-panel label span:nth-last-child(2) { background: #b9f65d; }.hsx-style-panel label span:last-child { background: #35d59a; }
 .hsx-agent-panel > div { padding: 8px; color: #b9f65d; background: rgba(185,246,93,.08); border-radius: 7px; display: flex; gap: 6px; }
 .hsx-agent-panel ul { list-style: none; padding: 0; color: #aab8c7; line-height: 1.8; }
 .hsx-agent-panel li { display: flex; gap: 5px; align-items: center; }

@@ -59,3 +59,23 @@ export function defaultCanvasFor(vw?: number, vh?: number): CanvasSize {
   if (vw && vh && vw > 0 && vh > 0) return { width: Math.round(vw), height: Math.round(vh) };
   return { width: 1920, height: 1080 };
 }
+
+export interface AspectRatioPreset {
+  id: string;
+  name: string;
+  nameHe: string;
+  ratio: string;
+  width: number;
+  height: number;
+  platformHint: string;
+}
+
+export const ASPECT_RATIO_PRESETS: AspectRatioPreset[] = [
+  { id: "16:9", name: "16:9 Landscape", nameHe: "16:9 לרוחב", ratio: "16:9", width: 1920, height: 1080, platformHint: "YouTube, מחשב, טלוויזיה" },
+  { id: "9:16", name: "9:16 Portrait", nameHe: "9:16 לאורך", ratio: "9:16", width: 1080, height: 1920, platformHint: "TikTok, Reels, Shorts" },
+  { id: "1:1", name: "1:1 Square", nameHe: "1:1 ריבוע", ratio: "1:1", width: 1080, height: 1080, platformHint: "Instagram, פוסטים" },
+  { id: "4:5", name: "4:5 Portrait", nameHe: "4:5 לאורך", ratio: "4:5", width: 1080, height: 1350, platformHint: "Instagram Feed" },
+  { id: "4:3", name: "4:3 Standard", nameHe: "4:3 קלאסי", ratio: "4:3", width: 1440, height: 1080, platformHint: "מצגות, אייפד" },
+  { id: "21:9", name: "21:9 Ultrawide", nameHe: "21:9 קולנועי", ratio: "21:9", width: 2560, height: 1080, platformHint: "קולנוע, מסך רחב" },
+];
+

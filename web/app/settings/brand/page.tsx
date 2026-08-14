@@ -220,7 +220,7 @@ export default function BrandSettingsPage() {
             <h2 style={{ margin: 0 }}>ערכות מותג</h2>
             <button className="btn primary" onClick={create} disabled={saving}>+ ערכת מותג חדשה</button>
           </div>
-          {kits.length === 0 && <div className="hint">אין עדיין ערכות. צור אחת כדי להגדיר צבעים ולוגו לסוכן.</div>}
+          {kits.length === 0 && <div className="hint">אין עדיין ערכות. אפשר ליצור ערכה כדי להגדיר צבעים ולוגו לסוכן.</div>}
           {kits.map((entry) => (
             <div key={entry.id} className="row" style={{ justifyContent: "space-between", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", marginBottom: 8, background: selId === entry.id ? "var(--card-2)" : "transparent" }}>
               <div>
@@ -274,13 +274,13 @@ export default function BrandSettingsPage() {
               <button className="btn primary sm" onClick={() => /^#[0-9A-F]{6}$/i.test(newColor) && addColor(newColor.toUpperCase())}>הוסף לפלטה</button>
             </div>
             <div className="brand-color-presets" aria-label="צבעים מוצעים">
-              {["#0B132B", "#18B981", "#5B6CFF", "#FFB020", "#EF476F", "#F8FAFC"].map((color) => <button key={color} style={{ background: color }} onClick={() => setNewColor(color)} aria-label={`בחר ${color}`} />)}
+              {["#07111D", "#122538", "#294355", "#35D59A", "#4BE0BB", "#B9F65D"].map((color) => <button key={color} style={{ background: color }} onClick={() => setNewColor(color)} aria-label={color} />)}
             </div>
 
             <h3 style={{ margin: "18px 0 8px" }}>לוגו</h3>
             <div className="row" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
               {kit.assets.filter((a) => a.role === "logo").map(assetRow)}
-              {kit.assets.filter((a) => a.role === "logo").length === 0 && <span className="hint">אין לוגו — העלה קובץ (PNG/SVG/JPEG).</span>}
+              {kit.assets.filter((a) => a.role === "logo").length === 0 && <span className="hint">אין לוגו — אפשר להעלות קובץ (PNG/SVG/JPEG).</span>}
               <div>
                 <button className="btn" onClick={() => logoInput.current?.click()} disabled={saving}>↑ העלאת לוגו</button>
                 <input ref={logoInput} type="file" accept="image/*" hidden onChange={(e) => { addAsset(e.target.files?.[0] || null, "logo"); e.target.value = ""; }} />
