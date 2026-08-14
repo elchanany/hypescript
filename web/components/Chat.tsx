@@ -38,6 +38,7 @@ import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
 import { conversationPinLimit } from "@/lib/billing/conversationLimits";
 import { toast } from "@/lib/ui/toast";
+import { addComposerReference, serializeComposerMessage, type ComposerReference } from "@/lib/chat/composerReferences";
 
 type Item = ChatItem;
 type ToolItem = Extract<Item, { kind: "tool" }>;
@@ -144,6 +145,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
+  const [composerReferences, setComposerReferences] = useState<ComposerReference[]>([]);
   const [running, setRunning] = useState(false);
   const [provider, setProvider] = useState<Provider>("deepseek");
   const [usage, setUsage] = useState<AgentUsage>({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
@@ -258,6 +260,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setStore(next);
     setItems((active.items || []).filter((it) => it.kind !== "output"));
     setAsk(null);
+    setInput("");
+    setComposerReferences([]);
   };
 
   const startNewChat = () => {
@@ -422,10 +426,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
   const insertQuote = useCallback((seconds: number) => {
     const snippet = quotePlaceText(seconds);
-    setInput((v) => {
-      const pad = v && !/\s$/.test(v) ? " " : "";
-      return v + pad + snippet + " ";
-    });
+    setComposerReferences((current) => addComposerReference(current, {
+      token: snippet,
+      label: `מיקום ${formatQuoteTime(seconds)}`,
+      kind: "time",
+    }));
     // אחרי שה-state מתעדכן — פוקוס לתיבה (גם אם הצ'אט זה עתה נפתח)
     setTimeout(() => {
       const ta = taRef.current;
@@ -445,7 +450,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   const insertMediaMention = useCallback((asset: MediaAsset) => {
     const token = `@media:${asset.id}`;
-    setInput((value) => `${value}${value && !/\s$/.test(value) ? " " : ""}${token} `);
+    setComposerReferences((current) => addComposerReference(current, { token, label: asset.name, kind: "media" }));
     setPop(null);
     setTimeout(() => {
       const ta = taRef.current;
@@ -516,6 +521,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setItems((p) => [...p, { kind: "user", text, time: now() }]);
     lastUserPromptRef.current = text;
     setInput("");
+    setComposerReferences([]);
     setRunning(true);
     const runner = getRunner();
     runner.provider = selectedProvider;
@@ -523,7 +529,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   };
 
   const submit = () => {
-    let text = input.trim();
+    let text = serializeComposerMessage(input, composerReferences);
     if (!text) return;
     // פקודת Slash שנשלחה ישירות (בלי בחירה מה-popup)
     if (text.startsWith("/") && !text.includes(" ")) {
@@ -539,6 +545,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       setItems((p) => [...p, { kind: "user", text, time: now() }]);
       lastUserPromptRef.current = text;
       setInput("");
+      setComposerReferences([]);
       runnerRef.current?.injectMessage(text);
       return;
     }
@@ -655,8 +662,15 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const applyMention = (token: string) => {
     const ta = taRef.current; const caret = ta ? ta.selectionStart : input.length;
     const upto = input.slice(0, caret); const rest = input.slice(caret);
-    const replaced = upto.replace(/(^|\s)@([^\s@]*)$/, (_m, pre) => `${pre}${token} `);
-    setInput(replaced + rest); setPop(null);
+    const item = mentionItems.find((mention) => mention.token === token);
+    const replaced = upto.replace(/(^|\s)@([^\s@]*)$/, (_m, pre) => pre);
+    setInput(replaced + rest);
+    if (item) setComposerReferences((current) => addComposerReference(current, {
+      token: item.token,
+      label: item.label,
+      kind: item.token.startsWith("@media:") ? "media" : "context",
+    }));
+    setPop(null);
     requestAnimationFrame(() => { const t = taRef.current; if (t) { t.focus(); t.selectionStart = t.selectionEnd = replaced.length; } });
   };
   const onComposerKey = (e: React.KeyboardEvent) => {
@@ -906,10 +920,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           aria-label="שינוי גובה תיבת ההודעה"
         />
         {uploading && <UploadProgressCard value={uploading} compact />}
-        {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.length ? <div className="composer-references" aria-label="הפניות בהודעה">
-          {input.match(/\[ציטוט\s+[^\]]+\]|@media:[\w-]+/g)?.map((token, index) => <span key={`${token}-${index}`}>{token.startsWith("[ציטוט") ? <Quote size={12} /> : <AtSign size={12} />}{token}</span>)}
-        </div> : null}
-
         {!input.trim() && !running && (suggestionTurns.length >= 2 || suggestionsLoading) && <section className="chat-suggestions" aria-label="הצעות להמשך השיחה">
           <header><span><Sparkles size={13} />הצעות לפי השיחה</span><small>נוצרו מההקשר האחרון</small></header>
           <div className="chat-suggestion-list">
@@ -925,6 +935,13 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         </div>}
 
         <div className="chat-compose">
+          {composerReferences.length > 0 && <div className="composer-references" aria-label="קבצים וציטוטים מצורפים">
+            {composerReferences.map((reference) => <span key={reference.token} className={`composer-reference ${reference.kind}`}>
+              {reference.kind === "time" ? <Quote size={13} /> : reference.kind === "media" ? <Paperclip size={13} /> : <AtSign size={13} />}
+              <b>{reference.label}</b>
+              <button type="button" aria-label={`הסר ${reference.label}`} onClick={() => setComposerReferences((current) => current.filter((item) => item.token !== reference.token))}><X size={12} /></button>
+            </span>)}
+          </div>}
           <div className="chat-compose-tools">
             <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
             <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { void handleAttachments(e.target.files); e.currentTarget.value = ""; }} />
@@ -943,9 +960,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           />
           <div className="chat-compose-send">
             {running
-              ? <><button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
+              ? <><button className="btn primary" onClick={submit} disabled={!input.trim() && composerReferences.length === 0} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
                  <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="בטל" data-tippos="up" aria-label="בטל"><Square size={15} strokeWidth={2} /></button></>
-              : <button className="btn primary" onClick={submit} disabled={!input.trim()} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
+              : <button className="btn primary" onClick={submit} disabled={!input.trim() && composerReferences.length === 0} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
           </div>
         </div>
       </div>

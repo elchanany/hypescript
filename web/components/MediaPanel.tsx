@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset } from "@/lib/editor/model";
 import { buildDragPreviewEl, MEDIA_DRAG_MIME, releaseDragPreviewEl } from "@/lib/editor/mediaDrag";
-import { AtSign, Film, Image as ImageIcon, Layers, Music, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "@/components/icons";
+import { AtSign, Film, Image as ImageIcon, Layers, Music, Pencil, Plus, Trash2, Upload, LayoutGrid, List, RefreshCw, TriangleAlert } from "@/components/icons";
 import { IconButton } from "@/components/ui";
 import { UploadProgressCard } from "@/components/LoadingState";
 import type { TransferProgress } from "@/lib/ui/progress";
@@ -44,7 +44,7 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 }
 
 export default function MediaPanel({
-  media, mainId, uploadProgress, onUpload, onAddClip, onAddOverlay, onMention, onRemove, onRelink, onAssetMenu,
+  media, mainId, uploadProgress, onUpload, onAddClip, onAddOverlay, onMention, onRename, onRemove, onRelink, onAssetMenu,
 }: {
   media: MediaAsset[]; mainId?: string;
   uploadProgress?: TransferProgress | null;
@@ -52,6 +52,7 @@ export default function MediaPanel({
   onAddClip: (asset: MediaAsset) => void;
   onAddOverlay: (asset: MediaAsset) => void;
   onMention: (asset: MediaAsset) => void;
+  onRename: (asset: MediaAsset) => void;
   onRemove: (id: string) => void;
   onRelink: (id: string, file: File) => void;
   onAssetMenu?: (id: string, x: number, y: number) => void;
@@ -162,6 +163,7 @@ export default function MediaPanel({
                   {m.kind === "image" && !m.missing && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="down" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
                   {!m.missing && <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="down" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />}
                   <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="down" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
+                  <IconButton icon={Pencil} tip="שנה שם" tipPos="down" onClick={(e) => { e.stopPropagation(); onRename(m); }} />
                   <IconButton icon={Trash2} tip="הסר" tipPos="down" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                 </div>
                 <span className="cell-name">{m.name}</span>
@@ -193,6 +195,7 @@ export default function MediaPanel({
                     {m.kind === "image" && !m.missing && <IconButton icon={Layers} tip="הוסף כלוגו / שכבה מעל הווידאו" tipPos="left" onClick={(e) => { e.stopPropagation(); onAddOverlay(m); }} />}
                     {!m.missing && <IconButton icon={Plus} tip={m.kind === "image" ? "הוסף כתמונה מלאה ברצועה" : "הוסף לציר"} tipPos="left" onClick={(e) => { e.stopPropagation(); onAddClip(m); }} />}
                     <IconButton icon={AtSign} tip="אזכר קובץ זה לסוכן" tipPos="left" onClick={(e) => { e.stopPropagation(); onMention(m); }} />
+                    <IconButton icon={Pencil} tip="שנה שם" tipPos="left" onClick={(e) => { e.stopPropagation(); onRename(m); }} />
                     <IconButton icon={Trash2} tip="הסר" tipPos="left" danger onClick={(e) => { e.stopPropagation(); onRemove(m.id); }} />
                   </div>
                 </div>

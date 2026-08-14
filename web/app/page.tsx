@@ -20,7 +20,7 @@ import { clipsOnTrack, flattenVideoTracks, projectDuration } from "@/lib/editor/
 import { TitlePopupPreset } from "@/lib/editor/overlay";
 import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus } from "@/components/icons";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil } from "@/components/icons";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -45,6 +45,7 @@ import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
 import { clampRatio, type TransferProgress } from "@/lib/ui/progress";
 import MobileEditorNav, { type MobileEditorSurface } from "@/components/MobileEditorNav";
 import { PROJECT_QUERY_KEY, requestedProjectId } from "@/lib/projects/navigation";
+import { renamedMediaName } from "@/lib/media/naming";
 
 ensureBuiltinCommands();
 
@@ -270,6 +271,7 @@ export default function EditorPage() {
   const [nameDlg, setNameDlg] = useState<
     | { kind: "none" }
     | { kind: "track"; id: string; name: string }
+    | { kind: "media"; id: string; name: string }
     | { kind: "overlayText"; id: string; text: string }
   >({ kind: "none" });
 
@@ -638,6 +640,13 @@ export default function EditorPage() {
     const result = runCommand("media.remove", editorApiRef.current, { id });
     if (!result.ok) setError(result.error);
     else toast.success("המדיה הוסרה", "מופעים קיימים בציר סומנו כחסרים וניתן לקשר את הקובץ מחדש.");
+  };
+  const renameMedia = (id: string, requestedName: string) => {
+    const asset = mediaRef.current.find((item) => item.id === id);
+    if (!asset) return;
+    const name = renamedMediaName(asset.name, requestedName);
+    setMedia((items) => items.map((item) => item.id === id ? { ...item, name } : item));
+    toast.success("שם הקובץ עודכן", name);
   };
   const relinkMedia = async (id: string, file: File) => {
     const previous = mediaRef.current.find((item) => item.id === id);
@@ -1167,7 +1176,8 @@ export default function EditorPage() {
     : [];
   const assetMenuTarget = assetMenu ? media.find((asset) => asset.id === assetMenu.id) : null;
   const assetMenuItems: CtxItem[] = assetMenuTarget && editorApiRef.current
-    ? [
+      ? [
+        { label: "שנה שם", icon: Pencil, onClick: () => setNameDlg({ kind: "media", id: assetMenuTarget.id, name: assetMenuTarget.name }) },
         { label: assetMenuTarget.kind === "image" ? "הוסף כתמונה מלאה לציר" : "הוסף לציר הזמן", icon: Plus, onClick: () => addMediaClip(assetMenuTarget) },
         ...(assetMenuTarget.kind === "image" ? [{ label: "הוסף כשכבה / לוגו", icon: Layers, onClick: () => addImageOverlay(assetMenuTarget) }] : []),
         ...listRunnableCommands(editorApiRef.current, { clipId: null, overlayId: null, assetId: assetMenuTarget.id }, "context-menu")
@@ -1258,7 +1268,7 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }} data-tour="media">
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} uploadProgress={uploadProgress} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRemove={removeMedia} onRelink={relinkMedia}
+            <MediaPanel media={media} mainId={main?.id} uploadProgress={uploadProgress} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRename={(asset) => setNameDlg({ kind: "media", id: asset.id, name: asset.name })} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
@@ -1462,6 +1472,18 @@ export default function EditorPage() {
         danger
         onClose={() => setProjDlg("none")}
         onConfirm={submitDelete}
+      />
+      <NameDialog
+        open={nameDlg.kind === "media"}
+        title="שינוי שם קובץ"
+        label="שם הקובץ"
+        initial={nameDlg.kind === "media" ? nameDlg.name : ""}
+        confirmLabel="שמור"
+        onClose={() => setNameDlg({ kind: "none" })}
+        onSubmit={(name) => {
+          if (nameDlg.kind === "media") renameMedia(nameDlg.id, name);
+          setNameDlg({ kind: "none" });
+        }}
       />
       <NameDialog
         open={nameDlg.kind === "track"}
