@@ -2,7 +2,12 @@ import { ChatMessage, ContentPart } from "./types";
 
 const MAX_MESSAGES = 10;
 const MAX_MESSAGE_CHARS = 700;
-const MAX_SUGGESTION_CHARS = 110;
+const MAX_SUGGESTION_CHARS = 84;
+
+export interface SuggestionContext {
+  projectSummary?: string;
+  availableCapabilities?: string[];
+}
 
 function textContent(content: string | ContentPart[] | null): string {
   if (typeof content === "string") return content;
@@ -10,7 +15,7 @@ function textContent(content: string | ContentPart[] | null): string {
   return content.filter((part) => part.type === "text").map((part) => part.text).join(" ");
 }
 
-export function suggestionPrompt(messages: unknown): ChatMessage[] | null {
+export function suggestionPrompt(messages: unknown, context: SuggestionContext = {}): ChatMessage[] | null {
   if (!Array.isArray(messages)) return null;
   const turns = messages
     .filter((message): message is ChatMessage => !!message && typeof message === "object" && ["user", "assistant"].includes((message as ChatMessage).role))
@@ -20,12 +25,14 @@ export function suggestionPrompt(messages: unknown): ChatMessage[] | null {
   if (!turns.some((turn) => turn.role === "user") || !turns.some((turn) => turn.role === "assistant")) return null;
 
   const transcript = turns.map((turn) => `${turn.role === "user" ? "המשתמש" : "Hypescript"}: ${turn.text}`).join("\n");
+  const capabilities = (context.availableCapabilities || []).filter(Boolean).slice(0, 16).join(", ");
+  const projectSummary = String(context.projectSummary || "").trim().slice(0, 900);
   return [
     {
       role: "system",
-      content: "אתה מציע את הפעולות הבאות בצ'אט של עורך וידאו. החזר JSON בלבד במבנה {\"suggestions\":[\"...\",\"...\",\"...\"]}. בדיוק 3 הצעות קצרות בעברית, שונות זו מזו, ישימות ומבוססות אך ורק על השיחה. נסח כל הצעה כהוראה שהמשתמש יכול לשלוח עכשיו. בלי הסברים ובלי Markdown.",
+      content: "אתה מנוע הצעות קטן בתוך עורך וידאו בשיחה. הסק מהשיחה ומהפרויקט את מטרת היצירה, הקהל, האירוע או ערוץ הפרסום (למשל מודעת דירה בפייסבוק או סרט בת מצווה). החזר JSON בלבד במבנה {\"suggestions\":[\"...\",\"...\",\"...\"]}. בדיוק 3 הוראות קצרות מאוד בעברית שהמשתמש יכול לשלוח עכשיו: אחת היא הצעד ההגיוני הבא, אחת משפרת את התוצאה לפי מטרת היצירה, ואחת מגלה יכולת רלוונטית שהמשתמש אולי לא ידע שקיימת. אל תציע יכולת שאינה ברשימת היכולות. אל תחזור על פעולה שכבר הושלמה. בלי הסברים, כותרות או Markdown.",
     },
-    { role: "user", content: `השיחה האחרונה:\n${transcript}` },
+    { role: "user", content: `הפרויקט הנוכחי:\n${projectSummary || "אין עדיין פרטי פרויקט נוספים."}\n\nיכולות זמינות באמת:\n${capabilities || "חיתוך, כתוביות, שכבות וייצוא"}\n\nהשיחה האחרונה:\n${transcript}` },
   ];
 }
 

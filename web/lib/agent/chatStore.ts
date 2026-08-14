@@ -3,8 +3,19 @@
 import { ChatMessage, Provider } from "./types";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
+export type ChatMessageReference = {
+  token: string;
+  label: string;
+  kind: "media" | "time" | "context" | "message";
+  preview?: string;
+  author?: "user" | "assistant";
+  time?: string;
+};
+
 export type ChatItem =
-  | { kind: "user" | "assistant" | "error"; text: string; time: string }
+  | { kind: "user"; text: string; time: string; references?: ChatMessageReference[] }
+  | { kind: "assistant"; text: string; time: string; modelLabel?: string }
+  | { kind: "error"; text: string; time: string }
   | { kind: "quote"; seconds: number; text: string; time: string }
   | { kind: "plan"; id: string; text: string; steps: string[]; state: "pending" | "approved" | "revision"; time: string }
   | { kind: "provider_approval"; id: string; provider: Provider; providerLabel: string; prompt: string; note: string; state: "pending" | "approved" | "declined"; time: string }
@@ -30,8 +41,8 @@ export interface ChatStoreV2 {
 const newId = () => "c_" + Math.random().toString(36).slice(2, 10);
 
 export function titleFromItems(items: ChatItem[] | undefined): string {
-  const u = (items || []).find((it) => it.kind === "user" && "text" in it) as { text?: string } | undefined;
-  const t = (u?.text || "").trim().replace(/\s+/g, " ");
+  const u = (items || []).find((it) => it.kind === "user") as Extract<ChatItem, { kind: "user" }> | undefined;
+  const t = (u?.text || u?.references?.[0]?.label || "").trim().replace(/\s+/g, " ");
   if (!t) return "שיחה חדשה";
   return t.length > 28 ? t.slice(0, 27) + "…" : t;
 }

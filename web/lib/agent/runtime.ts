@@ -7,7 +7,7 @@ import { repairToolMessages } from "./normalize";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export interface AgentEvents {
-  onAssistant: (text: string, mode: AgentMode) => void;
+  onAssistant: (text: string, mode: AgentMode, meta?: { provider: Provider; model?: string; providerMode?: "managed" | "byok" }) => void;
   onToolStart: (call: ToolCall, provider: Provider) => void;
   onToolStatus: (id: string, status: string) => void;
   onToolEnd: (id: string, ok: boolean, summary: string) => void;
@@ -305,7 +305,11 @@ export class AgentRunner {
         const content: string | null = data.content;
         const toolCalls: ToolCall[] = data.tool_calls || [];
 
-        if (content) this.events.onAssistant(content, this.mode);
+        if (content) this.events.onAssistant(content, this.mode, {
+          provider: this.provider,
+          model: data.providerMode === "byok" ? data.model : undefined,
+          providerMode: data.providerMode,
+        });
 
         if (!toolCalls.length) {
           this.history.push({ role: "assistant", content });

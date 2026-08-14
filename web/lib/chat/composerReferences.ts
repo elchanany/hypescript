@@ -1,7 +1,10 @@
 export type ComposerReference = {
   token: string;
   label: string;
-  kind: "media" | "time" | "context";
+  kind: "media" | "time" | "context" | "message";
+  preview?: string;
+  author?: "user" | "assistant";
+  time?: string;
 };
 
 export function addComposerReference(current: ComposerReference[], next: ComposerReference): ComposerReference[] {
@@ -11,4 +14,3 @@ export function addComposerReference(current: ComposerReference[], next: Compose
 export function serializeComposerMessage(text: string, references: ComposerReference[]): string {
   return [...references.map((reference) => reference.token), text.trim()].filter(Boolean).join(" ");
 }
-

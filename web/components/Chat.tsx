@@ -28,7 +28,7 @@ import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
-  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock, List, Pin,
+  PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock, List, Pin, Robot,
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -383,7 +383,22 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     .filter((item) => item.kind === "user" || item.kind === "assistant")
     .slice(-10)
     .map((item) => ({ role: item.kind as "user" | "assistant", content: "text" in item ? item.text : "" })), [items]);
-  const suggestionKey = useMemo(() => suggestionTurns.map((message) => `${message.role}:${message.content}`).join("\n").slice(-7000), [suggestionTurns]);
+  const suggestionContext = useMemo(() => ({
+    projectSummary: [
+      media.length ? `מדיה: ${media.slice(0, 6).map((asset) => `${asset.name} (${asset.kind}, ${asset.duration.toFixed(0)} שניות)`).join(", ")}` : "אין מדיה",
+      script.trim() ? `בריף או סקריפט: ${script.trim().replace(/\s+/g, " ").slice(0, 420)}` : "",
+      canvas ? `פורמט: ${canvas.width}×${canvas.height}` : "",
+      clips?.length ? `${clips.length} קטעים על ציר הזמן` : "",
+      subs?.length ? `${subs.length} כתוביות` : "",
+      overlays.length ? `${overlays.length} שכבות גרפיות` : "",
+    ].filter(Boolean).join(" · "),
+    availableCapabilities: [
+      "חיתוך והידוק לפי טקסט", "הסרת שתיקות ונשימות", "כתוביות עברית מסונכרנות",
+      "הוספת טקסט וכותרות", "תמונות ולוגו כשכבות", "קריינות ואודיו", "מוזיקת רקע מותאמת",
+      "מעברים ואפקטים", "התאמה לרשתות חברתיות", "בדיקת העריכה", "ייצוא וידאו ו-SRT",
+    ],
+  }), [media, script, canvas, clips?.length, subs?.length, overlays.length]);
+  const suggestionKey = useMemo(() => `${suggestionTurns.map((message) => `${message.role}:${message.content}`).join("\n")}\n${suggestionContext.projectSummary}`.slice(-7900), [suggestionTurns, suggestionContext.projectSummary]);
   // תמיד מציגים נקודות חשיבה כל עוד יש בקשה פתוחה (גם בזמן כלי רץ)
   const showThinking = running && !ask;
 
@@ -407,7 +422,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           method: "POST",
           headers: { "content-type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify({ messages: suggestionTurns, ...(providerMode === "byok" ? { provider } : {}) }),
+          body: JSON.stringify({ messages: suggestionTurns, context: suggestionContext, ...(providerMode === "byok" ? { provider } : {}) }),
         });
         const data = response.ok ? await response.json() : null;
         if (!controller.signal.aborted) setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions.slice(0, 3) : []);
@@ -421,7 +436,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       }
     }, 650);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [suggestionKey, running, input, providerMode, provider]);
+  }, [suggestionKey, suggestionContext, running, input, providerMode, provider]);
 
   // ציטוט מקום → לתיבת ההודעה (לא כהודעה בצ'אט). המשתמש שולח כשמוכן.
   const insertQuote = useCallback((seconds: number) => {
@@ -487,9 +502,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   function getRunner(): AgentRunner {
     if (!runnerRef.current) {
       runnerRef.current = new AgentRunner(provider, ctxRef.current, {
-        onAssistant: (text, responseMode) => setItems((p) => [...p, responseMode === "plan"
+        onAssistant: (text, responseMode, meta) => setItems((p) => [...p, responseMode === "plan"
           ? { kind: "plan", id: `plan_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, text, steps: parsePlanSteps(text), state: "pending", time: now() }
-          : { kind: "assistant", text, time: now() }]),
+          : {
+              kind: "assistant",
+              text,
+              time: now(),
+              modelLabel: meta?.providerMode === "byok" && meta.model ? `${PROVIDER_LABELS[meta.provider]} · ${meta.model}` : undefined,
+            }]),
         onToolStart: (call, toolProvider) => {
           const m = TOOL_BY_NAME[call.name];
             setItems((p) => [...p, { kind: "tool", id: call.id, name: call.name, label: m?.label || call.name, color: m?.color || "#5c6470", status: "מתחיל…", state: "running", summary: "", time: now(), providerLabel: providerMode === "byok" ? PROVIDER_LABELS[toolProvider] : undefined, args: { ...call.arguments }, startedAt: Date.now() }]);
@@ -517,8 +537,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     return runnerRef.current;
   }
 
-  const sendAgentRequest = (text: string, selectedProvider: Provider = provider) => {
-    setItems((p) => [...p, { kind: "user", text, time: now() }]);
+  const sendAgentRequest = (text: string, selectedProvider: Provider = provider, displayText = text, references: ComposerReference[] = []) => {
+    setItems((p) => [...p, { kind: "user", text: displayText, time: now(), references }]);
     lastUserPromptRef.current = text;
     setInput("");
     setComposerReferences([]);
@@ -529,6 +549,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   };
 
   const submit = () => {
+    const displayText = input.trim();
+    const sentReferences = composerReferences.map((reference) => ({ ...reference }));
     let text = serializeComposerMessage(input, composerReferences);
     if (!text) return;
     // פקודת Slash שנשלחה ישירות (בלי בחירה מה-popup)
@@ -542,7 +564,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       }
     }
     if (running) {
-      setItems((p) => [...p, { kind: "user", text, time: now() }]);
+      setItems((p) => [...p, { kind: "user", text: displayText, time: now(), references: sentReferences }]);
       lastUserPromptRef.current = text;
       setInput("");
       setComposerReferences([]);
@@ -553,7 +575,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       if (!entitlementsLoaded) { setItems((p) => [...p, { kind: "error", text: "בודק את הגדרות ה־BYOK. נסה שוב בעוד רגע.", time: now() }]); return; }
       if (!byokProviders.includes(provider)) { setItems((p) => [...p, { kind: "error", text: "יש לשמור מפתח לספק שנבחר בהגדרות ה־AI.", time: now() }]); setByokOpen(true); return; }
     }
-    sendAgentRequest(text);
+    sendAgentRequest(text, provider, displayText, sentReferences);
   };
 
   const changeProvider = (p: Provider) => {
@@ -564,6 +586,22 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setProvider(p); localStorage.setItem(PROVIDER_PREF, p); if (runnerRef.current) runnerRef.current.provider = p;
   };
   const copy = (t: string, i: number) => { navigator.clipboard?.writeText(t); setCopied(i); setTimeout(() => setCopied((c) => (c === i ? null : c)), 1200); };
+  const quoteMessage = (item: { kind: "user" | "assistant"; text: string; time: string }) => {
+    const authorLabel = item.kind === "user" ? "אני" : "עוזר AI";
+    const clean = item.text.trim();
+    if (!clean) return;
+    const preview = clean.replace(/\s+/g, " ").slice(0, 150);
+    const token = `[ציטוט הודעה מאת ${authorLabel}, ${item.time}]\n${clean}\n[/ציטוט]`;
+    setComposerReferences((current) => addComposerReference(current, {
+      token,
+      label: `הודעה של ${authorLabel}`,
+      kind: "message",
+      preview,
+      author: item.kind,
+      time: item.time,
+    }));
+    window.setTimeout(() => taRef.current?.focus(), 0);
+  };
   const attachRef = useRef<HTMLInputElement>(null);
   const handleAttachments = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -805,7 +843,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "plan") {
             return (
               <div key={it.id} className="msg2 assistant" role="region" aria-label="תוכנית עריכה לאישור">
-                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><ClipboardList size={15} />תוכנית עריכה</div>
                   {it.steps.length > 0 ? (
@@ -829,7 +867,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "provider_approval") {
             return (
               <div key={it.id} className="msg2 assistant" role="note" aria-label="הודעת ספק ישנה">
-                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><Info size={15} />הודעה משיחה קודמת</div>
                   <div>אין עוד צורך באישור ספק במצב המנוהל. שלח את ההוראה מחדש והיא תטופל אוטומטית.</div>
@@ -844,21 +882,32 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           return (
             <div key={i} className={`msg2 ${it.kind}`}>
               {(it.kind === "user" || it.kind === "assistant") && <div className="msg-speaker">
-                <span className={`msg-avatar ${it.kind === "assistant" ? "agent" : "user"}`} aria-hidden="true">{it.kind === "assistant" ? "H" : "א"}</span>
-                <strong>{it.kind === "assistant" ? "Hypescript" : "אתה"}</strong>
+                <span className={`msg-avatar ${it.kind === "assistant" ? "agent" : "user"}`} aria-hidden="true">{it.kind === "assistant" ? <Robot size={13} weight="bold" /> : "א"}</span>
+                <strong>{it.kind === "assistant" ? "עוזר AI" : "אני"}</strong>
               </div>}
               <div className="b">
                 {it.kind === "error" && <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6, color: "var(--danger)" }} />}
+                {it.kind === "user" && it.references?.length ? <div className="message-reference-stack">
+                  {it.references.map((reference, referenceIndex) => <div className={`message-reference-card ${reference.kind}`} key={`${reference.token}-${referenceIndex}`}>
+                    <Quote size={12} /><span><b>{reference.label}</b>{reference.preview && <small>{reference.preview}</small>}</span>
+                  </div>)}
+                </div> : null}
                 {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.kind === "user" ? <ChatUserText text={it.text} /> : it.text}
-                <button className="cp" onClick={() => copy(it.text, i)} aria-label="העתק">{copied === i ? <Check size={13} /> : <Copy size={13} />}</button>
               </div>
-              <span className="t">{it.time}</span>
+              {(it.kind === "user" || it.kind === "assistant") ? <div className="msg-meta">
+                <time>{it.time}</time>
+                {it.kind === "assistant" && canChooseProvider && providerMode === "byok" && it.modelLabel && <span className="msg-model">{it.modelLabel}</span>}
+                <span className="msg-actions">
+                  <button type="button" onClick={() => quoteMessage(it)} aria-label="צטט הודעה" data-tip="צטט"><Quote size={12} /></button>
+                  <button type="button" onClick={() => copy(it.text, i)} aria-label="העתק הודעה" data-tip="העתק">{copied === i ? <Check size={12} /> : <Copy size={12} />}</button>
+                </span>
+              </div> : <span className="t">{it.time}</span>}
             </div>
           );
         })}
         {showThinking && (
           <div className="msg2 assistant thinking-message" aria-live="polite" aria-label="Hypescript חושב">
-            <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true">H</span><strong>Hypescript</strong></div>
+            <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
             <div className="b think2">
               <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
               <span className="sr-only">חושב</span>
@@ -937,8 +986,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         <div className="chat-compose">
           {composerReferences.length > 0 && <div className="composer-references" aria-label="קבצים וציטוטים מצורפים">
             {composerReferences.map((reference) => <span key={reference.token} className={`composer-reference ${reference.kind}`}>
-              {reference.kind === "time" ? <Quote size={13} /> : reference.kind === "media" ? <Paperclip size={13} /> : <AtSign size={13} />}
-              <b>{reference.label}</b>
+              {reference.kind === "time" || reference.kind === "message" ? <Quote size={13} /> : reference.kind === "media" ? <Paperclip size={13} /> : <AtSign size={13} />}
+              <span><b>{reference.label}</b>{reference.kind === "message" && reference.preview ? <small>{reference.preview}</small> : null}</span>
               <button type="button" aria-label={`הסר ${reference.label}`} onClick={() => setComposerReferences((current) => current.filter((item) => item.token !== reference.token))}><X size={12} /></button>
             </span>)}
           </div>}

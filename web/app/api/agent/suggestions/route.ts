@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const auth = await requireCloudUser();
     if (auth.response) return auth.response;
     const body = await req.json();
-    const prompt = suggestionPrompt(body?.messages);
+    const prompt = suggestionPrompt(body?.messages, body?.context || {});
     if (!prompt) return NextResponse.json({ suggestions: [] });
 
     const access = await getAiAccess(auth.supabase, auth.user);

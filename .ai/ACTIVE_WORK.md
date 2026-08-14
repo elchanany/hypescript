@@ -1,5 +1,13 @@
 # ACTIVE_WORK.md
 
+## 2026-08-14 — chat conversation grammar and contextual suggestions
+
+- User messages now live on the right and assistant messages on the left with stable RTL speech tails, explicit `אני` / `עוזר AI` identity, timestamp, quote and copy actions.
+- Quoted messages are stored as structured composer references, rendered as compact quote cards, and serialized with speaker/time/full text into the agent request.
+- Assistant provider/model metadata is persisted and shown only for entitled BYOK sessions; managed mode remains provider-opaque.
+- Follow-up suggestions now receive bounded conversation plus real project context (media, brief, format, timeline state) and are prompted to offer a next step, goal-specific polish and one discoverable supported capability. UI is reduced to secondary chips.
+- Verification: 71 Vitest files / 537 tests, `tsc --noEmit`, isolated production build. Local browser loaded without console errors, but auth redirected before a live saved conversation could be visually inspected.
+
 ## 2026-08-13 — Rhea visual-system refactor
 
 - הוחל בסיס shadcn Rhea על המוצר הקיים בלי לשנות נתיבים, API, הרשאות או לוגיקת עריכה.

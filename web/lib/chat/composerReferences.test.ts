@@ -12,5 +12,17 @@ describe("chat composer references", () => {
     expect(serializeComposerMessage("שים אותו בצד שמאל", [mediaRef]))
       .toBe("@media:m_1 שים אותו בצד שמאל");
   });
-});
 
+  it("serializes a quoted message so the agent receives its exact context", () => {
+    const quote: ComposerReference = {
+      token: "[ציטוט הודעה מאת עוזר AI, 12:40]\nהטקסט המקורי\n[/ציטוט]",
+      label: "הודעה של עוזר AI",
+      kind: "message",
+      preview: "הטקסט המקורי",
+      author: "assistant",
+      time: "12:40",
+    };
+    expect(serializeComposerMessage("תשנה את זה", [quote]))
+      .toContain("הטקסט המקורי\n[/ציטוט] תשנה את זה");
+  });
+});

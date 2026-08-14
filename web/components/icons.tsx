@@ -74,6 +74,7 @@ import {
   PulseIcon,
   QuestionIcon,
   QuotesIcon,
+  RobotIcon,
   ScissorsIcon,
   SealCheckIcon,
   SelectionIcon,
@@ -202,6 +203,7 @@ export const Play = defineIcon(PlayIcon, "Play");
 export const Plus = defineIcon(PlusIcon, "Plus");
 export const Pin = defineIcon(PushPinIcon, "Pin");
 export const Quote = defineIcon(QuotesIcon, "Quote");
+export const Robot = defineIcon(RobotIcon, "Robot");
 export const Redo2 = defineIcon(ArrowClockwiseIcon, "Redo2");
 export const RefreshCw = defineIcon(ArrowClockwiseIcon, "RefreshCw");
 export const RotateCcw = defineIcon(ArrowCounterClockwiseIcon, "RotateCcw");
