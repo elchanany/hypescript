@@ -28,6 +28,10 @@ import { captionTokensFromScript, captionTokensFromTranscript } from "@/lib/capt
 import { auditEdit, formatAudit } from "@/lib/qa/editAudit";
 import { classifyGap, describeEvent } from "@/lib/audio/nonSpeech";
 import { computeSpectral } from "@/lib/audio/features";
+import { EFFECT_CATEGORIES, effectById, effectsByCategory, searchEffects } from "@/lib/creative/effects";
+import { TRANSITION_CATEGORIES, searchTransitions, transitionsByCategory } from "@/lib/creative/transitions";
+import { searchTextPresets, textPresetsByCategory } from "@/lib/creative/textPresets";
+import { clipLook } from "@/lib/creative/clipLook";
 import { CaptionStyle } from "@/lib/editor/captionStyle";
 import {
   assembleTranscript,
@@ -2418,6 +2422,148 @@ export const TOOLS: ToolMeta[] = [
         text: formatImageResult({ asset: registered, model, size }),
         artifacts: [{ blob, name, kind: "image" }],
       };
+    },
+  },
+  {
+    name: "list_looks", label: "קטלוג לוקים", color: "#8b5cf6", icon: "🎨",
+    schema: {
+      name: "list_looks",
+      description:
+        "מחזיר את קטלוג הלוקים החזותיים (52 פריטים, 8 קטגוריות). כל לוק מרונדר זהה בתצוגה המקדימה ובייצוא. " +
+        "אפשר לסנן לפי category או query. השתמש בזה לפני apply_look — אל תמציא מזהה לוק.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "basic|cinematic|warm|cool|vintage|bw|stylized|repair" },
+          query: { type: "string", description: "חיפוש חופשי בעברית או באנגלית" },
+        },
+      },
+    },
+    run: async (a) => {
+      const category = String(a.category || "").trim();
+      const list = category
+        ? effectsByCategory(category as Parameters<typeof effectsByCategory>[0])
+        : searchEffects(String(a.query || ""));
+      if (!list.length) return "לא נמצאו לוקים תואמים. הרץ בלי פרמטרים לרשימה המלאה.";
+      const byCategory = new Map<string, string[]>();
+      for (const effect of list) {
+        const label = EFFECT_CATEGORIES.find((c) => c.id === effect.category)?.labelHe || effect.category;
+        byCategory.set(label, [...(byCategory.get(label) || []), `${effect.id} (${effect.labelHe})`]);
+      }
+      return [...byCategory].map(([label, items]) => `${label}: ${items.join(", ")}`).join("\n");
+    },
+  },
+  {
+    name: "apply_look", label: "החלת לוק", color: "#8b5cf6", icon: "🎞️",
+    schema: {
+      name: "apply_look",
+      description:
+        "מחיל לוק מהקטלוג על קליפ אחד, על טווח, או על כל הציר. look=מזהה מ-list_looks (או \"none\" להסרה). " +
+        "amount=0..1 לעוצמה חלקית. הלוק נשמר על הקליפ ומרונדר בייצוא — לא רק בתצוגה.",
+      parameters: {
+        type: "object",
+        properties: {
+          look: { type: "string", description: "מזהה לוק מ-list_looks, או none" },
+          amount: { type: "number", description: "עוצמה 0..1 (ברירת מחדל 1)" },
+          index: { type: "number", description: "קליפ בודד (1-based)" },
+          from_index: { type: "number", description: "תחילת טווח (1-based)" },
+          to_index: { type: "number", description: "סוף טווח (1-based, כולל)" },
+          all: { type: "boolean", description: "true=כל הקליפים" },
+        },
+        required: ["look"],
+      },
+    },
+    run: async (a, ctx) => {
+      const missing = requireClips(ctx);
+      if (missing) return missing;
+      const requested = String(a.look || "").trim();
+      const effect = requested.toLowerCase() === "none" ? null : effectById(requested);
+      if (requested.toLowerCase() !== "none" && !effect) {
+        return `לוק לא מוכר: "${requested}". הרץ list_looks כדי לראות את הקטלוג.`;
+      }
+      const clips = ctx.clips!;
+      let targets: Clip[];
+      if (a.all === true) targets = clips.filter((c) => !isGapClip(c));
+      else if (a.from_index != null || a.to_index != null) {
+        const from = Math.max(1, (a.from_index | 0) || 1);
+        const to = Math.min(clips.length, (a.to_index | 0) || clips.length);
+        targets = clips.slice(from - 1, to).filter((c) => !isGapClip(c));
+      } else if (a.index != null) {
+        const one = clips[(a.index | 0) - 1];
+        if (!one) return "אינדקס קליפ לא תקין.";
+        targets = isGapClip(one) ? [] : [one];
+      } else targets = clips.filter((c) => !isGapClip(c));
+      if (!targets.length) return "לא נבחרו קליפים (ייתכן שכולם רווחים).";
+
+      const amount = a.amount != null ? Math.max(0, Math.min(1, +a.amount)) : 1;
+      let applied = 0;
+      for (const clip of targets) {
+        const error = dispatch(ctx, "clip.setEffect", { id: clip.id, effectId: effect?.id ?? "", amount });
+        if (error === "NO_API") return "החלת לוק אינה זמינה בלי עורך פעיל.";
+        if (error) return `שגיאה: ${error}`;
+        applied++;
+      }
+      if (!effect) return `הוסר הלוק מ-${applied} קליפים.`;
+      const preview = clipLook({ ...targets[0], effectId: effect.id, effectAmount: amount });
+      return `הוחל "${effect.labelHe}" (${effect.id}) על ${applied} קליפים בעוצמה ${(amount * 100).toFixed(0)}%. `
+        + `ייצוא: ${preview.ffmpeg || "ללא"}. לאימות חזותי: capture_frame(timeline=true).`;
+    },
+  },
+  {
+    name: "list_transitions", label: "קטלוג מעברים", color: "#0ea5e9", icon: "🔀",
+    schema: {
+      name: "list_transitions",
+      description:
+        "מחזיר את קטלוג המעברים (57 פריטים, 7 קטגוריות) — כל מה ש-FFmpeg תומך בו. " +
+        "שים לב: המעברים עדיין אינם מחוברים לציר הזמן; הכלי מיועד להצגת האפשרויות למשתמש.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "dissolve|wipe|slide|cover|shape|motion|stylized" },
+          query: { type: "string" },
+        },
+      },
+    },
+    run: async (a) => {
+      const category = String(a.category || "").trim();
+      const list = category
+        ? transitionsByCategory(category as Parameters<typeof transitionsByCategory>[0])
+        : searchTransitions(String(a.query || ""));
+      if (!list.length) return "לא נמצאו מעברים תואמים.";
+      const byCategory = new Map<string, string[]>();
+      for (const item of list) {
+        const label = TRANSITION_CATEGORIES.find((c) => c.id === item.category)?.labelHe || item.category;
+        byCategory.set(label, [...(byCategory.get(label) || []), `${item.id} (${item.labelHe})`]);
+      }
+      return [...byCategory].map(([label, items]) => `${label}: ${items.join(", ")}`).join("\n")
+        + "\n\n(המעברים אינם ניתנים להחלה עדיין — החיווט לציר הזמן טרם הושלם.)";
+    },
+  },
+  {
+    name: "list_text_templates", label: "תבניות טקסט", color: "#f59e0b", icon: "🅣",
+    schema: {
+      name: "list_text_templates",
+      description:
+        "מחזיר תבניות כרטיס/כותרת מוכנות (18 פריטים) עם מיקום, גודל וסגנון. " +
+        "השתמש בערכים כדי לבנות add_text_overlay מדויק במקום לנחש x/y/גודל.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "title|lower|dedication|source|cta|quote" },
+          query: { type: "string" },
+        },
+      },
+    },
+    run: async (a) => {
+      const category = String(a.category || "").trim();
+      const list = category
+        ? textPresetsByCategory(category as Parameters<typeof textPresetsByCategory>[0])
+        : searchTextPresets(String(a.query || ""));
+      if (!list.length) return "לא נמצאו תבניות תואמות.";
+      return list.map((p) =>
+        `${p.id} (${p.labelHe}) — מיקום ${p.box.x}%,${p.box.y}% גודל ${p.box.width}%×${p.box.height}%, `
+        + `גופן ${p.style.fontSize}%, יישור ${p.style.align}${p.style.background ? ", רקע" : ""}, `
+        + `משך מומלץ ${p.suggestedDuration}s`).join("\n");
     },
   },
   {

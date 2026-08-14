@@ -7,6 +7,7 @@ import { normalizeCaptionStyle } from "./captionStyle";
 import { audioTrack, createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
 import { clipTrackId, clipsOnTrack, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, replaceTrackClips } from "./tracks";
 import { registerCommand } from "./commands";
+import { effectById } from "@/lib/creative/effects";
 
 let registered = false;
 
@@ -551,6 +552,31 @@ export function ensureBuiltinCommands() {
         patch.saturation = Math.max(0, Math.min(3, value));
       }
       if (!Object.keys(patch).length) throw new Error("חסר תיקון צבע");
+      api.updateClip(id, patch);
+    },
+  });
+
+  registerCommand({
+    id: "clip.setEffect",
+    label: "Set clip look",
+    labelHe: "לוק לקליפ",
+    contexts: ["editor", "agent"],
+    run: (api, args) => {
+      const id = String(args?.id || "");
+      const clip = api.getClips()?.find((item) => item.id === id);
+      if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
+      const requested = args?.effectId == null ? "" : String(args.effectId).trim();
+      // מזהה שאינו בקטלוג נדחה במקום להישמר בשקט ולהיעלם בייצוא
+      const effect = requested ? effectById(requested) : undefined;
+      if (requested && !effect) throw new Error(`לוק לא מוכר: ${requested}`);
+      const patch: Partial<Clip> = {
+        effectId: !effect || effect.id === "none" ? undefined : effect.id,
+      };
+      if (args?.amount != null) {
+        const value = Number(args.amount);
+        if (!Number.isFinite(value)) throw new Error("עוצמה לא תקינה");
+        patch.effectAmount = Math.max(0, Math.min(1, value));
+      }
       api.updateClip(id, patch);
     },
   });
