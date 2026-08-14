@@ -165,6 +165,63 @@ describe("תכנון חיתוך לפי סקריפט", () => {
   });
 });
 
+describe("הסרת נשימות בפועל", () => {
+  // הכשל שדווח: "אני לא רואה כמעט חיתוך לפי נשימות". שלוש סיבות נמצאו —
+  // הרחבת הדיבור-הרך זחלה דרך הנשימה, הסיווג בדק את הפער כולו וראה בקצוות
+  // את זנב המילה, ורעש קצר מסף הפאוזה לא נחתך כלל.
+  const BREATH_REGIONS: Region[] = [
+    { kind: "speech", from: 0.40, to: 1.60 },
+    { kind: "breath", from: 1.72, to: 2.18 },
+    { kind: "speech", from: 2.30, to: 3.50 },
+    { kind: "breath", from: 3.62, to: 4.02 },
+    { kind: "speech", from: 4.15, to: 5.40 },
+  ];
+  const breathSamples = synth(BREATH_REGIONS, 6);
+  const breathEnv = computeEnvelope(breathSamples, SR);
+  const breathWords = words([
+    ["אחת", 0.42, 0.95], ["שתיים", 1.00, 1.58],
+    ["שלוש", 2.32, 2.90], ["ארבע", 2.95, 3.48],
+    ["חמש", 4.17, 4.70], ["שש", 4.75, 5.38],
+  ]);
+  const plan = planScriptCut(breathWords, "אחת שתיים שלוש ארבע חמש שש", {
+    sourceId: "src", duration: 6, pacing: "tight",
+    envelope: breathEnv, samples: breathSamples, sampleRate: SR,
+  });
+
+  it("שומר את כל המילים", () => {
+    expect(plan.missingScript).toEqual([]);
+    expect(plan.keptWords).toHaveLength(6);
+  });
+
+  it("חותך בשתי הנשימות", () => {
+    expect(plan.clips.length).toBeGreaterThanOrEqual(3);
+    const removed = plan.boundaries.reduce((sum, b) => sum + b.removedSec, 0);
+    expect(removed, "כמעט לא הוסר זמן").toBeGreaterThan(0.4);
+  });
+
+  it("אינו מסווג זנב מילה כדיבור בתוך הפער", () => {
+    // בלי קיצוץ קצוות הפער, הסיווג היה מחזיר speech_like ומונע כל חיתוך
+    expect(plan.events.some((e) => e.label === "speech_like")).toBe(false);
+    expect(plan.events.some((e) => e.label === "breath" || e.label === "silence")).toBe(true);
+  });
+
+  it("אף מילה אינה נחתכת למרות ההידוק", () => {
+    for (const word of plan.keptWords) {
+      const owner = plan.clips.find((c) => word.start >= c.start - 1e-6 && word.end <= c.end + 1e-6);
+      expect(owner, `"${word.text}" נחתכת`).toBeTruthy();
+    }
+  });
+
+  it("קצב רגוע מסיר פחות מקצב הדוק", () => {
+    const calm = planScriptCut(breathWords, "אחת שתיים שלוש ארבע חמש שש", {
+      sourceId: "src", duration: 6, pacing: "broadcast",
+      envelope: breathEnv, samples: breathSamples, sampleRate: SR,
+    });
+    const total = (p: typeof plan) => p.clips.reduce((s, c) => s + (c.end - c.start), 0);
+    expect(total(calm)).toBeGreaterThanOrEqual(total(plan) - 1e-6);
+  });
+});
+
 describe("שקיפות על מה שלא נמצא", () => {
   it("מדווח על מילת סקריפט שלא נאמרה במקום להשמיט אותה בשקט", () => {
     const plan = planScriptCut(WORDS, "שלום וברכה השיעור המופלא", {

@@ -201,7 +201,14 @@ export interface SpectralFeatures {
   midRatio: number;
   /** חלק האנרגיה מעל 3400Hz. */
   highRatio: number;
-  /** שיא שטף ספקטרלי — מדד לחדות ההתקפה (attack). */
+  /**
+   * חדות ההתקפה: העלייה החדה ביותר באנרגיה הכוללת בין מסגרות סמוכות,
+   * מנורמלת לשיא. 0 = עולה בהדרגה, 1 = קופץ ממש.
+   *
+   * לא שטף ספקטרלי. שטף מודד שינוי *לכל תא תדר*, ולכן רעש רחב-פס מקבל
+   * ערך גבוה גם בלי שום התקפה — הספקטרום שלו משתנה אקראית בכל מסגרת.
+   * נשימה היא רעש, ולכן נמדדה כ"התקפה חדה" ונפסלה מלהיות נשימה.
+   */
   attack: number;
   /** קצב אפנון המעטפת (Hz) — צחוק מאופנן ב-3..8Hz. */
   modulationHz: number;
@@ -270,14 +277,11 @@ export function computeSpectral(
   const re = new Float32Array(fftSize);
   const im = new Float32Array(fftSize);
   const magnitude = new Float32Array(bins);
-  const previous = new Float32Array(bins);
 
   let frames = 0;
   let centroidSum = 0, flatnessSum = 0, rolloffSum = 0;
   let lowSum = 0, midSum = 0, highSum = 0;
-  let attack = 0;
   const envelope: number[] = [];
-  let hasPrevious = false;
 
   for (let offset = from; offset + winSamples <= to; offset += hopSamples) {
     re.fill(0); im.fill(0);
@@ -286,7 +290,6 @@ export function computeSpectral(
 
     let total = 0, weighted = 0, logSum = 0;
     let low = 0, mid = 0, high = 0;
-    let flux = 0;
     for (let b = 1; b < bins; b++) {
       const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]);
       magnitude[b] = mag;
@@ -297,13 +300,7 @@ export function computeSpectral(
       if (hz < 300) low += mag;
       else if (hz < 3400) mid += mag;
       else high += mag;
-      if (hasPrevious) {
-        const rise = mag - previous[b];
-        if (rise > 0) flux += rise;
-      }
-      previous[b] = mag;
     }
-    hasPrevious = true;
     if (total <= 1e-9) continue;
 
     frames++;
@@ -320,21 +317,47 @@ export function computeSpectral(
     lowSum += low / total;
     midSum += mid / total;
     highSum += high / total;
-    if (flux > attack) attack = flux;
     envelope.push(total);
   }
 
   if (!frames) return null;
   return {
+    attack: envelopeAttack(envelope),
     centroid: centroidSum / frames,
     flatness: flatnessSum / frames,
     rolloff: rolloffSum / frames,
     lowRatio: lowSum / frames,
     midRatio: midSum / frames,
     highRatio: highSum / frames,
-    attack,
     modulationHz: modulationRate(envelope, 1 / hopSec),
   };
+}
+
+/**
+ * חדות ההתקפה מתוך מעטפת האנרגיה: העלייה החדה ביותר בין מסגרות סמוכות
+ * ביחס לשיא. חסין לרעש רחב-פס, בשונה משטף ספקטרלי.
+ */
+export function envelopeAttack(envelope: number[]): number {
+  if (envelope.length < 3) return 0;
+  // החלקה על שלוש מסגרות: אנרגיית רעש רחב-פס מרצדת אקראית בין מסגרות,
+  // ובלי החלקה הריצוד הזה נראה כמו התקפה חדה.
+  const smooth: number[] = [];
+  for (let i = 0; i < envelope.length; i++) {
+    const a = envelope[Math.max(0, i - 1)];
+    const b = envelope[i];
+    const c = envelope[Math.min(envelope.length - 1, i + 1)];
+    smooth.push((a + b + c) / 3);
+  }
+  const peak = Math.max(...smooth);
+  if (peak <= 0) return 0;
+  // גם עלייה חדה וגם דעיכה חדה מעידות על טרנזיינט. חבטה שמתחילה בשיא
+  // ממש בתחילת החלון אין לה עלייה נמדדת בכלל — רק נפילה.
+  let sharpest = 0;
+  for (let i = 1; i < smooth.length; i++) {
+    const delta = Math.abs(smooth[i] - smooth[i - 1]);
+    if (delta > sharpest) sharpest = delta;
+  }
+  return Math.max(0, Math.min(1, sharpest / peak));
 }
 
 /** קצב אפנון המעטפת — סופר חציות של הממוצע כלפי מעלה. */

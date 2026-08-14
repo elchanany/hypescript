@@ -119,7 +119,20 @@ interface Run {
   words: KeptWord[];
   /** למה נשבר הרצף *לפני* הרצף הזה. */
   reason: BreakReason;
+  /**
+   * true כשהפער שלפני הרצף סווג כרעש או שקט ודאי. אז מותר להדק עד גבולות
+   * המילים; אחרת נשמרת הרחבת הדיבור-הרך שמגינה על עיצורים.
+   */
+  cleanGap?: boolean;
 }
+
+/** פער קצר מזה לא נבדק בכלל — הוא חלק מזרימת הדיבור. */
+const CLASSIFY_MIN_GAP = 0.12;
+/** צלילים שמוסרים בזכות עצמם, גם כשהם קצרים מסף הפאוזה. */
+const NOISE_LABELS = new Set(["breath", "cough_throat", "impact"]);
+const NOISE_CONFIDENCE = 0.6;
+/** קיצוץ מקצות הפער לפני סיווג — חותמות ASR צמודות לדיבור. */
+const GAP_INSET_SEC = 0.09;
 
 function spectralFor(
   options: ScriptCutOptions,
@@ -224,12 +237,23 @@ export function planScriptCut(
       return found;
     }
     if (!envelope || to - from < 0.04) return undefined;
-    const measured = classifyGap(envelope, from, to, spectralFor(options, from, to), { calibration });
-    events.push(measured);
-    return measured;
+    // חותמות המילים של Scribe צמודות, ולכן קצוות ה"פער" עדיין מכילים את זנב
+    // המילה הקודמת ואת ההתקפה של הבאה. מדידת הפער כולו רואה שם דיבור ומסווגת
+    // נשימה כ-speech_like. בודקים רק את הפנים, כמו בכיול.
+    const inset = Math.min(GAP_INSET_SEC, (to - from) * 0.25);
+    const innerFrom = from + inset;
+    const innerTo = to - inset;
+    const wide = innerTo - innerFrom < 0.05;
+    const measured = wide
+      ? classifyGap(envelope, from, to, spectralFor(options, from, to), { calibration })
+      : classifyGap(envelope, innerFrom, innerTo, spectralFor(options, innerFrom, innerTo), { calibration });
+    // הטווח המדווח נשאר הפער המלא — הוא מה שיוסר בפועל
+    const event: NonSpeechEvent = { ...measured, start: from, end: to };
+    events.push(event);
+    return event;
   };
 
-  const runs: Run[] = [{ words: [kept[0]], reason: "script_removal" }];
+  const runs: Run[] = [{ words: [kept[0]], reason: "script_removal", cleanGap: true }];
   for (let i = 1; i < kept.length; i++) {
     const previous = kept[i - 1];
     const current = kept[i];
@@ -245,14 +269,27 @@ export function planScriptCut(
         && HEBREW_FILLERS.has(normalizeBase(r.text)))
         ? "filler"
         : "script_removal";
-    } else if (gap > pacing.maxInternalPauseSec) {
-      const event = gap > 0.05 ? eventInGap(gapStart, gapEnd) : undefined;
+    } else if (gap >= CLASSIFY_MIN_GAP) {
+      const event = eventInGap(gapStart, gapEnd);
       const removable = event ? isRemovable(event, options.keepLaughter !== false) : true;
-      if (removable) reason = event && event.label !== "silence" ? "non_speech" : "pause";
+      // רעש שאינו דיבור (נשימה/כחכוח/חבטה) מוסר בזכות עצמו, בלי קשר לסף
+      // הפאוזה. סף הפאוזה נועד לפאוזות רטוריות — נשימה אינה פאוזה רטורית,
+      // והמשתמש ביקש להסיר אותה גם כשהיא קצרה.
+      const noise = !!event && NOISE_LABELS.has(event.label) && event.confidence >= NOISE_CONFIDENCE;
+      if (removable && (gap > pacing.maxInternalPauseSec || noise)) {
+        reason = noise ? "non_speech" : "pause";
+      }
     }
 
-    if (reason) runs.push({ words: [current], reason });
-    else runs[runs.length - 1].words.push(current);
+    if (reason) {
+      // פער שסווג כרעש הוא "נקי": מותר להדק אליו עד גבולות המילים, בלי
+      // הרחבת הדיבור-הרך שנועדה להגן על עיצורים ובולעת את הנשימה עצמה.
+      const event = events[events.length - 1];
+      const matchesGap = !!event && event.start >= gapStart - 0.05 && event.end <= gapEnd + 0.05;
+      const cleanGap = reason === "script_removal" || reason === "filler"
+        || (matchesGap && (NOISE_LABELS.has(event!.label) || event!.label === "silence"));
+      runs.push({ words: [current], reason, cleanGap });
+    } else runs[runs.length - 1].words.push(current);
   }
 
   // ─── מיקום מדויק של הגבולות ─────────────────────────────────────────────
@@ -274,11 +311,17 @@ export function planScriptCut(
     placed[placed.length - 1].measured ||= lastOffset.measured;
 
     for (let i = 0; i < placed.length - 1; i++) {
+      // הרחבת הדיבור-הרך זוחלת דרך נשימה (שנשמעת הרבה מעל רצפת הרעש)
+      // ומשאירה אותה בפנים. בפער שסווג כרעש מנטרלים אותה.
+      const nextClean = placed[i + 1].run.cleanGap === true;
+      const joinOpts: BoundaryOptions = nextClean
+        ? { ...boundaryOpts, softMarginDb: boundaryOpts.speechMarginDb }
+        : boundaryOpts;
       const join = chooseJoinPoint(
         envelope,
         placed[i].run.words[placed[i].run.words.length - 1].word.end,
         placed[i + 1].run.words[0].word.start,
-        boundaryOpts,
+        joinOpts,
       );
       placed[i].end = join.outPoint;
       placed[i + 1].start = join.inPoint;

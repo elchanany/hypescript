@@ -76,6 +76,14 @@ export const CLASSIFY_DEFAULTS: Required<Omit<ClassifyOptions, "calibration">> =
   attackReference: 0.35,
 };
 
+/**
+ * ספי חדות התקפה, בסקאלה של envelopeAttack (יחס שינוי-אנרגיה מוחלק בין
+ * מסגרות סמוכות). ברזולוציית קפיצה של 10ms, דעיכה אקספוננציאלית טיפוסית של
+ * חבטה נותנת ~0.2, ואילו נשימה חלקה נותנת ~0.1.
+ */
+const ATTACK_SOFT = 0.20;
+const ATTACK_SHARP = 0.45;
+
 /** מדרון עולה 0..1 בין lo ל-hi. */
 function ramp(value: number, lo: number, hi: number): number {
   if (hi === lo) return value >= hi ? 1 : 0;
@@ -174,9 +182,10 @@ export function classifyGap(
       / Math.max(3, calibration!.speechDb.p50 - calibration!.noiseDb.p90)))
     : ramp(peakAboveFloorDb, 4, 26);
 
-  const attackNorm = relative
-    ? rank(spectral.attack, "attack")
-    : ramp(spectral.attack, 0, opts.attackReference * 2);
+  // ההתקפה כבר מנורמלת (יחס עלייה לשיא) ואינה תלויה במיקרופון או בחדר,
+  // ולכן היא *לא* עוברת דירוג אחוזוני. התפלגות ההתקפה של דיבור צפופה סביב
+  // האפס, ודירוג מולה היה מחזיר 1 לכל ערך — מה שפסל כל נשימה.
+  const attackNorm = Math.max(0, Math.min(1, spectral.attack));
   const flatnessHigh = relative ? rank(spectral.flatness, "flatness") : ramp(spectral.flatness, 0.18, 0.42);
   const lowHigh = relative ? rank(spectral.lowRatio, "lowRatio") : ramp(spectral.lowRatio, 0.45, 0.75);
   const highHigh = relative ? rank(spectral.highRatio, "highRatio") : ramp(spectral.highRatio, 0.12, 0.4);
@@ -203,14 +212,14 @@ export function classifyGap(
       band(loudness, 0.03, 0.1, 0.55, 0.85),
       ramp(flatnessHigh, 0.35, 0.7),
       ramp(highHigh, 0.4, 0.75),
-      1 - ramp(attackNorm, 0.5, 0.85),
+      1 - ramp(attackNorm, ATTACK_SOFT, ATTACK_SHARP),
       1 - ramp(lowHigh, 0.6, 0.9),
     ])],
     // שיעול/כחכוח: קצר, חזק כמעט כמו דיבור, התקפה חדה, רחב-פס
     ["cough_throat", profileScore([
       band(durationSec, 0.05, 0.09, 0.45, 0.9),
       ramp(loudness, 0.35, 0.75),
-      ramp(attackNorm, 0.5, 0.8),
+      ramp(attackNorm, ATTACK_SOFT * 0.7, ATTACK_SHARP),
       band(centroidHigh, 0.1, 0.25, 0.9, 1.0),
       ramp(highHigh, 0.3, 0.6),
     ])],
@@ -218,7 +227,7 @@ export function classifyGap(
     ["impact", profileScore([
       band(durationSec, 0.02, 0.05, 0.45, 0.9),
       ramp(loudness, 0.2, 0.6),
-      ramp(attackNorm, 0.45, 0.8),
+      ramp(attackNorm, ATTACK_SOFT * 0.7, ATTACK_SHARP),
       ramp(lowHigh, 0.7, 0.95),
       1 - ramp(centroidHigh, 0.15, 0.45),
       1 - ramp(highHigh, 0.4, 0.75),
