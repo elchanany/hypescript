@@ -14,7 +14,7 @@ import { AudioCalibration, calibrateFromTranscript, describeCalibration } from "
 import { NonSpeechEvent, classifyGap, isRemovable } from "@/lib/audio/nonSpeech";
 import { BOUNDARY_DEFAULTS, BoundaryOptions, chooseJoinPoint, refineOffset, refineOnset } from "./boundaries";
 
-export type Pacing = "tight" | "natural" | "broadcast";
+export type Pacing = "staccato" | "tight" | "natural" | "broadcast";
 
 export interface PacingPolicy {
   /** פאוזה פנימית ארוכה מזו נחתכת גם בתוך רצף שנשמר. */
@@ -25,6 +25,17 @@ export interface PacingPolicy {
 }
 
 export const PACING: Record<Pacing, PacingPolicy> = {
+  /**
+   * מקסימום הידוק — חותך בכל מקום שיש בו באמת שקט בין מילה למילה.
+   * האוויר סביב כל מילה מצומצם למינימום שעדיין לא קוטע הברה. שים לב:
+   * במקומות שבהן מילים נאמרות רצוף (פחות מ-50ms ביניהן) אין מה להסיר —
+   * חיתוך שם יחתוך את המילה עצמה, וההגנה המבנית תמנע אותו.
+   */
+  staccato: {
+    maxInternalPauseSec: 0.04,
+    minRemovalSec: 0.015,
+    boundary: { preRollSec: 0.02, postRollSec: 0.035, speechMarginDb: 9, softMarginDb: 3 },
+  },
   // פרסומת / רשתות חברתיות — בלי שנייה מיותרת
   tight: {
     maxInternalPauseSec: 0.16,
@@ -126,13 +137,20 @@ interface Run {
   cleanGap?: boolean;
 }
 
-/** פער קצר מזה לא נבדק בכלל — הוא חלק מזרימת הדיבור. */
-const CLASSIFY_MIN_GAP = 0.12;
+/**
+ * פער קצר מזה לא נבדק בכלל — הוא חלק מזרימת הדיבור. הגבול נגזר מה-pacing:
+ * ב-staccato המשתמש ביקש לחתוך בין כל מילה, ולכן גם פער של 40ms נבחן.
+ * הרצפה של 30ms קיימת כי מתחתיה אין די מסגרות למדידה אמינה.
+ */
+const CLASSIFY_GAP_CEILING = 0.12;
+const CLASSIFY_GAP_FLOOR = 0.03;
 /** צלילים שמוסרים בזכות עצמם, גם כשהם קצרים מסף הפאוזה. */
 const NOISE_LABELS = new Set(["breath", "cough_throat", "impact"]);
 const NOISE_CONFIDENCE = 0.6;
 /** קיצוץ מקצות הפער לפני סיווג — חותמות ASR צמודות לדיבור. */
 const GAP_INSET_SEC = 0.09;
+/** קאט שמסיר פחות מזה אינו שווה את גבול הקידוד שהוא מוסיף. */
+const MIN_EFFECTIVE_CUT = 0.02;
 
 function spectralFor(
   options: ScriptCutOptions,
@@ -159,6 +177,10 @@ export function planScriptCut(
     ? { ...preset, maxInternalPauseSec: Math.max(0.05, options.maxInternalPauseOverride) }
     : preset;
   const minClipSec = options.minClipSec ?? 0.12;
+  const classifyMinGap = Math.max(
+    CLASSIFY_GAP_FLOOR,
+    Math.min(CLASSIFY_GAP_CEILING, pacing.maxInternalPauseSec),
+  );
   const removeFillers = options.removeFillers !== false;
   const envelope = options.envelope ?? null;
 
@@ -269,7 +291,7 @@ export function planScriptCut(
         && HEBREW_FILLERS.has(normalizeBase(r.text)))
         ? "filler"
         : "script_removal";
-    } else if (gap >= CLASSIFY_MIN_GAP) {
+    } else if (gap >= classifyMinGap) {
       const event = eventInGap(gapStart, gapEnd);
       const removable = event ? isRemovable(event, options.keepLaughter !== false) : true;
       // רעש שאינו דיבור (נשימה/כחכוח/חבטה) מוסר בזכות עצמו, בלי קשר לסף
@@ -390,6 +412,22 @@ export function planScriptCut(
     merged[i - 1].end = middle;
     merged[i].start = middle;
   }
+
+  // תיקון הגבולות רץ *אחרי* המיזוג, ולכן הוא יכול לסגור פער לאפס. קאט
+  // שלא מסיר כלום הוא הפסד נטו: גבול קידוד נוסף בלי שום רווח. מאחדים.
+  const final: Placed[] = [];
+  for (const segment of merged) {
+    const previous = final[final.length - 1];
+    if (previous && segment.start - previous.end < MIN_EFFECTIVE_CUT) {
+      previous.end = Math.max(previous.end, segment.end);
+      previous.run = { ...previous.run, words: [...previous.run.words, ...segment.run.words] };
+      previous.measured ||= segment.measured;
+      continue;
+    }
+    final.push({ ...segment });
+  }
+  merged.length = 0;
+  merged.push(...final);
 
   const clips: Clip[] = [];
   const boundaries: CutBoundaryReport[] = [];

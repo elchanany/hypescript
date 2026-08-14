@@ -292,7 +292,7 @@ async function analysisFor(
   }
 }
 
-const PACING_VALUES: Pacing[] = ["tight", "natural", "broadcast"];
+const PACING_VALUES: Pacing[] = ["staccato", "tight", "natural", "broadcast"];
 function resolvePacing(value: unknown, fallback: Pacing = "natural"): Pacing {
   const raw = String(value ?? "").toLowerCase() as Pacing;
   return PACING_VALUES.includes(raw) ? raw : fallback;
@@ -930,8 +930,8 @@ export const TOOLS: ToolMeta[] = [
           source: { type: "string" },
           pacing: {
             type: "string",
-            enum: ["tight", "natural", "broadcast"],
-            description: "tight=פרסומת (0.16s); natural=ברירת מחדל (0.42s); broadcast=דרשה, שומר פאוזה רטורית (0.85s)",
+            enum: ["staccato", "tight", "natural", "broadcast"],
+            description: "staccato=בין כל מילה למילה (0.04s); tight=פרסומת (0.16s); natural=ברירת מחדל (0.42s); broadcast=דרשה (0.85s)",
           },
           threshold_db: { type: "number", description: "רק ל-fallback ללא תמלול: סף עוצמה (dB)" },
           min_silence: { type: "number", description: "עוקף את הפאוזה של ה-pacing" },
@@ -1092,8 +1092,8 @@ export const TOOLS: ToolMeta[] = [
           source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי)" },
           pacing: {
             type: "string",
-            enum: ["tight", "natural", "broadcast"],
-            description: "tight=פרסומת/רשתות (פאוזה 0.16s); natural=ברירת מחדל לשיעור (0.42s); broadcast=דרשה, שומר פאוזה רטורית (0.85s)",
+            enum: ["staccato", "tight", "natural", "broadcast"],
+            description: "staccato=חיתוך בין כל מילה למילה (0.04s, הכי אגרסיבי); tight=פרסומת/רשתות (0.16s); natural=ברירת מחדל לשיעור (0.42s); broadcast=דרשה, שומר פאוזה רטורית (0.85s)",
           },
           remove_fillers: { type: "boolean", description: "הסרת אה/אמ/יעני (ברירת מחדל true)" },
           keep_laughter: { type: "boolean", description: "השאר צחוק קהל (ברירת מחדל true)" },
@@ -2643,7 +2643,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 ═══ הזרימה הקנונית ═══
 1. transcribe_video — ElevenLabs Scribe עדיף לעברית (חותמות מילה, אירועי שמע, דוברים). keyterms לשמות ומונחים תורניים.
 2. keep_by_script(script=הטקסט המדובר בלבד, pacing=...) — **פעולה אחת** שמיישרת, מסירה מה שלא בטקסט, מהדקת פאוזות וממקמת כל קאט בעמק השקט. אל תריץ remove_silence אחריה; זה כבר נעשה.
-   pacing: broadcast=שיעור/דרשה (שומר פאוזה רטורית) · natural=ברירת מחדל · tight=פרסומת/רשתות ("בלי שנייה מיותרת").
+   pacing: broadcast=שיעור/דרשה (שומר פאוזה רטורית) · natural=ברירת מחדל · tight=פרסומת/רשתות ("בלי שנייה מיותרת") · staccato=חיתוך בין כל מילה למילה (הכי אגרסיבי, קופצני בכוונה).
 3. אם keep_by_script דיווח על מילים חסרות — **עצור וטפל**. בדוק אם נאמרו (find_in_transcript); אם לא נאמרו, אמור זאת למשתמש. אל תמשיך כאילו הכל תקין.
 4. transcribe_timeline(remap) — לרענון הזמנים על הציר הערוך.
 5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. set_caption_style לעיצוב.

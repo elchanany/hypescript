@@ -212,6 +212,32 @@ describe("הסרת נשימות בפועל", () => {
     }
   });
 
+  it("staccato חותך יותר מ-tight, ועדיין לא חותך מילה", () => {
+    const run = (pacing: "staccato" | "tight") => planScriptCut(
+      breathWords, "אחת שתיים שלוש ארבע חמש שש",
+      { sourceId: "src", duration: 6, pacing, envelope: breathEnv, samples: breathSamples, sampleRate: SR },
+    );
+    const staccato = run("staccato");
+    const tight = run("tight");
+    const kept = (p: typeof staccato) => p.clips.reduce((s, c) => s + (c.end - c.start), 0);
+    expect(kept(staccato)).toBeLessThanOrEqual(kept(tight) + 1e-6);
+    for (const word of staccato.keptWords) {
+      const owner = staccato.clips.find((c) => word.start >= c.start - 1e-6 && word.end <= c.end + 1e-6);
+      expect(owner, `"${word.text}" נחתכת ב-staccato`).toBeTruthy();
+    }
+  });
+
+  it("אין קאט שלא מסיר כלום — הוא רק מוסיף גבול קידוד", () => {
+    const staccato = planScriptCut(breathWords, "אחת שתיים שלוש ארבע חמש שש", {
+      sourceId: "src", duration: 6, pacing: "staccato",
+      envelope: breathEnv, samples: breathSamples, sampleRate: SR,
+    });
+    for (let i = 1; i < staccato.clips.length; i++) {
+      const removed = staccato.clips[i].start - staccato.clips[i - 1].end;
+      expect(removed, `קאט ${i} מסיר ${removed.toFixed(4)}s`).toBeGreaterThanOrEqual(0.02 - 1e-9);
+    }
+  });
+
   it("קצב רגוע מסיר פחות מקצב הדוק", () => {
     const calm = planScriptCut(breathWords, "אחת שתיים שלוש ארבע חמש שש", {
       sourceId: "src", duration: 6, pacing: "broadcast",
