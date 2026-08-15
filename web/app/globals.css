@@ -830,26 +830,27 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   flex: 1; min-height: 0; min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: auto;
   background-color: var(--inset, #080c14);
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.032) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
   overscroll-behavior: contain;
   touch-action: pan-x pan-y;
 }
 .tl-inner {
-  /* בלי min-width:100% — אחרת אי אפשר להקטין מתחת ל־fit (zoom < 1) */
-  position: relative; min-width: 0; min-height: 100%; height: max-content; box-sizing: border-box;
-  max-width: none; /* רוחב נשלט ב-inline לפי zoom — לא דוחף את הפריסה */
+  position: relative; min-width: 100%; min-height: 100%; height: max-content; box-sizing: border-box;
+  max-width: none;
 }
 
 .tl-rowline { display: flex; align-items: stretch; }
 .tl-rowline + .tl-rowline { border-top: 1px solid var(--border); }
-.tl-rowline.empty-layer-row {
-  opacity: 0.72;
-  transition: opacity 0.15s ease;
+.tl-rowline.dynamic-new-track-zone {
+  opacity: 0.65;
+  transition: all 0.18s var(--ease-out, ease);
+  border-bottom: 1px dashed var(--border);
 }
-.tl-rowline.empty-layer-row:hover {
-  opacity: 0.95;
+.tl-rowline.dynamic-new-track-zone:hover, .tl-rowline.dynamic-new-track-zone.active-target {
+  opacity: 1;
+  background: rgba(59, 130, 246, 0.06);
 }
 
 /* headers — שורה אחת קומפקטית כדי שלא יישבו אחד על השני בגבהים קצרים */
@@ -883,10 +884,24 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 48px 100%;
 }
-.tl-lane2.empty-lane {
+.tl-lane2.new-track-lane {
   background-color: rgba(255, 255, 255, 0.012);
   display: flex;
   align-items: center;
+}
+.new-track-hint {
+  position: absolute;
+  inset-inline-start: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  user-select: none;
+  font-weight: 500;
 }
 .tl-lane2.muted { opacity: .5; }
 .tl-lane2.locked { cursor: default; }
@@ -1033,16 +1048,19 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 
 .media-cell, .media-item { cursor: grab; }
 .media-cell:active, .media-item:active { cursor: grabbing; }
+.clip2.is-dragging, .clip-ov.is-dragging, .clip-audio.is-dragging { opacity: 0.38; filter: grayscale(0.5); }
+.tl-drop-box {
+  position: absolute; top: 3px; bottom: 3px; border-radius: var(--r-sm);
+  background: rgba(59, 130, 246, 0.28); border: 1.5px dashed var(--accent, #3b82f6);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45); pointer-events: none; z-index: 10;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  font-size: 10px; font-family: var(--mono);
+}
 .tl-lane2.drop-target { outline: 1px dashed var(--accent); outline-offset: -2px; background: rgba(108,146,255,.06); }
 .tl-lane2.magnetic-target {
   outline: 1px solid rgba(255,209,102,.78); outline-offset: -2px;
   background: linear-gradient(90deg, rgba(255,209,102,.04), rgba(255,209,102,.1), rgba(255,209,102,.04));
 }
-.tl-empty.drop-target { border-color: var(--accent); background: rgba(108,146,255,.06); }
-.tl-drop { display: none; position: absolute; top: 0; bottom: 0; width: 3px; margin-inline-start: -1.5px; background: var(--accent-hover); z-index: 7; pointer-events: none; box-shadow: 0 0 8px 1px var(--accent), inset 0 0 0 1px rgba(255,255,255,.55); border-radius: 1px; }
-.tl-drop::before, .tl-drop::after { content: ""; position: absolute; left: -3.5px; width: 10px; height: 6px; background: var(--accent-hover); }
-.tl-drop::before { top: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); }
-.tl-drop::after { bottom: 0; clip-path: polygon(50% 0, 0 100%, 100% 100%); }
 
 /* CapCut-like magnet guide — vertical line across the whole timeline when snapping */
 .tl-snap-guide {

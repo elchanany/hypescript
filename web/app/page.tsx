@@ -724,10 +724,17 @@ export default function EditorPage() {
     if (!asset) return;
     const api = editorApiRef.current;
     if (!api) return;
-    const requested = tracks.find((track) => track.id === trackId);
-    const tid = asset.kind === "audio"
-      ? (audioTrack(tracks)?.id || "trk_audio")
-      : requested?.type === "video" ? requested.id : primaryVideoTrackId(tracks);
+    let tid = trackId;
+    if (trackId === "__new_track__") {
+      const { tracks: next, track } = createVideoTrack(tracks);
+      setTracks(next);
+      tid = track.id;
+    } else {
+      const requested = tracks.find((track) => track.id === trackId);
+      tid = asset.kind === "audio"
+        ? (audioTrack(tracks)?.id || "trk_audio")
+        : requested?.type === "video" ? requested.id : primaryVideoTrackId(tracks);
+    }
     const result = runCommand("clip.add", api, {
       sourceId: asset.id,
       trackId: tid,
@@ -744,11 +751,17 @@ export default function EditorPage() {
   const moveClipAtTimeline = (id: string, trackId: string, timelineStart: number) => {
     const api = editorApiRef.current;
     if (!api) return;
-    const result = runCommand("clip.moveAtTimeline", api, { id, trackId, timeline_start: timelineStart });
+    let tid = trackId;
+    if (trackId === "__new_track__") {
+      const { tracks: next, track } = createVideoTrack(tracks);
+      setTracks(next);
+      tid = track.id;
+    }
+    const result = runCommand("clip.moveAtTimeline", api, { id, trackId: tid, timeline_start: timelineStart });
     if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
     setSelectedSubId(null);
-    setSelectionTrack(tracks.find((track) => track.id === trackId)?.type === "audio" ? "audio" : "video");
+    setSelectionTrack(tracks.find((track) => track.id === tid)?.type === "audio" ? "audio" : "video");
   };
   const addVideoTrack = () => {
     const { tracks: next } = createVideoTrack(tracks);

@@ -2,13 +2,14 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
-- 2026-08-15: CapCut-style Editor UX, Aspect Ratios, Infinite Grid, Top Tooltips & Inline Composer Mentions implemented and verified.
-  1. Global floating tooltips rendered through top-level portal (`z-index: 999999`) preventing tooltip clipping.
-  2. Inline Composer tags/mentions (`[⏱️ ...]`, `[@media:...]`) inserted cleanly inside prompt text and parsed into structured references.
-  3. Infinite checkerboard timeline background grid extending across the whole workspace.
-  4. Unlimited multi-layer video/audio tracks with "+ הוסף שכבה" button and seamless multi-track dragging.
-  5. Direct Aspect Ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Inspector, plus horizontal/vertical mirroring controls.
-  6. AI Agent full tool awareness (`set_aspect_ratio`, `add_track`, `set_clip_flip`).
+- 2026-08-15: CapCut-style 2D Drag Engine, Infinite Dynamic Tracks & Extended Viewport Grid implemented and verified.
+  1. CapCut-style 2D Free-Drag Engine (`Timeline.tsx`, `globals.css`): smooth 2D tracking across time and tracks, fixed 2D ghost card with thumbnail/waveform, duration and target track badge (`🧲`), active lane highlighting and landing box (`.tl-drop-box`).
+  2. Infinite Dynamic Track Creation on Drag/Drop (`Timeline.tsx`, `page.tsx`): removed arbitrary 8-track limits and manual add button; dragging downward or dropping media automatically spawns a new video track dynamically on-the-fly (`__new_track__`).
+  3. Truly Infinite Grid Across Viewport & Zoom (`Timeline.tsx`, `globals.css`): `visibleTotal = total / zoom` at `zoom < 1` and `min-width: 100%`, ensuring grid lines and ruler ticks stretch seamlessly across the entire screen without black cutoffs.
+  4. Global floating tooltips rendered through top-level portal (`z-index: 999999`) preventing tooltip clipping.
+  5. Inline Composer tags/mentions (`[⏱️ ...]`, `[@media:...]`) inserted cleanly inside prompt text and parsed into structured references.
+  6. Direct Aspect Ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Inspector, plus horizontal/vertical mirroring controls.
+  7. AI Agent full tool awareness (`set_aspect_ratio`, `add_track`, `set_clip_flip`).
 - Full verification: 72 Vitest files / 554 tests passing (100% green), Next.js isolated multi-agent build (`agent-build.mjs`) passing with 45/45 static pages and clean TypeScript validation.
 
 # Active Files

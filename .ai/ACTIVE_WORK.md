@@ -1,11 +1,19 @@
 # ACTIVE_WORK.md
 
-## 2026-08-15 — CapCut-style Editor UX, Aspect Ratios, Infinite Grid, Top Tooltips & Inline Composer Mentions
+## 2026-08-15 — CapCut-style 2D Drag Engine, Infinite Dynamic Tracks & Extended Full-Viewport Grid
 
+- **CapCut-style 2D Free-Drag Engine (`Timeline.tsx`, `globals.css`)**:
+  - Full 2D pointer tracking (horizontal across time + vertical across tracks/layers) on any clip or overlay drag.
+  - Floating 2D ghost card with thumbnail/waveform, duration, and target track name badge with magnetic snap indicator (`🧲`).
+  - Active target lane highlighting and visible landing preview box (`.tl-drop-box`) at snapped time position with exact clip duration width.
+- **Infinite Dynamic Track Creation on Drag/Drop (`Timeline.tsx`, `page.tsx`)**:
+  - Removed all arbitrary track/layer caps (unlimited video tracks and overlay rows).
+  - Dynamic bottom new-track zone (`data-track-lane="__new_track__"`): dragging downward or dropping media automatically spawns a new video track dynamically on-the-fly (`createVideoTrack`).
+- **Truly Infinite Grid Across Viewport & Zoom (`Timeline.tsx`, `globals.css`)**:
+  - Set `visibleTotal = zoom < 1 ? total / Math.max(0.01, zoom) : total` and `min-width: 100%`.
+  - Grid lines, ruler ticks, and lane background stretch seamlessly across 100% of viewport width and beyond at all zoom levels without dead black space on the right.
 - **Global Tooltips (`GlobalTooltip.tsx`)**: Rendered through a top-level React portal at `z-index: 999999` with pointer-events pass-through, eliminating tooltip clipping underneath modal/dock layers.
 - **Inline Composer Quotes & Mentions (`Chat.tsx`)**: Replaced top reference banners with inline badge pills (`[⏱️ 00:15 (15.00s)]`, `[@media:id "name"]`) inserted at cursor position and parsed accurately for the AI agent.
-- **Infinite Timeline Grid (`globals.css`)**: Implemented continuous infinite checkerboard grid background extending seamlessly across the timeline canvas regardless of media length.
-- **CapCut-style Unlimited Layers (`Timeline.tsx`)**: Added empty layer rows at the bottom with layer header icons and "+ הוסף שכבה" for multi-track video and audio layout.
 - **Aspect Ratio Picker & Video Transformations (`AspectRatioPicker.tsx`, `canvasCoords.ts`, `InspectorPanel.tsx`, `TopBar.tsx`)**:
   - Direct aspect ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Project Inspector.
   - Video mirror flipping controls (↔ היפוך אופקי, ↕ היפוך אנכי) in Inspector and direct video controls.
