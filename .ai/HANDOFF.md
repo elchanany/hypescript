@@ -2,15 +2,14 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
-- 2026-08-15: CapCut-style 2D Drag Engine, Infinite Dynamic Tracks & Extended Viewport Grid implemented and verified.
-  1. CapCut-style 2D Free-Drag Engine (`Timeline.tsx`, `globals.css`): smooth 2D tracking across time and tracks, fixed 2D ghost card with thumbnail/waveform, duration and target track badge (`🧲`), active lane highlighting and landing box (`.tl-drop-box`).
-  2. Infinite Dynamic Track Creation on Drag/Drop (`Timeline.tsx`, `page.tsx`): removed arbitrary 8-track limits and manual add button; dragging downward or dropping media automatically spawns a new video track dynamically on-the-fly (`__new_track__`).
-  3. Truly Infinite Grid Across Viewport & Zoom (`Timeline.tsx`, `globals.css`): `visibleTotal = total / zoom` at `zoom < 1` and `min-width: 100%`, ensuring grid lines and ruler ticks stretch seamlessly across the entire screen without black cutoffs.
-  4. Global floating tooltips rendered through top-level portal (`z-index: 999999`) preventing tooltip clipping.
-  5. Inline Composer tags/mentions (`[⏱️ ...]`, `[@media:...]`) inserted cleanly inside prompt text and parsed into structured references.
-  6. Direct Aspect Ratio switcher (9:16 TikTok/Reels, 16:9 YouTube, 1:1 Instagram, 4:5, 4:3, 21:9) in TopBar and Inspector, plus horizontal/vertical mirroring controls.
-  7. AI Agent full tool awareness (`set_aspect_ratio`, `add_track`, `set_clip_flip`).
-- Full verification: 72 Vitest files / 554 tests passing (100% green), Next.js isolated multi-agent build (`agent-build.mjs`) passing with 45/45 static pages and clean TypeScript validation.
+- 2026-08-15: Video Player Pro Upgrade, Stable Transport Dimensions, TopBar Cleanup & Spacious ChatGPT Chat Focus Mode
+  1. Pro Video Player Upgrades (`VideoPreview.tsx`, `globals.css`): continuous draggable Scrubber progress bar, 15s forward/backward skip buttons (`RotateCcw`/`RotateCw`), speed toggle button (`0.5x`, `1x`, `1.25x`, `1.5x`, `2x`), stable audio meter (`.audio-eq-bars` fixed 24x16px with `.is-idle` / `.is-playing` states eliminating bar resizing jitter), and integrated Aspect Ratio picker in the player HUD.
+  2. Cleaned TopBar (`TopBar.tsx`, `globals.css`): brand logo pinned permanently to the far top-left (`tb-logo` first element in `topbar2`), removed Aspect Ratio picker and Language selector from the main editor topbar (Aspect Ratio lives in player HUD, Language in `/settings`).
+  3. Spacious ChatGPT Chat Focus Mode (`Chat.tsx`, `globals.css`): expanded chat container (`.chat-gpt-container`) to `980px` max-width with outer screen-edge scrollbar, eliminated the double/inner scrollbar on `textarea` in `.chat-compose`, and synchronized **hypescript AI** robot branding (`Bot`).
+  4. CapCut-style 2D Free-Drag Engine (`Timeline.tsx`, `globals.css`): smooth 2D tracking across time and tracks, fixed 2D ghost card with thumbnail/waveform, duration and target track badge (`🧲`), active lane highlighting and landing box (`.tl-drop-box`).
+  5. Infinite Dynamic Track Creation on Drag/Drop (`Timeline.tsx`, `page.tsx`): removed arbitrary track limits; dragging downward dynamically spawns a new video track (`__new_track__`).
+  6. Truly Infinite Grid Across Viewport & Zoom (`Timeline.tsx`, `globals.css`): `visibleTotal = total / zoom` at `zoom < 1` and `min-width: 100%`, ensuring grid lines and ruler ticks stretch seamlessly across the entire screen.
+- Full verification: 73 Vitest test suites / 591 tests passing (100% green), Next.js isolated multi-agent production build (`agent-build.mjs --name=chat-player-polish`) compiling cleanly with 45/45 static pages.
 
 # Active Files
 - `web/app/page.tsx`: render auto-opens chat, passes `latestExport`; URL lifecycle split (revoke previous on replace, current on unmount).

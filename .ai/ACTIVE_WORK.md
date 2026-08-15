@@ -1,5 +1,22 @@
 # ACTIVE_WORK.md
 
+## 2026-08-15 — Video Player Pro Upgrade, Stable Transport Dimensions, TopBar Cleanup & Spacious ChatGPT Chat Focus Mode
+
+- **Pro Video Player Upgrades (`VideoPreview.tsx`, `globals.css`)**:
+  - Interactive Scrubber Bar (`.pv-scrubber-wrap` / `.pv-scrubber`): Continuous progress drag/seek slider at the top of the transport bar.
+  - Skip 15s Forward/Backward (`RotateCcw` / `RotateCw` icons with `-15s` / `+15s` jumping).
+  - Playback Speed Selector (`0.5x`, `1x`, `1.25x`, `1.5x`, `2x` toggle with real-time `playbackRate` sync).
+  - Rock-Solid Transport Bar & Audio Meter (`.audio-eq-bars`): Stabilized with fixed `width: 24px; height: 16px; box-sizing: border-box`, using `.is-idle` / `.is-playing` states so toggling playback never causes width/height layout shift or jitter.
+  - Integrated Aspect Ratio Picker (`AspectRatioPicker.tsx`) directly into video player controls HUD (`.tp-ratio-wrap`).
+- **Cleaned TopBar (`TopBar.tsx`, `globals.css`)**:
+  - Fixed Brand Logo strictly at the far top-left (`tb-logo` first element in `topbar2`).
+  - Removed Aspect Ratio selector and Language switcher from the main editor TopBar (Aspect Ratio lives in player HUD, Language in `/settings`).
+- **Spacious ChatGPT Chat Focus Mode (`Chat.tsx`, `globals.css`)**:
+  - Expanded chat container (`.chat-gpt-container`) to `980px` max-width with clean viewport-level outer scrollbar (`.chat-body2`).
+  - Removed the double/inner scrollbar on `textarea` in `.chat-compose` (`scrollbar-width: thin; scrollbar-color: transparent`).
+  - Synced branding to **hypescript AI** with `Bot` robot icon across all bubbles and thinking indicator.
+- **Verification**: 73 Vitest test suites / 591 tests passed (100% green), Next.js isolated multi-agent production build (`agent-build.mjs --name=chat-player-polish`) compiled cleanly with 45/45 static pages.
+
 ## 2026-08-15 — CapCut-style 2D Drag Engine, Infinite Dynamic Tracks & Extended Full-Viewport Grid
 
 - **CapCut-style 2D Free-Drag Engine (`Timeline.tsx`, `globals.css`)**:

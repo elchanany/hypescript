@@ -762,9 +762,26 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
 
   return (
     <>
-      <div className="panel-header">
-        <div className="chat-header-leading"><span className="title"><Bot size={16} weight="bold" />hypescript AI</span></div>
+      <div className="panel-header chat-header-unified">
+        <div className="chat-header-leading">
+          <span className="title"><Bot size={15} weight="bold" />hypescript AI</span>
+          <div className="agent-modes-inline" role="tablist" aria-label="מצב סוכן">
+            {MODES.map((m) => (
+              <button key={m.id} role="tab" aria-selected={mode === m.id} className={`mode-tab ${mode === m.id ? "on" : ""}`}
+                data-tip={m.tip} data-tippos="down" onClick={() => changeMode(m.id)}>
+                <m.icon size={12} strokeWidth={1.9} /><span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="actions" style={{ gap: 4 }}>
+          <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
+            data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
+            <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
+          </button>
+          {selectionLabel && (
+            <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 12 ? selectionLabel.slice(0, 11) + "…" : selectionLabel}</span>
+          )}
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
           {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
             {LLM_PROVIDERS.map((p) => {
@@ -811,27 +828,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           {providerMode === "byok" && <div className="chat-byok-list">{LLM_PROVIDERS.map((definition) => <label key={definition.id}><span><strong>{definition.labelHe}</strong><small>{byokProviders.includes(definition.id) ? "מפתח מוצפן שמור" : "לא הוגדר"}</small></span><input type="password" value={byokDraft[definition.id] || ""} onChange={(event) => setByokDraft((current) => ({ ...current, [definition.id]: event.target.value }))} placeholder="הדבק מפתח חדש" autoComplete="off" /><button className="btn sm" disabled={!byokDraft[definition.id]?.trim() || byokBusy === definition.id} onClick={() => void saveByok(definition.id)}>{byokBusy === definition.id ? "שומר…" : "שמור"}</button></label>)}</div>}
         </>}
       </section>}
-
-      <div className="agent-modes" role="tablist" aria-label="מצב סוכן">
-        {MODES.map((m) => (
-          <button key={m.id} role="tab" aria-selected={mode === m.id} className={`mode-tab ${mode === m.id ? "on" : ""}`}
-            data-tip={m.tip} data-tippos="down" onClick={() => changeMode(m.id)}>
-            <m.icon size={13} strokeWidth={1.9} />{m.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="agent-ctx" aria-label="הקשר נוכחי">
-        <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
-          data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
-          <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
-        </button>
-        {selectionLabel
-          ? <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 18 ? selectionLabel.slice(0, 17) + "…" : selectionLabel}</span>
-          : <span className="ctx-chip muted"><SquareDashedMousePointer size={11} strokeWidth={2} />אין בחירה</span>}
-        {clips?.length ? <span className="ctx-chip"><Film size={11} strokeWidth={2} />{clips.length}</span> : null}
-        {subs?.length ? <span className="ctx-chip"><Captions size={11} strokeWidth={2} />{subs.length}</span> : null}
-      </div>
 
       <div className="chat-body2" ref={scrollRef}>
         {!restoredChat && <div className="chat-loading-stack" aria-label="טוען את השיחה"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>}
