@@ -18,6 +18,27 @@ import { createInterface } from "node:readline";
 
 const ENVIRONMENTS = ["production", "preview", "development"];
 
+/**
+ * שירותים שאין להם מפתח להוסיף — מוצגים כדי שיהיה ברור שלא שכחנו אותם.
+ * @type {Array<{label:string,why:string,url:string}>}
+ */
+const NO_KEY_SERVICES = [
+  { label: "Google Fonts (גופנים עבריים)", url: "https://fonts.google.com/?subset=hebrew",
+    why: "אין API. מורידים את קובצי הגופן וארוזים בפרויקט. OFL, מסחרי מותר." },
+  { label: "Free Music Archive", url: "https://freemusicarchive.org",
+    why: "ה-API הציבורי הוסר. הורדה ידנית, ובדיקת רישיון לכל טראק." },
+  { label: "Uppbeat", url: "https://uppbeat.io",
+    why: "אין API ציבורי. הורדה מהאתר עם חשבון." },
+  { label: "Epidemic Sound", url: "https://www.epidemicsound.com",
+    why: "Partner API דורש אישור עסקי מראש. מנוי, לא מפתח." },
+  { label: "Artlist", url: "https://artlist.io",
+    why: "אין API ציבורי. מנוי + הורדה ידנית." },
+  { label: "Lickd (שירים מוכרים)", url: "https://lickd.co",
+    why: "אין API. רכישה לפי טראק דרך האתר. הדרך החוקית היחידה לשיר מסחרי." },
+  { label: "Cloudflare R2 / Supabase", url: "-",
+    why: "כבר מוגדרים בפרויקט. ⚠ שלושה ערכי R2 פגומים — שם המפתח שוכפל לתוך הערך." },
+];
+
 /** @type {Array<{key:string,label:string,url:string,tier:string,note?:string}>} */
 const SERVICES = [
   { key: "GEMINI_API_KEY", label: "Google Gemini — ראיית תמונות", tier: "חינם",
@@ -39,6 +60,18 @@ const SERVICES = [
     url: "https://lottiefiles.com/developers", note: "כל אנימציה עם רישיון נפרד." },
   { key: "STABILITY_API_KEY", label: "Stability — מוזיקה/תמונות", tier: "בתשלום",
     url: "https://platform.stability.ai/account/keys" },
+  { key: "OPENVERSE_CLIENT_ID", label: "Openverse — חיפוש CC מאוחד", tier: "חינם",
+    url: "https://api.openverse.org/v1/auth_tokens/register/",
+    note: "עובד גם בלי מפתח; המפתח רק מעלה את מגבלת הקצב." },
+  { key: "OPENVERSE_CLIENT_SECRET", label: "Openverse — סוד", tier: "חינם",
+    url: "https://api.openverse.org/v1/auth_tokens/register/",
+    note: "מגיע יחד עם ה-client id למעלה." },
+  { key: "SUNO_API_KEY", label: "Suno — מוזיקה AI", tier: "בתשלום",
+    url: "https://suno.com",
+    note: "⚠ תנאי רישוי מסחרי עדיין לא יציבים. לפרויקט לקוח — ElevenLabs Music עדיף." },
+  { key: "DEEPGRAM_API_KEY", label: "Deepgram — תמלול (גיבוי)", tier: "חינם 200$",
+    url: "https://console.deepgram.com/signup",
+    note: "אופציונלי. גיבוי אם Groq ו-ElevenLabs שניהם נופלים." },
 ];
 
 const args = process.argv.slice(2);
@@ -115,7 +148,20 @@ for (const s of SERVICES) {
 }
 const missing = wanted.filter((s) => !have.has(s.key));
 console.log("  " + "─".repeat(52));
-console.log(`  קיימים ${SERVICES.length - SERVICES.filter((s) => !have.has(s.key)).length}/${SERVICES.length} · חסרים ${missing.length}\n`);
+console.log(`  קיימים ${SERVICES.length - SERVICES.filter((s) => !have.has(s.key)).length}/${SERVICES.length} · חסרים ${missing.length}`);
+
+console.log("\n  כבר מוגדרים בפרויקט (לא נשאלים כאן):");
+for (const key of ["ELEVENLABS_API_KEY", "GROQ_API_KEY", "DEEPSEEK_API_KEY"]) {
+  if (have.has(key)) console.log(`  ✓ ${key}`);
+}
+
+console.log("\n  שירותים שאין להם מפתח להוסיף:");
+for (const s of NO_KEY_SERVICES) {
+  console.log(`  · ${s.label}`);
+  console.log(`      ${s.why}`);
+  if (s.url !== "-") console.log(`      ${s.url}`);
+}
+console.log("");
 
 if (flag("status")) process.exit(0);
 if (!missing.length) { console.log("  הכל כבר מוגדר.\n"); process.exit(0); }
