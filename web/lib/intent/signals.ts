@@ -228,7 +228,8 @@ export interface GoalScore {
 const TEXT_HINTS: Array<{ words: string[]; goals: GoalId[]; weight: number; reasonHe: string }> = [
   { words: ["טיקטוק", "tiktok", "רילס", "reels", "שורט", "shorts", "סטורי"], goals: ["shorts_from_long", "social_promo"], weight: 3, reasonHe: "הוזכרה פלטפורמת וידאו קצר" },
   { words: ["פייסבוק", "facebook", "אינסטגרם", "instagram", "פוסט", "מודעה"], goals: ["photo_promo", "social_promo"], weight: 2.5, reasonHe: "הוזכר פוסט ברשת חברתית" },
-  { words: ["משפחה", "משפחתי", "מצגת", "אמא", "סבתא", "חתונה", "בר מצווה", "יומולדת"], goals: ["family_slideshow"], weight: 3, reasonHe: "הוזכר אירוע משפחתי" },
+  // "מצגת" לבדה גנרית מדי — היא מופיעה גם במצגת עסקית. רק הקשר משפחתי מפורש.
+  { words: ["משפחה", "משפחתי", "אמא", "אבא", "סבתא", "סבא", "חתונה", "בר מצווה", "בת מצווה", "יומולדת", "ילדים"], goals: ["family_slideshow"], weight: 3, reasonHe: "הוזכר אירוע משפחתי" },
   { words: ["שיעור", "הרצאה", "רב", "דרשה", "שיחה", "כולל"], goals: ["lecture_cut"], weight: 3, reasonHe: "הוזכר שיעור או הרצאה" },
   { words: ["פודקאסט", "podcast", "ראיון", "פרק"], goals: ["podcast_edit", "shorts_from_long"], weight: 3, reasonHe: "הוזכר פודקאסט או ראיון" },
   { words: ["עסקי", "מצגת עסקית", "לקוחות", "משקיעים", "פיץ", "מכירות"], goals: ["business_deck"], weight: 3, reasonHe: "הוזכר הקשר עסקי" },

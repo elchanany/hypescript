@@ -324,11 +324,32 @@ describe("capture_frame mode decision (captureFrameMode)", () => {
 describe("client brief operating rules", () => {
   it("teaches the agent to classify a mixed client brief before cutting", () => {
     // הכשל שדווח בשדה: כותרות ופרסומת נכנסו ל-keep_by_script, ותוכן אמיתי הושמט
-    expect(SYSTEM_PROMPT).toContain("קריאת הבריף");
+    expect(SYSTEM_PROMPT).toContain("סיווג הבריף");
     expect(SYSTEM_PROMPT).toContain("טקסט מדובר לשמירה");
     expect(SYSTEM_PROMPT).toContain("find_in_transcript");
-    expect(SYSTEM_PROMPT).toContain("אסור** שייכנס ל-keep_by_script");
+    expect(SYSTEM_PROMPT).toContain("אסור** ל-keep_by_script");
     expect(SYSTEM_PROMPT).toContain("אילוץ קשיח");
+  });
+
+  it("starts every conversation by discovering what the user actually wants", () => {
+    // אותו קובץ הוא מוצר אחר לכל אדם; הסוכן חייב לשאול לפני שהוא מניח
+    expect(SYSTEM_PROMPT).toContain("discover_intent");
+    expect(SYSTEM_PROMPT).toContain("set_project_brief");
+    expect(SYSTEM_PROMPT).toContain("לכל היותר שלוש");
+    expect(SYSTEM_PROMPT).toContain("אפשר לדלג");
+    expect(SYSTEM_PROMPT).toContain("אל תניח");
+  });
+
+  it("requires looking at the material before describing or ordering it", () => {
+    expect(SYSTEM_PROMPT).toContain("אל תמציא תיאור לתמונה שלא ראית");
+    expect(SYSTEM_PROMPT).toContain("אל תתאר מה שלא ראית");
+    expect(SYSTEM_PROMPT).toContain("אל תחפור");
+  });
+
+  it("matches caption style to the format instead of using one look", () => {
+    expect(SYSTEM_PROMPT).toContain("list_caption_styles");
+    expect(SYSTEM_PROMPT).toContain("karaoke");
+    expect(SYSTEM_PROMPT).toContain("אל תשים karaoke על הרצאה");
   });
 
   it("mandates script-first cutting with pacing, and an acceptance gate before render", () => {

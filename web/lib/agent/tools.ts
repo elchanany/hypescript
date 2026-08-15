@@ -32,6 +32,9 @@ import { EFFECT_CATEGORIES, effectById, effectsByCategory, searchEffects } from 
 import { TRANSITION_CATEGORIES, searchTransitions, transitionsByCategory } from "@/lib/creative/transitions";
 import { searchTextPresets, textPresetsByCategory } from "@/lib/creative/textPresets";
 import { clipLook } from "@/lib/creative/clipLook";
+import { GOALS, collectSignals, isConfident, scoreGoals, type GoalId } from "@/lib/intent/signals";
+import { buildBrief, describeBrief, planQuestions, type DiscoveryAnswers, type ProjectBrief } from "@/lib/intent/questions";
+import { CAPTION_STYLES, HEBREW_FONTS, captionStyleById } from "@/lib/captions/styles";
 import { CaptionStyle } from "@/lib/editor/captionStyle";
 import {
   assembleTranscript,
@@ -59,6 +62,8 @@ export interface AgentContext {
   assembledWords?: Word[] | null;
   /** סקריפט נקי מהפאנל / keep_by_script — מקור אמת לכתוביות */
   script?: string;
+  /** מה המשתמש באמת רוצה — נקבע ב-set_project_brief ומיישר את שאר הכלים. */
+  brief?: ProjectBrief | null;
   clips: Clip[] | null;
   subs: Sub[] | null;
   overlays: Overlay[];
@@ -2497,6 +2502,140 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "discover_intent", label: "הבנת המטרה", color: "#6366f1", icon: "🧭",
+    schema: {
+      name: "discover_intent",
+      description:
+        "**הכלי הראשון בכל שיחה חדשה.** קורא את המדיה שהועלתה ואת מה שהמשתמש כתב, ומסיק מה המוצר " +
+        "שהוא באמת רוצה: פוסט מתמונות, מצגת משפחתית, חיתוך שיעור, עריכת פודקאסט, שורטים מתוכן ארוך, " +
+        "מצגת עסקית. מחזיר יעד מדורג עם סיבות, ואת השאלות הקצרות שכדאי לשאול — רק מה שאי-אפשר להסיק, " +
+        "ולכל היותר שלוש. אל תתחיל לחתוך לפני שהרצת אותו.",
+      parameters: {
+        type: "object",
+        properties: {
+          user_text: { type: "string", description: "מה שהמשתמש כתב עד כה (משפיע על ההסקה)" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const signals = collectSignals({
+        media: ctx.media,
+        hasTranscript: !!ctx.words || Object.keys(ctx.transcripts || {}).length > 0,
+        hasScript: !!(ctx.script || "").trim(),
+        timelineSec: ctx.clips?.length ? totalDur(ctx.clips) : 0,
+      });
+      const ranked = scoreGoals(signals, String(a.user_text || ""));
+      const questions = planQuestions(signals, ranked);
+      const brief = buildBrief(signals, ranked, {});
+
+      const lines: string[] = [];
+      lines.push(`חומר: ${signals.imageCount} תמונות · ${signals.videoCount} וידאו · ${signals.audioCount} אודיו`
+        + (signals.longestVideoSec ? ` · הארוך ${Math.round(signals.longestVideoSec)}s` : "")
+        + ` · סוג "${signals.shape}"`);
+      lines.push("");
+      lines.push("יעדים מדורגים:");
+      for (const entry of ranked.slice(0, 3)) {
+        lines.push(`  ${GOALS[entry.goal].labelHe} (${entry.score.toFixed(1)}) — ${entry.reasonsHe.join("; ")}`);
+      }
+      lines.push("");
+      lines.push(isConfident(ranked)
+        ? `ההובלה חד-משמעית. הצע: ${describeBrief(brief)}`
+        : "ההובלה אינה חד-משמעית — שאל לפני שתתחיל.");
+      if (questions.length) {
+        lines.push("", `שאלות לשאול (${questions.length}, כולן ניתנות לדילוג):`);
+        for (const q of questions) {
+          lines.push(`  [${q.id}] ${q.promptHe}`);
+          lines.push(`     ${q.options.map((o) => `${o.labelHe}${o.hintHe ? ` (${o.hintHe})` : ""}`).join(" · ")}`);
+        }
+        lines.push("העבר אותן ל-ask_user אחת-אחת בניסוח שלך, ידידותי וקצר. דילוג = ברירת המחדל.");
+      } else {
+        lines.push("", "אין צורך לשאול — אפשר להציע תוכנית ולהתחיל.");
+      }
+      lines.push("", "אחרי שהמשתמש עונה: set_project_brief כדי לקבע את ההחלטות.");
+      return lines.join("\n");
+    },
+  },
+  {
+    name: "set_project_brief", label: "קיבוע בריף", color: "#6366f1", icon: "📌",
+    schema: {
+      name: "set_project_brief",
+      description:
+        "מקבע את מה שסוכם: יעד, פלטפורמה, טון, מוזיקה, קריינות, אורך. מחזיר את המתכון המלא — " +
+        "יחס מסך, קצב חיתוך, סגנון כתוביות, קטגוריות מעברים וצעדים מומלצים. כל שאר הכלים אמורים " +
+        "להתיישר לפי זה במקום לנחש.",
+      parameters: {
+        type: "object",
+        properties: {
+          goal: { type: "string", description: "photo_promo|family_slideshow|lecture_cut|podcast_edit|shorts_from_long|social_promo|business_deck" },
+          platform: { type: "string", description: "tiktok|instagram|facebook|youtube|whatsapp|screen" },
+          tone: { type: "string", description: "energetic|warm|serious|clean" },
+          music: { type: "string", description: "yes_generated|yes_own|no" },
+          narration: { type: "string", description: "yes|no" },
+          length: { type: "string", description: "very_short|short|medium|full" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const signals = collectSignals({
+        media: ctx.media,
+        hasTranscript: !!ctx.words || Object.keys(ctx.transcripts || {}).length > 0,
+        hasScript: !!(ctx.script || "").trim(),
+        timelineSec: ctx.clips?.length ? totalDur(ctx.clips) : 0,
+      });
+      const ranked = scoreGoals(signals, "");
+      const answers: DiscoveryAnswers = {};
+      if (a.goal && GOALS[String(a.goal) as GoalId]) answers.goal = String(a.goal) as GoalId;
+      if (a.platform) answers.platform = String(a.platform) as DiscoveryAnswers["platform"];
+      if (a.tone) answers.tone = String(a.tone) as DiscoveryAnswers["tone"];
+      if (a.music) answers.music = String(a.music) as DiscoveryAnswers["music"];
+      if (a.narration) answers.narration = String(a.narration) as DiscoveryAnswers["narration"];
+      if (a.length) answers.length = String(a.length) as DiscoveryAnswers["length"];
+
+      const brief = buildBrief(signals, ranked, answers);
+      ctx.brief = brief;
+      const style = captionStyleById(brief.captions);
+      return [
+        describeBrief(brief),
+        "",
+        "על מה זה מבוסס:",
+        ...brief.derivedHe.map((d) => `  • ${d}`),
+        "",
+        `סגנון כתוביות: ${style ? `${style.labelHe} — ${style.descriptionHe}` : brief.captions}`,
+        `מעברים מועדפים: ${brief.transitions.join(", ")} (list_transitions לפרטים)`,
+        `צעדים: ${brief.steps.join(" → ")}`,
+      ].join("\n");
+    },
+  },
+  {
+    name: "get_project_brief", label: "בריף נוכחי", color: "#6366f1", icon: "📄",
+    schema: {
+      name: "get_project_brief",
+      description: "מחזיר את הבריף שנקבע. הרץ אותו כשאתה לא בטוח לאיזה יחס מסך, קצב או סגנון כתוביות להתיישר.",
+      parameters: { type: "object", properties: {} },
+    },
+    run: async (_a, ctx) => {
+      if (!ctx.brief) return "עדיין לא נקבע בריף. הרץ discover_intent ואז set_project_brief.";
+      return `${describeBrief(ctx.brief)}\nצעדים: ${ctx.brief.steps.join(" → ")}`;
+    },
+  },
+  {
+    name: "list_caption_styles", label: "סגנונות כתוביות", color: "#8b5cf6", icon: "🔤",
+    schema: {
+      name: "list_caption_styles",
+      description:
+        "מחזיר את סגנונות הכתוביות והגופנים העבריים הזמינים. הסגנון קובע גם מראה (גופן, צבע, קו מתאר, " +
+        "הדגשת מילה) וגם חלוקה (כמה מילים בפעימה, קצב קריאה) — הם החלטה אחת. " +
+        "karaoke מדגיש את המילה הנאמרת (טיקטוק); lecture נותן משפט שלם לכמה שניות.",
+      parameters: { type: "object", properties: {} },
+    },
+    run: async () => {
+      const styles = Object.values(CAPTION_STYLES).map((s) =>
+        `${s.id} (${s.labelHe}) — ${s.descriptionHe}\n   גופן ${s.look.fontFamily} · ${s.look.fontSize}% · הדגשת מילה: ${s.look.highlight}`
+        + (s.policy.targetWords ? ` · ~${s.policy.targetWords} מילים בפעימה · עד ${s.policy.maxCps} תווים/שנייה` : ""));
+      return `${styles.join("\n")}\n\nגופנים עבריים זמינים (OFL, ארוזים מקומית):\n  ${HEBREW_FONTS.map((f) => f.labelHe).join("\n  ")}`;
+    },
+  },
+  {
     name: "list_looks", label: "קטלוג לוקים", color: "#8b5cf6", icon: "🎨",
     schema: {
       name: "list_looks",
@@ -2694,25 +2833,41 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 ═══ מה נחשב הצלחה ═══
 הפלט מכיל **בדיוק** את הטקסט שהמשתמש ביקש — לא מילה פחות ולא מילה יותר; כל קאט נופל בשקט מדוד ולא באמצע הברה; הכתוביות קריאות ומכובדות. אם אחד מהשלושה לא מתקיים — העבודה לא הסתיימה, גם אם כל הכלים "הצליחו". אל תדווח הצלחה לפני audit_edit.
 
-═══ שלב 0: קריאת הבריף (אל תדלג) ═══
-בריף של לקוח מערבב חמישה סוגי טקסט. סיווג שגוי הוא הכשל הנפוץ ביותר — הוא מכניס כותרות ופרסומות לתוך הסרטון או משמיט תוכן אמיתי.
-א. **טקסט מדובר לשמירה** — מה שנאמר בהקלטה וצריך להישאר. רק זה נכנס ל-keep_by_script ולכתוביות.
-ב. **מטא/כותרות** — "הקלטה ראשונה", "פתיח וכותרת:", תיאור שיווקי של השיעור. לא נכנס לסרטון ולא לכתוביות.
-ג. **טקסט מסך** — שורות שמסומנות כציטוט/כרטיס (למשל אחרי ">>>") שנועדו להופיע כשכבה, לא כדיבור.
-ד. **הוראות עריכה** — "הסאונד הולך ונחלש", "מעבר לטקסט הבא", "תשים לוגו". פעולות, לא תוכן.
-ה. **טקסט חדש שלא נאמר** (CTA/אאוטרו) — נוצר בקריינות/כרטיס בסוף. **אסור** שייכנס ל-keep_by_script.
+═══ שלב 0: להבין מה רוצים (לפני כל פעולה) ═══
+**הרץ discover_intent בתחילת כל שיחה חדשה, לפני כל דבר אחר.** הוא קורא את המדיה ואת מה שנכתב ומחזיר יעד מדורג עם סיבות, ואת השאלות ששווה לשאול.
 
-כלל ההכרעה: קטע הוא "טקסט מדובר" רק אם הוא באמת בתמלול. כשיש ספק — find_in_transcript על 4–6 מילים ממנו. לא נמצא ⇒ אינו טקסט מדובר.
-שלילות מפורשות של המשתמש ("אל תשים פופ-אפ", "בלי מוזיקה") הן אילוץ קשיח שגובר על כל ברירת מחדל ועל כל תבנית.
-לפני שמתחילים לחתוך, אמור בשורה אחת מה סיווגת כטקסט לשמירה, מה כשכבות/CTA, ומה נדחה לסוף. אם משפט אחד באמת דו-משמעי — ask_user פעם אחת בלבד, ובינתיים המשך בשלבים שאינם תלויים בו.
+אותו קובץ הוא מוצר אחר לכל אדם. תיקיית תמונות היא מודעת דירת-שותפים לפייסבוק אצל אחד ומצגת משפחתית אצל אחר — ומהן נגזרים יחס מסך, קצב, מוזיקה וסגנון כתוביות הפוכים. אל תניח.
+
+- ההובלה חד-משמעית ⇒ הצע תוכנית במשפט אחד והתחל.
+- לא חד-משמעית ⇒ שאל את השאלות שהכלי החזיר, **לכל היותר שלוש**, אחת-אחת דרך ask_user, בניסוח קצר וידידותי משלך. אמור מראש שאפשר לדלג.
+- אחרי התשובות (או דילוג) ⇒ set_project_brief, ואז התיישר אליו: יחס מסך, pacing, סגנון כתוביות, מעברים.
+- get_project_brief כשאתה לא בטוח לאיזה קצב או סגנון להתיישר. אל תנחש מה שכבר סוכם.
+- אין מדיה בכלל ⇒ שאלה אחת ידידותית מה רוצים ליצור, ובקש את החומר.
+
+═══ סיווג הבריף כשיש טקסט ═══
+בריף של לקוח מערבב חמישה סוגי טקסט. סיווג שגוי מכניס כותרות ופרסומות לתוך הסרטון או משמיט תוכן אמיתי.
+א. **טקסט מדובר לשמירה** — נאמר בהקלטה. רק זה נכנס ל-keep_by_script ולכתוביות.
+ב. **מטא/כותרות** — "הקלטה ראשונה", תיאור שיווקי. לא נכנס.
+ג. **טקסט מסך** — שורות מסומנות כציטוט/כרטיס, נועדו לשכבה.
+ד. **הוראות עריכה** — "הסאונד נחלש", "תשים לוגו". פעולות, לא תוכן.
+ה. **טקסט חדש שלא נאמר** (CTA/אאוטרו) — קריינות או כרטיס בסוף. **אסור** ל-keep_by_script.
+
+כלל ההכרעה: קטע הוא "טקסט מדובר" רק אם הוא בתמלול. בספק — find_in_transcript על 4–6 מילים. לא נמצא ⇒ אינו טקסט מדובר.
+שלילה מפורשת ("אל תשים פופ-אפ") היא אילוץ קשיח שגובר על כל ברירת מחדל.
+
+═══ להבין את החומר, לא רק את הבקשה ═══
+- **תמונות:** לפני שמסדרים אותן — capture_frame או צפייה ישירה, כדי לדעת מה בכל תמונה. סדר נכון של סיפור דורש לדעת מה רואים. אל תמציא תיאור לתמונה שלא ראית.
+- **תוכן ארוך (פודקאסט/הרצאה):** transcribe_video ואז get_transcript, וסכם למשתמש במשפט־שניים על מה מדובר ואיפה הקטעים החזקים. אל תשפוך עליו את התמלול.
+- **אימות ויזואלי:** capture_frame(timeline=true) מרנדר את הציר בדיוק כמו בייצוא — כך רואים מה יצא באמת אחרי שכבות וכתוביות.
 
 ═══ הזרימה הקנונית ═══
+0. discover_intent → שאלות (אם צריך) → set_project_brief. כל השאר מתיישר לבריף.
 1. transcribe_video — ElevenLabs Scribe עדיף לעברית (חותמות מילה, אירועי שמע, דוברים). keyterms לשמות ומונחים תורניים.
 2. keep_by_script(script=הטקסט המדובר בלבד, pacing=...) — **פעולה אחת** שמיישרת, מסירה מה שלא בטקסט, מהדקת פאוזות וממקמת כל קאט בעמק השקט. אל תריץ remove_silence אחריה; זה כבר נעשה.
    pacing: broadcast=שיעור/דרשה (שומר פאוזה רטורית) · natural=ברירת מחדל · tight=פרסומת/רשתות ("בלי שנייה מיותרת") · staccato=חיתוך בין כל מילה למילה (הכי אגרסיבי, קופצני בכוונה).
 3. אם keep_by_script דיווח על מילים חסרות — **עצור וטפל**. בדוק אם נאמרו (find_in_transcript); אם לא נאמרו, אמור זאת למשתמש. אל תמשיך כאילו הכל תקין.
 4. transcribe_timeline(remap) — לרענון הזמנים על הציר הערוך.
-5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. set_caption_style לעיצוב.
+5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. הסגנון לפי הבריף: list_caption_styles ואז set_caption_style. karaoke (הדגשת המילה הנאמרת) לטיקטוק; lecture (משפט שלם) לשיעור. אל תשים karaoke על הרצאה.
 6. שכבות/לוגו/כרטיסים, ואז CTA/אאוטרו (קריינות + כרטיס) אם ביקשו.
 7. **audit_edit** — חובה. יש כשלים ⇒ תקן, אל תרנדר.
 8. render_video רק בסוף או לפי בקשה.
@@ -2728,6 +2883,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 8. **אל תיגע בעבודה שכבר סודרה.** נאמר שתמונת סיום/קריינות/לוגו מסודרים ⇒ אל תשנה ואל תבנה מחדש. עדכון שכבה רק לפי overlay_id + expected_source.
 9. **אל תמציא נכסים.** אין לוגו/קול/תמונה ⇒ get_brand_kit, ואם אין — ask_user פעם אחת כשמגיעים לשלב, לא לפניו.
 10. **נכס חסר אינו חוסם.** "אביא אחר כך" ⇒ בצע את כל השאר במלואו, ובקש בסוף.
+11. **אל תחפור.** שלוש שאלות מקסימום בפתיחה, ואז עובדים. שאלה נוספת רק כשבאמת אי-אפשר להמשיך בלעדיה. הצעות — אחת או שתיים, לא רשימה.
+12. **אל תתאר מה שלא ראית.** תמונה שלא נצפתה, קטע שלא תומלל, פלט שלא נבדק — אין עליהם מה לומר.
 
 ═══ מדידה מול ניחוש ═══
 - תווית audio_event מספק התמלול = ראיה ישירה.
@@ -2742,7 +2899,10 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 - אין ניתוח גל-קול (הכלי מדווח על כך) ⇒ אמור למשתמש שהחיתוך פחות מדויק. אל תתחזה לדיוק שאין.
 
 ═══ כלים ═══
-- keep_by_script(script, pacing, remove_fillers, keep_laughter, append) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. append לריבוי מקורות.
+- discover_intent / set_project_brief / get_project_brief — מה המשתמש רוצה, ומה נגזר מזה.
+- list_caption_styles — סגנונות וגופנים עבריים; הסגנון קובע גם מראה וגם חלוקה.
+- list_looks / apply_look / list_transitions / list_text_templates — הקטלוג היצירתי.
+- keep_by_script(script, pacing, remove_fillers, keep_laughter, append) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. pacing: staccato (בין כל מילה) · tight · natural · broadcast. append לריבוי מקורות.
 - remove_silence — רק כשאין טקסט מוגדר, או להידוק נוסף. after keep_by_script: within_existing.
 - audit_edit(script) — שער הקבלה. חובה לפני render.
 - inspect_timeline_evidence(classify_sounds) / analyze_audio / find_in_transcript / get_transcript(timeline=true) / transcribe_timeline.
