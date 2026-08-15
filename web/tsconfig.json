@@ -50,7 +50,8 @@
     ".next-agent-timeline-direct-drag/types/**/*.ts",
     ".next-agent-intent/types/**/*.ts",
     ".next-agent-timeline-verify/types/**/*.ts",
-    ".next-agent-chat-gpt-mode/types/**/*.ts"
+    ".next-agent-chat-gpt-mode/types/**/*.ts",
+    ".next-agent-chat-gpt-hero/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

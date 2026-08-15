@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "web/app/page.tsx": {
-    "mtime": 1786752412.8736792,
-    "ast_hash": "6c4e2db3ae66d3fa699ce0e2cf0dcf61",
+    "mtime": 1786801961.9922874,
+    "ast_hash": "2d9184445a24dfea9dd9678dd31f4535",
     "semantic_hash": ""
   },
   "web/app/settings/page.tsx": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "web/components/Chat.tsx": {
-    "mtime": 1786741476.4710293,
-    "ast_hash": "5fba0fa9b18dc1c5e93d7a4f80afea85",
+    "mtime": 1786802153.3846457,
+    "ast_hash": "21e241eff4d0079c531fb76b1a015e7a",
     "semantic_hash": ""
   },
   "web/components/ChunkReload.tsx": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "web/components/TopBar.tsx": {
-    "mtime": 1786741800.1925607,
-    "ast_hash": "609ee3ef3cf3051ce5e827f5d63fd704",
+    "mtime": 1786801857.4243002,
+    "ast_hash": "5929a3e9727751fcb6cf0464abbd851e",
     "semantic_hash": ""
   },
   "web/components/VideoPreview.tsx": {
@@ -480,8 +480,8 @@
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
-    "mtime": 1786801650.6862867,
-    "ast_hash": "757c99a937cabcfc5ad64d970c6c7f80",
+    "mtime": 1786802057.9876323,
+    "ast_hash": "cb8e3a7a2256e4e6c4ee2d2fa629bbf9",
     "semantic_hash": ""
   },
   "web/vitest.config.ts": {
@@ -2040,8 +2040,8 @@
     "semantic_hash": ""
   },
   "web/components/EditorTour.tsx": {
-    "mtime": 1786739007.4116108,
-    "ast_hash": "911b952b24acb364220e2d078645eecf",
+    "mtime": 1786801867.8744402,
+    "ast_hash": "01315b30aa7576edd8fa0777d9b7a27b",
     "semantic_hash": ""
   },
   "web/lib/billing/aiAccess.server.ts": {

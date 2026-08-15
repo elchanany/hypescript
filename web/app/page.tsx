@@ -1317,10 +1317,11 @@ export default function EditorPage() {
           setTourOpen(false);
           localStorage.removeItem("hs_editor_tour_pending");
           localStorage.setItem("hs_editor_tour_done", "1");
-          setFocusMode(true);
+          setFocusMode(false);
           setChatOpen(true);
-          localStorage.setItem("hs_chatFocus", "1");
+          localStorage.setItem("hs_chatFocus", "0");
           localStorage.setItem("hs_chatOpen", "1");
+          window.dispatchEvent(new CustomEvent("hypescript:chat-example", { detail: "הסר שתיקות ונשימות, צור כתוביות בעברית והכן לי סרטון מוכן לייצוא." }));
         }}
       />
 

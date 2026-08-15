@@ -831,9 +831,33 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       <div className="chat-body2" ref={scrollRef}>
         {!restoredChat && <div className="chat-loading-stack" aria-label="טוען את השיחה"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>}
         {restoredChat && items.length === 0 && (
-          <div className="chat-empty2">
-            העלה קבצים ותאר מה לעשות — למשל: “השאר רק את הקטע על X”, “תמלל והכן כתוביות”, “הסר שתיקות ונשימות”.
-          </div>
+          inFocusMode ? (
+            <div className="chat-gpt-hero">
+              <div className="chat-gpt-hero-badge"><Sparkles size={16} /><span>עוזר עריכה חכם</span></div>
+              <h1 className="chat-gpt-hero-title">במה אפשר לעזור לך לערוך היום?</h1>
+              <p className="chat-gpt-hero-sub">כתוב הוראה בעברית, צרף קבצים או בחר אחת מהפעולות המהירות להלן:</p>
+              <div className="chat-gpt-hero-starters">
+                {[
+                  { icon: Scissors, label: "הסר שתיקות ונשימות", text: "הסר שתיקות ונשימות מכל הווידאו והשאר זרימה חלקה." },
+                  { icon: Captions, label: "צור כתוביות בעברית", text: "צור כתוביות מסונכרנות לקצב הדיבור בעברית." },
+                  { icon: FilmIcon, label: "ערוך לפי סקריפט", text: "השאר רק את החלקים הבאים לפי הסקריפט: " },
+                  { icon: AudioLines, label: "נקה מהססים וחזרות", text: "זהה מהססים וחזרות על מילים ונקה אותם מהסרטון." },
+                ].map((s) => (
+                  <button type="button" key={s.label} className="chat-hero-starter-card" onClick={() => { setInput(s.text); taRef.current?.focus(); }}>
+                    <div className="starter-card-icon"><s.icon size={17} /></div>
+                    <div className="starter-card-content">
+                      <strong>{s.label}</strong>
+                      <small>{s.text}</small>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="chat-empty2">
+              העלה קבצים ותאר מה לעשות — למשל: “השאר רק את הקטע על X”, “תמלל והכן כתוביות”, “הסר שתיקות ונשימות”.
+            </div>
+          )
         )}
         {displayItems.map((it, i) => {
           if (it.kind === "quote") {
@@ -1024,7 +1048,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           </div>
         </section>}
 
-        {!input.trim() && !running && suggestionTurns.length < 2 && <div className="chat-starters" aria-label="פעולות התחלה מהירה">
+        {!input.trim() && !running && (!inFocusMode || items.length > 0) && suggestionTurns.length < 2 && <div className="chat-starters" aria-label="פעולות התחלה מהירה">
           <span>התחלה מהירה</span>
           {["הסר שתיקות ונשימות מכל הווידאו.", "צור כתוביות מסונכרנות בעברית.", "השאר רק את החלקים לפי הסקריפט."].map((starter) => <button type="button" key={starter} onClick={() => { setInput(starter); taRef.current?.focus(); }}>{starter}</button>)}
         </div>}

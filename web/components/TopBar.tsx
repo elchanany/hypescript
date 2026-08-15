@@ -111,7 +111,7 @@ export default function TopBar({
         {onOpenTour && <IconButton icon={HelpCircle} tip="הדרכה על המערכת" onClick={onOpenTour} />}
         <Link href="/dashboard" className="iconbtn" data-tip={t("nav.dashboard")} aria-label={t("nav.dashboard")}><LayoutGrid size={16} strokeWidth={1.75} /></Link>
         <IconButton icon={MessageCircle} tip={t("editor.openChat")} active={chatOpen && !focusMode} onClick={onToggleChat} />
-        <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip={t("editor.chatMode")}>
+        <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip={t("editor.chatMode")} data-tour="focus-mode">
           <MessagesSquare size={16} strokeWidth={1.75} />
           <span>{focusMode ? t("editor.backToEditor") : t("editor.chatMode")}</span>
         </button>
