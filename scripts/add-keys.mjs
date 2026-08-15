@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+// אשף הוספת מפתחות API ל-Vercel.
+//
+// למה סקריפט ולא ידנית: תשעה מפתחות × שלוש סביבות = 27 הרצות של
+// `vercel env add`, כל אחת עם שם מדויק ו-prompt נפרד. קל לטעות בשם, וקשה
+// לזכור מאיזה דשבורד כל מפתח מגיע.
+//
+// המפתח שאתה מקליד הולך ישירות מהטרמינל שלך ל-Vercel CLI. הוא לא נכתב
+// לדיסק, לא נשמר בהיסטוריית הפקודות, ולא מוצג על המסך בזמן ההקלדה.
+//
+// שימוש:
+//   node scripts/add-keys.mjs            הוספה אינטראקטיבית של מה שחסר
+//   node scripts/add-keys.mjs --status   רק להראות מה קיים ומה חסר
+//   node scripts/add-keys.mjs --only=PEXELS_API_KEY,PIXABAY_API_KEY
+
+import { spawn, spawnSync } from "node:child_process";
+import { createInterface } from "node:readline";
+
+const ENVIRONMENTS = ["production", "preview", "development"];
+
+/** @type {Array<{key:string,label:string,url:string,tier:string,note?:string}>} */
+const SERVICES = [
+  { key: "GEMINI_API_KEY", label: "Google Gemini — ראיית תמונות", tier: "חינם",
+    url: "https://aistudio.google.com/apikey",
+    note: "DeepSeek לא רואה תמונות. בלי מודל ראייה, זיהוי תמונות וסידור סיפור לא עובדים." },
+  { key: "PEXELS_API_KEY", label: "Pexels — וידאו ותמונות סטוק", tier: "חינם",
+    url: "https://www.pexels.com/api/", note: "ללא ייחוס נדרש. הכי נקי משפטית." },
+  { key: "PIXABAY_API_KEY", label: "Pixabay — סטוק + מוזיקה + אפקטים", tier: "חינם",
+    url: "https://pixabay.com/api/docs/", note: "חובה להציג מקור בתוצאות חיפוש." },
+  { key: "FREESOUND_API_KEY", label: "Freesound — אפקטי קול", tier: "חינם",
+    url: "https://freesound.org/apiv2/apply/", note: "רישיון משתנה לכל קובץ — לסנן ל-CC0." },
+  { key: "UNSPLASH_ACCESS_KEY", label: "Unsplash — תמונות", tier: "חינם",
+    url: "https://unsplash.com/developers", note: "דורש ייחוס לצלם." },
+  { key: "OPENAI_API_KEY", label: "OpenAI — יצירת תמונות + ראייה", tier: "בתשלום",
+    url: "https://platform.openai.com/api-keys" },
+  { key: "ANTHROPIC_API_KEY", label: "Anthropic — ראייה (חלופה)", tier: "בתשלום",
+    url: "https://console.anthropic.com/settings/keys" },
+  { key: "LOTTIEFILES_API_KEY", label: "LottieFiles — אנימציות", tier: "חינם/בתשלום",
+    url: "https://lottiefiles.com/developers", note: "כל אנימציה עם רישיון נפרד." },
+  { key: "STABILITY_API_KEY", label: "Stability — מוזיקה/תמונות", tier: "בתשלום",
+    url: "https://platform.stability.ai/account/keys" },
+];
+
+const args = process.argv.slice(2);
+const flag = (n) => args.find((a) => a === `--${n}` || a.startsWith(`--${n}=`));
+const flagValue = (n) => { const h = flag(n); return h && h.includes("=") ? h.slice(h.indexOf("=") + 1) : undefined; };
+
+function existingKeys() {
+  const r = spawnSync("npx", ["vercel", "env", "ls", "production"],
+    { encoding: "utf8", shell: process.platform === "win32" });
+  if (r.status !== 0) {
+    console.error("לא הצלחתי לקרוא את המשתנים מ-Vercel. ודא ש-`npx vercel whoami` עובד.");
+    process.exit(1);
+  }
+  return new Set((r.stdout || "").split("\n")
+    .map((line) => line.trim().split(/\s+/)[0])
+    .filter((name) => /^[A-Z][A-Z0-9_]+$/.test(name)));
+}
+
+/** קלט מוסתר — המפתח לא מוצג בזמן ההקלדה ולא נשאר על המסך. */
+function askSecret(prompt) {
+  return new Promise((resolve) => {
+    process.stdout.write(prompt);
+    const stdin = process.stdin;
+    const wasRaw = stdin.isRaw;
+    if (stdin.isTTY) stdin.setRawMode(true);
+    let value = "";
+    const onData = (chunk) => {
+      const s = chunk.toString("utf8");
+      for (const ch of s) {
+        if (ch === "\r" || ch === "\n") {
+          stdin.removeListener("data", onData);
+          if (stdin.isTTY) stdin.setRawMode(!!wasRaw);
+          stdin.pause();
+          process.stdout.write("\n");
+          resolve(value.trim());
+          return;
+        }
+        if (ch === "") { process.stdout.write("\n"); process.exit(130); }
+        if (ch === "" || ch === "\b") { value = value.slice(0, -1); continue; }
+        value += ch;
+      }
+    };
+    stdin.resume();
+    stdin.on("data", onData);
+  });
+}
+
+function askLine(prompt) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => rl.question(prompt, (a) => { rl.close(); resolve(a.trim()); }));
+}
+
+/** מזין ערך יחיד ל-Vercel דרך stdin — לא כארגומנט, כדי שלא ידלוף להיסטוריה. */
+function pushToVercel(key, value, environment) {
+  return new Promise((resolve) => {
+    const child = spawn("npx", ["vercel", "env", "add", key, environment],
+      { stdio: ["pipe", "pipe", "pipe"], shell: process.platform === "win32" });
+    let stderr = "";
+    child.stderr.on("data", (d) => { stderr += d.toString(); });
+    child.stdout.on("data", () => {});
+    child.stdin.write(`${value}\n`);
+    child.stdin.end();
+    child.on("close", (code) => resolve({ ok: code === 0, stderr }));
+  });
+}
+
+const have = existingKeys();
+const only = flagValue("only")?.split(",").map((s) => s.trim()).filter(Boolean);
+const wanted = only ? SERVICES.filter((s) => only.includes(s.key)) : SERVICES;
+
+console.log("\n  מפתחות API — Vercel\n  " + "─".repeat(52));
+for (const s of SERVICES) {
+  console.log(`  ${have.has(s.key) ? "✓" : "·"} ${s.key.padEnd(22)} ${s.label}`);
+}
+const missing = wanted.filter((s) => !have.has(s.key));
+console.log("  " + "─".repeat(52));
+console.log(`  קיימים ${SERVICES.length - SERVICES.filter((s) => !have.has(s.key)).length}/${SERVICES.length} · חסרים ${missing.length}\n`);
+
+if (flag("status")) process.exit(0);
+if (!missing.length) { console.log("  הכל כבר מוגדר.\n"); process.exit(0); }
+
+console.log("  Enter ריק = דילוג. Ctrl+C = יציאה.");
+console.log("  המפתח לא מוצג בהקלדה ולא נשמר בהיסטוריה.\n");
+
+let added = 0;
+for (const service of missing) {
+  console.log(`  ${service.label}  [${service.tier}]`);
+  console.log(`     ${service.url}`);
+  if (service.note) console.log(`     ${service.note}`);
+  const value = await askSecret(`     ${service.key} = `);
+  if (!value) { console.log("     דילוג\n"); continue; }
+
+  for (const environment of ENVIRONMENTS) {
+    const { ok, stderr } = await pushToVercel(service.key, value, environment);
+    if (ok) continue;
+    if (/already exists/i.test(stderr)) { console.log(`     כבר קיים ב-${environment}`); continue; }
+    console.log(`     נכשל ב-${environment}: ${stderr.trim().split("\n").pop()}`);
+  }
+  console.log(`     נוסף ל-${ENVIRONMENTS.join(", ")}\n`);
+  added++;
+}
+
+console.log(`  ${"─".repeat(52)}`);
+console.log(`  נוספו ${added} מפתחות.`);
+if (added) {
+  const deploy = await askLine("  לפרוס עכשיו לפרודקשן? (y/N) ");
+  if (deploy.toLowerCase() === "y") {
+    console.log("\n  פורס…\n");
+    const r = spawnSync("npx", ["vercel", "--prod"], { stdio: "inherit", shell: process.platform === "win32" });
+    process.exit(r.status ?? 0);
+  }
+  console.log("  לפריסה מאוחר יותר:  npx vercel --prod\n");
+}
