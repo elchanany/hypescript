@@ -46,7 +46,8 @@
     ".next-agent-brain-play-brand-final/types/**/*.ts",
     ".next-agent-brand-locale-system/types/**/*.ts",
     ".next-agent-editor-ux-upgrade/types/**/*.ts",
-    ".next-agent-timeline-capcut-ux/types/**/*.ts"
+    ".next-agent-timeline-capcut-ux/types/**/*.ts",
+    ".next-agent-timeline-direct-drag/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
