@@ -85,6 +85,38 @@ export default function Timeline(p: Props) {
   const zoomRaf = useRef(0);
   const zoomAnchorX = useRef<number | undefined>(undefined);
 
+  // Marquee selection box state (Windows-style selection box)
+  const [marquee, setMarquee] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const marqueeRef = useRef<{ startX: number; startY: number; clientX0: number; clientY0: number; active: boolean } | null>(null);
+
+  // Smooth Auto-scroll during drag
+  const autoScrollRaf = useRef<number | null>(null);
+  const autoScrollSpeed = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 });
+
+  const startAutoScroll = (vx: number, vy: number) => {
+    autoScrollSpeed.current = { vx, vy };
+    if (autoScrollRaf.current != null) return;
+    const step = () => {
+      const el = scrollRef.current;
+      if (el && (autoScrollSpeed.current.vx !== 0 || autoScrollSpeed.current.vy !== 0)) {
+        el.scrollLeft += autoScrollSpeed.current.vx;
+        el.scrollTop += autoScrollSpeed.current.vy;
+        autoScrollRaf.current = requestAnimationFrame(step);
+      } else {
+        autoScrollRaf.current = null;
+      }
+    };
+    autoScrollRaf.current = requestAnimationFrame(step);
+  };
+
+  const stopAutoScroll = () => {
+    autoScrollSpeed.current = { vx: 0, vy: 0 };
+    if (autoScrollRaf.current != null) {
+      cancelAnimationFrame(autoScrollRaf.current);
+      autoScrollRaf.current = null;
+    }
+  };
+
   // Active floating 2D drag state across all tracks without overflow clipping
   const [activeDrag, setActiveDrag] = useState<{
     kind: "clip" | "overlay";
@@ -231,7 +263,7 @@ export default function Timeline(p: Props) {
 
   // CapCut Track Organization:
   // Only display dedicated audio track if dedicated audio files exist or audio is unlinked/detached.
-  const showDedicatedAudioTrack = dedicatedAudioClips.length > 0 || !avLinked;
+  const showDedicatedAudioTrack = dedicatedAudioClips.filter((c) => !isGapClip(c)).length > 0 || (!avLinked && dedicatedAudioClips.length > 0);
   // Only display caption track if actual subtitles exist.
   const showCaptionTrack = !!(subs && subs.length > 0);
 
@@ -244,7 +276,7 @@ export default function Timeline(p: Props) {
     });
   }, [ordered, showDedicatedAudioTrack, showCaptionTrack]);
 
-  const overlayRows: Array<Overlay | null> = overlays.length ? [...overlays].sort((a, b) => b.start - a.start) : [null];
+  const overlayRows: Array<Overlay> = overlays.length ? [...overlays].sort((a, b) => b.start - a.start) : [];
 
   const snapTargets = useMemo<MagneticTarget[]>(() => {
     const points: MagneticTarget[] = [
@@ -256,17 +288,21 @@ export default function Timeline(p: Props) {
     for (const track of sortedTracks(tracks).filter((item) => item.type === "video" || item.type === "audio")) {
       let cursor = 0;
       for (const clip of clipsOnTrack(clips, track.id, primary)) {
+        const d = clipDur(clip);
         points.push({ time: cursor, label: `${track.name} · התחלה`, kind: "clip", priority: 5 });
-        cursor += clipDur(clip);
+        points.push({ time: cursor + d / 2, label: `${track.name} · אמצע`, kind: "clip", priority: 4 });
+        cursor += d;
         points.push({ time: cursor, label: `${track.name} · סוף`, kind: "clip", priority: 5 });
       }
     }
     for (const overlay of overlays) {
       points.push({ time: overlay.start, label: "שכבה · התחלה", kind: "overlay", priority: 4 });
+      points.push({ time: (overlay.start + overlay.end) / 2, label: "שכבה · אמצע", kind: "overlay", priority: 3 });
       points.push({ time: overlay.end, label: "שכבה · סוף", kind: "overlay", priority: 4 });
     }
     for (const cue of (subs || [])) {
       points.push({ time: cue.start, label: "כתובית · התחלה", kind: "caption", priority: 2 });
+      points.push({ time: (cue.start + cue.end) / 2, label: "כתובית · אמצע", kind: "caption", priority: 2 });
       points.push({ time: cue.end, label: "כתובית · סוף", kind: "caption", priority: 2 });
     }
     return points;
@@ -421,6 +457,31 @@ export default function Timeline(p: Props) {
     d.py = e.clientY;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) d.moved = true;
     const dt = (dx / Math.max(1, d.laneW)) * visibleTotal;
+
+    // Smooth continuous auto-scrolling when dragging near container boundaries
+    const scrollEl = scrollRef.current;
+    if (scrollEl) {
+      const rect = scrollEl.getBoundingClientRect();
+      let vx = 0;
+      let vy = 0;
+      const marginX = 60;
+      const marginY = 40;
+      if (e.clientX < rect.left + marginX) {
+        vx = -Math.min(22, (rect.left + marginX - e.clientX) * 0.45);
+      } else if (e.clientX > rect.right - marginX) {
+        vx = Math.min(22, (e.clientX - (rect.right - marginX)) * 0.45);
+      }
+      if (e.clientY < rect.top + marginY) {
+        vy = -Math.min(18, (rect.top + marginY - e.clientY) * 0.4);
+      } else if (e.clientY > rect.bottom - marginY) {
+        vy = Math.min(18, (e.clientY - (rect.bottom - marginY)) * 0.4);
+      }
+      if (vx !== 0 || vy !== 0) {
+        startAutoScroll(vx, vy);
+      } else {
+        stopAutoScroll();
+      }
+    }
 
     if (d.kind === "overlay") {
       if (d.mode === "l") {
@@ -603,6 +664,7 @@ export default function Timeline(p: Props) {
 
   const onUp = () => {
     const d = drag.current;
+    stopAutoScroll();
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
     endDragVisuals();
@@ -643,6 +705,97 @@ export default function Timeline(p: Props) {
       }
     }
     drag.current = null;
+  };
+
+  const onTimelineMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest(".clip2, .clip-audio, .clip-ov, .cue-chip, button, .tl-head2, .trim, .tl-ruler2, .playhead2, .tl-tick2")) return;
+
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const rect = scrollEl.getBoundingClientRect();
+    const startX = e.clientX - rect.left + scrollEl.scrollLeft;
+    const startY = e.clientY - rect.top + scrollEl.scrollTop;
+
+    marqueeRef.current = {
+      startX,
+      startY,
+      clientX0: e.clientX,
+      clientY0: e.clientY,
+      active: false,
+    };
+
+    const onMarqueeMove = (ev: MouseEvent) => {
+      if (!marqueeRef.current) return;
+      const dx = ev.clientX - marqueeRef.current.clientX0;
+      const dy = ev.clientY - marqueeRef.current.clientY0;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        marqueeRef.current.active = true;
+      }
+      if (!marqueeRef.current.active) return;
+
+      const currentX = ev.clientX - rect.left + scrollEl.scrollLeft;
+      const currentY = ev.clientY - rect.top + scrollEl.scrollTop;
+
+      const left = Math.min(marqueeRef.current.startX, currentX);
+      const top = Math.min(marqueeRef.current.startY, currentY);
+      const width = Math.abs(currentX - marqueeRef.current.startX);
+      const height = Math.abs(currentY - marqueeRef.current.startY);
+
+      setMarquee({ left, top, width, height });
+
+      const marqueeRect = {
+        left: Math.min(marqueeRef.current.clientX0, ev.clientX),
+        top: Math.min(marqueeRef.current.clientY0, ev.clientY),
+        right: Math.max(marqueeRef.current.clientX0, ev.clientX),
+        bottom: Math.max(marqueeRef.current.clientY0, ev.clientY),
+      };
+
+      const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov");
+      let firstHit: { id: string; kind: "video" | "audio" | "overlay" } | null = null;
+
+      for (let i = 0; i < foundClips.length; i++) {
+        const el = foundClips[i];
+        const cRect = el.getBoundingClientRect();
+        const intersects = !(
+          cRect.right < marqueeRect.left ||
+          cRect.left > marqueeRect.right ||
+          cRect.bottom < marqueeRect.top ||
+          cRect.top > marqueeRect.bottom
+        );
+        if (intersects) {
+          el.classList.add("marquee-selected");
+          const cid = el.dataset.clipId;
+          if (cid && !firstHit) {
+            const kind: "video" | "audio" | "overlay" = el.classList.contains("clip-audio")
+              ? "audio"
+              : el.classList.contains("clip-ov")
+              ? "overlay"
+              : "video";
+            firstHit = { id: cid, kind };
+          }
+        } else {
+          el.classList.remove("marquee-selected");
+        }
+      }
+
+      if (firstHit) {
+        if (firstHit.kind === "overlay") p.onSelectOverlay?.(firstHit.id);
+        else selectClip(firstHit.id, firstHit.kind);
+      }
+    };
+
+    const onMarqueeUp = () => {
+      window.removeEventListener("mousemove", onMarqueeMove);
+      window.removeEventListener("mouseup", onMarqueeUp);
+      document.querySelectorAll(".marquee-selected").forEach((el) => el.classList.remove("marquee-selected"));
+      setMarquee(null);
+      marqueeRef.current = null;
+    };
+
+    window.addEventListener("mousemove", onMarqueeMove);
+    window.addEventListener("mouseup", onMarqueeUp);
   };
 
   const seekFromRow = (e: React.MouseEvent, el: HTMLElement) => {
@@ -701,7 +854,7 @@ export default function Timeline(p: Props) {
   const contentWidth = portW > 0 ? Math.max(portW, timelineContentWidth(portW, zoom)) : "100%";
 
   return (
-    <div className="tl-scroll" ref={scrollRef} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
+    <div className="tl-scroll" ref={scrollRef} onMouseDown={onTimelineMouseDown} title="שתי אצבעות לצד = גלילה · Pinch/Ctrl+גלגלת = זום">
       <div
         className="tl-inner"
         ref={innerRef}
@@ -709,6 +862,19 @@ export default function Timeline(p: Props) {
       >
         {/* CapCut-style snap guide — full height across all tracks */}
         <div className="tl-snap-guide" ref={snapGuideRef}><span ref={snapLabelRef} /></div>
+
+        {/* Windows-style blue marquee selection box */}
+        {marquee && (
+          <div
+            className="tl-marquee-box"
+            style={{
+              left: marquee.left,
+              top: marquee.top,
+              width: marquee.width,
+              height: marquee.height,
+            }}
+          />
+        )}
 
         {/* Ruler */}
         <div className="tl-rowline tl-rulerline">
@@ -730,8 +896,9 @@ export default function Timeline(p: Props) {
             const asset = mediaById(media, clip.sourceId);
             return isGapClip(clip) || asset?.kind === "video";
           });
+          const realDedicated = dedicatedAudio.filter((c) => !isGapClip(c));
           const audioLayers = track.type === "audio"
-            ? (dedicatedAudio.length ? [{ clips: linkedAudio, linked: true }, { clips: dedicatedAudio, linked: false }] : [{ clips: linkedAudio, linked: true }])
+            ? (realDedicated.length ? [{ clips: realDedicated, linked: false }] : (!avLinked && linkedAudio.length ? [{ clips: linkedAudio, linked: true }] : []))
             : [];
           const tLocked = !!track.locked;
 
@@ -772,13 +939,6 @@ export default function Timeline(p: Props) {
                       tipPos="up"
                       active={track.muted}
                       onClick={() => p.toggleMute(track.id)}
-                    />
-                  ) : track.type === "video" && p.onAddVideoTrack ? (
-                    <IconButton
-                      icon={Plus}
-                      tip="הוסף רצועת וידאו"
-                      tipPos="up"
-                      onClick={() => p.onAddVideoTrack?.()}
                     />
                   ) : (
                     <span className="hd-slot" aria-hidden />
@@ -832,6 +992,7 @@ export default function Timeline(p: Props) {
                     return (
                       <div
                         key={c.id}
+                        data-clip-id={c.id}
                         className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${tLocked ? "locked" : ""} ${!asset || asset.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                         style={{
                           left: `${pct(assembledStart(tClips, i))}%`,
@@ -912,6 +1073,7 @@ export default function Timeline(p: Props) {
                     return (
                       <div
                         key={`${layer.linked ? "linked" : "extra"}-${c.id}`}
+                        data-clip-id={c.id}
                         className={`clip-audio ${layer.linked ? "linked" : "extra"} ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || (layer.linked && vLocked) ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                         style={{
                           left: `${pct(assembledStart(layer.clips, i))}%`,
@@ -1020,6 +1182,7 @@ export default function Timeline(p: Props) {
                 return (
                   <div
                     key={o.id}
+                    data-clip-id={o.id}
                     className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                     style={{
                       left: `${pct(o.start)}%`,
@@ -1055,12 +1218,18 @@ export default function Timeline(p: Props) {
           </div>
         ))}
 
-        {/* Dynamic Infinite New-Track Drop Zone (CapCut style — clean minimal lane) */}
+        {/* Dynamic Infinite New-Track Drop Zone (CapCut style — shown when dragging) */}
         <div
           className="tl-rowline dynamic-new-track-zone"
           data-track-lane="__new_track__"
           data-track-type="video"
-          style={{ minHeight: 44 }}
+          style={{
+            minHeight: activeDrag || html5Drop ? 44 : 0,
+            height: activeDrag || html5Drop ? 44 : 0,
+            display: activeDrag || html5Drop ? "flex" : "none",
+            opacity: activeDrag || html5Drop ? 1 : 0,
+            transition: "all 0.15s ease",
+          }}
           onDragOver={(e) => onLaneDragOver(e, "__new_track__")}
           onDragLeave={onLaneDragLeave}
           onDrop={(e) => onLaneDrop(e, "__new_track__")}
@@ -1068,12 +1237,10 @@ export default function Timeline(p: Props) {
           <div className="tl-head2 new-track-head">
             <div className="hd-top">
               <Layers className="hd-type" size={14} strokeWidth={1.75} style={{ opacity: 0.4 }} />
-              <span className="hd-name" style={{ opacity: 0.5 }}>שכבה חדשה</span>
+              <span className="hd-name" style={{ opacity: 0.6 }}>שכבה חדשה</span>
             </div>
             <div className="hd-ctrls" dir="ltr">
-              {p.onAddVideoTrack && (
-                <IconButton icon={Plus} tip="הוסף שכבה חדשה" tipPos="up" onClick={() => p.onAddVideoTrack?.()} />
-              )}
+              <span className="hd-slot" />
             </div>
           </div>
           <div

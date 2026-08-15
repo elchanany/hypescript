@@ -1362,7 +1362,7 @@ export default function EditorPage() {
                     if (!result.ok) setError(result.error);
                   }}
                   onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
-                  canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
+                  canvas={canvas} onChangeCanvas={setCanvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                   onSelectOverlay={selectOverlay} onBeginOverlay={beginTransaction}
                   onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
                   onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
@@ -1417,7 +1417,7 @@ export default function EditorPage() {
                   if (!result.ok) setError(result.error);
                 }}
                 onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
-                canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
+                canvas={canvas} onChangeCanvas={setCanvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
                 onBeginOverlay={beginTransaction}
                 onOverlayLive={(u) => setOverlaysLive(u)}

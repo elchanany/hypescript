@@ -77,8 +77,7 @@ describe("multi-track helpers", () => {
     const primary = clipsOnTrack(moved, "trk_video");
     expect(primary.map((item) => item.id)).toEqual(["base", "logo"]);
     expect(primary[1]).toMatchObject({ sourceId: "b", start: 2, end: 5, trackId: "trk_video" });
-    expect(clipsOnTrack(moved, "trk_b")).toHaveLength(1);
-    expect(clipsOnTrack(moved, "trk_b")[0]).toMatchObject({ sourceId: "__gap__", end: 3 });
+    expect(clipsOnTrack(moved, "trk_b")).toHaveLength(0);
   });
 
   it("consumes available gap space when magnetically placing a clip", () => {

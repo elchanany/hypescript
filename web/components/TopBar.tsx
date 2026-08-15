@@ -69,6 +69,10 @@ export default function TopBar({
   return (
     <div className="topbar2">
       <KeyboardShortcutsModal open={kbdOpen} onClose={() => setKbdOpen(false)} />
+      {/* Brand logo pinned at the far top-left */}
+      <Link href="/dashboard" className="tb-logo" title={`Hypescript — ${t("nav.dashboard")}`} aria-label="Hypescript">
+        <BrandLogo variant="icon" size="sm" decorative priority />
+      </Link>
       <div className="tb-group tb-primary-slot" aria-label={`${t("nav.project")} · ${t("nav.account")}`}>
         {authOn && user && <div className={`tb-account-wrap${userOpen ? " is-open" : ""}`} ref={userRef}>
           <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu" data-tip={`${t("account.profilePrivacy")} · ${t("nav.account")}`}>
@@ -95,18 +99,11 @@ export default function TopBar({
       <div className="tb-spacer" />
 
       <div className="tb-group tb-action-slot">
-        <Link href="/dashboard" className="tb-logo" title={`Hypescript — ${t("nav.dashboard")}`} aria-label="Hypescript">
-          <BrandLogo variant="icon" size="sm" decorative priority />
-        </Link>
-        {canvas && onChangeCanvas && (
-          <AspectRatioPicker currentCanvas={canvas} onChangeCanvas={onChangeCanvas} />
-        )}
         <IconButton icon={Undo2} tip={`${t("editor.undo")} (Ctrl+Z)`} disabled={!canUndo} onClick={onUndo} />
         <IconButton icon={Redo2} tip={`${t("editor.redo")} (Ctrl+Shift+Z)`} disabled={!canRedo} onClick={onRedo} />
       </div>
 
       <div className="tb-group tb-utility-slot">
-        <LanguageSwitcher compact />
         <IconButton icon={Command} tip={`${t("editor.shortcuts")} (Ctrl+K)`} onClick={() => setKbdOpen(true)} />
         {onOpenTour && <IconButton icon={HelpCircle} tip="הדרכה על המערכת" onClick={onOpenTour} />}
         <Link href="/dashboard" className="iconbtn" data-tip={t("nav.dashboard")} aria-label={t("nav.dashboard")}><LayoutGrid size={16} strokeWidth={1.75} /></Link>

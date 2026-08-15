@@ -11,8 +11,9 @@ import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { audioTrack, primaryVideoTrackId, TrackMeta, videoTracks } from "@/lib/editor/project";
 import { clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music } from "@/components/icons";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music, RotateCcw, RotateCw } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
+import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import PreviewOverlays from "@/components/PreviewOverlays";
 
 export interface PreviewHandle { seek: (assembled: number) => void; toggle: () => void; }
@@ -30,6 +31,7 @@ interface Props {
   onCopyPosition?: (assembled: number) => void;
   audioMuted?: boolean;
   canvas: CanvasSize;
+  onChangeCanvas?: (canvas: CanvasSize) => void;
   overlays: Overlay[];
   selectedOverlayId?: string | null;
   onSelectOverlay?: (id: string | null) => void;
@@ -51,7 +53,7 @@ function download(blob: Blob, name: string) {
 }
 
 const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(props, ref) {
-  const { media, clips, tracks, subs, selectedSubId, onSelectSub, onEditSub, onCaptionPosition, onTime, onCopyPosition, audioMuted, canvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle } = props;
+  const { media, clips, tracks, subs, selectedSubId, onSelectSub, onEditSub, onCaptionPosition, onTime, onCopyPosition, audioMuted, canvas, onChangeCanvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle } = props;
   const mediaARef = useRef<HTMLVideoElement>(null);
   const mediaBRef = useRef<HTMLVideoElement>(null);
   const mediaRefs = [mediaARef, mediaBRef] as const;
@@ -75,10 +77,24 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
   const [vol, setVol] = useState(1);
+  const [speed, setSpeed] = useState<number>(1);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [activeKind, setActiveKind] = useState<"video" | "image" | "audio" | "gap" | "missing">("gap");
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [audioLevels, setAudioLevels] = useState([0.12, 0.2, 0.16, 0.24, 0.14]);
+
+  const cycleSpeed = () => {
+    const speeds = [1, 1.25, 1.5, 2, 0.5];
+    const next = speeds[(speeds.indexOf(speed) + 1) % speeds.length];
+    setSpeed(next);
+    if (mediaARef.current) mediaARef.current.playbackRate = next;
+    if (mediaBRef.current) mediaBRef.current.playbackRate = next;
+    if (extraAudioRef.current) extraAudioRef.current.playbackRate = next;
+  };
+
+  const skipSeconds = (delta: number) => {
+    seekTo(Math.max(0, Math.min(total, t + delta)));
+  };
 
   const primaryId = tracks?.length ? primaryVideoTrackId(tracks) : "trk_video";
   const visualClips = useMemo(() => {
@@ -209,6 +225,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     let assembled = Math.max(start, Math.min(from, end));
     publishTime(assembled, play);
     if (!play) { setPlaying(false); return; }
+
     setPlaying(true);
     let last = performance.now();
     const tick = (now: number) => {
@@ -284,8 +301,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     idx.current = i;
     if (i >= edl.length) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); publishTime(total, false); return; }
     const clip = edl[i], asset = byId(clip.sourceId), from = assembledStart(edl, i);
-    if (!asset || asset.missing) runTimed(i, from, play, "missing");
-    else if (isGapClip(clip)) runTimed(i, from, play, "gap");
+    if (!clip || isGapClip(clip)) runTimed(i, from, play, "gap");
+    else if (!asset || asset.missing) runTimed(i, from, play, "missing");
     else if (asset.kind === "image") runTimed(i, from, play, "image");
     else {
       // אותו מקור וקדימה בזמן — דילוג במקום, בלי החלפת אלמנט ובלי טעינה מחדש
@@ -335,8 +352,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     const { index, source } = assembledToSource(edl, Math.min(next, Math.max(0, total - 0.0001)));
     idx.current = Math.max(0, index);
     const clip = edl[idx.current], asset = clip ? byId(clip.sourceId) : null;
-    if (!asset || asset.missing) runTimed(idx.current, next, false, "missing");
-    else if (!clip || isGapClip(clip)) runTimed(idx.current, next, false, "gap");
+    if (!clip || isGapClip(clip)) runTimed(idx.current, next, false, "gap");
+    else if (!asset || asset.missing) runTimed(idx.current, next, false, "missing");
     else if (asset.kind === "image") runTimed(idx.current, next, false, "image");
     else ensureMedia(clip.sourceId, source, false);
     publishTime(next, false);
@@ -348,8 +365,8 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     if (playing) { clearClock(); activeMedia()?.pause(); extraAudioRef.current?.pause(); setPlaying(false); return; }
     if (t >= total - 0.001) { idx.current = 0; advanceFrom(0, true); return; }
     const clip = edl[idx.current], start = assembledStart(edl, idx.current), asset = byId(clip?.sourceId || "");
-    if (!asset || asset.missing) runTimed(idx.current, Math.max(start, t), true, "missing");
-    else if (!clip || isGapClip(clip)) runTimed(idx.current, Math.max(start, t), true, "gap");
+    if (!clip || isGapClip(clip)) runTimed(idx.current, Math.max(start, t), true, "gap");
+    else if (!asset || asset.missing) runTimed(idx.current, Math.max(start, t), true, "missing");
     else if (asset.kind === "image") runTimed(idx.current, Math.max(start, t), true, "image");
     else ensureMedia(clip.sourceId, clip.start + Math.max(0, t - start), true);
   };
@@ -501,16 +518,61 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
         )}
       </div> : <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><span>טען מדיה כדי לראות תצוגה מקדימה</span></div>}
     </div>
+    <div className="pv-scrubber-wrap" dir="ltr">
+      <div
+        className="pv-scrubber"
+        onPointerDown={(e) => {
+          if (!hasPlayable || total <= 0) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          seekTo(pct * total);
+          const onPointerMove = (ev: PointerEvent) => {
+            const p = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+            seekTo(p * total);
+          };
+          const onPointerUp = () => {
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+          };
+          window.addEventListener("pointermove", onPointerMove);
+          window.addEventListener("pointerup", onPointerUp);
+        }}
+        role="slider"
+        aria-label="פס התקדמות"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={t}
+      >
+        <div className="pv-scrubber-track">
+          <div className="pv-scrubber-fill" style={{ width: `${total > 0 ? (Math.min(t, total) / total) * 100 : 0}%` }} />
+          <div className="pv-scrubber-thumb" style={{ left: `${total > 0 ? (Math.min(t, total) / total) * 100 : 0}%` }} />
+        </div>
+      </div>
+    </div>
     <div className="transport" dir="ltr">
       <div className="tp-vol"><IconButton icon={vol === 0 ? VolumeX : Volume2} tip={vol === 0 ? "בטל השתקה" : "עוצמה"} tipPos="up" onClick={() => setVol((v) => v === 0 ? 1 : 0)} disabled={!hasPlayable} />
         <input type="range" min={0} max={1} step={0.05} value={vol} aria-label="עוצמת שמע בתצוגה המקדימה" title="עוצמת שמע בתצוגה המקדימה" onChange={(e) => setVol(+e.target.value)} disabled={!hasPlayable} /></div>
+      <button type="button" className="tp-speed-btn" onClick={cycleSpeed} data-tip="מהירות ניגון" data-tippos="up" disabled={!hasPlayable}>
+        {speed}x
+      </button>
+      {canvas && onChangeCanvas && (
+        <div className="tp-ratio-wrap">
+          <AspectRatioPicker currentCanvas={canvas} onChangeCanvas={onChangeCanvas} />
+        </div>
+      )}
       <div className="tp-grow" /><div className="tp-center">
+        <IconButton icon={RotateCcw} tip="15 שניות אחורה" tipPos="up" onClick={() => skipSeconds(-15)} disabled={!hasPlayable} />
         <IconButton icon={SkipBack} tip="פריים אחורה" tipPos="up" onClick={() => step(-1)} disabled={!hasPlayable} />
         <button className="tp-play" onClick={toggle} disabled={!hasPlayable} data-tip={playing ? "השהה (Space)" : "נגן (Space)"} data-tippos="up">{playing ? <Pause size={18} /> : <Play size={18} />}</button>
         <IconButton icon={SkipForward} tip="פריים קדימה" tipPos="up" onClick={() => step(1)} disabled={!hasPlayable} />
+        <IconButton icon={RotateCw} tip="15 שניות קדימה" tipPos="up" onClick={() => skipSeconds(15)} disabled={!hasPlayable} />
         <span className="tp-time">
-          {playing && <span className="audio-eq-bars" title="עוצמת השמע בזמן אמת">{audioLevels.map((level, index) => <i key={index} style={{ "--level": `${Math.round(level * 100)}%` } as CSSProperties} />)}</span>}
-          {fmtT(Math.min(t, total))}<span className="sep">/</span><span className="total">{fmtT(total)}</span>
+          <span className={`audio-eq-bars ${playing ? "is-playing" : "is-idle"}`} title="עוצמת השמע בזמן אמת">
+            {audioLevels.map((level, index) => <i key={index} style={{ "--level": playing ? `${Math.round(level * 100)}%` : "15%" } as CSSProperties} />)}
+          </span>
+          <span className="cur">{fmtT(Math.min(t, total))}</span>
+          <span className="sep">/</span>
+          <span className="total">{fmtT(total)}</span>
         </span>
       </div><div className="tp-grow" />
       <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up" onClick={quotePlace} disabled={!hasPlayable} />

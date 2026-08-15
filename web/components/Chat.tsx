@@ -29,6 +29,7 @@ import {
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
   HelpCircle, Info, Wrench, Film, Download, Eye, ClipboardList, Palette, AtSign, MapPin, SquareDashedMousePointer,
   PanelLeftClose, PanelRightClose, MessageSquarePlus, Quote, Command, Play, ChevronDown, Sparkles, Settings, Lock, List, Pin, Robot,
+  CornerUpLeft, Bot, OctagonX, StopCircle,
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
@@ -193,7 +194,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [entitlementsLoaded, setEntitlementsLoaded] = useState(false);
   const [uploading, setUploading] = useState<TransferProgress | null>(null);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
-  const [askText, setAskText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
   const [mode, setMode] = useState<AgentMode>("act");
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
@@ -605,6 +605,12 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         text = c.template || text;
       }
     }
+    if (ask) {
+      answerAsk(text);
+      setInput("");
+      setComposerReferences([]);
+      return;
+    }
     if (running) {
       setItems((p) => [...p, { kind: "user", text: displayText, time: now(), references: sentReferences }]);
       lastUserPromptRef.current = text;
@@ -659,10 +665,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const answerAsk = (value: string) => {
     if (!ask || !value.trim()) return;
     const clean = value.trim();
-    setItems((prev) => [...prev, { kind: "user", text: `בחרתי: ${clean}`, time: now() }]);
+    setItems((prev) => [...prev, { kind: "user", text: clean === "דלג" ? "דלג" : `בחרתי: ${clean}`, time: now() }]);
     ask.resolve(clean);
     setAsk(null);
-    setAskText("");
   };
 
   const retryTool = async (tool: ToolItem) => {
@@ -758,7 +763,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   return (
     <>
       <div className="panel-header">
-        <div className="chat-header-leading"><span className="title"><MessageCircle size={15} strokeWidth={1.75} />עוזר העריכה</span></div>
+        <div className="chat-header-leading"><span className="title"><Bot size={16} weight="bold" />hypescript AI</span></div>
         <div className="actions" style={{ gap: 4 }}>
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
           {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
@@ -833,7 +838,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         {restoredChat && items.length === 0 && (
           inFocusMode ? (
             <div className="chat-gpt-hero">
-              <div className="chat-gpt-hero-badge"><Sparkles size={16} /><span>עוזר עריכה חכם</span></div>
+              <div className="chat-gpt-hero-badge"><Bot size={16} weight="bold" /><span>hypescript AI</span></div>
               <h1 className="chat-gpt-hero-title">במה אפשר לעזור לך לערוך היום?</h1>
               <p className="chat-gpt-hero-sub">כתוב הוראה בעברית, צרף קבצים או בחר אחת מהפעולות המהירות להלן:</p>
               <div className="chat-gpt-hero-starters">
@@ -900,7 +905,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "plan") {
             return (
               <div key={it.id} className="msg2 assistant" role="region" aria-label="תוכנית עריכה לאישור">
-                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Bot size={13} weight="bold" /></span><strong>hypescript AI</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}><ClipboardList size={15} />תוכנית עריכה</div>
                   {it.steps.length > 0 ? (
@@ -924,7 +929,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "provider_approval") {
             return (
               <div key={it.id} className="msg2 assistant" role="note" aria-label="הודעת ספק ישנה">
-                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
+                <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Bot size={13} weight="bold" /></span><strong>hypescript AI</strong></div>
                 <div className="b">
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}><Info size={15} />הודעה משיחה קודמת</div>
                   <div>אין עוד צורך באישור ספק במצב המנוהל. שלח את ההוראה מחדש והיא תטופל אוטומטית.</div>
@@ -940,8 +945,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           return (
             <div key={i} className={`msg2 ${it.kind}`}>
               {(it.kind === "user" || it.kind === "assistant") && <div className="msg-speaker">
-                <span className={`msg-avatar ${it.kind === "assistant" ? "agent" : "user"}`} aria-hidden="true">{it.kind === "assistant" ? <Robot size={13} weight="bold" /> : "א"}</span>
-                <strong>{it.kind === "assistant" ? "עוזר AI" : "אני"}</strong>
+                <span className={`msg-avatar ${it.kind === "assistant" ? "agent" : "user"}`} aria-hidden="true">{it.kind === "assistant" ? <Bot size={13} weight="bold" /> : "א"}</span>
+                <strong>{it.kind === "assistant" ? "hypescript AI" : "אני"}</strong>
               </div>}
               <div className="b">
                 {it.kind === "error" && <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginInlineEnd: 6, color: "var(--danger)" }} />}
@@ -950,7 +955,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                     <Quote size={12} /><span><b>{reference.label}</b>{reference.preview && <small>{reference.preview}</small>}</span>
                   </div>)}
                 </div> : null}
-                {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.kind === "user" ? <ChatUserText text={it.text} /> : it.text}
+                {it.kind === "assistant" && (it.text.includes("נעצר על ידי המשתמש") || it.text.startsWith("⏹")) ? (
+                  <div className="msg-stopped-badge">
+                    <OctagonX size={14} />
+                    <span>נעצר על ידי המשתמש</span>
+                  </div>
+                ) : it.kind === "assistant" ? (
+                  <ChatMarkdown text={it.text} />
+                ) : it.kind === "user" ? (
+                  <ChatUserText text={it.text} />
+                ) : (
+                  it.text
+                )}
                 {/* Embedded Live Video Player in Assistant Message Body (ChatGPT Style) */}
                 {it.kind === "assistant" && isLatestAssistant && renderVideoPreview && (
                   <div className="msg-embedded-player-card">
@@ -968,7 +984,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                 <time>{it.time}</time>
                 {it.kind === "assistant" && canChooseProvider && providerMode === "byok" && it.modelLabel && <span className="msg-model">{it.modelLabel}</span>}
                 <span className="msg-actions">
-                  <button type="button" onClick={() => quoteMessage(it)} aria-label="צטט הודעה" data-tip="צטט"><Quote size={12} /></button>
+                  <button type="button" onClick={() => quoteMessage(it)} aria-label="צטט הודעה" data-tip="צטט"><CornerUpLeft size={13} /></button>
                   <button type="button" onClick={() => copy(it.text, i)} aria-label="העתק הודעה" data-tip="העתק">{copied === i ? <Check size={12} /> : <Copy size={12} />}</button>
                 </span>
               </div> : <span className="t">{it.time}</span>}
@@ -977,7 +993,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         })}
         {showThinking && (
           <div className="msg2 assistant thinking-message" aria-live="polite" aria-label="Hypescript חושב">
-            <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Robot size={13} weight="bold" /></span><strong>עוזר AI</strong></div>
+            <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Bot size={13} weight="bold" /></span><strong>hypescript AI</strong></div>
             <div className="b think2">
               <span className="dots2" aria-hidden="true"><i /><i /><i /></span>
               <span className="sr-only">חושב</span>
@@ -988,18 +1004,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           <div className="pinned-export">
             <div className="pinned-label">הייצוא האחרון מוכן</div>
             <ChatMediaCard url={latestExport.url} name={latestExport.name} mkind="video" />
-          </div>
-        )}
-        {ask && (
-          <div className="ask2">
-            <div className="q">{ask.q}</div>
-            <div className="opts">{ask.options.map((o, i) => (<button key={i} className="btn sm" onClick={() => answerAsk(o)}>{o}</button>))}</div>
-            <div className="free">
-              <input value={askText} onChange={(e) => setAskText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && askText.trim()) answerAsk(askText); }}
-                placeholder="או כתוב תשובה משלך…" />
-              <button className="btn primary sm" disabled={!askText.trim()} onClick={() => answerAsk(askText)}>שלח</button>
-            </div>
           </div>
         )}
       </div>
@@ -1048,10 +1052,28 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           </div>
         </section>}
 
-        {!input.trim() && !running && (!inFocusMode || items.length > 0) && suggestionTurns.length < 2 && <div className="chat-starters" aria-label="פעולות התחלה מהירה">
+        {!input.trim() && !running && (!inFocusMode || items.length > 0) && suggestionTurns.length < 2 && !ask && <div className="chat-starters" aria-label="פעולות התחלה מהירה">
           <span>התחלה מהירה</span>
           {["הסר שתיקות ונשימות מכל הווידאו.", "צור כתוביות מסונכרנות בעברית.", "השאר רק את החלקים לפי הסקריפט."].map((starter) => <button type="button" key={starter} onClick={() => { setInput(starter); taRef.current?.focus(); }}>{starter}</button>)}
         </div>}
+
+        {ask && (
+          <div className="ask-composer-card" role="region" aria-label="שאלת הסוכן">
+            <div className="ask-composer-head">
+              <div className="ask-q-title"><Sparkles size={14} /><span>{ask.q}</span></div>
+              <button type="button" className="ask-skip-btn" onClick={() => answerAsk("דלג")} title="דלג על השאלה">
+                דלג
+              </button>
+            </div>
+            <div className="ask-composer-chips">
+              {ask.options.map((opt, optIndex) => (
+                <button type="button" key={optIndex} className="ask-opt-chip" onClick={() => answerAsk(opt)}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="chat-compose">
 
@@ -1067,7 +1089,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={onComposerKey}
             onBlur={() => setTimeout(() => setPop(null), 120)}
-            placeholder={running ? "עדכן את הסוכן תוך כדי עבודה…" : mode === "ask" ? "שאל על הפרויקט…  /  @  לאזכור" : mode === "plan" ? "תאר מה לתכנן…  /  @  לאזכור" : "כתוב הוראה…  /  לפקודה,  @  לאזכור"}
+            placeholder={ask ? "או שתאמר לי בעצמך…" : running ? "עדכן את הסוכן תוך כדי עבודה…" : mode === "ask" ? "שאל על הפרויקט…  /  @  לאזכור" : mode === "plan" ? "תאר מה לתכנן…  /  @  לאזכור" : "כתוב הוראה…  /  לפקודה,  @  לאזכור"}
             style={{ height: composeH }}
             rows={3}
           />
@@ -1075,7 +1097,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             {running
               ? <><button className="btn primary" onClick={submit} disabled={!input.trim() && composerReferences.length === 0} data-tip="עדכן" data-tippos="up"><Send size={15} strokeWidth={2} /></button>
                  <button className="iconbtn lg danger" onClick={() => runnerRef.current?.stop()} data-tip="בטל" data-tippos="up" aria-label="בטל"><Square size={15} strokeWidth={2} /></button></>
-              : <button className="btn primary" onClick={submit} disabled={!input.trim() && composerReferences.length === 0} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
+              : <button className="btn primary" onClick={submit} disabled={!input.trim() && composerReferences.length === 0 && !ask} data-tip="שלח" data-tippos="up"><Send size={15} strokeWidth={2} /></button>}
           </div>
         </div>
       </div>

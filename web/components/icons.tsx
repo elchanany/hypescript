@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import {
+  ArrowBendUpLeftIcon,
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
@@ -92,6 +93,7 @@ import {
   SpinnerGapIcon,
   SquareIcon,
   StackIcon,
+  StopCircleIcon,
   SunIcon,
   TextTIcon,
   TrashIcon,
@@ -142,6 +144,7 @@ export const BadgeCheck = defineIcon(SealCheckIcon, "BadgeCheck");
 export const BarChart3 = defineIcon(ChartBarIcon, "BarChart3");
 export const BetweenHorizontalStart = defineIcon(ColumnsPlusLeftIcon, "BetweenHorizontalStart");
 export const Blend = defineIcon(IntersectIcon, "Blend");
+export const Bot = defineIcon(RobotIcon, "Bot");
 export const CalendarDays = defineIcon(CalendarDotsIcon, "CalendarDays");
 export const Camera = defineIcon(CameraIcon, "Camera");
 export const Captions = defineIcon(ClosedCaptioningIcon, "Captions");
@@ -158,6 +161,7 @@ export const Cloud = defineIcon(CloudIcon, "Cloud");
 export const Coins = defineIcon(CoinsIcon, "Coins");
 export const Command = defineIcon(CommandIcon, "Command");
 export const Copy = defineIcon(CopyIcon, "Copy");
+export const CornerUpLeft = defineIcon(ArrowBendUpLeftIcon, "CornerUpLeft");
 export const CreditCard = defineIcon(CreditCardIcon, "CreditCard");
 export const Download = defineIcon(DownloadSimpleIcon, "Download");
 export const ExternalLink = defineIcon(ArrowSquareOutIcon, "ExternalLink");
@@ -193,6 +197,7 @@ export const MoreHorizontal = defineIcon(DotsThreeIcon, "MoreHorizontal");
 export const MousePointer2 = defineIcon(CursorClickIcon, "MousePointer2");
 export const Move = defineIcon(ArrowsOutCardinalIcon, "Move");
 export const Music = defineIcon(MusicNoteIcon, "Music");
+export const OctagonX = defineIcon(StopCircleIcon, "OctagonX");
 export const Palette = defineIcon(PaletteIcon, "Palette");
 export const PanelLeftClose = defineIcon(SidebarSimpleIcon, "PanelLeftClose");
 export const PanelRightClose = defineIcon(SidebarSimpleIcon, "PanelRightClose");
@@ -203,9 +208,10 @@ export const Play = defineIcon(PlayIcon, "Play");
 export const Plus = defineIcon(PlusIcon, "Plus");
 export const Pin = defineIcon(PushPinIcon, "Pin");
 export const Quote = defineIcon(QuotesIcon, "Quote");
-export const Robot = defineIcon(RobotIcon, "Robot");
 export const Redo2 = defineIcon(ArrowClockwiseIcon, "Redo2");
 export const RefreshCw = defineIcon(ArrowClockwiseIcon, "RefreshCw");
+export const Reply = defineIcon(ArrowBendUpLeftIcon, "Reply");
+export const Robot = defineIcon(RobotIcon, "Robot");
 export const RotateCcw = defineIcon(ArrowCounterClockwiseIcon, "RotateCcw");
 export const RotateCw = defineIcon(ArrowClockwiseIcon, "RotateCw");
 export const Save = defineIcon(FloppyDiskIcon, "Save");
@@ -222,6 +228,7 @@ export const Sparkles = defineIcon(SparkleIcon, "Sparkles");
 export const Square = defineIcon(SquareIcon, "Square");
 export const SquareDashed = defineIcon(SelectionIcon, "SquareDashed");
 export const SquareDashedMousePointer = defineIcon(SelectionPlusIcon, "SquareDashedMousePointer");
+export const StopCircle = defineIcon(StopCircleIcon, "StopCircle");
 export const Sun = defineIcon(SunIcon, "Sun");
 export const Trash2 = defineIcon(TrashIcon, "Trash2");
 export const TriangleAlert = defineIcon(WarningIcon, "TriangleAlert");

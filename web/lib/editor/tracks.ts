@@ -95,11 +95,7 @@ export function moveClipAtTimeline(
   if (!clip) return clips;
   const sourceTrackId = clipTrackId(clip, primaryId);
   const sourceTrack = clipsOnTrack(clips, sourceTrackId, primaryId);
-  const sourceNext = sourceTrackId === targetTrackId
-    ? sourceTrack.filter((item) => item.id !== id)
-    : sourceTrack.map((item) => item.id === id
-      ? { id: uid("g"), sourceId: "__gap__", start: 0, end: clipDur(item), trackId: sourceTrackId }
-      : item);
+  const sourceNext = sourceTrack.filter((item) => item.id !== id);
   let without = replaceTrackClips(
     clips,
     sourceTrackId,
@@ -164,8 +160,10 @@ export function flattenVideoTracks(clips: Clip[], tracks: TrackMeta[]): Clip[] {
       for (const c of tc) {
         const d = clipDur(c);
         if (mid >= acc && mid < acc + d - 1e-9) {
-          chosen = { clip: c, localStart: acc };
-          break;
+          if (c.sourceId && c.sourceId !== "__gap__") {
+            chosen = { clip: c, localStart: acc };
+            break;
+          }
         }
         acc += d;
       }
