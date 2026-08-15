@@ -63,7 +63,7 @@ function calculateLayout(element: HTMLElement): TourLayout {
   };
 }
 
-export default function EditorTour({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function EditorTour({ open, onClose, onFinish }: { open: boolean; onClose: () => void; onFinish?: () => void }) {
   const [index, setIndex] = useState(0);
   const [layout, setLayout] = useState<TourLayout | null>(null);
   useEffect(() => { if (open) setIndex(0); }, [open]);
@@ -79,10 +79,14 @@ export default function EditorTour({ open, onClose }: { open: boolean; onClose: 
   }, [open, index]);
   if (!open) return null;
   const step = STEPS[index];
+  const handleComplete = () => {
+    onClose();
+    onFinish?.();
+  };
   const tryExample = () => {
     if (!("example" in step)) return;
     window.dispatchEvent(new CustomEvent("hypescript:chat-example", { detail: step.example }));
-    onClose();
+    handleComplete();
   };
   const cardStyle = layout ? ({ left: layout.card.left, top: layout.card.top } satisfies CSSProperties) : undefined;
   return <div className="editor-tour" role="dialog" aria-modal="true" aria-labelledby="editor-tour-title">
@@ -97,7 +101,7 @@ export default function EditorTour({ open, onClose }: { open: boolean; onClose: 
       <div className="editor-tour-actions">
         <button className="btn ghost editor-tour-skip" onClick={onClose}>דלג על ההדרכה</button>
         {index > 0 && <button className="btn" onClick={() => setIndex((value) => value - 1)}><ArrowRight size={14} />הקודם</button>}
-        <button className="btn primary" onClick={() => index === STEPS.length - 1 ? onClose() : setIndex((value) => value + 1)}>{index === STEPS.length - 1 ? <><Check size={14} />מתחילים</> : <>הבא<ArrowLeft size={14} /></>}</button>
+        <button className="btn primary" onClick={() => index === STEPS.length - 1 ? handleComplete() : setIndex((value) => value + 1)}>{index === STEPS.length - 1 ? <><Check size={14} />מתחילים</> : <>הבא<ArrowLeft size={14} /></>}</button>
       </div>
     </div>
   </div>;

@@ -292,9 +292,12 @@ export default function EditorPage() {
 
   useEffect(() => {
     fetch("/api/config").then((r) => r.json()).then((d) => setGroqOk(!!d.transcription?.groq)).catch(() => {});
-    const firstVisit = localStorage.getItem("hs_editor_tour_pending") === "1" && localStorage.getItem("hs_editor_tour_done") !== "1";
-    const o = localStorage.getItem("hs_chatOpen"); if (o !== null && !firstVisit) setChatOpen(o === "1");
-    if (firstVisit) { setChatOpen(true); setTourOpen(true); localStorage.setItem("hs_chatOpen", "1"); }
+    const tourDone = localStorage.getItem("hs_editor_tour_done") === "1";
+    if (!tourDone) {
+      setTourOpen(true);
+      setChatOpen(true);
+    }
+    const o = localStorage.getItem("hs_chatOpen"); if (o !== null && tourDone) setChatOpen(o === "1");
     const focus = localStorage.getItem("hs_chatFocus"); if (focus === "1") { setFocusMode(true); setChatOpen(true); }
     const w = parseInt(localStorage.getItem("hs_chatw") || "0", 10); if (w >= 320) setChatWidth(Math.min(720, w));
     const ds = localStorage.getItem("hs_dockside"); if (ds === "left" || ds === "right") setDockSide(ds);
@@ -1296,13 +1299,30 @@ export default function EditorPage() {
         chatOpen={chatOpen} onToggleChat={toggleChat}
         focusMode={focusMode} onToggleFocusMode={toggleFocusMode}
         canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
+        onOpenTour={() => setTourOpen(true)}
       />
 
       {!restored && <div className="editor-hydration-loading"><LoadingState label="טוען את הפרויקט, המדיה וציר הזמן…" lines={4} /></div>}
 
       {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}
 
-      <EditorTour open={tourOpen} onClose={() => { setTourOpen(false); localStorage.removeItem("hs_editor_tour_pending"); localStorage.setItem("hs_editor_tour_done", "1"); }} />
+      <EditorTour
+        open={tourOpen}
+        onClose={() => {
+          setTourOpen(false);
+          localStorage.removeItem("hs_editor_tour_pending");
+          localStorage.setItem("hs_editor_tour_done", "1");
+        }}
+        onFinish={() => {
+          setTourOpen(false);
+          localStorage.removeItem("hs_editor_tour_pending");
+          localStorage.setItem("hs_editor_tour_done", "1");
+          setFocusMode(true);
+          setChatOpen(true);
+          localStorage.setItem("hs_chatFocus", "1");
+          localStorage.setItem("hs_chatOpen", "1");
+        }}
+      />
 
       <ExportDialog
         open={exportOpen}
@@ -1317,36 +1337,41 @@ export default function EditorPage() {
         onRetry={() => void render()}
       />
 
-      {focusMode && <div className="chat-focus-shell">
-        <section className="chat-focus-preview">
-          <div className="chat-focus-stage">
-            <VideoPreview ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
-              selectedSubId={selectedSubId} onSelectSub={selectSub} onEditSub={editSub}
-              onCaptionPosition={(position) => {
-                if (!editorApiRef.current) return;
-                const result = runCommand("caption.setStyle", editorApiRef.current, { position });
-                if (!result.ok) setError(result.error);
+      {/* ChatGPT-Style Centered Conversation Mode */}
+      {focusMode && (
+        <div className="chat-focus-shell chat-gpt-conversation-shell">
+          <div className="chat-gpt-container">
+            <Chat
+              media={media} onAddMedia={addFiles} onClose={toggleFocusMode} words={words} clips={clips} subs={subs}
+              script={script} overlays={overlays} canvas={canvas} projectId={projectId} captionStyle={captionStyle}
+              editorApi={editorApiRef.current} tracks={tracks} latestExport={exportResult}
+              onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
+                setWords(w); if (viaEditor) return; setProject(c, s); if (ovs) setOverlays(ovs); if (tr?.length) setTracks(tr);
               }}
-              onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
-              canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
-              onSelectOverlay={selectOverlay} onBeginOverlay={beginTransaction}
-              onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
-              onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
-              onCanvasDetected={onCanvasDetected} captionStyle={captionStyle} />
+              playhead={cur} selectionLabel={agentSelLabel} quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef}
+              mentionSink={mentionSink} pendingMentionRef={pendingMentionRef}
+              inFocusMode={true}
+              renderVideoPreview={() => (
+                <VideoPreview
+                  ref={previewRef} media={media} clips={clips} tracks={tracks} subs={subs} onTime={setCur}
+                  selectedSubId={selectedSubId} onSelectSub={selectSub} onEditSub={editSub}
+                  onCaptionPosition={(position) => {
+                    if (!editorApiRef.current) return;
+                    const result = runCommand("caption.setStyle", editorApiRef.current, { position });
+                    if (!result.ok) setError(result.error);
+                  }}
+                  onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
+                  canvas={canvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
+                  onSelectOverlay={selectOverlay} onBeginOverlay={beginTransaction}
+                  onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
+                  onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
+                  onCanvasDetected={onCanvasDetected} captionStyle={captionStyle}
+                />
+              )}
+            />
           </div>
-          {(working || phase) && <div className="chat-focus-progress"><span>{phase}</span>{working && <div><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>}</div>}
-        </section>
-        <aside className="agent-dock chat-focus-dock">
-          <Chat media={media} onAddMedia={addFiles} onClose={toggleFocusMode} words={words} clips={clips} subs={subs}
-            script={script} overlays={overlays} canvas={canvas} projectId={projectId} captionStyle={captionStyle}
-            editorApi={editorApiRef.current} tracks={tracks} latestExport={exportResult}
-            onProject={({ words: w, clips: c, subs: s, overlays: ovs, tracks: tr, viaEditor }) => {
-              setWords(w); if (viaEditor) return; setProject(c, s); if (ovs) setOverlays(ovs); if (tr?.length) setTracks(tr);
-            }}
-            playhead={cur} selectionLabel={agentSelLabel} quoteSink={quoteSink} pendingQuoteRef={pendingQuoteRef}
-            mentionSink={mentionSink} pendingMentionRef={pendingMentionRef} />
-        </aside>
-      </div>}
+        </div>
+      )}
 
       {!focusMode && <div className="shell-body" data-mobile-surface={mobileSurface}>
         {dockSide === "left" && agentDock}

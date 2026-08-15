@@ -127,6 +127,10 @@ interface ChatProps {
   pendingMentionRef?: MutableRefObject<MediaAsset | null>;
   /** הייצוא האחרון מהעורך — מוצמד בראש רשימת ההודעות */
   latestExport?: { url: string; name: string; size: number } | null;
+  /** האם מוצג במצב שיחה מרכזי בסגנון ChatGPT */
+  inFocusMode?: boolean;
+  /** נגן וידאו אינטראקטיבי מוטמע בגוף הודעות הסוכן */
+  renderVideoPreview?: () => React.ReactNode;
 }
 
 const fmtTc = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -172,7 +176,7 @@ const COMPOSE_H_DEFAULT = 82;
 const COMPOSE_H_MIN = 64;
 const COMPOSE_H_MAX = 280;
 
-export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle, latestExport }: ChatProps) {
+export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle, latestExport, inFocusMode = false, renderVideoPreview }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
   const [input, setInput] = useState("");
@@ -908,6 +912,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           if (it.kind === "output") {
             return <ChatMediaCard key={i} url={it.url} name={it.name} mkind={it.mkind} />;
           }
+          const isLatestAssistant = i === displayItems.reduce((last, item, index) => item.kind === "assistant" ? index : last, -1);
           return (
             <div key={i} className={`msg2 ${it.kind}`}>
               {(it.kind === "user" || it.kind === "assistant") && <div className="msg-speaker">
@@ -922,6 +927,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   </div>)}
                 </div> : null}
                 {it.kind === "assistant" ? <ChatMarkdown text={it.text} /> : it.kind === "user" ? <ChatUserText text={it.text} /> : it.text}
+                {/* Embedded Live Video Player in Assistant Message Body (ChatGPT Style) */}
+                {it.kind === "assistant" && isLatestAssistant && renderVideoPreview && (
+                  <div className="msg-embedded-player-card">
+                    <div className="embedded-player-header">
+                      <div className="e-badge"><Film size={13} strokeWidth={2} /><span>סרטון מעודכן</span></div>
+                      <span className="e-hint">נגן אינטראקטיבי · לחץ להפעלה ובדיקה</span>
+                    </div>
+                    <div className="embedded-player-stage">
+                      {renderVideoPreview()}
+                    </div>
+                  </div>
+                )}
               </div>
               {(it.kind === "user" || it.kind === "assistant") ? <div className="msg-meta">
                 <time>{it.time}</time>

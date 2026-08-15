@@ -49,7 +49,8 @@
     ".next-agent-timeline-capcut-ux/types/**/*.ts",
     ".next-agent-timeline-direct-drag/types/**/*.ts",
     ".next-agent-intent/types/**/*.ts",
-    ".next-agent-timeline-verify/types/**/*.ts"
+    ".next-agent-timeline-verify/types/**/*.ts",
+    ".next-agent-chat-gpt-mode/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

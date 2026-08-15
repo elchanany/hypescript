@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command } from "@/components/icons";
+import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command, HelpCircle } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import { ProjectMeta } from "@/lib/storage";
@@ -21,7 +21,7 @@ export default function TopBar({
   canUndo, canRedo, onUndo, onRedo,
   chatOpen, onToggleChat, focusMode, onToggleFocusMode,
   canExport, rendering, renderProgress = 0, onExport,
-  canvas, onChangeCanvas,
+  canvas, onChangeCanvas, onOpenTour,
 }: {
   projectName: string; projects: ProjectMeta[]; projectId: string | null; saving: boolean;
   onSwitch: (id: string) => void; onNew: () => void; onRename: () => void; onDelete: () => void;
@@ -29,6 +29,7 @@ export default function TopBar({
   chatOpen: boolean; onToggleChat: () => void; focusMode: boolean; onToggleFocusMode: () => void;
   canExport: boolean; rendering: boolean; renderProgress?: number; onExport: () => void;
   canvas?: CanvasSize; onChangeCanvas?: (canvas: CanvasSize) => void;
+  onOpenTour?: () => void;
 }) {
   const { t } = useI18n();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -107,6 +108,7 @@ export default function TopBar({
       <div className="tb-group tb-utility-slot">
         <LanguageSwitcher compact />
         <IconButton icon={Command} tip={`${t("editor.shortcuts")} (Ctrl+K)`} onClick={() => setKbdOpen(true)} />
+        {onOpenTour && <IconButton icon={HelpCircle} tip="הדרכה על המערכת" onClick={onOpenTour} />}
         <Link href="/dashboard" className="iconbtn" data-tip={t("nav.dashboard")} aria-label={t("nav.dashboard")}><LayoutGrid size={16} strokeWidth={1.75} /></Link>
         <IconButton icon={MessageCircle} tip={t("editor.openChat")} active={chatOpen && !focusMode} onClick={onToggleChat} />
         <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip={t("editor.chatMode")}>
