@@ -130,6 +130,7 @@ export default function Timeline(p: Props) {
     timelineStart: number;
     dur: number;
     targetTrackId: string;
+    targetTrackName?: string;
     snapped: boolean;
     clip?: Clip | null;
     overlay?: Overlay | null;
@@ -588,6 +589,9 @@ export default function Timeline(p: Props) {
         rangeHit.snapped,
       );
 
+      const trackMeta = p.tracks.find((t) => t.id === d.targetTrackId);
+      const targetTrackName = d.targetTrackId === "__new_track__" ? "שכבה חדשה" : (trackMeta?.name || "וידאו");
+
       setActiveDrag({
         kind: "clip",
         id: d.id,
@@ -600,6 +604,7 @@ export default function Timeline(p: Props) {
         timelineStart: d.timelineStart,
         dur: d.dur,
         targetTrackId: d.targetTrackId,
+        targetTrackName,
         snapped: rangeHit.snapped,
         clip: clips.find((c) => c.id === d.id) || null,
       });
@@ -662,20 +667,32 @@ export default function Timeline(p: Props) {
     endDragVisuals();
   };
 
-  const onUp = () => {
-    const d = drag.current;
-    stopAutoScroll();
+  const onUp = (e: MouseEvent) => {
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
-    endDragVisuals();
-    if (!d) { drag.current = null; return; }
+    showSnapGuide(null);
+    setActiveDrag(null);
+    document.querySelectorAll(".tl-lane2.magnetic-target, .tl-rowline.active-target, .tl-lane2.drop-target").forEach((el) => {
+      el.classList.remove("magnetic-target", "active-target", "drop-target");
+    });
+    if (!drag.current) return;
+    const d = drag.current;
+
     if (d.kind === "overlay") {
-      if (d.mode === "move" && d.moved) {
-        p.onOverlayMove?.(d.id, d.timelineStart, d.timelineStart + d.dur);
+      if (d.mode === "l" || d.mode === "r") {
+        /* committed via onOverlayTrim */
+      } else if (d.mode === "move") {
+        if (!d.moved) { p.onSelectOverlay?.(d.id); }
+        else if (p.onOverlayMove) {
+          p.onOverlayMove(d.id, d.timelineStart, d.timelineStart + d.dur);
+        }
       }
-      p.onOverlayTrimEnd?.();
-    } else if (d.mode === "l" || d.mode === "r") {
-      p.onTrimEnd();
+      drag.current = null;
+      return;
+    }
+
+    if (d.mode === "l" || d.mode === "r") {
+      /* committed live */
     } else if (d.mode === "move") {
       if (!d.moved) { /* selected on mousedown */ }
       else {
@@ -759,21 +776,19 @@ export default function Timeline(p: Props) {
         const el = foundClips[i];
         const cRect = el.getBoundingClientRect();
         const intersects = !(
-          cRect.right < marqueeRect.left ||
-          cRect.left > marqueeRect.right ||
-          cRect.bottom < marqueeRect.top ||
-          cRect.top > marqueeRect.bottom
+          marqueeRect.right < cRect.left ||
+          marqueeRect.left > cRect.right ||
+          marqueeRect.bottom < cRect.top ||
+          marqueeRect.top > cRect.bottom
         );
+
         if (intersects) {
           el.classList.add("marquee-selected");
           const cid = el.dataset.clipId;
           if (cid && !firstHit) {
-            const kind: "video" | "audio" | "overlay" = el.classList.contains("clip-audio")
-              ? "audio"
-              : el.classList.contains("clip-ov")
-              ? "overlay"
-              : "video";
-            firstHit = { id: cid, kind };
+            const isOv = el.classList.contains("clip-ov");
+            const isAud = el.classList.contains("clip-audio");
+            firstHit = { id: cid, kind: isOv ? "overlay" : isAud ? "audio" : "video" };
           }
         } else {
           el.classList.remove("marquee-selected");
@@ -858,11 +873,11 @@ export default function Timeline(p: Props) {
       <div
         className="tl-inner"
         ref={innerRef}
-        style={{ width: contentWidth, position: "relative" }}
+        style={{
+          width: contentWidth,
+          minWidth: "100%",
+        }}
       >
-        {/* CapCut-style snap guide — full height across all tracks */}
-        <div className="tl-snap-guide" ref={snapGuideRef}><span ref={snapLabelRef} /></div>
-
         {/* Windows-style blue marquee selection box */}
         {marquee && (
           <div

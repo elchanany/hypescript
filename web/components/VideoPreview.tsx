@@ -477,8 +477,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
           style={{ visibility: activeKind === "video" && activeSlot === slot ? "visible" : "hidden", opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />)}
         <audio ref={extraAudioRef} onEnded={() => syncExtraAudio(t, playing)} />
         {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />}
-        {activeKind === "audio" && <div className="pv-audio-only"><Music size={46} /><span>אודיו מתנגן</span></div>}
-        {activeKind === "missing" && <div className="pv-missing"><Film size={42} /><strong>קובץ המדיה חסר</strong><span>אפשר לקשר אותו מחדש מספריית המדיה</span></div>}
+        {activeKind === "missing" && <div className="pv-gap" aria-hidden />}
         {activeKind === "gap" && <div className="pv-gap" aria-hidden />}
         {cue && <div className={`pv-caption ${cue.id === selectedSubId ? "selected" : ""}`} style={captionStyleToCss(st)}
           contentEditable={cue.id === selectedSubId} suppressContentEditableWarning
