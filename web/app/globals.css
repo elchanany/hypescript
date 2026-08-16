@@ -3029,8 +3029,26 @@ html[data-locale="hi"] :is(.topbar,.dashboard-shell,.settings-page,.account-page
   position: absolute;
   pointer-events: none;
   z-index: 99;
-  background: rgba(59, 130, 246, 0.18);
-  border: 1px solid rgba(59, 130, 246, 0.85);
+  background: rgba(59, 130, 246, 0.22);
+  border: 1px solid #3b82f6;
   border-radius: 2px;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+}
+
+.clip2.marquee-selected,
+.clip-audio.marquee-selected,
+.clip-ov.marquee-selected,
+.clip-gap.marquee-selected {
+  outline: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5), 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+  filter: brightness(1.2);
+}
+
+.clip2.selected,
+.clip-audio.selected,
+.clip-ov.selected,
+.clip-gap.selected {
+  outline: 2px solid #0ea5e9 !important;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.45), 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+  filter: brightness(1.15);
 }

@@ -771,7 +771,7 @@ export default function Timeline(p: Props) {
         bottom: Math.max(marqueeRef.current.clientY0, ev.clientY),
       };
 
-      const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov");
+      const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov, .clip-gap");
       const currentHits = new Set<string>();
 
       for (let i = 0; i < foundClips.length; i++) {
@@ -807,9 +807,10 @@ export default function Timeline(p: Props) {
       if (hits && hits.size > 0) {
         const hitsArr = Array.from(hits);
         p.onSelectMulti?.(hitsArr);
-        const firstId = hitsArr[0];
-        if (overlays.some((o) => o.id === firstId)) p.onSelectOverlay?.(firstId);
-        else selectClip(firstId, "video");
+      } else {
+        p.onSelectMulti?.([]);
+        p.onSelect(null);
+        p.onSelectOverlay?.(null);
       }
     };
 
@@ -1002,6 +1003,7 @@ export default function Timeline(p: Props) {
                       return (
                         <div
                           key={c.id}
+                          data-clip-id={c.id}
                           className={`clip-gap ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${tLocked ? "locked" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                           style={{
                             left: `${pct(assembledStart(tClips, i))}%`,
