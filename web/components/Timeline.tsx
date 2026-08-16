@@ -25,6 +25,7 @@ interface Props {
   maxDuration: number;
   currentAssembled: number;
   selectedId: string | null;
+  selectedIds?: string[];
   selectedOverlayId?: string | null;
   selectedSubId?: string | null;
   /** Which track the clip selection came from — drives inspector title. */
@@ -36,6 +37,7 @@ interface Props {
   snap: boolean;
   onSeek: (assembled: number) => void;
   onSelect: (id: string | null, track?: "video" | "audio") => void;
+  onSelectMulti?: (ids: string[]) => void;
   onSelectOverlay?: (id: string | null) => void;
   onSelectSub?: (id: string | null) => void;
   onTrimBegin: () => void;
@@ -770,7 +772,7 @@ export default function Timeline(p: Props) {
       };
 
       const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov");
-      let firstHit: { id: string; kind: "video" | "audio" | "overlay" } | null = null;
+      const currentHits = new Set<string>();
 
       for (let i = 0; i < foundClips.length; i++) {
         const el = foundClips[i];
@@ -785,28 +787,30 @@ export default function Timeline(p: Props) {
         if (intersects) {
           el.classList.add("marquee-selected");
           const cid = el.dataset.clipId;
-          if (cid && !firstHit) {
-            const isOv = el.classList.contains("clip-ov");
-            const isAud = el.classList.contains("clip-audio");
-            firstHit = { id: cid, kind: isOv ? "overlay" : isAud ? "audio" : "video" };
-          }
+          if (cid) currentHits.add(cid);
         } else {
           el.classList.remove("marquee-selected");
         }
       }
 
-      if (firstHit) {
-        if (firstHit.kind === "overlay") p.onSelectOverlay?.(firstHit.id);
-        else selectClip(firstHit.id, firstHit.kind);
-      }
+      (marqueeRef.current as any).hits = currentHits;
     };
 
     const onMarqueeUp = () => {
       window.removeEventListener("mousemove", onMarqueeMove);
       window.removeEventListener("mouseup", onMarqueeUp);
       document.querySelectorAll(".marquee-selected").forEach((el) => el.classList.remove("marquee-selected"));
+      const hits: Set<string> | undefined = (marqueeRef.current as any)?.hits;
       setMarquee(null);
       marqueeRef.current = null;
+
+      if (hits && hits.size > 0) {
+        const hitsArr = Array.from(hits);
+        p.onSelectMulti?.(hitsArr);
+        const firstId = hitsArr[0];
+        if (overlays.some((o) => o.id === firstId)) p.onSelectOverlay?.(firstId);
+        else selectClip(firstId, "video");
+      }
     };
 
     window.addEventListener("mousemove", onMarqueeMove);
@@ -842,6 +846,20 @@ export default function Timeline(p: Props) {
     window.addEventListener("mouseup", onUp);
   };
 
+  const onRulerDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const rulerEl = e.currentTarget as HTMLElement;
+    seekFromClientX(e.clientX, rulerEl);
+    const onMove = (ev: MouseEvent) => seekFromClientX(ev.clientX, rulerEl);
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   const Playhead = ({ laneEl }: { laneEl?: HTMLElement | null }) => (
     <div
       className={`playhead2 ${phDrag ? "dragging" : ""}`}
@@ -862,8 +880,9 @@ export default function Timeline(p: Props) {
     </>
   );
 
-  const videoSel = (id: string) => selectedId === id && (avLinked || selectionTrack !== "audio");
-  const audioSel = (id: string) => selectedId === id && (avLinked || selectionTrack === "audio");
+  const isMultiSel = (id: string) => !!p.selectedIds && p.selectedIds.includes(id);
+  const videoSel = (id: string) => isMultiSel(id) || (selectedId === id && (avLinked || selectionTrack !== "audio"));
+  const audioSel = (id: string) => isMultiSel(id) || (selectedId === id && (avLinked || selectionTrack === "audio"));
   const clipHover = (id: string) => hoveredId === id;
 
   const contentWidth = portW > 0 ? Math.max(portW, timelineContentWidth(portW, zoom)) : "100%";
@@ -894,7 +913,7 @@ export default function Timeline(p: Props) {
         {/* Ruler */}
         <div className="tl-rowline tl-rulerline">
           <div className="tl-corner2" />
-          <div className="tl-ruler2" onClick={(e) => seekFromRow(e, e.currentTarget)}>
+          <div className="tl-ruler2" onMouseDown={onRulerDown} onClick={(e) => seekFromRow(e, e.currentTarget)}>
             {ticks.out.map((t) => (
               <div key={t} className="tl-tick2" style={{ left: `${pct(t)}%` }}><span>{fmt(t)}</span></div>
             ))}
@@ -1025,7 +1044,7 @@ export default function Timeline(p: Props) {
                         {asset?.kind === "video" && !asset.missing && (
                           <div className="clip-video-content">
                             <div className="clip-filmstrip-area">
-                              <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={thumbH} />
+                              <Filmstrip file={asset.file || asset.url} src={asset.url} sourceIn={c.start} sourceOut={c.end} height={thumbH} />
                             </div>
                             {/* Integrated Audio Waveform inside the Video Clip (CapCut style) */}
                             {avLinked && (
@@ -1198,7 +1217,7 @@ export default function Timeline(p: Props) {
                   <div
                     key={o.id}
                     data-clip-id={o.id}
-                    className={`clip-ov ${o.id === selectedOverlayId ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                    className={`clip-ov ${o.id === selectedOverlayId || isMultiSel(o.id) ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                     style={{
                       left: `${pct(o.start)}%`,
                       width: `${Math.max(0.4, pct(dur))}%`,
@@ -1331,7 +1350,7 @@ export default function Timeline(p: Props) {
                   {asset?.kind === "video" && !asset.missing && (
                     <div className="clip-video-content">
                       <div className="clip-filmstrip-area">
-                        <Filmstrip file={asset.file} sourceIn={c.start} sourceOut={c.end} height={Math.max(26, activeDrag.originHeight - (avLinked ? 26 : 8))} />
+                        <Filmstrip file={asset.file || asset.url} src={asset.url} sourceIn={c.start} sourceOut={c.end} height={Math.max(26, activeDrag.originHeight - (avLinked ? 26 : 8))} />
                       </div>
                       {avLinked && (
                         <div className="clip-waveform-area">

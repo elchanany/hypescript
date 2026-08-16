@@ -1,14 +1,13 @@
 # ACTIVE_WORK.md
 
-## 2026-08-16 — Full Timeline 2D Polish, Question Choices in Composer, Clean Gap Playback & Scrollbar Polish
+## 2026-08-16 — Full Timeline 2D Polish, Ruler Drag Scrubbing, Windows Marquee Multi-Selection, Fast Frame Filmstrip & Plus Button in Chat
 
-- **Clean Black Gap Playback (`VideoPreview.tsx`)**: Missing clips and empty spaces between clips render cleanly as natural black frames (`activeKind === "gap"` / `activeKind === "missing"`) without alarming "קובץ המדיה חסר" banners or ghost boxes.
-- **Hidden Phantom Green Audio Lane (`Timeline.tsx`)**: Standalone audio lane is cleanly hidden when audio is linked to video (`avLinked === true` and `realDedicated.length === 0`), eliminating the phantom unmovable green track.
-- **2D Timeline Drag with 4-Way Auto-Scroll (`Timeline.tsx`)**: Seamless 4-way viewport auto-scrolling when dragging clips or overlays near the top/bottom/left/right boundaries.
-- **Question Prompt in Composer (`Chat.tsx`, `globals.css`)**: When the agent asks questions (`ask_user`), choice options expand cleanly right inside/above the composer with pill option buttons, a "דלג" button, and placeholder "או שתאמר לי בעצמך…".
-- **Zero Triangle Bubble Tails & Clean Quotes (`globals.css`)**: Removed speech bubble triangle carets (`border-end-start-radius` / `border-end-end-radius`), removed vertical side border from quotes, and ensured uniform 16px border-radius and non-crammed tool action cards.
-- **Hidden Composer Scrollbar (`globals.css`)**: Fully suppressed scrollbar on textarea (`scrollbar-width: none !important; -ms-overflow-style: none`).
-- **Verification**: 73 Vitest test suites (591 unit & integration tests) passed (100% green), Next.js isolated multi-agent production build (`agent-build.mjs --name=complete-ui-cleanup`) compiled cleanly with 45/45 static pages.
+- **Direct Timeline Ruler Drag-to-Scrub (`Timeline.tsx`)**: Clicking or dragging directly on the time ruler (`.tl-ruler2`) instantly tracks the playhead smoothly across time.
+- **Windows-Style Marquee Multi-Select (`Timeline.tsx`, `page.tsx`, `globals.css`)**: Dragging a translucent blue marquee selection rectangle across empty timeline space selects multiple clips and overlays simultaneously (`selectedIds`), with synchronized batch deletion and actions.
+- **Reliable Video Filmstrip Frame Capture (`Filmstrip.tsx`, `thumbnails.ts`)**: Video frame capture now supports `playsInline`, Blob/URL fallbacks, and non-blocking seek resolution, eliminating frozen/stuck frame thumbnails on the timeline.
+- **Prominent Plus (+) Media Upload in Chat (`Chat.tsx`)**: Added a dedicated `+` button in both conversation and editor chat composers accepting all media types (`video/*,image/*,audio/*,.pdf,.txt,.srt,.vtt,.json`) with automatic multimodal tag insertion.
+- **Consistent Branding**: Enforced **hypescript AI** with the robot icon across all views.
+- **Verification**: 73 Vitest test suites (591 unit & integration tests) passed (100% green), Next.js isolated multi-agent production build (`agent-build.mjs --name=multi-select-scrub-plus`) compiled cleanly with 45/45 static pages.
 
 ## 2026-08-15 — CapCut-style 2D Drag Engine, Infinite Dynamic Tracks & Extended Full-Viewport Grid
 

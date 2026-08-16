@@ -81,6 +81,7 @@ export default function EditorPage() {
   } = useEditor();
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const editorClipboardRef = useRef<{ kind: "clip"; value: Clip } | { kind: "overlay"; value: Overlay } | { kind: "sub"; value: Sub } | null>(null);
@@ -789,6 +790,7 @@ export default function EditorPage() {
   };
   const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
     setSelectedId(id);
+    setSelectedIds(id ? [id] : []);
     if (id) {
       setSelectedOverlayId(null);
       setSelectedSubId(null);
@@ -799,6 +801,7 @@ export default function EditorPage() {
   };
   const selectOverlay = (id: string | null) => {
     setSelectedOverlayId(id);
+    setSelectedIds(id ? [id] : []);
     if (id) {
       setSelectedId(null);
       setSelectedSubId(null);
@@ -1009,6 +1012,19 @@ export default function EditorPage() {
     if (!res.ok) setError(res.error);
   };
   const deleteSel = (leaveGap = false) => {
+    if (selectedIds.length > 1) {
+      for (const id of selectedIds) {
+        if (overlays.some((o) => o.id === id)) {
+          runCommand("overlay.delete", editorApiRef.current!, { id });
+        } else if (clips?.some((c) => c.id === id)) {
+          deleteClipById(id, leaveGap);
+        }
+      }
+      setSelectedIds([]);
+      setSelectedId(null);
+      setSelectedOverlayId(null);
+      return;
+    }
     if (selectedOverlayId) {
       const res = runCommand("overlay.delete", editorApiRef.current!, { id: selectedOverlayId });
       if (!res.ok) setError(res.error);
@@ -1487,10 +1503,10 @@ export default function EditorPage() {
               <Timeline
                 media={media} clips={clips || []} subs={subs} overlays={overlays} tracks={tracks}
                 maxDuration={timelineDuration}
-                currentAssembled={cur} selectedId={selectedId} selectedOverlayId={selectedOverlayId}
+                currentAssembled={cur} selectedId={selectedId} selectedIds={selectedIds} selectedOverlayId={selectedOverlayId}
                 selectedSubId={selectedSubId} selectionTrack={selectionTrack} avLinked={avLinked}
                 zoom={zoom} onZoom={setZoom} snap={snap}
-                onSeek={seek} onSelect={selectClip} onSelectOverlay={selectOverlay} onSelectSub={selectSub}
+                onSeek={seek} onSelect={selectClip} onSelectMulti={(ids) => setSelectedIds(ids)} onSelectOverlay={selectOverlay} onSelectSub={selectSub}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => {
                   if (!c) return c;

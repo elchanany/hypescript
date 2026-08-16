@@ -656,6 +656,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         return;
       }
       updateUpload(1);
+      for (const f of selected) {
+        const matchingAsset = media.find((m) => m.name === f.name);
+        const tag = matchingAsset ? `[@media:${matchingAsset.id} "${matchingAsset.name}"]` : `[קובץ: "${f.name}"]`;
+        insertInlineTag(tag);
+      }
       window.setTimeout(() => setUploading(null), 900);
     } catch {
       setUploading(null);
@@ -1074,8 +1079,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         <div className="chat-compose">
 
           <div className="chat-compose-tools">
-            <button className="iconbtn lg" data-tip="העלה קובץ" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="העלה קובץ"><Paperclip size={16} strokeWidth={1.75} /></button>
-            <input ref={attachRef} type="file" accept="video/*,image/*,audio/*" multiple hidden onChange={(e) => { void handleAttachments(e.target.files); e.currentTarget.value = ""; }} />
+            <button className="iconbtn lg plus-attach-btn" data-tip="הוסף קבצים ומדיה (+)" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="הוסף קבצים ומדיה">
+              <Plus size={16} strokeWidth={2.2} />
+            </button>
+            <input ref={attachRef} type="file" accept="video/*,image/*,audio/*,application/pdf,text/*,.srt,.vtt,.json" multiple hidden onChange={(e) => { void handleAttachments(e.target.files); e.currentTarget.value = ""; }} />
             <button className="iconbtn lg" data-tip="פקודה (/)" data-tippos="up" onClick={() => { setInput("/"); setPop({ kind: "slash", query: "" }); taRef.current?.focus(); }} aria-label="פקודות"><Command size={16} strokeWidth={1.75} /></button>
             <button className="iconbtn lg" data-tip="אזכור (@)" data-tippos="up" onClick={() => { setInput((v) => v + (v && !v.endsWith(" ") ? " @" : "@")); setPop({ kind: "mention", query: "" }); taRef.current?.focus(); }} aria-label="אזכורים"><AtSign size={16} strokeWidth={1.75} /></button>
           </div>
