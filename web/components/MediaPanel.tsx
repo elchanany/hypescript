@@ -32,7 +32,7 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
 
   const Icon = KIND_ICON[asset.kind];
   return (
-    <div className="cell-thumb">
+    <div className={`cell-thumb kind-${asset.kind}`}>
       {asset.missing ? <div className="cell-missing"><TriangleAlert size={24} /><span>קובץ חסר</span></div>
         : url ? <img src={url} alt="" draggable={false} />
         : asset.kind === "video" ? <span className="strip-loading cover" />

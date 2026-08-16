@@ -71,8 +71,8 @@ export function AspectRatioPicker({ currentCanvas, onChangeCanvas, className = "
 
       {open && (
         <div
-          className="absolute z-50 mt-1 min-w-[240px] p-1.5 rounded-lg border border-[var(--border)] bg-[var(--panel)] shadow-xl backdrop-blur-md text-xs right-0 rtl:right-auto rtl:left-0 animate-in fade-in zoom-in-95 duration-100"
-          style={{ backgroundColor: "var(--panel-bg, #121826)", borderColor: "var(--border, #2a3447)" }}
+          className="aspect-ratio-menu absolute bottom-[calc(100%+6px)] inset-inline-start-0 min-w-[240px] p-1.5 rounded-lg border border-[var(--border)] bg-[var(--panel)] shadow-2xl backdrop-blur-md text-xs animate-in fade-in zoom-in-95 duration-100"
+          style={{ backgroundColor: "var(--panel-bg, #121826)", borderColor: "var(--border, #2a3447)", zIndex: 9999 }}
         >
           <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--text-3)] uppercase border-b border-[var(--border)] mb-1">
             פורמט ומידות וידאו
