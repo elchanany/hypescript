@@ -182,8 +182,33 @@ html[data-theme="light"] {
 .chat-model-picker select { width: 82px; padding: 0; border: 0; background: transparent; color: var(--text); font-size: 11px; }
 .chat-header-leading { min-width: 0; display: flex; align-items: center; gap: 7px; }
 .chat-history-trigger { flex: none; }
-.chat-history-backdrop { position: absolute; z-index: 80; inset: 0; direction: rtl; background: color-mix(in srgb, var(--bg) 32%, transparent); backdrop-filter: blur(2px); animation: hs-fade-in .16s ease-out; }
-.chat-history-drawer { width: min(360px, 88%); height: 100%; padding: 12px; display: flex; flex-direction: column; gap: 10px; direction: rtl; border-inline-start: 1px solid var(--border-strong); background: var(--elevated); box-shadow: -18px 0 54px rgba(10,17,30,.2); animation: chat-drawer-in-rtl .2s var(--ease-out); }
+.chat-history-backdrop {
+  position: absolute;
+  z-index: 120;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+  backdrop-filter: blur(4px);
+  animation: hs-fade-in .16s ease-out;
+}
+.chat-history-drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0 !important;
+  left: auto !important;
+  width: min(360px, 88%);
+  height: 100%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  direction: rtl;
+  border-left: 1px solid var(--border-strong);
+  border-right: none;
+  background: var(--elevated);
+  box-shadow: -18px 0 54px rgba(0, 0, 0, 0.4);
+  animation: chat-drawer-in-right .22s var(--ease-out);
+}
 .chat-history-head { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .chat-history-head > div { min-width: 0; display: grid; gap: 2px; }
 .chat-history-head strong { font-size: 14px; }
@@ -204,7 +229,10 @@ html[data-theme="light"] {
 .chat-thread-action.danger:hover { color: var(--danger); background: var(--danger-tint); }
 .chat-history-foot { padding: 9px 4px 2px; color: var(--text-3); border-top: 1px solid var(--border); font-size: 10px; }
 .chat-history-foot a { color: var(--accent); }
-@keyframes chat-drawer-in-rtl { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes chat-drawer-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
 
 @media (max-height: 760px) {
   .upper { min-height: 190px; }

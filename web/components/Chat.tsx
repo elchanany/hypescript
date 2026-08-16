@@ -795,6 +795,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             })}
           </select><ChevronDown size={12} /></label>}
           {providerMode === "byok" && usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()}`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
+          <button className="iconbtn new-chat-btn" data-tip="שיחה חדשה" data-tippos="down" onClick={() => startNewChat()} aria-label="פתח שיחה חדשה"><MessageSquarePlus size={16} strokeWidth={1.8} /></button>
+          <button className="iconbtn chat-history-trigger" data-tip="כל השיחות" data-tippos="down" onClick={() => setThreadsOpen(true)} aria-expanded={threadsOpen} aria-controls="chat-history-drawer" aria-label="פתח את כל השיחות"><List size={18} strokeWidth={1.8} /></button>
           <button className="iconbtn" data-tip="הגדרות AI" data-tippos="down" onClick={() => setByokOpen((value) => !value)} aria-expanded={byokOpen} aria-label="הגדרות AI"><Settings size={16} /></button>
           {onToggleDock && (
             <button className="iconbtn" data-tip={dockSide === "right" ? "עגן משמאל" : "עגן מימין"} data-tippos="down"
@@ -803,7 +805,6 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             </button>
           )}
           <button className="iconbtn" data-tip="סגור" data-tippos="down" onClick={onClose} aria-label="סגור"><X size={16} strokeWidth={1.75} /></button>
-          <button className="iconbtn chat-history-trigger" data-tip="כל השיחות" data-tippos="down" onClick={() => setThreadsOpen(true)} aria-expanded={threadsOpen} aria-controls="chat-history-drawer" aria-label="פתח את כל השיחות"><List size={18} /></button>
         </div>
       </div>
 
