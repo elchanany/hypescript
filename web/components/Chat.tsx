@@ -770,23 +770,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       <div className="panel-header chat-header-unified">
         <div className="chat-header-leading">
           <span className="title"><Bot size={15} weight="bold" />hypescript AI</span>
-          <div className="agent-modes-inline" role="tablist" aria-label="מצב סוכן">
-            {MODES.map((m) => (
-              <button key={m.id} role="tab" aria-selected={mode === m.id} className={`mode-tab ${mode === m.id ? "on" : ""}`}
-                data-tip={m.tip} data-tippos="down" onClick={() => changeMode(m.id)}>
-                <m.icon size={12} strokeWidth={1.9} /><span>{m.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
-        <div className="actions" style={{ gap: 4 }}>
-          <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
-            data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
-            <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
-          </button>
-          {selectionLabel && (
-            <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 12 ? selectionLabel.slice(0, 11) + "…" : selectionLabel}</span>
-          )}
+        <div className="actions" style={{ gap: 3 }}>
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
           {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
             {LLM_PROVIDERS.map((p) => {
@@ -805,6 +790,26 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             </button>
           )}
           <button className="iconbtn" data-tip="סגור" data-tippos="down" onClick={onClose} aria-label="סגור"><X size={16} strokeWidth={1.75} /></button>
+        </div>
+      </div>
+
+      <div className="chat-subbar">
+        <div className="agent-modes-inline" role="tablist" aria-label="מצב סוכן">
+          {MODES.map((m) => (
+            <button key={m.id} role="tab" aria-selected={mode === m.id} className={`mode-tab ${mode === m.id ? "on" : ""}`}
+              data-tip={m.tip} data-tippos="down" onClick={() => changeMode(m.id)}>
+              <m.icon size={12} strokeWidth={1.9} /><span>{m.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="chat-subbar-ctx">
+          <button type="button" className="ctx-chip on quote-chip" data-tip="ציטוט מקום — הכנס לתיבת ההודעה"
+            data-tippos="down" onClick={() => insertQuote(playhead)} aria-label="ציטוט מקום לתיבת ההודעה">
+            <MapPin size={11} strokeWidth={2} />{fmtTc(playhead)}
+          </button>
+          {selectionLabel && (
+            <span className="ctx-chip on" title={selectionLabel}><SquareDashedMousePointer size={11} strokeWidth={2} />{selectionLabel.length > 12 ? selectionLabel.slice(0, 11) + "…" : selectionLabel}</span>
+          )}
         </div>
       </div>
 

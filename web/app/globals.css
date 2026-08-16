@@ -1281,29 +1281,45 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 
 /* Unified sleek single-row chat header */
 .chat-header-unified {
-  min-height: 40px; height: 40px; padding: 0 8px;
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  min-height: 42px; height: 42px; padding: 0 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
   border-bottom: 1px solid var(--border); background: var(--panel); direction: rtl;
+  flex: none;
 }
 .chat-header-unified .chat-header-leading {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
+  display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;
 }
 .chat-header-unified .chat-header-leading .title {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 6px;
   font-weight: 700; font-size: 13px; color: var(--text); white-space: nowrap;
 }
-.chat-header-unified .agent-modes-inline {
-  display: inline-flex; align-items: center; gap: 2px; padding: 2px;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px;
+.chat-header-unified .actions {
+  display: flex; align-items: center; gap: 3px; flex: none;
 }
-.chat-header-unified .agent-modes-inline .mode-tab {
+
+/* Secondary toolbar below header for modes & context */
+.chat-subbar {
+  min-height: 34px; height: 34px; padding: 0 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border-bottom: 1px solid var(--border); background: var(--panel-2); direction: rtl;
+  flex: none;
+}
+.agent-modes-inline {
+  display: inline-flex; align-items: center; gap: 2px; padding: 2px;
+  background: var(--inset); border: 1px solid var(--border); border-radius: 999px;
+  flex: none;
+}
+.agent-modes-inline .mode-tab {
   display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px;
   border: none; background: transparent; color: var(--text-2); border-radius: 999px;
   font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.12s ease;
 }
-.chat-header-unified .agent-modes-inline .mode-tab:hover { color: var(--text); }
-.chat-header-unified .agent-modes-inline .mode-tab.on {
-  background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+.agent-modes-inline .mode-tab:hover { color: var(--text); }
+.agent-modes-inline .mode-tab.on {
+  background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.chat-subbar-ctx {
+  display: flex; align-items: center; gap: 6px; min-width: 0; flex: none;
 }
 
 .agent-modes { display: none; }
