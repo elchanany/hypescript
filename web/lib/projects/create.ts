@@ -2,6 +2,7 @@
 
 import { createProject, deleteProject, kvGet, kvSet, listProjects, type ProjectMeta } from "@/lib/storage";
 import { createCloudProject, type CloudProject } from "@/lib/cloud/client";
+import { quotaMessage } from "@/lib/billing/quotaMessaging";
 import { saveProjectPolicy } from "./policy";
 import { DEFAULT_POLICY, type ProjectExecutionPolicy, type ProjectMetaV2 } from "./types";
 
@@ -51,7 +52,11 @@ export async function createProjectWithPolicy(input: CreateProjectInput): Promis
       }
     } catch (error) {
       await deleteProject(id);
-      throw new Error(error instanceof Error ? `הענן לא מוכן: ${error.message}` : "הענן לא מוכן");
+      const rawMsg = error instanceof Error ? error.message : String(error || "");
+      const quota = quotaMessage(rawMsg);
+      if (quota) throw new Error(quota);
+      if (rawMsg.includes("cloud_schema_unavailable")) throw new Error("שירות הענן אינו זמין כרגע. אנא נסה שוב בעוד מספר רגעים.");
+      throw new Error(rawMsg || "יצירת הפרויקט בענן נכשלה");
     }
   }
 

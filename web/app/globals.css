@@ -3052,3 +3052,70 @@ html[data-locale="hi"] :is(.topbar,.dashboard-shell,.settings-page,.account-page
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.45), 0 2px 10px rgba(0, 0, 0, 0.4) !important;
   filter: brightness(1.15);
 }
+
+/* ==========================================================================
+   Admin Control Center & User Modal
+   ========================================================================== */
+.admin-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.admin-filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-tabs { display: flex; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; gap: 3px; }
+.admin-tabs button { background: transparent; border: none; color: var(--text-2); padding: 5px 12px; font-size: 12px; font-weight: 500; border-radius: 4px; cursor: pointer; transition: all .15s; }
+.admin-tabs button.active { background: var(--accent); color: #fff; }
+.admin-search-label { display: flex; align-items: center; gap: 8px; background: var(--bg-card); border: 1px solid var(--border); padding: 6px 12px; border-radius: var(--r-sm); color: var(--text-3); font-size: 13px; min-width: 240px; }
+.admin-search-label input { background: transparent; border: none; color: var(--text-1); outline: none; width: 100%; font-size: 13px; }
+.admin-tr.clickable { cursor: pointer; transition: background .15s; }
+.admin-tr.clickable:hover { background: rgba(255, 255, 255, 0.04); }
+.admin-badge-plan { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; font-family: var(--mono); }
+.admin-badge-plan.pro { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+.admin-badge-plan.free { background: rgba(255, 255, 255, 0.08); color: var(--text-2); }
+.admin-badge-exempt { margin-inline-start: 6px; font-size: 10px; background: rgba(234, 179, 8, 0.15); color: #facc15; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(234, 179, 8, 0.3); }
+
+/* Admin Modal Backdrop & Card */
+.admin-modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.admin-modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg); width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); }
+.admin-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--bg-surface); }
+.admin-modal-user-header { display: flex; align-items: center; gap: 16px; }
+.admin-modal-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; overflow: hidden; flex-shrink: 0; }
+.admin-modal-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.admin-modal-user-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+.admin-modal-user-header p { font-size: 13px; color: var(--text-2); margin: 2px 0 6px; }
+.admin-modal-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge-super-admin { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.badge-admin { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-user { background: rgba(255, 255, 255, 0.08); color: var(--text-2); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.badge-plan { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: var(--mono); background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+.badge-exempt { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-cloud { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+.admin-modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+.admin-modal-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.stat-box span { font-size: 11px; color: var(--text-3); }
+.stat-box strong { font-size: 15px; color: var(--text-1); font-family: var(--mono); }
+
+.admin-modal-section { display: flex; flex-direction: column; gap: 12px; }
+.admin-modal-section h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-1); }
+
+/* Provider Stats Grid */
+.provider-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.provider-stat-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; }
+.provider-stat-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.provider-indicator { width: 8px; height: 8px; border-radius: 50%; }
+.provider-stat-header strong { font-size: 12px; font-weight: 600; }
+.provider-stat-numbers { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); }
+.provider-stat-numbers div { display: flex; flex-direction: column; }
+.provider-stat-numbers span { font-family: var(--mono); font-weight: 600; color: var(--text-1); font-size: 12px; }
+
+/* User Projects List */
+.admin-user-projects-list { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; }
+.admin-user-project-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 12px; font-size: 12px; }
+.admin-user-project-item strong { display: block; color: var(--text-1); }
+.admin-user-project-item small { color: var(--text-3); font-size: 11px; }
+
+/* Admin Controls Area */
+.admin-actions-box { background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: var(--r-md); padding: 16px; }
+.admin-actions-grid { display: flex; flex-direction: column; gap: 16px; }
+.admin-actions-grid label { font-size: 12px; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 6px; }
+.admin-btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.super-admin-lock-note { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #f87171; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.25); }
+
