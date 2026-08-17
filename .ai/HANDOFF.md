@@ -2,6 +2,11 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
+- 2026-08-17: Vercel Production Cloud Build Fixed & Deployed (Live Ready)
+  1. Identified & resolved build failure: `TEXT_PRESETS` value import in `web/app/page.tsx` was missing (imported as type only).
+  2. Fixed `web/lib/creative/effects.ts` and `web/lib/creative/catalog.test.ts` to pass 100% of test suites.
+  3. Verified all 74 Vitest test files / 614 tests pass and Next.js isolated production build (49/49 static pages generated).
+  4. Deployed and verified on Vercel CLI: deployment `https://hypescript-2794odcua-elchanan-ys-projects.vercel.app` is **● Ready** (Production).
 - 2026-08-17: Cross-Device Cloud Sync, Chat Persistence & Complete Purge
   1. Full AI Chat Store Cloud Sync (`Chat.tsx`, `client.ts`): the conversation store is continuously synchronized to `cloud_projects.editor_state.chatStore` in Supabase upon every update, eliminating lost chat history across devices.
   2. Cloud-First Project Hydration (`page.tsx`, `create.ts`): removed stale local cache checks (`if (!raw)`). Cloud projects always fetch the latest state from Supabase, preventing stale local state from overriding remote edits.

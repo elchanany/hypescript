@@ -34,7 +34,7 @@ function CellThumb({ asset }: { asset: MediaAsset }) {
   return (
     <div className={`cell-thumb kind-${asset.kind}`}>
       {asset.missing ? <div className="cell-missing"><TriangleAlert size={24} /><span>קובץ חסר</span></div>
-        : url ? <img src={url} alt="" draggable={false} />
+        : url ? <img src={url} alt="" draggable={false} onError={() => setUrl(null)} />
         : asset.kind === "video" ? <span className="strip-loading cover" />
         : <Icon size={22} strokeWidth={1.5} />}
       {url && <span className="cell-kind"><Icon size={13} strokeWidth={2} /></span>}

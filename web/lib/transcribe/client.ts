@@ -68,35 +68,48 @@ export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Wo
       for (const [k, v] of Object.entries(formExtras)) fd.append(k, v);
     }
 
-    const local = new AbortController();
-    const onAbort = () => local.abort();
-    if (signal) {
-      if (signal.aborted) throw new Error("התמלול בוטל.");
-      signal.addEventListener("abort", onAbort, { once: true });
-    }
-    const to = setTimeout(() => local.abort(), 180000);
+    let data: any = null;
+    let lastError: Error | null = null;
+    const maxAttempts = 2;
 
-    let data: any;
-    try {
-      const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: local.signal });
-      // לא JSON.parse עיוור: תשובות שנוצרות לפני הראוט (413 מ-Vercel, 504
-      // משער) הן טקסט רגיל, וניסיון לפרסר אותן הסתיר את השגיאה האמיתית.
-      const body = await resp.text();
-      try { data = body ? JSON.parse(body) : null; } catch { data = null; }
-      if (!resp.ok) throw new Error(data?.error || httpErrorHe(resp.status, body, blob.size));
-      if (!data) throw new Error("שירות התמלול החזיר תשובה ריקה. נסה שוב.");
-      if (resp.headers.get("X-Hypescript-Transcription-Quality") === "reduced") {
-        onPhase?.("התמלול הושלם במנוע הגיבוי. האיכות עשויה להיות נמוכה יותר; Pro עם מכסה זמינה משתמש ב־ElevenLabs.");
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const local = new AbortController();
+      const onAbort = () => local.abort();
+      if (signal) {
+        if (signal.aborted) throw new Error("התמלול בוטל.");
+        signal.addEventListener("abort", onAbort, { once: true });
       }
-    } catch (e: any) {
-      if (e?.name === "AbortError") {
-        throw new Error(signal?.aborted ? "התמלול בוטל." : "התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר.");
+      const to = setTimeout(() => local.abort(), 25000);
+
+      try {
+        if (attempt > 1) {
+          onPhase?.(chunks.length > 1 ? `מתמלל שוב חלק ${i + 1}/${chunks.length}…` : "מתמלל שוב…");
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+        const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: local.signal });
+        const body = await resp.text();
+        try { data = body ? JSON.parse(body) : null; } catch { data = null; }
+        if (!resp.ok) throw new Error(data?.error || httpErrorHe(resp.status, body, blob.size));
+        if (!data) throw new Error("שירות התמלול החזיר תשובה ריקה. נסה שוב.");
+        if (resp.headers.get("X-Hypescript-Transcription-Quality") === "reduced") {
+          onPhase?.("התמלול הושלם במנוע הגיבוי. האיכות עשויה להיות נמוכה יותר; Pro עם מכסה זמינה משתמש ב־ElevenLabs.");
+        }
+        lastError = null;
+        break;
+      } catch (e: any) {
+        if (signal?.aborted) throw new Error("התמלול בוטל.");
+        if (e?.name === "AbortError") {
+          lastError = new Error("התמלול נתקע (timeout). נסה שוב או קובץ קצר יותר.");
+        } else {
+          lastError = e instanceof Error ? e : new Error(String(e));
+        }
+        if (attempt === maxAttempts) throw lastError;
+      } finally {
+        clearTimeout(to);
+        if (signal) signal.removeEventListener("abort", onAbort);
       }
-      throw e;
-    } finally {
-      clearTimeout(to);
-      if (signal) signal.removeEventListener("abort", onAbort);
     }
+    if (!data) throw (lastError || new Error("התמלול נכשל. נסה שוב."));
     parts.push(shiftWords(wordsFromProviderPayload(data), offset));
   }
 

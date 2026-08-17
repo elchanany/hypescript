@@ -1,6 +1,7 @@
 // Proxy לתמלול: מקבל אודיו ומעביר ל-Groq / OpenAI / ElevenLabs.
 // המפתח נקרא מ-env בצד השרת בלבד (ElevenLabs תמיד; Groq/OpenAI עם fallback ל-dev).
-// האודיו קטן (mono דחוס) — נשאר מתחת למגבלת הגוף של Vercel.
+// הלקוח חייב לשלוח קטעים: מגבלת גוף הבקשה של Vercel היא 4.5MB, וחריגה
+// ממנה נעצרת לפני הראוט הזה. הגודל נקבע ב-lib/transcribe/chunking.ts.
 
 import { NextRequest, NextResponse } from "next/server";
 import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
@@ -31,11 +32,19 @@ export async function POST(req: NextRequest) {
 
     if (requested === "auto") {
       if ((process.env.ELEVENLABS_API_KEY || "").trim()) {
-        const primary = await transcribeElevenLabs(form, file, language);
-        if (primary.ok || primary.status < 429) return withQuality(primary, "premium", "elevenlabs");
+        try {
+          const primary = await transcribeElevenLabs(form, file, language);
+          if (primary.ok) return withQuality(primary, "premium", "elevenlabs");
+          if (primary.status === 400) return withQuality(primary, "premium", "elevenlabs");
+        } catch {
+          // fallback to groq or openai
+        }
       }
       if ((process.env.GROQ_API_KEY || "").trim()) {
         return withQuality(await transcribeOpenAiCompat(form, file, "groq", language), "reduced", "groq");
+      }
+      if ((process.env.OPENAI_API_KEY || "").trim()) {
+        return withQuality(await transcribeOpenAiCompat(form, file, "openai", language), "reduced", "openai");
       }
       return NextResponse.json({ error: "שירות התמלול אינו זמין כרגע." }, { status: 503 });
     }
@@ -92,11 +101,16 @@ async function transcribeElevenLabs(form: FormData, file: Blob, language: string
   }
 
   let resp: Response;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
   try {
-    resp = await elevenLabsFetch("/v1/speech-to-text", { method: "POST", body: upstream });
+    resp = await elevenLabsFetch("/v1/speech-to-text", { method: "POST", body: upstream, signal: ctrl.signal });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 400 });
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    const message = isTimeout ? "ElevenLabs לא הספיק לענות (timeout 12s)" : (err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ error: message }, { status: isTimeout ? 504 : 502 });
+  } finally {
+    clearTimeout(timer);
   }
 
   const text = await resp.text();
@@ -144,11 +158,23 @@ async function transcribeOpenAiCompat(
   upstream.append("timestamp_granularities[]", "word");
   upstream.append("timestamp_granularities[]", "segment");
 
-  const resp = await fetch(`${base}/audio/transcriptions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: upstream,
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  let resp: Response;
+  try {
+    resp = await fetch(`${base}/audio/transcriptions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: upstream,
+      signal: ctrl.signal,
+    });
+  } catch (err: unknown) {
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    const message = isTimeout ? `${provider} לא הספיק לענות (timeout 15s)` : (err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ error: message }, { status: isTimeout ? 504 : 502 });
+  } finally {
+    clearTimeout(timer);
+  }
 
   const text = await resp.text();
   if (!resp.ok) {

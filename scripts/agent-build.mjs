@@ -19,6 +19,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { say, warn } from "./lib/rtl.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const webDir = join(root, "web");
 const registryDir = join(root, ".ai", "locks");
@@ -62,14 +64,14 @@ function minutesSince(iso) {
 if (flag("list")) {
   const data = prune();
   if (!data.builds.length) {
-    console.log("אין בילדים פעילים.");
+    say("אין בילדים פעילים.");
   } else {
-    console.log("בילדים פעילים:");
+    say("בילדים פעילים:");
     for (const entry of data.builds) {
-      console.log(`  pid ${entry.pid}  ${entry.name}  ${entry.distDir}  לפני ${minutesSince(entry.startedAt)} דק'`);
+      say(`  pid ${entry.pid}  ${entry.name}  ${entry.distDir}  לפני ${minutesSince(entry.startedAt)} דק'`);
     }
   }
-  console.log("\nאל תהרוג תהליך שמופיע כאן בלי לשאול — הוא של סוכן אחר שעובד עכשיו.");
+  say("\nאל תהרוג תהליך שמופיע כאן בלי לשאול — הוא של סוכן אחר שעובד עכשיו.");
   process.exit(0);
 }
 
@@ -79,12 +81,12 @@ if (flag("clean")) {
   let removed = 0;
   for (const name of readdirSync(webDir)) {
     if (!name.startsWith(".next-agent-")) continue;
-    if (busy.has(name)) { console.log(`דילוג על ${name} — בשימוש עכשיו.`); continue; }
+    if (busy.has(name)) { say(`דילוג על ${name} — בשימוש עכשיו.`); continue; }
     rmSync(join(webDir, name), { recursive: true, force: true });
-    console.log(`נמחק ${name}`);
+    say(`נמחק ${name}`);
     removed++;
   }
-  console.log(removed ? `נוקו ${removed} תיקיות.` : "אין שאריות לניקוי.");
+  say(removed ? `נוקו ${removed} תיקיות.` : "אין שאריות לניקוי.");
   process.exit(0);
 }
 
@@ -95,8 +97,8 @@ const distDir = `.next-agent-${name}`;
 const data = prune();
 const conflict = data.builds.find((entry) => entry.distDir === distDir);
 if (conflict) {
-  console.error(`בילד בשם "${name}" כבר רץ (pid ${conflict.pid}, לפני ${minutesSince(conflict.startedAt)} דק').`);
-  console.error("בחר --name אחר, או המתן לו. אל תהרוג אותו בלי לשאול.");
+  warn(`בילד בשם "${name}" כבר רץ (pid ${conflict.pid}, לפני ${minutesSince(conflict.startedAt)} דק').`);
+  warn("בחר --name אחר, או המתן לו. אל תהרוג אותו בלי לשאול.");
   process.exit(1);
 }
 
@@ -114,8 +116,8 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   process.on(signal, () => { release(); process.exit(1); });
 }
 
-console.log(`בילד מבודד "${name}" → web/${distDir}`);
-if (!existsSync(webDir)) { console.error("web/ לא נמצא"); process.exit(1); }
+say(`בילד מבודד "${name}" → web/${distDir}`);
+if (!existsSync(webDir)) { warn("web/ לא נמצא"); process.exit(1); }
 
 const child = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build"], {
   cwd: webDir,

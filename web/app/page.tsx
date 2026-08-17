@@ -1355,15 +1355,16 @@ export default function EditorPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest?.("input, textarea, [contenteditable='true']"))) return;
+      const isSpace = e.code === "Space" || e.key === " " || e.key === "Spacebar";
       const meta = e.ctrlKey || e.metaKey;
+      if (isSpace && !meta && !e.altKey) { e.preventDefault(); e.stopPropagation(); previewRef.current?.toggle(); return; }
       if (meta && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandMenu({ x: Math.max(12, window.innerWidth / 2 - 150), y: Math.max(12, window.innerHeight / 3) }); }
       else if (meta && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (meta && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
       else if (meta && e.key.toLowerCase() === "c" && copySelection()) { e.preventDefault(); }
       else if (meta && e.key.toLowerCase() === "x" && copySelection()) { e.preventDefault(); deleteSel(false); }
       else if (meta && e.key.toLowerCase() === "v" && pasteSelection()) { e.preventDefault(); }
-      else if (e.key === " ") { e.preventDefault(); previewRef.current?.toggle(); }
       else if (e.key === "ArrowLeft" && !e.altKey) { e.preventDefault(); seek(Math.max(0, curRef.current - (e.shiftKey ? 1 : 1 / 30))); }
       else if (e.key === "ArrowRight" && !e.altKey) { e.preventDefault(); seek(Math.min(timelineDuration, curRef.current + (e.shiftKey ? 1 : 1 / 30))); }
       else if (e.key === "Home") { e.preventDefault(); seek(0); }

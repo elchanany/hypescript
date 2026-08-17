@@ -123,7 +123,8 @@ export async function extractAudioSegment(
 
 /**
  * Plan + extract audio chunks for long files (local parity).
- * Short files → one full extractAudio call.
+ * חילוץ יעיל ומהיר: חילוץ פס-קול פעם אחת בלבד מהווידאו, ואם נדרש חיתוך
+ * חותכים את קובץ ה-MP3 הקל עצמו — בלי לקרוא שוב ושוב את קובץ הווידאו הכבד.
  */
 export async function extractAudioChunks(
   file: File,
@@ -136,44 +137,54 @@ export async function extractAudioChunks(
 ): Promise<{ blob: Blob; offset: number }[]> {
   const { planChunkOffsets, DEFAULT_CHUNK_SEC, MAX_UPLOAD_BYTES, AUDIO_BYTES_PER_SEC } =
     await import("@/lib/transcribe/chunking");
+
+  // שלב 1: חילוץ פס-קול מלא פעם אחת בלבד מהווידאו (1-2 שניות)
+  opts?.onChunk?.(0, 1);
+  const fullAudioBlob = await extractAudio(file, opts?.onProgress);
+
   const chunkSec = opts?.chunkSec ?? DEFAULT_CHUNK_SEC;
-  const offsets = planChunkOffsets(mediaDurationSec, chunkSec);
+  const audioDuration = mediaDurationSec > 0 ? mediaDurationSec : (fullAudioBlob.size / AUDIO_BYTES_PER_SEC);
+  const offsets = planChunkOffsets(audioDuration, chunkSec);
 
-  if (offsets.length === 1) {
-    opts?.onChunk?.(0, 1);
-    const blob = await extractAudio(file, opts?.onProgress);
-    if (blob.size <= MAX_UPLOAD_BYTES) return [{ blob, offset: 0 }];
-    // המשך שהוצהר היה שגוי (או שלא היה משך בכלל). הגודל אמין יותר: קצב
-    // הקידוד קבוע, אז בייטים → שניות.
-    const realDur = blob.size / AUDIO_BYTES_PER_SEC;
-    return extractAudioChunks(file, realDur, {
-      ...opts,
-      chunkSec: Math.max(30, Math.min(DEFAULT_CHUNK_SEC, realDur / 2)),
-    });
+  // אם האודיו קטן מ-4.5MB ובקטע בודד — מחזירים מיד
+  if (offsets.length <= 1 && fullAudioBlob.size <= MAX_UPLOAD_BYTES) {
+    return [{ blob: fullAudioBlob, offset: 0 }];
   }
 
-  const out: { blob: Blob; offset: number }[] = [];
-  // רשת ביטחון: קטע שיצא גדול מהמותר נחתך לשניים במקום להישלח ולהיכשל.
-  const pushSegment = async (start: number, dur: number, depth: number): Promise<void> => {
-    const blob = await extractAudioSegment(file, start, dur, opts?.onProgress);
-    if (blob.size <= MAX_UPLOAD_BYTES || depth >= 3 || dur <= 20) {
-      out.push({ blob, offset: start });
-      return;
+  // שלב 2: אם נדרש חיתוך למקטעים, חותכים את קובץ ה-MP3 הקטן (באלפיות שניה)
+  return runExclusive(async () => {
+    const ff = await getFFmpeg();
+    const inputAudio = `full_au_${uid()}.mp3`;
+    await ff.writeFile(inputAudio, new Uint8Array(await fullAudioBlob.arrayBuffer()));
+
+    const out: { blob: Blob; offset: number }[] = [];
+    const step = offsets.length > 1 ? offsets[1] - offsets[0] : chunkSec;
+
+    for (let i = 0; i < offsets.length; i++) {
+      opts?.onChunk?.(i, offsets.length);
+      const start = offsets[i];
+      const dur = Math.min(step, Math.max(0.1, audioDuration - start));
+      const chunkFile = `chk_${uid()}.mp3`;
+
+      await ff.exec([
+        "-ss", start.toFixed(3),
+        "-i", inputAudio,
+        "-t", dur.toFixed(3),
+        "-c", "copy",
+        chunkFile,
+      ]);
+
+      const data = (await ff.readFile(chunkFile)) as Uint8Array;
+      await ff.deleteFile(chunkFile).catch(() => {});
+      out.push({
+        blob: new Blob([data as unknown as BlobPart], { type: "audio/mpeg" }),
+        offset: start,
+      });
     }
-    const half = dur / 2;
-    await pushSegment(start, half, depth + 1);
-    await pushSegment(start + half, half, depth + 1);
-  };
 
-  // המרווח האמיתי בין הקטעים, לא מה שהמתקשר ביקש: planChunkOffsets מקצץ
-  // בקשה גדולה מדי, ושימוש ב-chunkSec המקורי היה יוצר קטעים חופפים.
-  const step = offsets[1] - offsets[0];
-  for (let i = 0; i < offsets.length; i++) {
-    opts?.onChunk?.(i, offsets.length);
-    const start = offsets[i];
-    await pushSegment(start, Math.min(step, Math.max(0.1, mediaDurationSec - start)), 0);
-  }
-  return out;
+    await ff.deleteFile(inputAudio).catch(() => {});
+    return out;
+  });
 }
 
 /**

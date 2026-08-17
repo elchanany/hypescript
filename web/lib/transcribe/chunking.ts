@@ -17,14 +17,11 @@ export const AUDIO_BYTES_PER_SEC = (48 * 1000) / 8;
 export const MAX_CHUNK_SEC = Math.floor((MAX_UPLOAD_BYTES * 0.85) / AUDIO_BYTES_PER_SEC);
 
 /**
- * חמש דקות לקטע. שתי מגבלות שונות, ושתיהן חייבות להתקיים:
- * גודל הבקשה (4.5MB — כלומר עד ~786 שניות), ומשך הריצה של הפונקציה
- * (maxDuration=60 בראוט התמלול). חמש דקות מותירות מרווח בשתיהן.
- *
- * הצד המקומי (local/hypescript) עובד ב-1200 שניות, כי הוא שולח ישירות
- * לספק בלי לעבור דרך Vercel. אל תיישר את שני המספרים.
+ * שתי דקות לקטע (120 שניות).
+ * מונע הגעה למגבלת ה-timeout של Vercel (maxDuration=60) ומאפשר לשרתי
+ * התמלול (ElevenLabs/Groq/OpenAI) להחזיר מילים מסונכרנות תוך שניות בודדות לכל מקטע.
  */
-export const DEFAULT_CHUNK_SEC = 300;
+export const DEFAULT_CHUNK_SEC = 120;
 
 export function planChunkOffsets(durationSec: number, chunkSec = DEFAULT_CHUNK_SEC): number[] {
   if (!Number.isFinite(durationSec) || durationSec <= 0) return [0];

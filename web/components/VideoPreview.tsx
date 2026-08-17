@@ -549,22 +549,27 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
       </div>
     </div>
     <div className="transport" dir="ltr">
-      <div className="tp-vol"><IconButton icon={vol === 0 ? VolumeX : Volume2} tip={vol === 0 ? "בטל השתקה" : "עוצמה"} tipPos="up" onClick={() => setVol((v) => v === 0 ? 1 : 0)} disabled={!hasPlayable} />
-        <input type="range" min={0} max={1} step={0.05} value={vol} aria-label="עוצמת שמע בתצוגה המקדימה" title="עוצמת שמע בתצוגה המקדימה" onChange={(e) => setVol(+e.target.value)} disabled={!hasPlayable} /></div>
-      <button type="button" className="tp-speed-btn" onClick={cycleSpeed} data-tip="מהירות ניגון" data-tippos="up" disabled={!hasPlayable}>
-        {speed}x
-      </button>
-      {canvas && onChangeCanvas && (
-        <div className="tp-ratio-wrap">
-          <AspectRatioPicker currentCanvas={canvas} onChangeCanvas={onChangeCanvas} />
+      <div className="tp-left">
+        <div className="tp-vol">
+          <IconButton icon={vol === 0 ? VolumeX : Volume2} tip={vol === 0 ? "בטל השתקה" : "עוצמה"} tipPos="up" onClick={() => setVol((v) => v === 0 ? 1 : 0)} disabled={!hasPlayable} />
+          <input type="range" min={0} max={1} step={0.05} value={vol} aria-label="עוצמת שמע בתצוגה המקדימה" title="עוצמת שמע בתצוגה המקדימה" onChange={(e) => setVol(+e.target.value)} disabled={!hasPlayable} />
         </div>
-      )}
-      <div className="tp-grow" /><div className="tp-center">
-        <IconButton icon={RotateCcw} tip="15 שניות אחורה" tipPos="up" onClick={() => skipSeconds(-15)} disabled={!hasPlayable} />
+        <button type="button" className="tp-speed-btn" onClick={cycleSpeed} data-tip="מהירות ניגון" data-tippos="up" disabled={!hasPlayable}>
+          {speed}x
+        </button>
+        {canvas && onChangeCanvas && (
+          <div className="tp-ratio-wrap">
+            <AspectRatioPicker currentCanvas={canvas} onChangeCanvas={onChangeCanvas} />
+          </div>
+        )}
+      </div>
+
+      <div className="tp-center">
+        <IconButton className="tp-rotate-btn" icon={RotateCcw} tip="15 שניות אחורה" tipPos="up" onClick={() => skipSeconds(-15)} disabled={!hasPlayable} />
         <IconButton icon={SkipBack} tip="פריים אחורה" tipPos="up" onClick={() => step(-1)} disabled={!hasPlayable} />
         <button className="tp-play" onClick={toggle} disabled={!hasPlayable} data-tip={playing ? "השהה (Space)" : "נגן (Space)"} data-tippos="up">{playing ? <Pause size={18} /> : <Play size={18} />}</button>
         <IconButton icon={SkipForward} tip="פריים קדימה" tipPos="up" onClick={() => step(1)} disabled={!hasPlayable} />
-        <IconButton icon={RotateCw} tip="15 שניות קדימה" tipPos="up" onClick={() => skipSeconds(15)} disabled={!hasPlayable} />
+        <IconButton className="tp-rotate-btn" icon={RotateCw} tip="15 שניות קדימה" tipPos="up" onClick={() => skipSeconds(15)} disabled={!hasPlayable} />
         <span className="tp-time">
           <span className={`audio-eq-bars ${playing ? "is-playing" : "is-idle"}`} title="עוצמת השמע בזמן אמת">
             {audioLevels.map((level, index) => <i key={index} style={{ "--level": playing ? `${Math.round(level * 100)}%` : "15%" } as CSSProperties} />)}
@@ -573,10 +578,13 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
           <span className="sep">/</span>
           <span className="total">{fmtT(total)}</span>
         </span>
-      </div><div className="tp-grow" />
-      <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up" onClick={quotePlace} disabled={!hasPlayable} />
-      <IconButton icon={MoreHorizontal} tip="עוד" tipPos="up" disabled={!hasPlayable} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.left, y: r.top - 8 }); }} />
-      <IconButton icon={Maximize} tip="מסך מלא" tipPos="up" onClick={fullscreen} disabled={!hasPlayable} />
+      </div>
+
+      <div className="tp-right">
+        <IconButton icon={MapPin} tip="ציטוט מקום — הכנס זמן לתיבת ההודעה" tipPos="up" onClick={quotePlace} disabled={!hasPlayable} />
+        <IconButton icon={MoreHorizontal} tip="עוד" tipPos="up" disabled={!hasPlayable} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.left, y: r.top - 8 }); }} />
+        <IconButton icon={Maximize} tip="מסך מלא" tipPos="up" onClick={fullscreen} disabled={!hasPlayable} />
+      </div>
     </div>
     {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
   </div>;

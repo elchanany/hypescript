@@ -17,6 +17,7 @@ describe("transcribe chunking", () => {
   });
 
   it("splits long audio into contiguous offsets", () => {
+    expect(planChunkOffsets(250)).toEqual([0, 120, 240]);
     expect(planChunkOffsets(700, 300)).toEqual([0, 300, 600]);
     expect(planChunkOffsets(600, 300)).toEqual([0, 300]);
   });

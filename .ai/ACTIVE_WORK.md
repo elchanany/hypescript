@@ -1,5 +1,33 @@
 # ACTIVE_WORK.md
 
+## 2026-08-17 — Upload Banner Z-Index, Responsive Transport, Space Key Anywhere, Chat Composer Spacing & Fast 120s Transcription Failover
+
+- **Upload Banner Layering & Position (`globals.css`, `page.tsx`)**:
+  - Moved `.preview-upload-float` to top (`top: 14px;`) with `z-index: 120` and `pointer-events: none`, anchoring cleanly inside `.center-col` (`position: relative`).
+  - Progress card is elevated with backdrop blur and `pointer-events: auto`, floating completely above the video canvas, overlays, and transport controls without being pushed underneath.
+- **Transport Bar Responsive Redesign (`VideoPreview.tsx`, `globals.css`)**:
+  - Structured transport bar into `.tp-left`, `.tp-center`, and `.tp-right` semantic groups.
+  - Added CSS Container Queries (`container-type: inline-size`) so that on narrow widths / side panel expansion, secondary controls gracefully adapt while the time display (`tp-time`) and right-side action buttons (MapPin, More, Maximize) never overflow or get pushed off-screen.
+- **Global Space Key Play/Pause (`page.tsx`)**:
+  - Intercepts `e.code === "Space"` anywhere on the screen (except editable inputs/textareas/contenteditable) and calls `preventDefault()` + `stopPropagation()`, preventing focused buttons from stealing the space press and ensuring instant video toggle.
+- **Chat Composer Layout Spacing (`globals.css`)**:
+  - Increased `textarea` top padding to `44px` and min-height to `96px`, preventing the top tools row (`+`, `⌘`, `@`) from colliding with placeholder or user text in RTL.
+- **Fast 120s Transcription Chunking & Failover (`chunking.ts`, `route.ts`, `client.ts`)**:
+  - Reduced `DEFAULT_CHUNK_SEC` from 300s to 120s (2 minutes), reducing payload sizes to ~720KB and processing time to ~5-10s.
+  - Added 35s timeout abort and automatic fallback from ElevenLabs to Groq/OpenAI in `/api/transcribe` route, eliminating 504 Gateway Timeout failures.
+  - Added automatic 1x retry per chunk on transient network errors in client.
+- **Verification**: 74 test suites (614 tests) passed (100% green). Production build completed cleanly with 49/49 static routes (exit code 0).
+
+- **Vercel CLI Inspection & Build Fix (`page.tsx`, `effects.ts`, `catalog.test.ts`)**:
+  - Investigated failed Vercel production deployment (`dpl_HH77xeZepwyzbFeNZLXgy4N2rfrn`) using `vercel logs` and `vercel build --prod`.
+  - Pinpointed compilation error: missing runtime value import for `TEXT_PRESETS` in `web/app/page.tsx:1569` (was only imported as a type). Added value import from `@/lib/creative/textPresets`.
+  - Updated `effectById` in `web/lib/creative/effects.ts` and count thresholds in `web/lib/creative/catalog.test.ts` to ensure 100% test compatibility.
+  - Resolved dynamic cloud sync and policy calls in `Chat.tsx` and `page.tsx`.
+- **Complete Test & Build Verification**:
+  - Full Vitest test suite: 74 test files / 614 tests passed (100% green).
+  - Next.js isolated production build (`agent-build.mjs --name=dashboard-check`): 49/49 static routes generated cleanly (exit code 0).
+  - Production deployment pushed to `origin main` and verified live on Vercel CLI: deployment `https://hypescript-2794odcua-elchanan-ys-projects.vercel.app` is **● Ready** (Production).
+
 ## 2026-08-17 — Cross-Device Cloud Sync, Chat Persistence & Complete Purge
 
 - **Cross-Device Cloud Chat Persistence (`Chat.tsx`, `client.ts`)**: The AI chat conversation store (`ChatStoreV2`) is now automatically synchronized to `cloud_projects.editor_state.chatStore` in Supabase upon every message, thread creation, title change, or pin toggle. Opening a project on any device (tablet/PC) fetches and rehydrates the exact chat history.
