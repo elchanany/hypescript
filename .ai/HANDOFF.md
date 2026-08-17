@@ -2,6 +2,13 @@
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
 # Current State
+- 2026-08-17: Cross-Device Cloud Sync, Chat Persistence & Complete Purge
+  1. Full AI Chat Store Cloud Sync (`Chat.tsx`, `client.ts`): the conversation store is continuously synchronized to `cloud_projects.editor_state.chatStore` in Supabase upon every update, eliminating lost chat history across devices.
+  2. Cloud-First Project Hydration (`page.tsx`, `create.ts`): removed stale local cache checks (`if (!raw)`). Cloud projects always fetch the latest state from Supabase, preventing stale local state from overriding remote edits.
+  3. Cross-Device Cloud Media Resolution (`page.tsx`, `client.ts`): cloud media with `cloudAssetId` automatically generates signed download URLs (`/api/cloud/assets/[id]/download`) from Cloudflare R2 on remote devices.
+  4. Total Purge & Data Reset (`dashboard/page.tsx`, `storage.ts`, `client.ts`): added `purgeAllLocalData()` and `deleteAllCloudProjects()` functions with a one-click dashboard reset dialog.
+  5. Default Cloud Policy (`types.ts`, `create.ts`): all new projects default to `dataMode: "cloud"` and R2 storage backend.
+  6. Multi-agent isolated build verified clean (`Compiled successfully`, exit code 0).
 - 2026-08-15: Video Player Pro Upgrade, Stable Transport Dimensions, TopBar Cleanup & Spacious ChatGPT Chat Focus Mode
   1. Pro Video Player Upgrades (`VideoPreview.tsx`, `globals.css`): continuous draggable Scrubber progress bar, 15s forward/backward skip buttons (`RotateCcw`/`RotateCw`), speed toggle button (`0.5x`, `1x`, `1.25x`, `1.5x`, `2x`), stable audio meter (`.audio-eq-bars` fixed 24x16px with `.is-idle` / `.is-playing` states eliminating bar resizing jitter), and integrated Aspect Ratio picker in the player HUD.
   2. Cleaned TopBar (`TopBar.tsx`, `globals.css`): brand logo pinned permanently to the far top-left (`tb-logo` first element in `topbar2`), removed Aspect Ratio picker and Language selector from the main editor topbar (Aspect Ratio lives in player HUD, Language in `/settings`).

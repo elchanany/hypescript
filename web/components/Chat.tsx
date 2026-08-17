@@ -16,6 +16,8 @@ import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { CaptionStyle } from "@/lib/editor/captionStyle";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
+import { getProjectPolicy } from "@/lib/projects/policy";
+import { getCloudProject, saveCloudProjectState } from "@/lib/cloud/client";
 import { ChatMessage } from "@/lib/agent/types";
 import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
 import { approvedPlanPrompt, parsePlanSteps } from "@/lib/agent/planApproval";
@@ -328,10 +330,27 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setThreadsOpen(false);
   };
 
+  const syncChatToCloud = async (chatStore: ChatStoreV2) => {
+    if (!projectId) return;
+    try {
+      const policy = await getProjectPolicy(projectId);
+      if (policy?.cloudProjectId && policy.dataMode !== "local") {
+        const rawState = (await kvGet<Record<string, unknown>>(pk(projectId, "state"))) || {};
+        await saveCloudProjectState(policy.cloudProjectId, {
+          ...rawState,
+          chatStore,
+        });
+      }
+    } catch { /* ignore / offline */ }
+  };
+
   const persistConversationStore = (next: ChatStoreV2) => {
     storeRef.current = next;
     setStore(next);
-    if (projectId) void kvSet(pk(projectId, "chat"), next);
+    if (projectId) {
+      void kvSet(pk(projectId, "chat"), next);
+      void syncChatToCloud(next);
+    }
   };
   const saveThreadTitle = (id: string) => {
     persistConversationStore(renameConversation(storeRef.current, id, threadTitle));
@@ -345,7 +364,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     });
     const next = removeConversation(current, id);
     loadConversation(next);
-    if (projectId) void kvSet(pk(projectId, "chat"), next);
+    if (projectId) {
+      void kvSet(pk(projectId, "chat"), next);
+      void syncChatToCloud(next);
+    }
   };
   const toggleThreadPin = (id: string) => {
     const conversation = storeRef.current.conversations.find((entry) => entry.id === id);
@@ -362,7 +384,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     if (!projectId) return;
     setRestoredChat(false);
     (async () => {
-      const raw = await kvGet<unknown>(pk(projectId, "chat"));
+      let raw = await kvGet<unknown>(pk(projectId, "chat"));
+      const policy = await getProjectPolicy(projectId);
+      if (policy?.cloudProjectId && policy.dataMode !== "local") {
+        try {
+          const cloud = await getCloudProject(policy.cloudProjectId);
+          const cloudChat = (cloud?.project?.editor_state as Record<string, unknown> | undefined)?.chatStore;
+          if (cloudChat && typeof cloudChat === "object") {
+            raw = cloudChat;
+            await kvSet(pk(projectId, "chat"), raw);
+          }
+        } catch { /* use local fallback */ }
+      }
       loadConversation(migrateChatStore(raw));
       setRestoredChat(true);
     })();
@@ -380,6 +413,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       // מעדכן כותרת ברשימת השיחות בלי לולאת רינדור מיותרת
       setStore((prev) => (prev.activeId === next.activeId ? next : prev));
       kvSet(pk(projectId, "chat"), next);
+      void syncChatToCloud(next);
     }, 700);
     return () => clearTimeout(t);
   }, [items, restoredChat, projectId]);

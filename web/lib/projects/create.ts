@@ -70,14 +70,23 @@ export async function createProjectWithPolicy(input: CreateProjectInput): Promis
   return id;
 }
 
-/** Creates a local cache entry for a project that already exists in Supabase. */
+/** Creates or updates a local cache entry for a project that exists in Supabase. */
 export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<string> {
   const list = (await listProjects()) as ProjectMetaV2[];
   const existing = list.find((project) => project.cloudProjectId === cloud.id);
+  const cloudUpdated = Date.parse(cloud.updated_at) || Date.now();
+
   if (existing) {
-    const localState = await kvGet<Record<string, unknown>>(`p:${existing.id}:state`);
-    if (!localState && cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
+    existing.name = cloud.name || existing.name;
+    existing.updatedAt = Math.max(existing.updatedAt || 0, cloudUpdated);
+    await kvSet("projects", list);
+
+    if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
       await kvSet(`p:${existing.id}:state`, cloud.editor_state);
+      const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
+      if (chat && typeof chat === "object") {
+        await kvSet(`p:${existing.id}:chat`, chat);
+      }
     }
     return existing.id;
   }
@@ -89,7 +98,7 @@ export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<str
     row.dataMode = "cloud";
     row.cloudProjectId = cloud.id;
     row.createdAt = Date.parse(cloud.created_at) || Date.now();
-    row.updatedAt = Date.parse(cloud.updated_at) || Date.now();
+    row.updatedAt = cloudUpdated;
     await kvSet("projects", next);
   }
   const policy = DEFAULT_POLICY();
@@ -103,6 +112,10 @@ export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<str
   await saveProjectPolicy(id, policy);
   if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
     await kvSet(`p:${id}:state`, cloud.editor_state);
+    const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
+    if (chat && typeof chat === "object") {
+      await kvSet(`p:${id}:chat`, chat);
+    }
   }
   return id;
 }

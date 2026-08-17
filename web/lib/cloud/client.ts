@@ -53,6 +53,16 @@ export async function deleteCloudProject(id: string) {
   return json<{ ok: true }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, { method: "DELETE" }));
 }
 
+export async function deleteAllCloudProjects(): Promise<void> {
+  const projects = await listCloudProjects().catch(() => []);
+  await Promise.all(projects.map((p) => deleteCloudProject(p.id).catch(() => {})));
+}
+
+export async function getCloudAssetDownloadUrl(assetId: string): Promise<string> {
+  const data = await json<{ url: string }>(await fetch(`/api/cloud/assets/${encodeURIComponent(assetId)}/download`));
+  return data.url;
+}
+
 export async function uploadCloudAsset(projectId: string, file: File, onProgress?: (ratio: number) => void, signal?: AbortSignal): Promise<CloudUploadResult> {
   const prepared = await json<{ assetId: string; objectKey: string; uploadUrl: string; headers: Record<string, string> }>(await fetch("/api/cloud/uploads", {
     method: "POST",

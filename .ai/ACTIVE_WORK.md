@@ -1,5 +1,14 @@
 # ACTIVE_WORK.md
 
+## 2026-08-17 — Cross-Device Cloud Sync, Chat Persistence & Complete Purge
+
+- **Cross-Device Cloud Chat Persistence (`Chat.tsx`, `client.ts`)**: The AI chat conversation store (`ChatStoreV2`) is now automatically synchronized to `cloud_projects.editor_state.chatStore` in Supabase upon every message, thread creation, title change, or pin toggle. Opening a project on any device (tablet/PC) fetches and rehydrates the exact chat history.
+- **Cloud-First Project Hydration & No Overwrite Race (`page.tsx`, `create.ts`)**: Removed stale local cache checks (`if (!raw)`). Cloud projects now always hydrate the latest state (words, clips, subtitles, tracks, overlays, canvas, caption styles, chat history, and media metadata) from Supabase and update local IndexedDB accordingly, preventing stale local state from overriding new edits.
+- **Cross-Device Cloud Media Resolution (`page.tsx`, `client.ts`)**: Assets uploaded to R2 with `cloudAssetId` are automatically resolved via signed download URLs (`/api/cloud/assets/[id]/download`), allowing preview, playback, and editing across devices without requiring manual re-upload or showing broken media indicators.
+- **Total Purge & Data Reset (`dashboard/page.tsx`, `storage.ts`, `client.ts`)**: Added `purgeAllLocalData()` and `deleteAllCloudProjects()` functions along with a dedicated "איפוס הכל" action in the dashboard to completely wipe all local IndexedDB/localStorage data and delete cloud projects on demand.
+- **Default Cloud Policy (`types.ts`, `create.ts`)**: All new projects default to `dataMode: "cloud"` with R2 storage backend.
+- **Verification**: Next.js multi-agent isolated build (`agent-build.mjs --name=cloud-sync-fix`) compiled cleanly with exit code 0 (`Compiled successfully`).
+
 ## 2026-08-16 — Full Timeline 2D Polish, Ruler Drag Scrubbing, Windows Marquee Multi-Selection, Fast Frame Filmstrip & Plus Button in Chat
 
 - **Direct Timeline Ruler Drag-to-Scrub (`Timeline.tsx`)**: Clicking or dragging directly on the time ruler (`.tl-ruler2`) instantly tracks the playhead smoothly across time.

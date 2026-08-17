@@ -17,7 +17,13 @@ import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
-import { Overlay, TitlePopupPreset } from "@/lib/editor/overlay";
+import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
+import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
+import type { GiphyAssetItem } from "@/lib/creative/giphy";
+import type { VectorElement } from "@/lib/creative/iconify";
+import type { VectorShape } from "@/lib/creative/shapes";
+import type { MotionAsset } from "@/lib/creative/motionAssets";
+import { loadGoogleFont } from "@/lib/creative/fonts";
 import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil } from "@/components/icons";
@@ -37,7 +43,7 @@ import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 import { getProjectPolicy } from "@/lib/projects/policy";
-import { deleteCloudProject, getCloudProject, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
+import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
 import { createProjectWithPolicy } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
@@ -446,33 +452,83 @@ export default function EditorPage() {
     let cancelled = false;
     setRestored(false);
     (async () => {
-      const sm = await kvGet<any[]>(pk(projectId, "media"));
-      if (cancelled) return;
-      setMedia((prev) => {
-        prev.forEach((m) => { if (m.url) URL.revokeObjectURL(m.url); });
-        if (!sm?.length) return [];
-        const out: MediaAsset[] = [];
-        for (const m of sm) {
-          // rehydrate as a real File so downstream (ffmpeg extOf, render) always has a name.
-          const file = m.blob instanceof File ? m.blob
-            : m.blob instanceof Blob ? new File([m.blob], m.name || "media", { type: m.blob.type || "" })
-            : null;
-          if (!file && !m.missing) continue; // skip a broken record rather than throwing (never wipe good media)
-          const restoredFile = file || new File([], m.name || "media", { type: "" });
-          out.push({ id: m.id, name: m.name, kind: m.kind, duration: m.duration, file: restoredFile, url: m.missing ? "" : URL.createObjectURL(restoredFile), missing: !!m.missing, cloudAssetId: m.cloudAssetId, cloudObjectKey: m.cloudObjectKey, cloudState: m.cloudState });
-        }
-        return out;
-      });
-      let raw = await kvGet<any>(pk(projectId, "state"));
       const policy = await getProjectPolicy(projectId);
-      if (!raw && policy?.cloudProjectId) {
+      let raw: any = null;
+      let cloudMediaMeta: any[] = [];
+
+      // Always fetch latest cloud state first if this is a cloud project
+      if (policy?.cloudProjectId && policy.dataMode !== "local") {
         try {
           const cloud = await getCloudProject(policy.cloudProjectId);
-          raw = cloud.project.editor_state;
-          if (raw && Object.keys(raw).length > 0) await kvSet(pk(projectId, "state"), raw);
-        } catch { /* local cache remains usable while offline */ }
+          if (cloud?.project?.editor_state && Object.keys(cloud.project.editor_state).length > 0) {
+            raw = cloud.project.editor_state;
+            await kvSet(pk(projectId, "state"), raw);
+            if (raw.chatStore) {
+              await kvSet(pk(projectId, "chat"), raw.chatStore);
+            }
+            if (Array.isArray(raw.mediaMeta)) {
+              cloudMediaMeta = raw.mediaMeta;
+            }
+          }
+        } catch { /* offline / local fallback */ }
       }
+
+      if (!raw) {
+        raw = await kvGet<any>(pk(projectId, "state"));
+      }
+
+      const sm = await kvGet<any[]>(pk(projectId, "media"));
       if (cancelled) return;
+
+      const localMap = new Map((sm || []).map((m) => [m.id, m]));
+      const sourceList = cloudMediaMeta.length > 0
+        ? cloudMediaMeta.map((cm) => {
+            const local = localMap.get(cm.id);
+            return { ...cm, blob: local?.blob || null, missing: local ? !!local.missing : false };
+          })
+        : (sm || []);
+
+      const out: MediaAsset[] = [];
+      for (const m of sourceList) {
+        const file = m.blob instanceof File ? m.blob
+          : m.blob instanceof Blob ? new File([m.blob], m.name || "media", { type: m.blob.type || "" })
+          : null;
+        let url = "";
+        let missing = !file;
+
+        if (file) {
+          url = URL.createObjectURL(file);
+          missing = false;
+        } else if (m.cloudAssetId) {
+          try {
+            url = await getCloudAssetDownloadUrl(m.cloudAssetId);
+            missing = false;
+          } catch {
+            missing = true;
+          }
+        }
+
+        const restoredFile = file || new File([], m.name || "media", { type: "" });
+        out.push({
+          id: m.id,
+          name: m.name,
+          kind: m.kind,
+          duration: m.duration,
+          file: restoredFile,
+          url,
+          missing,
+          cloudAssetId: m.cloudAssetId,
+          cloudObjectKey: m.cloudObjectKey,
+          cloudState: m.cloudState || (m.cloudAssetId ? "available" : undefined),
+        });
+      }
+
+      if (cancelled) return;
+      setMedia((prev) => {
+        prev.forEach((m) => { if (m.url && m.url.startsWith("blob:")) URL.revokeObjectURL(m.url); });
+        return out;
+      });
+
       setWords(raw?.words ?? null);
       const st = migrateState(raw);
       resetEditor({ clips: st.clips, subs: st.subs, tracks: st.tracks, overlays: st.overlays, canvas: st.canvas, captionStyle: st.captionStyle });
@@ -492,7 +548,28 @@ export default function EditorPage() {
     if (!restored || !projectId) return;
     setSaving(true);
     const t = setTimeout(async () => {
-      const state = { schemaVersion: SCHEMA_VERSION, words, clips, subs, tracks, overlays, canvas, captionStyle };
+      const chatStore = await kvGet<unknown>(pk(projectId, "chat"));
+      const mediaMeta = media.map((m) => ({
+        id: m.id,
+        name: m.name,
+        kind: m.kind,
+        duration: m.duration,
+        cloudAssetId: m.cloudAssetId,
+        cloudObjectKey: m.cloudObjectKey,
+        cloudState: m.cloudState,
+      }));
+      const state = {
+        schemaVersion: SCHEMA_VERSION,
+        words,
+        clips,
+        subs,
+        tracks,
+        overlays,
+        canvas,
+        captionStyle,
+        chatStore: chatStore || undefined,
+        mediaMeta,
+      };
       await kvSet(pk(projectId, "state"), state);
       const policy = await getProjectPolicy(projectId);
       if (policy?.cloudProjectId && policy.dataMode !== "local") {
@@ -509,7 +586,7 @@ export default function EditorPage() {
       touchProject(projectId); setSaving(false);
     }, 500);
     return () => clearTimeout(t);
-  }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId]);
+  }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId, media]);
 
   const clearProjectWorkspace = () => {
     // A project switch used to leave the previous project's clips alive for one
@@ -760,6 +837,14 @@ export default function EditorPage() {
       const { tracks: next, track } = createVideoTrack(tracks);
       setTracks(next);
       tid = track.id;
+    } else {
+      const clip = clipsRef.current?.find((c) => c.id === id);
+      const asset = clip ? mediaById(mediaRef.current, clip.sourceId) : null;
+      if (asset?.kind === "audio") {
+        tid = audioTrack(tracks)?.id || "trk_audio";
+      } else if (!tracks.some((t) => t.id === tid && t.type === "video")) {
+        tid = primaryVideoTrackId(tracks);
+      }
     }
     const result = runCommand("clip.moveAtTimeline", api, { id, trackId: tid, timeline_start: timelineStart });
     if (!result.ok) { setError(result.error); return; }
@@ -779,13 +864,163 @@ export default function EditorPage() {
     if (created) setSelectedOverlayId(created.id);
     setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
-  const addStyledPopup = (presetName: TitlePopupPreset) => {
+  const addTextPreset = (preset: TextPreset) => {
     const api = editorApiRef.current;
     if (!api) return;
-    const end = Math.max(cur + 3.5, cur + 0.1);
-    const text = presetName === "speaker_card" ? "שם\nתיאור קצר" : presetName === "dedication_card" ? "כותרת מרכזית\nפרטים נוספים" : "כותרת הסרטון\nטקסט משני";
-    const result = runCommand("overlay.addText", api, { text, start: cur, end, preset: presetName });
-    if (!result.ok) { setError(result.error); return; }
+    const cw = canvas?.width || 1920;
+    const ch = canvas?.height || 1080;
+    const start = cur;
+    const end = cur + preset.suggestedDuration;
+    const w = Math.round((preset.box.width / 100) * cw);
+    const h = Math.round((preset.box.height / 100) * ch);
+    const x = Math.round(((preset.box.x + preset.box.width / 2) / 100) * cw);
+    const y = Math.round(((preset.box.y + preset.box.height / 2) / 100) * ch);
+    const fontSize = Math.round((preset.style.fontSize / 100) * Math.min(cw, ch));
+
+    const o: Overlay = {
+      id: uid("ov"),
+      kind: "text",
+      text: preset.sampleHe,
+      color: preset.style.color,
+      fontSize,
+      bold: preset.style.bold,
+      align: preset.style.align === "left" ? "start" : preset.style.align === "right" ? "end" : "center",
+      background: preset.style.background || undefined,
+      borderRadius: preset.style.borderRadius,
+      borderColor: preset.style.borderColor,
+      borderWidth: preset.style.borderWidth,
+      fadeIn: preset.fade.in,
+      fadeOut: preset.fade.out,
+      start,
+      end,
+      zIndex: nextZ(overlays),
+      transform: { x, y, w, h, rotation: 0, opacity: 1 },
+    };
+    api.addOverlay(o);
+    api.selectOverlay(o.id);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+  };
+  const addStickerOverlay = (sticker: GiphyAssetItem) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const assetId = uid("m_sticker");
+    const asset: MediaAsset = {
+      id: assetId,
+      name: sticker.title || "Sticker",
+      kind: "image",
+      file: new File([], "sticker.gif", { type: "image/gif" }),
+      duration: 5,
+      url: sticker.fullUrl || sticker.previewUrl,
+    };
+    setMedia((prev) => [...prev, asset]);
+    const cw = canvas?.width || 1920;
+    const ch = canvas?.height || 1080;
+    const ratio = (sticker.width && sticker.height) ? sticker.width / sticker.height : 1;
+    const w = Math.round(cw * 0.22);
+    const h = Math.round(w / ratio);
+    const o: Overlay = {
+      id: uid("ov"),
+      kind: "image",
+      assetId,
+      start: cur,
+      end: cur + 4,
+      zIndex: nextZ(overlays),
+      transform: { x: cw / 2, y: ch / 2, w, h, rotation: 0, opacity: 1 },
+    };
+    api.addOverlay(o);
+    api.selectOverlay(o.id);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+  };
+  const addVectorElementOverlay = (elem: VectorElement) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${elem.viewBox}" width="100" height="100" color="${elem.defaultColor}">${elem.svgPath}</svg>`;
+    const assetId = uid("m_icon");
+    const asset: MediaAsset = {
+      id: assetId,
+      name: elem.nameHe || "Icon",
+      kind: "image",
+      file: new File([], "icon.svg", { type: "image/svg+xml" }),
+      duration: 5,
+      url: `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`,
+    };
+    setMedia((prev) => [...prev, asset]);
+    const cw = canvas?.width || 1920;
+    const ch = canvas?.height || 1080;
+    const w = Math.round(cw * 0.12);
+    const o: Overlay = {
+      id: uid("ov"),
+      kind: "image",
+      assetId,
+      start: cur,
+      end: cur + 4,
+      zIndex: nextZ(overlays),
+      transform: { x: cw / 2, y: ch / 2, w, h: w, rotation: 0, opacity: 1 },
+    };
+    api.addOverlay(o);
+    api.selectOverlay(o.id);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+  };
+  const addShapeOverlay = (shape: VectorShape) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${shape.viewBox}" width="100" height="100" color="${shape.defaultFill}">${shape.svgContent}</svg>`;
+    const assetId = uid("m_shape");
+    const asset: MediaAsset = {
+      id: assetId,
+      name: shape.nameHe || "Shape",
+      kind: "image",
+      file: new File([], "shape.svg", { type: "image/svg+xml" }),
+      duration: 5,
+      url: `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`,
+    };
+    setMedia((prev) => [...prev, asset]);
+    const cw = canvas?.width || 1920;
+    const ch = canvas?.height || 1080;
+    const w = Math.round(cw * 0.2);
+    const o: Overlay = {
+      id: uid("ov"),
+      kind: "image",
+      assetId,
+      start: cur,
+      end: cur + 4,
+      zIndex: nextZ(overlays),
+      transform: { x: cw / 2, y: ch / 2, w, h: w, rotation: 0, opacity: 1 },
+    };
+    api.addOverlay(o);
+    api.selectOverlay(o.id);
+    setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
+  };
+  const addMotionAssetOverlay = (motion: MotionAsset) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${motion.viewBox}" width="${motion.width}" height="${motion.height}">${motion.animatedSvgMarkup}</svg>`;
+    const assetId = uid("m_motion");
+    const asset: MediaAsset = {
+      id: assetId,
+      name: motion.nameHe || "Motion",
+      kind: "image",
+      file: new File([], "motion.svg", { type: "image/svg+xml" }),
+      duration: motion.defaultDuration || 3,
+      url: `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`,
+    };
+    setMedia((prev) => [...prev, asset]);
+    const cw = canvas?.width || 1920;
+    const ch = canvas?.height || 1080;
+    const ratio = motion.width / Math.max(1, motion.height);
+    const w = Math.round(cw * 0.25);
+    const h = Math.round(w / ratio);
+    const o: Overlay = {
+      id: uid("ov"),
+      kind: "image",
+      assetId,
+      start: cur,
+      end: cur + (motion.defaultDuration || 3),
+      zIndex: nextZ(overlays),
+      transform: { x: cw / 2, y: ch / 2, w, h, rotation: 0, opacity: 1 },
+    };
+    api.addOverlay(o);
+    api.selectOverlay(o.id);
     setSelectedId(null); setSelectedSubId(null); setSelectionTrack(null);
   };
   const selectClip = (id: string | null, track: "video" | "audio" = "video") => {
@@ -1399,7 +1634,18 @@ export default function EditorPage() {
             <MediaPanel media={media} mainId={main?.id} uploadProgress={uploadProgress} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRename={(asset) => setNameDlg({ kind: "media", id: asset.id, name: asset.name })} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
-            <TextPanel onAddText={addTextOverlay} onAddPopup={addStyledPopup} />
+            <TextPanel
+              onAddText={addTextOverlay}
+              onAddPopup={(presetName) => {
+                const preset = TEXT_PRESETS.find((p) => p.id === presetName);
+                if (preset) addTextPreset(preset);
+              }}
+              onAddPreset={addTextPreset}
+              onSelectFont={(family) => {
+                loadGoogleFont(family);
+                setCaptionStyle((s) => ({ ...s, fontFamily: family }));
+              }}
+            />
           ) : leftTab === "captions" ? (
             <CaptionsPanel
               script={script} onScript={setScript} onAnalyze={analyze} analyzing={busy}
@@ -1416,7 +1662,27 @@ export default function EditorPage() {
               }}
             />
           ) : (
-            <CreativePanel kind={leftTab} clip={selectedClip} onApply={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)} />
+            <CreativePanel
+              kind={leftTab}
+              clip={selectedClip}
+              onApply={(patch) => selectedClip && updateClipFromInspector(selectedClip.id, patch)}
+              onAddTextTemplate={addTextPreset}
+              onAddSticker={addStickerOverlay}
+              onAddVectorElement={addVectorElementOverlay}
+              onAddShape={addShapeOverlay}
+              onAddMotionAsset={addMotionAssetOverlay}
+              captionStyle={captionStyle}
+              onCaptionStyle={(patch) => {
+                if (!editorApiRef.current) { setCaptionStyle((s) => ({ ...s, ...patch })); return; }
+                const res = runCommand("caption.setStyle", editorApiRef.current, patch);
+                if (!res.ok) setError(res.error);
+              }}
+              selectedFont={captionStyle?.fontFamily}
+              onSelectFont={(family) => {
+                loadGoogleFont(family);
+                setCaptionStyle((s) => ({ ...s, fontFamily: family }));
+              }}
+            />
           )}
         </div>
         <div className="col-resize" onPointerDown={startResizeLeft} onDoubleClick={resetLeft} onKeyDown={resizeLeftByKey} tabIndex={0}

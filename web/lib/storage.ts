@@ -45,6 +45,22 @@ export async function kvClear(): Promise<void> {
   } catch { /* ignore */ }
 }
 
+export async function purgeAllLocalData(): Promise<void> {
+  await kvClear();
+  if (typeof window !== "undefined") {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("hs_") || k.startsWith("hypescript_") || k === "projects" || k === "currentProjectId")) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  }
+}
+
 // --- ניהול פרויקטים מרובים ---
 // כל פרויקט מחזיק בנפרד: מדיה, מצב עריכה ושיחה, תחת מפתחות p:<id>:<key>.
 export interface ProjectMeta { id: string; name: string; updatedAt: number; }

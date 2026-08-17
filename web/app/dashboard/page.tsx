@@ -9,7 +9,7 @@ import {
 } from "@/components/icons";
 import {
   deleteProject, listProjects, ProjectMeta,
-  renameProject, setCurrentProject,
+  purgeAllLocalData, renameProject, setCurrentProject,
 } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
@@ -21,7 +21,7 @@ import {
 } from "@/lib/projects/preview";
 import { createProjectWithPolicy } from "@/lib/projects/create";
 import { ensureCloudProjectMirror } from "@/lib/projects/create";
-import { deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
+import { deleteAllCloudProjects, deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
 import { LoadingState } from "@/components/LoadingState";
@@ -148,8 +148,8 @@ function ProjectCard({
         <button type="button" className="dash-card-title" onClick={onOpen}>{project.name}</button>
 
         <div className="dash-card-badges">
-          <span className={`dash-badge mode-${meta.dataMode || "local"}`}>
-            {meta.dataMode === "cloud" ? "בענן" : meta.dataMode === "hybrid" ? "משולב" : "מקומי"}
+          <span className={`dash-badge mode-${meta.dataMode || "cloud"}`}>
+            {meta.dataMode === "local" ? "מקומי" : meta.dataMode === "hybrid" ? "משולב" : "בענן"}
           </span>
           {meta.aspectRatio && (
             <span className="dash-badge">{meta.aspectRatio}</span>
@@ -200,7 +200,8 @@ type DialogState =
   | { kind: "none" }
   | { kind: "create" }
   | { kind: "rename"; id: string; name: string }
-  | { kind: "delete"; id: string; name: string };
+  | { kind: "delete"; id: string; name: string }
+  | { kind: "purge" };
 
 export default function DashboardPage() {
   const { configured, loading, user, signOut, signInWithGoogle, error: authError } = useAuth();
@@ -318,6 +319,21 @@ export default function DashboardPage() {
     }
   };
 
+  const onPurgeAll = async () => {
+    setDlg({ kind: "none" });
+    setBusy(true);
+    try {
+      await deleteAllCloudProjects();
+      await purgeAllLocalData();
+      await refresh();
+      toast.success("איפוס הושלם", "כל הפרויקטים והשיחות נמחקו בהצלחה.");
+    } catch (e) {
+      toast.error("האיפוס נכשל", e instanceof Error ? e.message : undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const avatar = userAvatarUrl(user);
   const label = userLabel(user);
   const startCreate = () => {
@@ -382,6 +398,17 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       role="menuitem"
+                      className="danger"
+                      onClick={() => {
+                        setUserOpen(false);
+                        setDlg({ kind: "purge" });
+                      }}
+                    >
+                      <Trash2 size={14} />מחק את כל הפרויקטים והשיחות
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
                       onClick={async () => {
                         setUserOpen(false);
                         await signOut();
@@ -438,14 +465,26 @@ export default function DashboardPage() {
                 : "התחבר כדי ליצור פרויקטים שמסתנכרנים אוטומטית בין המכשירים שלך."}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn primary tall"
-            onClick={startCreate}
-            disabled={busy}
-          >
-            <Plus size={16} />{configured && !user ? "התחבר והתחל" : "פרויקט חדש"}
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {projects.length > 0 && (
+              <button
+                type="button"
+                className="btn ghost tall"
+                onClick={() => setDlg({ kind: "purge" })}
+                title="איפוס ומחיקת כל הפרויקטים והשיחות"
+              >
+                <Trash2 size={15} />איפוס הכל
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn primary tall"
+              onClick={startCreate}
+              disabled={busy}
+            >
+              <Plus size={16} />{configured && !user ? "התחבר והתחל" : "פרויקט חדש"}
+            </button>
+          </div>
         </div>
 
         {configured && !loading && !user && (
@@ -505,6 +544,15 @@ export default function DashboardPage() {
         danger
         onClose={() => setDlg({ kind: "none" })}
         onConfirm={onDelete}
+      />
+      <ConfirmDialog
+        open={dlg.kind === "purge"}
+        title="מחיקת כל הפרויקטים והשיחות"
+        message="האם אתה בטוח שברצונך למחוק את כל הפרויקטים, העריכות, קבצי המדיה והשיחות (גם המקומיים וגם בענן)? פעולה זו אינה ניתנת לביטול."
+        confirmLabel="מחק הכל"
+        danger
+        onClose={() => setDlg({ kind: "none" })}
+        onConfirm={onPurgeAll}
       />
     </div>
   );
