@@ -70,8 +70,11 @@ export default function TopBar({
     <div className="topbar2">
       <KeyboardShortcutsModal open={kbdOpen} onClose={() => setKbdOpen(false)} />
       {/* Brand logo pinned at the far top-left */}
-      <Link href="/dashboard" className="tb-logo" title={`Hypescript — ${t("nav.dashboard")}`} aria-label="Hypescript">
+      <Link href="/dashboard" className="tb-logo" title="חזרה ללוח הפרויקטים" aria-label="חזרה ללוח הפרויקטים">
         <BrandLogo variant="icon" size="sm" decorative priority />
+      </Link>
+      <Link href="/dashboard" className="iconbtn tb-back-dashboard" title="חזרה לפרויקטים" data-tip="חזרה לפרויקטים" aria-label="חזרה לפרויקטים">
+        <LayoutGrid size={16} strokeWidth={1.75} />
       </Link>
       <div className="tb-group tb-primary-slot" aria-label={`${t("nav.project")} · ${t("nav.account")}`}>
         {authOn && user && <div className={`tb-account-wrap${userOpen ? " is-open" : ""}`} ref={userRef}>

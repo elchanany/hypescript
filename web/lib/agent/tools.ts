@@ -7,7 +7,7 @@ import { DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
 import {
   addClip, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
-import { clampOverlayTransform, imageOverlayGeometry, Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset } from "@/lib/editor/overlay";
+import { clampOverlayTransform, imageOverlayGeometry, Overlay, makeImageOverlay, makeTextOverlay, makeTitlePopup, overlayVisibleAt, type ImageOverlayPreset } from "@/lib/editor/overlay";
 import { isGapClip, removeClipLeaveGap, removeClipRipple, closeGap } from "@/lib/editor/timelineOps";
 import { CanvasSize, defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import {
@@ -93,6 +93,33 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     fr.onerror = rej;
     fr.readAsDataURL(blob);
   });
+}
+
+// פריים בגודל ייצוא הוא PNG של מאות KB. ב-base64 הוא תופח בשליש, נשמר
+// בהיסטוריה, ונשלח *מחדש בכל תור*. ארבעה כאלה חוצים את מגבלת גוף הבקשה של
+// Vercel (4.5MB), והשיחה מתה ב-FUNCTION_PAYLOAD_TOO_LARGE בלי דרך חזרה — גם
+// "תמשיך" שולח שוב את אותה היסטוריה ונכשל שוב. לכן: מוקטן ל-JPEG לפני ההיסטוריה.
+const MODEL_IMAGE_MAX_EDGE = 768;
+const MODEL_IMAGE_QUALITY = 0.72;
+
+async function blobToModelImage(blob: Blob): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const scale = Math.min(1, MODEL_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const c2d = canvas.getContext("2d");
+    if (!c2d) throw new Error("no 2d context");
+    c2d.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+    return canvas.toDataURL("image/jpeg", MODEL_IMAGE_QUALITY);
+  } catch {
+    // עדיף פריים כבד מאשר סוכן עיוור — התקרה בצד ההיסטוריה תגן על הבקשה
+    return await blobToDataUrl(blob);
+  }
 }
 
 // התמלול של מקור מסוים (מהמפה, או של הראשי מ-words).
@@ -330,6 +357,12 @@ function summarizePlan(plan: ScriptCutPlan, sourceName: string, measured: boolea
     );
   } else {
     lines.push("כיסוי הטקסט: 100% — כל מילה שביקשת נמצאה.");
+  }
+  if (plan.alignment.mergedScript.length) {
+    lines.push(
+      `${plan.alignment.mergedScript.length} מילים נבלעו בהגייה בתוך המילה השכנה `
+      + `(כמו "שאם אדם" שנשמע "שאדם"). הן נאמרו והאודיו שלהן נשמר — אין מה לחפש.`,
+    );
   }
   if (plan.weakMatches.length) {
     lines.push(
@@ -574,12 +607,12 @@ export const TOOLS: ToolMeta[] = [
     schema: {
       name: "transcribe_video",
       description:
-        "מתמלל סרטון ובונה מפת נקודות-ציון (מילים+זמנים). ספקים: elevenlabs (Scribe — מומלץ, בתשלום; אירועי שמע/צחוק/דוברים) או groq (Whisper). " +
-        "אפשר לבחור model במפורש (למשל scribe_v2 / whisper-large-v3). אם יש כמה סרטונים — תמלל כל אחד (עם source).",
+        "מתמלל סרטון או קובץ אודיו ובונה מפת נקודות-ציון (מילים+זמנים). ספקים: elevenlabs (Scribe — מומלץ, בתשלום; אירועי שמע/צחוק/דוברים) או groq (Whisper). " +
+        "אפשר לבחור model במפורש (למשל scribe_v2 / whisper-large-v3). אם יש כמה מקורות — תמלל כל אחד (עם source).",
       parameters: {
         type: "object",
         properties: {
-          source: { type: "string", description: "שם/אינדקס הסרטון לתמלול (ברירת מחדל: הראשי)" },
+          source: { type: "string", description: "שם/אינדקס של סרטון או אודיו לתמלול (ברירת מחדל: הסרטון הראשי)" },
           provider: { type: "string", description: "elevenlabs | groq | auto (ברירת מחדל לפי הגדרות)" },
           model: { type: "string", description: "מודל תמלול (למשל scribe_v2 / scribe_v1 / whisper-large-v3)" },
           force: { type: "boolean", description: "true=התעלם מתמלול שמור ותמלל מחדש" },
@@ -591,8 +624,15 @@ export const TOOLS: ToolMeta[] = [
       },
     },
     run: async (a, ctx, report) => {
-      const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
-      if (!asset || asset.kind !== "video") return "שגיאה: לא נמצא סרטון לתמלול.";
+      // גם אודיו: הצינור ממילא מחלץ פס-קול לפני השליחה, והחסימה כאן רק
+      // מנעה תמלול של קריינות או ראיון שהועלו כקובץ קול.
+      const asset = a.source
+        ? resolveAsset(ctx, a.source)
+        : (mainVideo(ctx) || ctx.media.find((m) => m.kind === "audio"));
+      if (!asset) return "שגיאה: לא נמצא סרטון או אודיו לתמלול.";
+      if (asset.kind !== "video" && asset.kind !== "audio") {
+        return `שגיאה: "${asset.name}" הוא ${asset.kind} — אפשר לתמלל רק וידאו או אודיו.`;
+      }
 
       const { provider, model } = await resolveSttChoice(a.provider, a.model);
       const wantsSpecific = false;
@@ -778,6 +818,67 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "inspect_timeline_layers", label: "מבנה שכבות וציר", color: "#6366f1", icon: "📑",
+    schema: {
+      name: "inspect_timeline_layers",
+      description:
+        "מחזיר סקירה מלאה ומדויקת של כל הרצועות, הקליפים, השכבות (Overlays), סדר ה-Z-order והכתוביות הפעילות בזמן מסוים או בכל הפרויקט.",
+      parameters: {
+        type: "object",
+        properties: {
+          at_seconds: { type: "number", description: "זמן מסוים (שניות) לבדיקת כל האלמנטים הפעילים בו" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const tracks = ctx.tracks || [];
+      const clips = ctx.clips || [];
+      const overlays = ctx.overlays || [];
+      const subs = ctx.subs || [];
+      const dur = projectDuration(clips, tracks);
+
+      if (a.at_seconds != null) {
+        const t = +a.at_seconds;
+        const activeClips: string[] = [];
+        for (const track of tracks) {
+          const tClips = clipsOnTrack(clips, track.id);
+          let acc = 0;
+          for (const c of tClips) {
+            const d = clipDur(c);
+            if (t >= acc && t < acc + d) {
+              const asset = mediaById(ctx.media, c.sourceId);
+              activeClips.push(`  - רצועה "${track.name}" (${track.type}, סדר ${track.order}): ${isGapClip(c) ? "רווח" : `"${asset?.name || c.id}" (${c.start.toFixed(1)}–${c.end.toFixed(1)}s מקור)`}`);
+            }
+            acc += d;
+          }
+        }
+        const activeOverlays = overlays.filter((o) => overlayVisibleAt(o, t)).map((o) => {
+          const asset = o.assetId ? mediaById(ctx.media, o.assetId) : null;
+          return `  - שכבה "${o.kind === "image" ? (asset?.name || "תמונה") : (o.text || "טקסט")}" (סוג: ${o.kind}, Z-Index: ${o.zIndex}, מיקום: [X:${o.transform.x.toFixed(0)}, Y:${o.transform.y.toFixed(0)}], גודל: [${o.transform.w.toFixed(0)}x${o.transform.h.toFixed(0)}])`;
+        });
+        const activeSub = subs.find((s) => t >= s.start && t <= s.end);
+
+        return [
+          `מצב הציר בשנייה ${t.toFixed(2)}s:`,
+          `קליפים פעילים ברצועות:`,
+          activeClips.length ? activeClips.join("\n") : "  (אין קליפים פעילים)",
+          `שכבות ויזואליות מעל הווידאו:`,
+          activeOverlays.length ? activeOverlays.join("\n") : "  (אין שכבות פעילות)",
+          activeSub ? `כתובית פעילה: "${activeSub.text}" (${activeSub.start.toFixed(2)}–${activeSub.end.toFixed(2)}s)` : "אין כתובית פעילה",
+        ].join("\n");
+      }
+
+      return [
+        `מבנה הפרויקט (משך כולל: ${dur.toFixed(1)}s):`,
+        `רצועות (${tracks.length}):`,
+        ...tracks.map((t) => `  - [${t.type}] "${t.name}" (מזהה: ${t.id}, סדר שכבה: ${t.order}): ${clipsOnTrack(clips, t.id).length} קטעים`),
+        `שכבות על הקנבס (${overlays.length}):`,
+        ...overlays.map((o) => `  - [${o.kind}] ${o.kind === "image" ? (mediaById(ctx.media, o.assetId || "")?.name || "תמונה") : `"${o.text}"`} (${o.start.toFixed(1)}–${o.end.toFixed(1)}s, Z:${o.zIndex})`),
+        `כתוביות: ${subs.length} שורות`,
+      ].join("\n");
+    },
+  },
+  {
     name: "get_transcript", label: "קריאת תמלול", color: "#14b8a6", icon: "📄",
     schema: {
       name: "get_transcript",
@@ -863,7 +964,16 @@ export const TOOLS: ToolMeta[] = [
         ctx.assembledWords = words;
         const n = words.filter(isSpeechWord).length;
         const dur = assembledDuration(ctx.clips);
-        return `מופה תמלול לציר הערוך: ${n} מילים, משך ${dur.toFixed(1)}s (בלי תמלול API). קרא עם get_transcript(timeline=true).`;
+        // כמה מילים היו במקורות שבשימוש — ההפרש הוא מה שהעריכה הסירה.
+        // בלי המספר הזה "חסרה מילה" נראה כמו באג, והסוכן יוצא לחקירה מיותרת.
+        const usedSources = new Set(ctx.clips.map((c) => c.sourceId));
+        const sourceWords = [...usedSources]
+          .reduce((sum, sid) => sum + (getWords(sid) || []).filter(isSpeechWord).length, 0);
+        const removed = Math.max(0, sourceWords - n);
+        return `מופה תמלול לציר הערוך: ${n} מילים, משך ${dur.toFixed(1)}s (בלי תמלול API).`
+          + (removed ? ` ${removed} מילים מהמקור נחתכו בעריכה ואינן על הציר — זה צפוי.` : "")
+          + ` קרא עם get_transcript(timeline=true).`
+          + ` אם נראה שמילה חסרה שאמורה להישמע — mode=retranscribe מתמלל את האודיו הערוך עצמו ומראה מה באמת יוצא.`;
       }
 
       // retranscribe: אודיו זמני מה-EDL → STT
@@ -1057,7 +1167,7 @@ export const TOOLS: ToolMeta[] = [
           canvas: ctx.canvas || defaultCanvasFor(),
           captionStyle: ctx.captionStyle ?? null,
         });
-        try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+        try { ctx.pendingImages?.push(await blobToModelImage(blob)); } catch { /* ignore */ }
         const srcName = mediaById(ctx.media, micro.segments[0]?.sourceId)?.name;
         const where = micro.gap
           ? "רווח (שחור)"
@@ -1074,7 +1184,7 @@ export const TOOLS: ToolMeta[] = [
       const srcTime = +a.at_seconds;
       const { extractFrame } = await import("@/lib/ffmpeg");
       const blob = await extractFrame(asset.file, srcTime);
-      try { ctx.pendingImages?.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+      try { ctx.pendingImages?.push(await blobToModelImage(blob)); } catch { /* ignore */ }
       return {
         text: `צולם פריים גולמי מהמקור "${asset.name}" בשנייה ${srcTime.toFixed(1)} (בלי אובריי/כתוביות). לצילום מורכב של מה שנראה בפועל — השתמש ב-timeline=true.`,
         artifacts: [{ blob, name: `frame_${srcTime.toFixed(1)}s.png`, kind: "image" }],
@@ -2124,11 +2234,15 @@ export const TOOLS: ToolMeta[] = [
         ? captionTokensFromScript(timeline, script)
         : { tokens: captionTokensFromTranscript(timeline), interpolated: [] as number[], dropped: 0, coverage: 1 };
 
+      // שורה אחת = אותה מכסת תווים בשורה אחת, לא חצי ממנה. בלי זה מגבלת התווים
+      // מכריעה את מבנה המשפט וגוררת מילים בין משפטים.
+      const singleLine = a.max_lines === 1;
+      const defaultChars = CAPTION_POLICY.maxCharsPerLine * (singleLine ? CAPTION_POLICY.maxLines : 1);
       const policy = {
         ...CAPTION_POLICY,
         targetWords: Math.max(3, Math.min(8, (a.words_per_cue | 0) || CAPTION_POLICY.targetWords)),
-        maxCharsPerLine: Math.max(12, (a.max_chars_per_line | 0) || CAPTION_POLICY.maxCharsPerLine),
-        maxLines: a.max_lines === 1 ? 1 : CAPTION_POLICY.maxLines,
+        maxCharsPerLine: Math.max(12, (a.max_chars_per_line | 0) || defaultChars),
+        maxLines: singleLine ? 1 : CAPTION_POLICY.maxLines,
       };
       const cues = buildCaptionCues(built.tokens, { policy, limitSec: assembledDuration(clips) });
       setSubs(ctx, cues.map((cue) => ({ id: uid("s"), start: cue.start, end: cue.end, text: cue.text })));

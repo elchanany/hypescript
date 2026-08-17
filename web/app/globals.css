@@ -731,8 +731,9 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
   flex: none; overflow: hidden; text-decoration: none; background: transparent;
 }
+.tb-logo:hover { background: var(--hover); }
 .tb-logo:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.tb-logo .brand-logo { display: block; width: 34px; height: 34px; }
+.tb-logo .brand-logo { display: block; width: 28px; height: 28px; object-fit: contain; }
 .tb-project { display: flex; align-items: center; gap: 6px; height: var(--h-ctrl); padding: 0 8px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel-2); cursor: pointer; max-width: 220px; }
 .tb-project:hover { border-color: var(--border-strong); background: var(--hover); }
 .tb-project .pname { font-size: var(--fs); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2946,8 +2947,26 @@ html[data-theme="dark"] .onboarding-card { box-shadow: 0 22px 64px rgba(0, 0, 0,
 .chat-body2 .msg2 .msg-speaker { min-height:22px; padding-inline:2px; direction:rtl; }
 .chat-body2 .msg2.user .msg-speaker { flex-direction:row; }
 .chat-body2 .msg2 .b { min-width:58px; padding:10px 12px; border-radius:16px; box-shadow:0 5px 18px rgba(4,12,28,.055); unicode-bidi:plaintext; }
-.chat-body2 .msg2.user .b { border-radius:16px; background:color-mix(in srgb,var(--accent) 13%,var(--panel)); border-color:color-mix(in srgb,var(--accent) 25%,var(--border)); }
-.chat-body2 .msg2.assistant .b { border-radius:16px; background:var(--panel); }
+.chat-body2 .msg2.user .b { border-top-right-radius: 4px !important; border-top-left-radius: 16px !important; border-bottom-left-radius: 16px !important; border-bottom-right-radius: 16px !important; background:color-mix(in srgb,var(--accent) 14%,var(--panel)) !important; border: 1px solid color-mix(in srgb,var(--accent) 26%,var(--border)) !important; }
+.chat-body2 .msg2.assistant .b { border-top-left-radius: 4px !important; border-top-right-radius: 16px !important; border-bottom-left-radius: 16px !important; border-bottom-right-radius: 16px !important; background:var(--panel) !important; border: 1px solid var(--border) !important; }
+
+/* Steering Queue Dock */
+.steering-queue-dock { margin: 0 10px 8px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--panel-2) 90%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; gap: 6px; animation: hs-arrive 0.2s ease; }
+.steering-queue-head { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--accent); }
+.steering-queue-head .s-title { display: flex; align-items: center; gap: 5px; }
+.steering-clear-btn { background: none; border: none; font-size: 10px; color: var(--text-3); cursor: pointer; }
+.steering-clear-btn:hover { color: var(--text-1); }
+.steering-queue-list { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+.steering-note-card { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); font-size: 11px; }
+.steering-note-card.applied { opacity: 0.6; background: transparent; }
+.steering-note-card .s-num { font-weight: bold; color: var(--accent); flex: none; }
+.steering-note-card .s-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); }
+.steering-note-card .s-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.btn-push-now { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; background: var(--accent); color: var(--accent-contrast, #000); border: none; cursor: pointer; transition: transform 0.1s ease; }
+.btn-push-now:hover { transform: scale(1.04); }
+.btn-del-note { background: none; border: none; color: var(--text-3); cursor: pointer; padding: 2px; }
+.btn-del-note:hover { color: var(--danger); }
+.s-applied-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; color: #35d59a; }
 .msg-avatar.agent { color:var(--accent-contrast,#071c17); background:var(--accent); }
 .msg-avatar.agent svg { display:block; }
 .msg-meta { min-height:22px; display:flex; align-items:center; gap:6px; padding:0 3px; color:var(--text-3); font-size:9.5px; direction:rtl; }

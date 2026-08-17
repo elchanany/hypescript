@@ -177,6 +177,13 @@ const COMPOSE_H_DEFAULT = 82;
 const COMPOSE_H_MIN = 64;
 const COMPOSE_H_MAX = 280;
 
+export interface SteeringNote {
+  id: string;
+  text: string;
+  time: string;
+  status: "queued" | "applied";
+}
+
 export default function Chat({ media, onAddMedia, onClose, words, clips, subs, script = "", overlays = [], canvas, projectId, onProject, editorApi = null, tracks = [], playhead = 0, selectionLabel, dockSide = "right", onToggleDock, quoteSink, pendingQuoteRef, mentionSink, pendingMentionRef, captionStyle, latestExport, inFocusMode = false, renderVideoPreview }: ChatProps) {
   const [store, setStore] = useState<ChatStoreV2>(() => emptyStore());
   const [items, setItems] = useState<Item[]>([]);
@@ -204,6 +211,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [threadTitle, setThreadTitle] = useState("");
   const [pinLimit, setPinLimit] = useState(5);
+  const [steeringQueue, setSteeringQueue] = useState<Array<{ id: string; text: string; time: string; status: "queued" | "applied" }>>([]);
   const composeHRef = useRef(COMPOSE_H_DEFAULT);
   const suggestionFetchedKeyRef = useRef("");
   composeHRef.current = composeH;
@@ -612,11 +620,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       return;
     }
     if (running) {
-      setItems((p) => [...p, { kind: "user", text: displayText, time: now(), references: sentReferences }]);
-      lastUserPromptRef.current = text;
+      const noteId = `st_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const note: SteeringNote = {
+        id: noteId,
+        text: displayText,
+        time: now(),
+        status: "queued",
+      };
+      setSteeringQueue((prev) => [...prev, note]);
       setInput("");
       setComposerReferences([]);
-      runnerRef.current?.injectMessage(text);
       return;
     }
     if (providerMode === "byok") {
@@ -624,6 +637,18 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       if (!byokProviders.includes(provider)) { setItems((p) => [...p, { kind: "error", text: "יש לשמור מפתח לספק שנבחר בהגדרות ה־AI.", time: now() }]); setByokOpen(true); return; }
     }
     sendAgentRequest(text, provider, displayText, sentReferences);
+  };
+
+  const applySteeringNote = (id: string) => {
+    const note = steeringQueue.find((n) => n.id === id);
+    if (!note || note.status === "applied") return;
+    runnerRef.current?.injectMessage(note.text);
+    setSteeringQueue((prev) => prev.map((n) => (n.id === id ? { ...n, status: "applied" } : n)));
+    setItems((p) => [...p, { kind: "user", text: `[הנחיה תוך כדי עבודה]: ${note.text}`, time: now() }]);
+  };
+
+  const removeSteeringNote = (id: string) => {
+    setSteeringQueue((prev) => prev.filter((n) => n.id !== id));
   };
 
   const changeProvider = (p: Provider) => {
@@ -1063,6 +1088,35 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           <span>התחלה מהירה</span>
           {["הסר שתיקות ונשימות מכל הווידאו.", "צור כתוביות מסונכרנות בעברית.", "השאר רק את החלקים לפי הסקריפט."].map((starter) => <button type="button" key={starter} onClick={() => { setInput(starter); taRef.current?.focus(); }}>{starter}</button>)}
         </div>}
+
+        {steeringQueue.length > 0 && (
+          <div className="steering-queue-dock" role="region" aria-label="הנחיות שנשלחו תוך כדי עבודה">
+            <div className="steering-queue-head">
+              <span className="s-title"><Sparkles size={13} />הנחיות לסוכן בעבודה ({steeringQueue.filter((n) => n.status === "queued").length})</span>
+              <button type="button" className="steering-clear-btn" onClick={() => setSteeringQueue([])}>נקה הכל</button>
+            </div>
+            <div className="steering-queue-list">
+              {steeringQueue.map((note, idx) => (
+                <div key={note.id} className={`steering-note-card ${note.status}`}>
+                  <span className="s-num">{idx + 1}.</span>
+                  <span className="s-text">{note.text}</span>
+                  <div className="s-actions">
+                    {note.status === "queued" ? (
+                      <button type="button" className="btn-push-now" onClick={() => applySteeringNote(note.id)} title="החל הנחיה זו עכשיו באמצע העבודה">
+                        החל עכשיו ⚡
+                      </button>
+                    ) : (
+                      <span className="s-applied-badge"><Check size={11} /> הוחל</span>
+                    )}
+                    <button type="button" className="btn-del-note" onClick={() => removeSteeringNote(note.id)} title="הסר">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {ask && (
           <div className="ask-composer-card" role="region" aria-label="שאלת הסוכן">

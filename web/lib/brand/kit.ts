@@ -320,5 +320,22 @@ export async function setActiveBrandKit(id: string, adapter: BrandKv = defaultBr
   const kit = await getBrandKit(id, adapter);
   if (!kit) return null;
   await adapter.set(BRAND_ACTIVE_KEY, id);
+  if (typeof window !== "undefined") {
+    void syncActiveBrandKitToCloud(kit);
+  }
   return id;
+}
+
+export async function syncActiveBrandKitToCloud(kit: BrandKit | null): Promise<void> {
+  if (typeof window === "undefined" || !kit) return;
+  try {
+    const summary = summarizeBrandKit(kit);
+    await fetch("/api/cloud/brand", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kit: summary }),
+    }).catch(() => {});
+  } catch {
+    // Local-first non-blocking fallback
+  }
 }

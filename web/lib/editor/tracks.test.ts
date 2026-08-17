@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Clip } from "./model";
 import { defaultTracks, createVideoTrack } from "./project";
 import {
-  clipTrackId, clipsOnTrack, flattenVideoTracks, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, projectDuration, replaceTrackClips,
+  clipTrackId, clipsOnTrack, flattenVideoTracks, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, normalizeTrackGaps, projectDuration, replaceTrackClips,
 } from "./tracks";
 
 describe("multi-track helpers", () => {
@@ -108,5 +108,39 @@ describe("multi-track helpers", () => {
     ];
     const flat = flattenVideoTracks(styled, tracks);
     expect(flat[0]).toMatchObject({ contrast: 1.3, saturation: 0.4, fadeIn: 0.5, fadeOut: 0.75, visualFadeIn: 0.25, visualFadeOut: 0.4, flipX: true, flipY: true });
+  });
+
+  it("normalizes adjacent gaps into a single contiguous gap", () => {
+    const clips: Clip[] = [
+      { id: "g1", sourceId: "__gap__", start: 0, end: 3, trackId: "trk_b" },
+      { id: "g2", sourceId: "__gap__", start: 0, end: 4, trackId: "trk_b" },
+      { id: "c", sourceId: "src", start: 0, end: 5, trackId: "trk_b" },
+    ];
+    const normalized = normalizeTrackGaps(clips);
+    expect(normalized).toHaveLength(2);
+    expect(normalized[0]).toMatchObject({ sourceId: "__gap__", end: 7 });
+    expect(normalized[1].id).toBe("c");
+  });
+
+  it("preserves subsequent clip timestamps on secondary track when moving an earlier clip", () => {
+    const clips: Clip[] = [
+      { id: "base", sourceId: "a", start: 0, end: 30, trackId: "trk_video" },
+      { id: "g1", sourceId: "__gap__", start: 0, end: 5, trackId: "trk_b" },
+      { id: "logo", sourceId: "b", start: 0, end: 5, trackId: "trk_b" },
+      { id: "g2", sourceId: "__gap__", start: 0, end: 5, trackId: "trk_b" },
+      { id: "banner", sourceId: "c", start: 0, end: 5, trackId: "trk_b" },
+    ];
+    // banner is at 5 + 5 + 5 = 15s. Moving logo to 25s should keep banner at 15s!
+    const moved = moveClipAtTimeline(clips, "logo", "trk_b", 25, "trk_video");
+    const bClips = clipsOnTrack(moved, "trk_b");
+    const bannerClip = bClips.find((c) => c.id === "banner");
+    expect(bannerClip).toBeTruthy();
+    // Verify banner starts at 15s in assembled timeline
+    let acc = 0;
+    for (const c of bClips) {
+      if (c.id === "banner") break;
+      acc += c.end - c.start;
+    }
+    expect(acc).toBeCloseTo(15, 2);
   });
 });

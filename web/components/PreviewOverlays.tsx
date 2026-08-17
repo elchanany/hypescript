@@ -117,6 +117,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
       document.body.style.userSelect = "";
     }
   };
+
   const startDrag = (e: React.PointerEvent, o: Overlay, mode: DragState["mode"]) => {
     if (o.locked) { onSelect(o.id); return; }
     e.stopPropagation(); e.preventDefault();
@@ -127,6 +128,24 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
     document.body.style.userSelect = "none";
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+  };
+
+  const onBoxPointerDown = (e: React.PointerEvent, o: Overlay) => {
+    // Layer cycling with Alt+Click or repeated click when multiple visual layers overlap
+    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const hitOverlayEls = elements.filter((el) => el.classList.contains("ov-box")) as HTMLElement[];
+    if (hitOverlayEls.length > 1 && (e.altKey || o.id === selectedId)) {
+      e.stopPropagation();
+      e.preventDefault();
+      const currentIdx = hitOverlayEls.findIndex((el) => el.dataset.overlayId === selectedId);
+      const nextIdx = (currentIdx + 1) % hitOverlayEls.length;
+      const nextId = hitOverlayEls[nextIdx].dataset.overlayId;
+      if (nextId && nextId !== selectedId) {
+        onSelect(nextId);
+        return;
+      }
+    }
+    startDrag(e, o, "move");
   };
 
   const visible = overlays.filter((o) => overlayVisibleAt(o, currentTime)).sort((a, b) => a.zIndex - b.zIndex);
@@ -150,8 +169,8 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
           opacity: opacity * Math.min(fadeInFactor, fadeOutFactor),
         };
         return (
-          <div key={o.id} className={`ov-box ${sel ? "sel" : ""} ${o.locked ? "locked" : ""}`} style={style}
-            onPointerDown={(e) => startDrag(e, o, "move")}
+          <div key={o.id} data-overlay-id={o.id} className={`ov-box ${sel ? "sel" : ""} ${o.locked ? "locked" : ""}`} style={style}
+            onPointerDown={(e) => onBoxPointerDown(e, o)}
             onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); onEditText(o.id, o.text || ""); } }}>
             {o.kind === "image" && asset ? (
               // Transparent pixels must reveal the actual video, never an editor checkerboard.

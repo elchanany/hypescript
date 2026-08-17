@@ -56,7 +56,8 @@ export function insertClipAtTimeline(trackClips: Clip[], rawClip: Clip, timeline
   const next: Clip[] = [];
   let cursor = 0;
 
-  for (const current of trackClips) {
+  for (let i = 0; i < trackClips.length; i++) {
+    const current = trackClips[i];
     const duration = clipDur(current);
     if (wanted > cursor + duration + 1e-4) {
       next.push(current);
@@ -65,8 +66,10 @@ export function insertClipAtTimeline(trackClips: Clip[], rawClip: Clip, timeline
     }
 
     const local = Math.max(0, Math.min(duration, wanted - cursor));
-    if (local <= 0.001) return [...next, clip, current, ...trackClips.slice(next.length + 1)];
-    if (local >= duration - 0.001) return [...next, current, clip, ...trackClips.slice(next.length + 1)];
+    const remainder = trackClips.slice(i + 1);
+
+    if (local <= 0.001) return [...next, clip, current, ...remainder];
+    if (local >= duration - 0.001) return [...next, current, clip, ...remainder];
 
     if (isGapClip(current)) {
       const before = local;
@@ -74,12 +77,12 @@ export function insertClipAtTimeline(trackClips: Clip[], rawClip: Clip, timeline
       if (before > 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: before, trackId });
       next.push(clip);
       if (after > 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: after, trackId });
-      return [...next, ...trackClips.slice(next.length ? trackClips.indexOf(current) + 1 : 0)];
+      return [...next, ...remainder];
     }
 
     const halves = splitClip([current], current.id, current.start + local);
-    if (halves.length === 2) return [...next, halves[0], clip, halves[1], ...trackClips.slice(trackClips.indexOf(current) + 1)];
-    return [...next, current, clip, ...trackClips.slice(trackClips.indexOf(current) + 1)];
+    if (halves.length === 2) return [...next, halves[0], clip, halves[1], ...remainder];
+    return [...next, current, clip, ...remainder];
   }
 
   if (wanted > cursor + 0.001) next.push({ id: uid("g"), sourceId: "__gap__", start: 0, end: wanted - cursor, trackId });
@@ -87,7 +90,27 @@ export function insertClipAtTimeline(trackClips: Clip[], rawClip: Clip, timeline
   return next;
 }
 
-/** Move a clip across or within tracks while preserving its exact source range. */
+/** Merge adjacent gap clips and eliminate zero-duration gaps */
+export function normalizeTrackGaps(trackClips: Clip[]): Clip[] {
+  const result: Clip[] = [];
+  for (const c of trackClips) {
+    if (isGapClip(c)) {
+      if (clipDur(c) <= 0.001) continue;
+      const prev = result[result.length - 1];
+      if (prev && isGapClip(prev)) {
+        result[result.length - 1] = {
+          ...prev,
+          end: prev.end + clipDur(c),
+        };
+        continue;
+      }
+    }
+    result.push(c);
+  }
+  return result;
+}
+
+/** Move a clip across or within tracks while preserving its exact source range and gap timeline alignment. */
 export function moveClipAtTimeline(
   clips: Clip[], id: string, targetTrackId: string, timelineStart: number, primaryId = "trk_video",
 ): Clip[] {
@@ -95,7 +118,22 @@ export function moveClipAtTimeline(
   if (!clip) return clips;
   const sourceTrackId = clipTrackId(clip, primaryId);
   const sourceTrack = clipsOnTrack(clips, sourceTrackId, primaryId);
-  const sourceNext = sourceTrack.filter((item) => item.id !== id);
+  
+  let sourceNext: Clip[];
+  if (sourceTrackId !== primaryId) {
+    const replaced = sourceTrack.map((item) =>
+      item.id === id
+        ? { id: uid("g"), sourceId: "__gap__", start: 0, end: clipDur(item), trackId: sourceTrackId }
+        : item
+    );
+    sourceNext = normalizeTrackGaps(replaced);
+    if (!sourceNext.some((item) => !isGapClip(item))) {
+      sourceNext = [];
+    }
+  } else {
+    sourceNext = sourceTrack.filter((item) => item.id !== id);
+  }
+
   let without = replaceTrackClips(
     clips,
     sourceTrackId,
@@ -104,7 +142,7 @@ export function moveClipAtTimeline(
   );
   const target = clipsOnTrack(without, targetTrackId, primaryId);
   const placed = insertClipAtTimeline(target, clip, timelineStart, targetTrackId);
-  without = replaceTrackClips(without, targetTrackId, placed, primaryId);
+  without = replaceTrackClips(without, targetTrackId, normalizeTrackGaps(placed), primaryId);
   return without;
 }
 
