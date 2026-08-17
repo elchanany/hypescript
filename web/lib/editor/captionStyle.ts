@@ -6,6 +6,7 @@ export type CaptionPosition = "bottom" | "center" | "top";
 export type CaptionBg = "none" | "soft" | "box";
 
 export interface CaptionStyle {
+  fontFamily?: string; // e.g. "Heebo", "Assistant", "Rubik"
   fontSize: number; // percent of canvas short-side, typically 3–8
   color: string; // #rrggbb
   bold: boolean;
@@ -35,7 +36,11 @@ export function normalizeCaptionStyle(input: unknown): CaptionStyle {
       : d.position;
   const bg: CaptionBg =
     raw.bg === "none" || raw.bg === "soft" || raw.bg === "box" ? raw.bg : d.bg;
+  const fontFamily = typeof raw.fontFamily === "string" && raw.fontFamily.trim()
+    ? raw.fontFamily.trim()
+    : undefined;
   return {
+    ...(fontFamily ? { fontFamily } : {}),
     fontSize: Number.isFinite(fontSize) ? Math.max(2, Math.min(12, fontSize)) : d.fontSize,
     color,
     bold: raw.bold !== undefined ? !!raw.bold : d.bold,
@@ -56,6 +61,7 @@ export function captionStyleToCss(style: CaptionStyle): CSSProperties {
         : "transparent";
   return {
     ...pos,
+    fontFamily: style.fontFamily ? `"${style.fontFamily}", system-ui, sans-serif` : undefined,
     color: style.color,
     fontWeight: style.bold ? 700 : 500,
     fontSize: `clamp(12px, ${style.fontSize}cqw, 42px)`,

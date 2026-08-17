@@ -165,7 +165,7 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
           top: `${(y / canvas.height) * 100}%`,
           width: `${(w / canvas.width) * 100}%`,
           height: `${(h / canvas.height) * 100}%`,
-          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${o.transform.flipX ? -1 : 1}, ${o.transform.flipY ? -1 : 1})`,
           opacity: opacity * Math.min(fadeInFactor, fadeOutFactor),
         };
         return (

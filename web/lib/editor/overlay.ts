@@ -17,6 +17,8 @@ export interface VisualTransform {
   h: number;        // height, project px
   rotation: number; // degrees, clockwise
   opacity: number;  // 0..1
+  flipX?: boolean;  // horizontal mirror
+  flipY?: boolean;  // vertical flip
 }
 
 export interface Overlay {
@@ -76,8 +78,6 @@ export function imageOverlayGeometry(
   overrides: Partial<Pick<VisualTransform, "x" | "y" | "w" | "h" | "opacity">> = {},
 ): VisualTransform {
   const ratio = intrinsic && intrinsic.width > 0 && intrinsic.height > 0 ? intrinsic.width / intrinsic.height : 1;
-  // A corner logo must remain legible in a phone-sized export. 20% is still a
-  // watermark, but avoids the tiny 100px result seen on an 848px canvas.
   let w = preset === "fit_canvas" ? canvasW : preset.startsWith("logo_") ? canvasW * 0.20 : canvasW * 0.4;
   let h = w / ratio;
   const maxH = preset === "fit_canvas" ? canvasH : preset.startsWith("logo_") ? canvasH * 0.26 : canvasH * 0.7;

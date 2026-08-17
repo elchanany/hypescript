@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Captions, FileDown, FileUp, Trash2, Wand2 } from "@/components/icons";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CaptionBg, CaptionPosition, CaptionStyle } from "@/lib/editor/captionStyle";
+import { HEBREW_FONTS } from "@/lib/captions/styles";
 import { Button, IconButton, Section, Toggle } from "@/components/ui";
 
 export default function CaptionsPanel({
@@ -45,6 +46,17 @@ export default function CaptionsPanel({
 
         <Section title="סגנון כתוביות">
           <div className="cap-body cap-style" style={{ padding: 0 }}>
+            <label className="cap-field">
+              <span>גופן</span>
+              <select
+                value={captionStyle.fontFamily || "Heebo"}
+                onChange={(e) => onCaptionStyle({ fontFamily: e.target.value })}
+              >
+                {HEBREW_FONTS.map((font) => (
+                  <option key={font.id} value={font.id}>{font.labelHe}</option>
+                ))}
+              </select>
+            </label>
             <label className="cap-field">
               <span>גודל</span>
               <input

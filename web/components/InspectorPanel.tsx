@@ -237,6 +237,25 @@ function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
             <button type="button" className="btn sm" onClick={() => placeLogo("right")} data-tip="הקטן והצב בפינה ימנית עליונה">ימין עליון ↗</button>
           </div>
         </>}
+        <div className="prop" style={{ marginTop: 8 }}><span className="k">היפוך מראה (Mirror)</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          <button
+            type="button"
+            className={`btn sm ${t.flipX ? "primary" : ""}`}
+            onClick={() => setT({ flipX: !t.flipX })}
+            data-tip="היפוך אופקי ימין-שמאל"
+          >
+            ↔ היפוך אופקי {t.flipX ? "✓" : ""}
+          </button>
+          <button
+            type="button"
+            className={`btn sm ${t.flipY ? "primary" : ""}`}
+            onClick={() => setT({ flipY: !t.flipY })}
+            data-tip="היפוך אנכי מעלה-מטה"
+          >
+            ↕ היפוך אנכי {t.flipY ? "✓" : ""}
+          </button>
+        </div>
       </Section>
 
       <Section title="מראה וסדר שכבות">
