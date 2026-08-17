@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef } from "react";
-import { Captions, FileDown, FileUp, Trash2, Wand2 } from "@/components/icons";
+import { useRef, useState } from "react";
+import { Captions, FileDown, FileUp, Sparkles, Trash2, Wand2 } from "@/components/icons";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CaptionBg, CaptionPosition, CaptionStyle } from "@/lib/editor/captionStyle";
 import { HEBREW_FONTS } from "@/lib/captions/styles";
+import { CAPTION_PRESETS, CaptionPreset } from "@/lib/creative/captionStyles";
 import { Button, IconButton, Section, Toggle } from "@/components/ui";
+import { loadGoogleFont } from "@/lib/creative/fonts";
 
 export default function CaptionsPanel({
   script, onScript, onAnalyze, analyzing, hasMain, hasWords,
@@ -27,6 +29,18 @@ export default function CaptionsPanel({
   const srtRef = useRef<HTMLInputElement>(null);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
+  const applyPreset = (preset: CaptionPreset) => {
+    if (preset.style.fontFamily) loadGoogleFont(preset.style.fontFamily);
+    onCaptionStyle({
+      fontSize: preset.style.fontSize,
+      color: preset.style.color,
+      bold: preset.style.bold,
+      position: preset.style.position,
+      bg: preset.style.bg,
+      fontFamily: preset.style.fontFamily,
+    });
+  };
+
   return (
     <>
       <div className="panel-header">
@@ -44,13 +58,46 @@ export default function CaptionsPanel({
           </div>
         </Section>
 
-        <Section title="סגנון כתוביות">
+        <Section title="סגנונות ויראליים מוכנים (1-Click)">
+          <div className="cap-body" style={{ padding: 0 }}>
+            <div className="caption-presets-mini-grid">
+              {CAPTION_PRESETS.slice(0, 8).map((preset) => {
+                const isCurrent = captionStyle.color === preset.style.color && captionStyle.bg === preset.style.bg;
+                return (
+                  <button
+                    key={preset.id}
+                    className={`mini-caption-pill ${isCurrent ? "active" : ""}`}
+                    onClick={() => applyPreset(preset)}
+                    title={preset.descriptionHe}
+                  >
+                    <span
+                      className="swatch"
+                      style={{
+                        background: preset.style.bg === "box" ? "#000" : preset.style.bg === "soft" ? "#333" : "transparent",
+                        color: preset.style.color,
+                        borderColor: preset.style.color,
+                      }}
+                    >
+                      Aa
+                    </span>
+                    <span className="name">{preset.labelHe}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="התאמה אישית">
           <div className="cap-body cap-style" style={{ padding: 0 }}>
             <label className="cap-field">
               <span>גופן</span>
               <select
                 value={captionStyle.fontFamily || "Heebo"}
-                onChange={(e) => onCaptionStyle({ fontFamily: e.target.value })}
+                onChange={(e) => {
+                  loadGoogleFont(e.target.value);
+                  onCaptionStyle({ fontFamily: e.target.value });
+                }}
               >
                 {HEBREW_FONTS.map((font) => (
                   <option key={font.id} value={font.id}>{font.labelHe}</option>

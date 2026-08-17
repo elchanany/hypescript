@@ -1,60 +1,72 @@
-import { describe, it, expect } from "vitest";
-import { assembleTranscript, assembledDuration, formatTranscriptLines } from "./assembleTranscript";
-import { GAP_SOURCE } from "./timelineOps";
+// מיפוי תמלול לציר הערוך.
+//
+// הרגרסיה שנצרבה כאן: מילה שנאמרה על גבול חיתוך נעלמה מהציר. השיוך היה לפי
+// אמצע המילה, ונקודת החיתוך מוקמה לפי מדידה אקוסטית — כך שאמצע המילה נפל
+// בתוך הפער שהוסר, המילה לא שויכה לאף קליפ, ונמחקה בשקט. הסוכן אז רדף אחרי
+// "מילה חסרה" שהייתה קיימת באודיו כל הזמן.
 
-describe("assembleTranscript", () => {
-  const words: Record<string, any[]> = {
-    s1: [
-      { text: "שלום", start: 1.0, end: 1.3 },
-      { text: "עולם", start: 1.4, end: 1.8 },
-      { text: "ביי", start: 5.0, end: 5.3 },
-    ],
-    s2: [
-      { text: "ערב", start: 0.2, end: 0.5 },
-      { text: "טוב", start: 0.6, end: 0.9 },
-    ],
-  };
+import { describe, expect, it } from "vitest";
+import { assembleTranscript } from "./assembleTranscript";
+import type { Clip } from "./model";
+import type { Word } from "@/lib/models";
 
-  it("remaps source words onto assembled timeline after cuts/reorder", () => {
-    const clips = [
-      { id: "a", sourceId: "s1", start: 1.0, end: 2.0 }, // 1s of s1 → assembled 0..1
-      { id: "b", sourceId: "s2", start: 0.0, end: 1.0 }, // 1s of s2 → assembled 1..2
+const clip = (id: string, start: number, end: number): Clip =>
+  ({ id, sourceId: "src", start, end }) as Clip;
+
+const word = (text: string, start: number, end: number): Word =>
+  ({ text, start, end, type: "word" }) as Word;
+
+const texts = (words: Word[]) => words.map((w) => w.text);
+
+describe("מיפוי תמלול לציר הערוך", () => {
+  it("שומר מילה שאמצעה נפל בפער שהוסר", () => {
+    // הפער בין הקליפים הוא 46.873–47.308. המילה 46.80–47.40 מרכזה ב-47.10,
+    // כלומר בתוך הפער — אבל היא נשמעת בשני הקליפים ואסור שתיעלם.
+    const clips = [clip("a", 41.437, 46.873), clip("b", 47.308, 55.086)];
+    const words = [
+      word("לעזור", 45.0, 45.6),
+      word("מה", 46.8, 47.4),
+      word("שאין", 47.5, 47.9),
     ];
-    const out = assembleTranscript(clips, (sid) => words[sid]);
-    expect(out.map((w) => w.text)).toEqual(["שלום", "עולם", "ערב", "טוב"]);
-    expect(out[0].start).toBeCloseTo(0.0, 2); // 1.0 - 1.0
-    expect(out[2].start).toBeCloseTo(1.2, 2); // 1 + (0.2 - 0)
-    expect(out.some((w) => w.text === "ביי")).toBe(false); // outside kept range
+    const out = assembleTranscript(clips, () => words);
+    expect(texts(out)).toEqual(["לעזור", "מה", "שאין"]);
   });
 
-  it("advances time across gaps without emitting words", () => {
-    const clips = [
-      { id: "a", sourceId: "s1", start: 1.0, end: 2.0 },
-      { id: "g", sourceId: GAP_SOURCE, start: 0, end: 0.5 },
-      { id: "b", sourceId: "s2", start: 0.0, end: 1.0 },
-    ];
-    const out = assembleTranscript(clips, (sid) => words[sid]);
-    expect(out[0].text).toBe("שלום");
-    const erev = out.find((w) => w.text === "ערב")!;
-    expect(erev.start).toBeCloseTo(1.5 + 0.2, 2); // after 1s clip + 0.5 gap
-    expect(assembledDuration(clips)).toBeCloseTo(2.5, 2);
+  it("אינו מכפיל מילה בין שני קליפים סמוכים", () => {
+    const clips = [clip("a", 0, 5), clip("b", 5, 10)];
+    const words = [word("גבול", 4.8, 5.2)];
+    const out = assembleTranscript(clips, () => words);
+    expect(out).toHaveLength(1);
   });
 
-  it("skips disabled clips", () => {
-    const clips = [
-      { id: "a", sourceId: "s1", start: 1.0, end: 2.0, enabled: false },
-      { id: "b", sourceId: "s2", start: 0.0, end: 1.0 },
-    ];
-    const out = assembleTranscript(clips, (sid) => words[sid]);
-    expect(out.map((w) => w.text)).toEqual(["ערב", "טוב"]);
-    expect(out[0].start).toBeCloseTo(0.2, 2);
+  it("משאיר מילה כפולה כשהקטע עצמו שוכפל", () => {
+    const clips = [clip("a", 0, 3), clip("b", 0, 3)];
+    const words = [word("חוזר", 1.0, 1.5)];
+    const out = assembleTranscript(clips, () => words);
+    expect(texts(out)).toEqual(["חוזר", "חוזר"]);
   });
 
-  it("formatTranscriptLines shows assembled timestamps", () => {
-    const clips = [{ id: "a", sourceId: "s1", start: 1.0, end: 2.0 }];
-    const out = assembleTranscript(clips, (sid) => words[sid]);
-    const text = formatTranscriptLines(out);
-    expect(text).toContain("שלום");
-    expect(text).toMatch(/\[0\./);
+  it("מסיר מילה שנאמרה כולה בתוך קטע שנחתך", () => {
+    const clips = [clip("a", 0, 5), clip("b", 20, 25)];
+    const words = [word("נשאר", 1, 1.5), word("הוסר", 10, 10.5), word("נשאר2", 21, 21.5)];
+    const out = assembleTranscript(clips, () => words);
+    expect(texts(out)).toEqual(["נשאר", "נשאר2"]);
+  });
+
+  it("מחזיר זמנים עולים על הציר", () => {
+    const clips = [clip("a", 10, 12), clip("b", 0, 2)];
+    const words = [word("ראשון", 0.2, 0.8), word("שני", 10.2, 10.8)];
+    const out = assembleTranscript(clips, () => words);
+    expect(texts(out)).toEqual(["שני", "ראשון"]);
+    for (let i = 1; i < out.length; i++) {
+      expect(out[i].start).toBeGreaterThanOrEqual(out[i - 1].start);
+    }
+  });
+
+  it("אינו מייצר מילה באורך אפס", () => {
+    const clips = [clip("a", 0, 5), clip("b", 5.4, 10)];
+    const words = [word("קצה", 5.3, 5.45)];
+    const out = assembleTranscript(clips, () => words);
+    for (const w of out) expect(w.end).toBeGreaterThan(w.start);
   });
 });

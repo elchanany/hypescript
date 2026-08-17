@@ -166,3 +166,31 @@ describe("עוגני ייחוד", () => {
     expect(anchored.missingScript).toEqual([]);
   });
 });
+
+describe("מילה שנבלעה בהגייה", () => {
+  it("לא מדווחת כחסרה כשאות שימוש נצמדה למילה הבאה", () => {
+    // הדובר אמר "אז כתוב שאם אדם השאיר", ה-ASR שמע "שאדם" כטוקן אחד
+    const asr = tokenizeHebrew("אז כתוב שאדם השאיר אחריו דור");
+    const script = tokenizeHebrew("אז כתוב שאם אדם השאיר אחריו דור");
+    const report = summarizeAlignment(alignTokens(asr, script), script.length, { asr, script });
+    const missing = report.missingScript.map((i) => script[i].raw);
+    expect(missing).not.toContain("שאם");
+    expect(report.mergedScript.map((i) => script[i].raw)).toContain("שאם");
+  });
+
+  it("עדיין מדווחת על מילה שבאמת לא נאמרה", () => {
+    const asr = tokenizeHebrew("קשה סילוקו של אדם");
+    const script = tokenizeHebrew("קשה סילוקו של אדם מפורסם");
+    const report = summarizeAlignment(alignTokens(asr, script), script.length, { asr, script });
+    expect(report.missingScript.map((i) => script[i].raw)).toContain("מפורסם");
+    expect(report.mergedScript).toEqual([]);
+  });
+
+  it("בלי טוקנים מתנהגת כמו קודם", () => {
+    const asr = tokenizeHebrew("קשה סילוקו של אדם");
+    const script = tokenizeHebrew("קשה סילוקו של אדם מפורסם");
+    const report = summarizeAlignment(alignTokens(asr, script), script.length);
+    expect(report.missingScript.length).toBe(1);
+    expect(report.mergedScript).toEqual([]);
+  });
+});

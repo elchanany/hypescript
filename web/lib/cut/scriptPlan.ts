@@ -207,7 +207,7 @@ export function planScriptCut(
   const asrTokens = speech.map((w) => makeToken(w.text));
   const scriptTokens = tokenizeHebrew(scriptText);
   const pairs = alignTokens(asrTokens, scriptTokens);
-  const alignment = summarizeAlignment(pairs, scriptTokens.length);
+  const alignment = summarizeAlignment(pairs, scriptTokens.length, { asr: asrTokens, script: scriptTokens });
 
   const emptyPlan = (): ScriptCutPlan => ({
     clips: [],

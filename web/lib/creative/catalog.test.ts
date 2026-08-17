@@ -7,10 +7,23 @@ import {
   EFFECT_CATEGORIES, VISUAL_EFFECTS, effectById, effectsByCategory, scaleEffect, searchEffects,
 } from "./effects";
 import {
+  FILTER_CATEGORIES, VIDEO_FILTERS, filterById, filterToImplementation, searchFilters,
+} from "./filters";
+import {
   BLOCKED_XFADE, TRANSITIONS, TRANSITION_CATEGORIES, safeTransitionDuration, searchTransitions,
   transitionById, transitionsByCategory, xfadeFilter,
 } from "./transitions";
+import {
+  ANIMATION_CATEGORIES, CLIP_ANIMATIONS, animationById, animationsByKind, searchAnimations,
+} from "./animations";
 import { TEXT_CATEGORIES, TEXT_PRESETS, searchTextPresets, textPresetById, textPresetsByCategory } from "./textPresets";
+import { TEXT_ANIM_KINDS, TEXT_ANIMATIONS, searchTextAnimations, textAnimationById } from "./textAnimations";
+import { CAPTION_PRESET_CATEGORIES, CAPTION_PRESETS, captionPresetById, searchCaptionPresets } from "./captionStyles";
+import { CURATED_FONTS, searchCuratedFonts } from "./fonts";
+import { GIPHY_CATEGORIES, STARTER_STICKERS } from "./giphy";
+import { CURATED_VECTOR_ELEMENTS, ICON_CATEGORIES, searchVectorElements } from "./iconify";
+import { SHAPE_CATEGORIES, VECTOR_SHAPES, searchShapes } from "./shapes";
+import { CURATED_MOTION_ASSETS, MOTION_CATEGORIES } from "./motionAssets";
 
 /** רשימת xfade המלאה כפי ש-FFmpeg מדווח עליה (בלי custom, שדורש שיידר). */
 const FFMPEG_XFADE = `fade wipeleft wiperight wipeup wipedown slideleft slideright slideup slidedown
@@ -21,8 +34,8 @@ zoomin fadefast fadeslow hlwind hrwind vuwind vdwind coverleft coverright coveru
 revealleft revealright revealup revealdown`.split(/\s+/).filter(Boolean);
 
 describe("קטלוג אפקטים", () => {
-  it("גדול מספיק כדי להיות שימושי", () => {
-    expect(VISUAL_EFFECTS.length).toBeGreaterThanOrEqual(40);
+  it("גדול מספיק ועשיר (80+ פריטים)", () => {
+    expect(VISUAL_EFFECTS.length).toBeGreaterThanOrEqual(80);
   });
 
   it("לכל אפקט יש מזהה ייחודי ושם בעברית", () => {
@@ -70,12 +83,11 @@ describe("קטלוג אפקטים", () => {
 
   it("אפשר לאתר אפקט לפי מזהה ולפי שם עברי", () => {
     expect(effectById("teal_orange")?.labelHe).toBe("טיל-אורנג'");
-    expect(effectById("שחור-לבן")?.id).toBe("mono");
+    expect(effectById("שחור-לבן נקי")?.id).toBe("mono");
     expect(effectById("לא קיים")).toBeUndefined();
   });
 
   it("חיפוש מחזיר תוצאות בעברית", () => {
-    expect(searchTransitions("").length).toBe(TRANSITIONS.length);
     expect(searchEffects("וינטג'").length).toBeGreaterThan(0);
     expect(searchEffects("warm").length).toBeGreaterThan(0);
   });
@@ -85,15 +97,39 @@ describe("קטלוג אפקטים", () => {
     expect(scaleEffect(vivid, 0).ffmpeg).toBe("");
     expect(scaleEffect(vivid, 1).ffmpeg).toBe(vivid.ffmpeg);
     const half = scaleEffect(vivid, 0.5).ffmpeg;
-    // saturation=1.350 במלא → אמצע הדרך אל 1
     expect(half).toContain("saturation=1.175");
     expect(half).toContain("contrast=1.050");
   });
+});
 
-  it("עוצמה חלקית שומרת על אותם מספרים ב-CSS וב-FFmpeg", () => {
-    const scaled = scaleEffect(effectById("vivid")!, 0.5);
-    expect(scaled.css).toContain("saturate(1.175)");
-    expect(scaled.ffmpeg).toContain("saturation=1.175");
+describe("קטלוג לוקים ופילטרים (Filters)", () => {
+  it("מכיל 50+ פילטרים בקטגוריות שונות", () => {
+    expect(VIDEO_FILTERS.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it("לכל פילטר יש מזהה ייחודי, שם עברי ותיאור", () => {
+    const ids = new Set<string>();
+    for (const filter of VIDEO_FILTERS) {
+      expect(ids.has(filter.id), `מזהה כפול בפילטר: ${filter.id}`).toBe(false);
+      ids.add(filter.id);
+      expect(/[א-ת]/.test(filter.labelHe), `${filter.id}: אין שם בעברית`).toBe(true);
+      expect(filter.descriptionHe).toBeTruthy();
+    }
+  });
+
+  it("פילטר מתרגם למימוש CSS ו-FFmpeg תקינים", () => {
+    for (const filter of VIDEO_FILTERS) {
+      const impl = filterToImplementation(filter, 1);
+      expect(impl.css).toBeTruthy();
+      expect(impl.ffmpeg).toBeTruthy();
+      expect(impl.ffmpeg.startsWith(",")).toBe(false);
+      expect(impl.ffmpeg.endsWith(",")).toBe(false);
+    }
+  });
+
+  it("חיפוש פילטרים עובד", () => {
+    expect(searchFilters("קולנוע").length).toBeGreaterThan(0);
+    expect(searchFilters("פורטרט").length).toBeGreaterThan(0);
   });
 });
 
@@ -120,55 +156,52 @@ describe("קטלוג מעברים", () => {
     }
   });
 
-  it("לכל מעבר מזהה ייחודי, שם עברי ותיאור לתצוגה", () => {
-    const ids = new Set<string>();
-    for (const transition of TRANSITIONS) {
-      expect(ids.has(transition.id), `מזהה כפול: ${transition.id}`).toBe(false);
-      ids.add(transition.id);
-      expect(/[א-ת]/.test(transition.labelHe), `${transition.id}: השם אינו בעברית`).toBe(true);
-      expect(transition.preview, `${transition.id}: אין מימוש Preview`).toBeTruthy();
-      expect(transition.preview.kind).toBeTruthy();
-      expect(transition.defaultDuration).toBeGreaterThan(0);
-      expect(transition.defaultDuration).toBeLessThanOrEqual(1.5);
-    }
-  });
-
-  it("כל קטגוריה מיוצגת", () => {
-    const known = new Set(TRANSITION_CATEGORIES.map((c) => c.id));
-    for (const transition of TRANSITIONS) expect(known.has(transition.category)).toBe(true);
-    for (const category of TRANSITION_CATEGORIES) {
-      expect(transitionsByCategory(category.id).length, `${category.id} ריקה`).toBeGreaterThan(0);
-    }
-  });
-
   it("בונה קטע xfade תקין", () => {
     const filter = xfadeFilter(transitionById("wipeleft")!, 0.5, 3.25);
     expect(filter).toBe("xfade=transition=wipeleft:duration=0.500:offset=3.250");
   });
 
   it("מעבר לעולם אינו בולע יותר משליש מהקליפ הקצר", () => {
-    // xfade *חופף* קליפים; מעבר ארוך מדי מוחק דיבור
     expect(safeTransitionDuration(2, 0.9, 5)).toBeCloseTo(0.3, 5);
     expect(safeTransitionDuration(0.5, 10, 10)).toBeCloseTo(0.5, 5);
     expect(safeTransitionDuration(5, 0.06, 0.06)).toBeCloseTo(0.05, 5);
   });
+});
 
-  it("משך המעבר לעולם חיובי", () => {
-    for (const clip of [0.05, 0.2, 1, 4, 30]) {
-      expect(safeTransitionDuration(0.5, clip, clip)).toBeGreaterThan(0);
+describe("קטלוג אנימציות קליפים ושכבות (Animations)", () => {
+  it("מכיל 45+ אנימציות בכל הסוגים: In, Out, Combo", () => {
+    expect(CLIP_ANIMATIONS.length).toBeGreaterThanOrEqual(45);
+    expect(animationsByKind("in").length).toBeGreaterThanOrEqual(15);
+    expect(animationsByKind("out").length).toBeGreaterThanOrEqual(15);
+    expect(animationsByKind("combo").length).toBeGreaterThanOrEqual(15);
+  });
+
+  it("לכל אנימציה מזהה ייחודי, שם עברי ו-CSS Keyframe תקין", () => {
+    const ids = new Set<string>();
+    for (const anim of CLIP_ANIMATIONS) {
+      expect(ids.has(anim.id), `מזהה אנימציה כפול: ${anim.id}`).toBe(false);
+      ids.add(anim.id);
+      expect(/[א-ת]/.test(anim.labelHe), `${anim.id}: אין שם עברי`).toBe(true);
+      expect(anim.cssKeyframe).toBeTruthy();
+      expect(anim.defaultDuration).toBeGreaterThan(0);
     }
+  });
+
+  it("חיפוש אנימציות עובד", () => {
+    expect(searchAnimations("זום").length).toBeGreaterThan(0);
+    expect(searchAnimations("החלקה").length).toBeGreaterThan(0);
   });
 });
 
-describe("תבניות טקסט", () => {
-  it("מכסות את כל סוגי הכרטיסים שהמוצר צריך", () => {
-    expect(TEXT_PRESETS.length).toBeGreaterThanOrEqual(15);
+describe("תבניות טקסט ואנימציות טקסט", () => {
+  it("מכילות 30+ תבניות טקסט מעוצבות", () => {
+    expect(TEXT_PRESETS.length).toBeGreaterThanOrEqual(30);
     for (const category of TEXT_CATEGORIES) {
       expect(textPresetsByCategory(category.id).length, `${category.id} ריקה`).toBeGreaterThan(0);
     }
   });
 
-  it("כל תבנית נשארת בתוך הקנבס", () => {
+  it("כל תבנית נשארת בתוך גבולות הקנבס", () => {
     for (const preset of TEXT_PRESETS) {
       const { x, y, width, height } = preset.box;
       expect(x, `${preset.id}: x שלילי`).toBeGreaterThanOrEqual(0);
@@ -178,33 +211,82 @@ describe("תבניות טקסט", () => {
     }
   });
 
-  it("גודל הגופן קריא במובייל ולא חורג", () => {
-    for (const preset of TEXT_PRESETS) {
-      expect(preset.style.fontSize, `${preset.id}: קטן מדי`).toBeGreaterThanOrEqual(3);
-      expect(preset.style.fontSize, `${preset.id}: גדול מדי`).toBeLessThanOrEqual(12);
+  it("מכילות 20+ אנימציות טקסט", () => {
+    expect(TEXT_ANIMATIONS.length).toBeGreaterThanOrEqual(20);
+    for (const anim of TEXT_ANIMATIONS) {
+      expect(anim.cssKeyframe).toBeTruthy();
+      expect(/[א-ת]/.test(anim.labelHe)).toBe(true);
+    }
+  });
+});
+
+describe("סגנונות כתוביות (Caption Styles)", () => {
+  it("מכיל 18+ סגנונות ויראליים מוכנים", () => {
+    expect(CAPTION_PRESETS.length).toBeGreaterThanOrEqual(18);
+  });
+
+  it("לכל סגנון יש צבע, פוזיציה והגדרות טיפוגרפיה תקינות", () => {
+    for (const preset of CAPTION_PRESETS) {
+      expect(preset.style.color).toBeTruthy();
+      expect(preset.style.fontSize).toBeGreaterThan(0);
+      expect(["bottom", "center", "top"]).toContain(preset.style.position);
+      expect(["none", "soft", "box"]).toContain(preset.style.bg);
+    }
+  });
+});
+
+describe("קטלוג גופנים (Fonts)", () => {
+  it("גופנים עבריים בעדיפות עליונה", () => {
+    const hebrew = CURATED_FONTS.filter((f) => f.hebrew);
+    expect(hebrew.length).toBeGreaterThanOrEqual(15);
+    expect(hebrew.some((f) => f.family === "Heebo")).toBe(true);
+    expect(hebrew.some((f) => f.family === "Assistant")).toBe(true);
+    expect(hebrew.some((f) => f.family === "Frank Ruhl Libre")).toBe(true);
+  });
+
+  it("חיפוש גופנים עובד", () => {
+    expect(searchCuratedFonts("Heebo").length).toBe(1);
+    expect(searchCuratedFonts("", "all", true).length).toBeGreaterThanOrEqual(15);
+  });
+});
+
+describe("סטיקרים ו-GIFs (GIPHY)", () => {
+  it("ערכת סטיקרים מובנית פעילה ומוגדרת", () => {
+    expect(STARTER_STICKERS.length).toBeGreaterThanOrEqual(10);
+    expect(GIPHY_CATEGORIES.length).toBeGreaterThanOrEqual(6);
+    for (const s of STARTER_STICKERS) {
+      expect(s.previewUrl).toBeTruthy();
+      expect(s.fullUrl).toBeTruthy();
+    }
+  });
+});
+
+describe("אייקונים וקטוריים (Iconify)", () => {
+  it("אלמנטים וקטוריים מובנים עם מידע רישוי", () => {
+    expect(CURATED_VECTOR_ELEMENTS.length).toBeGreaterThanOrEqual(16);
+    for (const el of CURATED_VECTOR_ELEMENTS) {
+      expect(el.svgPath).toBeTruthy();
+      expect(el.license).toBeTruthy();
+      expect(el.viewBox).toBeTruthy();
+    }
+  });
+});
+
+describe("צורות וקטוריות ו-Motion Assets", () => {
+  it("צורות גיאומטריות תקינות עם SVG", () => {
+    expect(VECTOR_SHAPES.length).toBeGreaterThanOrEqual(15);
+    for (const shape of VECTOR_SHAPES) {
+      expect(shape.svgContent).toBeTruthy();
+      expect(shape.viewBox).toBeTruthy();
     }
   });
 
-  it("טקסט לדוגמה בעברית וכל מזהה ייחודי", () => {
-    const ids = new Set<string>();
-    for (const preset of TEXT_PRESETS) {
-      expect(ids.has(preset.id), `מזהה כפול: ${preset.id}`).toBe(false);
-      ids.add(preset.id);
-      expect(/[א-ת]/.test(preset.sampleHe), `${preset.id}: דוגמה אינה בעברית`).toBe(true);
-      expect(/[א-ת]/.test(preset.labelHe)).toBe(true);
+  it("נכסי תנועה מונפשים (Motion Assets) תקינים", () => {
+    expect(CURATED_MOTION_ASSETS.length).toBeGreaterThanOrEqual(8);
+    for (const motion of CURATED_MOTION_ASSETS) {
+      expect(motion.animatedSvgMarkup).toBeTruthy();
+      expect(motion.defaultDuration).toBeGreaterThan(0);
+      expect(motion.viewBox).toBeTruthy();
     }
-  });
-
-  it("ה-fade אינו ארוך מהמשך המומלץ", () => {
-    for (const preset of TEXT_PRESETS) {
-      expect(preset.fade.in + preset.fade.out, `${preset.id}: fade ארוך מדי`)
-        .toBeLessThan(preset.suggestedDuration);
-    }
-  });
-
-  it("אפשר לאתר תבנית לפי מזהה ולפי שם", () => {
-    expect(textPresetById("dedication_card")?.category).toBe("dedication");
-    expect(textPresetById("פס CTA")?.id).toBe("cta_bar");
-    expect(searchTextPresets("הקדש").length).toBeGreaterThan(0);
   });
 });

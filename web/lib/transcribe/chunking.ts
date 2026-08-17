@@ -3,12 +3,33 @@
 
 import { Word } from "@/lib/models";
 
-/** Match local default (~20 min) — keeps each upload small for cloud STT limits. */
-export const DEFAULT_CHUNK_SEC = 1200;
+/**
+ * מגבלת גוף הבקשה של פונקציית שרת ב-Vercel. חריגה ממנה לא מגיעה לראוט
+ * שלנו בכלל: הפלטפורמה עונה "Request Entity Too Large" כטקסט רגיל, ומי
+ * שקורא לתשובה JSON.parse מקבל שגיאה שנראית כמו תקלת ספק תמלול.
+ */
+export const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
+
+/** הקידוד ב-extractAudio: mono, 16kHz, 48kbit/s → 6KB לשנייה. */
+export const AUDIO_BYTES_PER_SEC = (48 * 1000) / 8;
+
+/** מעל זה אי אפשר לשלוח, גם אם המתקשר ביקש. 15% מרווח למעטפת multipart. */
+export const MAX_CHUNK_SEC = Math.floor((MAX_UPLOAD_BYTES * 0.85) / AUDIO_BYTES_PER_SEC);
+
+/**
+ * חמש דקות לקטע. שתי מגבלות שונות, ושתיהן חייבות להתקיים:
+ * גודל הבקשה (4.5MB — כלומר עד ~786 שניות), ומשך הריצה של הפונקציה
+ * (maxDuration=60 בראוט התמלול). חמש דקות מותירות מרווח בשתיהן.
+ *
+ * הצד המקומי (local/hypescript) עובד ב-1200 שניות, כי הוא שולח ישירות
+ * לספק בלי לעבור דרך Vercel. אל תיישר את שני המספרים.
+ */
+export const DEFAULT_CHUNK_SEC = 300;
 
 export function planChunkOffsets(durationSec: number, chunkSec = DEFAULT_CHUNK_SEC): number[] {
   if (!Number.isFinite(durationSec) || durationSec <= 0) return [0];
-  const size = Number.isFinite(chunkSec) && chunkSec > 0 ? chunkSec : DEFAULT_CHUNK_SEC;
+  const requested = Number.isFinite(chunkSec) && chunkSec > 0 ? chunkSec : DEFAULT_CHUNK_SEC;
+  const size = Math.min(requested, MAX_CHUNK_SEC);
   if (durationSec <= size) return [0];
   const n = Math.ceil(durationSec / size);
   return Array.from({ length: n }, (_, i) => i * size);

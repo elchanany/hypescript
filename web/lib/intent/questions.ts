@@ -213,6 +213,12 @@ export function buildBrief(
   if (answers.platform) {
     aspect = PLATFORM_ASPECT[answers.platform] ?? aspect;
     derivedHe.push(`יחס מסך ${aspect} לפי הפלטפורמה שנבחרה`);
+    // הפלטפורמה גוברת, אבל היא ניחוש והחומר הוא עובדה. חיתוך שקט מ-landscape
+    // ל-square הוא נזק אמיתי, ולכן הסתירה נאמרת במפורש במקום להיבלע.
+    const material = signals.aspect;
+    if ((material === "portrait" || material === "landscape" || material === "square") && material !== aspect) {
+      derivedHe.push(`⚠ החומר שהועלה הוא ${material} אבל היעד ${aspect} — ייחתכו שוליים. אם לא ביקשת את הפלטפורמה הזו, בטל אותה`);
+    }
   } else if (signals.aspect === "portrait" || signals.aspect === "landscape") {
     aspect = signals.aspect;
     derivedHe.push(`יחס מסך ${aspect} לפי החומר שהועלה`);

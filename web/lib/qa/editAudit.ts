@@ -147,7 +147,11 @@ export function auditEdit(input: EditAuditInput): EditAudit {
   if (scriptText) {
     const scriptTokens = tokenizeHebrew(scriptText);
     const keptTokens = kept.map((w) => makeToken(w.text));
-    const report = summarizeAlignment(alignTokens(keptTokens, scriptTokens), scriptTokens.length);
+    const report = summarizeAlignment(
+      alignTokens(keptTokens, scriptTokens),
+      scriptTokens.length,
+      { asr: keptTokens, script: scriptTokens },
+    );
     script = {
       scriptWords: scriptTokens.length,
       keptWords: keptTokens.length,

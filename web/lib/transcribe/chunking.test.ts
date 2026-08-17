@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  AUDIO_BYTES_PER_SEC,
   DEFAULT_CHUNK_SEC,
+  MAX_CHUNK_SEC,
+  MAX_UPLOAD_BYTES,
   mergeWordChunks,
   planChunkOffsets,
   shiftWords,
@@ -9,13 +12,29 @@ import {
 
 describe("transcribe chunking", () => {
   it("returns a single offset for short audio", () => {
-    expect(planChunkOffsets(600)).toEqual([0]);
+    expect(planChunkOffsets(60)).toEqual([0]);
     expect(planChunkOffsets(DEFAULT_CHUNK_SEC)).toEqual([0]);
   });
 
   it("splits long audio into contiguous offsets", () => {
-    expect(planChunkOffsets(2500, 1200)).toEqual([0, 1200, 2400]);
-    expect(planChunkOffsets(2400, 1200)).toEqual([0, 1200]);
+    expect(planChunkOffsets(700, 300)).toEqual([0, 300, 600]);
+    expect(planChunkOffsets(600, 300)).toEqual([0, 300]);
+  });
+
+  // הבאג שהיה: וידאו של 1093 שניות נכנס לקטע אחד של ~6.5MB, ו-Vercel
+  // ענה "Request Entity Too Large" כטקסט — מה שנראה כמו תקלת ספק תמלול.
+  it("keeps every chunk under the Vercel body limit", () => {
+    for (const duration of [1093, 2500, 7200]) {
+      const offsets = planChunkOffsets(duration);
+      const longest = offsets.length > 1 ? offsets[1] - offsets[0] : duration;
+      expect(longest * AUDIO_BYTES_PER_SEC).toBeLessThan(MAX_UPLOAD_BYTES);
+    }
+  });
+
+  it("clamps a caller that asks for oversized chunks", () => {
+    expect(planChunkOffsets(1093, 1200)).not.toEqual([0]);
+    const offsets = planChunkOffsets(5000, 1200);
+    expect(offsets[1] - offsets[0]).toBeLessThanOrEqual(MAX_CHUNK_SEC);
   });
 
   it("shifts and merges word chunks", () => {

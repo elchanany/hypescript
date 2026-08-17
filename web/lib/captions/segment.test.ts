@@ -105,6 +105,50 @@ describe("חלוקת כתוביות", () => {
   });
 });
 
+/** הטקסט האמיתי מהשיעור — המקרה שבו הכתוביות יצאו פגומות. */
+const SHIUR = "נשאלת השאלה. לכאורה למה פעם שריפה ופעם חורבן? אז כתוב שאם אדם השאיר אחריו דור. "
+  + "אז זה רק חורבן. אפשר עוד לשחזר. אפשר להציל. אפשר לעזור. מה שאין כן כשזה שריפה. הכל מתכלה והכל נגמר.";
+
+/** אינדקסי הטוקנים שסוגרים משפט. */
+function sentenceEnds(tokens: CaptionToken[]): Set<number> {
+  const ends = new Set<number>();
+  tokens.forEach((token, index) => {
+    if (/[.!?…]["'”’)\]]*$/.test(token.text.trimEnd())) ends.add(index);
+  });
+  return ends;
+}
+
+describe("גבול משפט הוא גבול כתובית", () => {
+  const tokens = speak(SHIUR);
+  const ends = sentenceEnds(tokens);
+
+  for (const maxLines of [1, 2] as const) {
+    it(`אף כתובית אינה חוצה סוף משפט (max_lines=${maxLines})`, () => {
+      const cues = buildCaptionCues(tokens, {
+        policy: { maxLines, maxCharsPerLine: maxLines === 1 ? 48 : 24 },
+      });
+      for (const cue of cues) {
+        // סוף משפט מותר רק בטוקן האחרון של הכתובית
+        for (let i = cue.tokenFrom; i < cue.tokenTo - 1; i++) {
+          expect(ends.has(i)).toBe(false);
+        }
+      }
+    });
+  }
+
+  it("משפט קצר עומד בפני עצמו ולא נגרר למשפט הבא", () => {
+    const cues = buildCaptionCues(tokens, { policy: { maxLines: 1, maxCharsPerLine: 48 } });
+    const opening = cues.find((cue) => cue.lines.join(" ").includes("נשאלת"));
+    expect(opening?.lines.join(" ").trim()).toBe("נשאלת השאלה.");
+  });
+
+  it("לא גוררת מילה בודדת מהמשפט הבא", () => {
+    const cues = buildCaptionCues(tokens, { policy: { maxLines: 1, maxCharsPerLine: 48 } });
+    const carried = cues.find((cue) => cue.lines.join(" ").trimEnd().endsWith("מה"));
+    expect(carried).toBeUndefined();
+  });
+});
+
 describe("איות מהסקריפט", () => {
   it("מחליף שיבוש ASR בכתיב של המשתמש בלי לאבד תזמון", () => {
     const asr = speak("להצלחת הגברת טיפרת עטר בת נתלי");

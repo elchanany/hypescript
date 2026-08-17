@@ -36,36 +36,58 @@ export function assembleTranscript(
     return true;
   });
 
+  // שיוך לפי *חפיפה* ולא לפי אמצע המילה.
+  //
+  // אמצע המילה נכשל בשני כיוונים כשנקודת החיתוך מוקמה לפי מדידה אקוסטית ולא
+  // לפי חותמת התמלול: מילה שאמצעה נפל בתוך הפער שהוסר לא שויכה לאף קליפ
+  // ונמחקה בשקט, ומילה שאמצעה נפל בדיוק על הגבול שויכה לשני הקליפים והוקראה
+  // פעמיים. שתי התוצאות נראות כמו באג בחיתוך, והן באג במיפוי.
+  //
+  // כאן: מילה שנשמעת ברובה בקליפ שייכת לו (וכך קטע משוכפל עדיין מקבל את
+  // מילותיו פעמיים), ומילה שלא עברה את הרוב באף קליפ הולכת לקליפ שבו היא
+  // נשמעת הכי הרבה — פעם אחת בלבד.
+  interface Candidate { word: Word; clipIndex: number; overlap: number; }
+  const fallback = new Map<string, Candidate>();
+  const settled = new Set<string>();
+
   active.forEach((c, ci) => {
-    const base = assembledStart(active, ci);
     if (isGapClip(c)) return; // שקט על הציר — אין מילים
+    const base = assembledStart(active, ci);
     const raw = getWords(c.sourceId) || [];
-    // שיוך לפי אמצע המילה: הקליפים אינם חופפים, ולכן כל מילה שייכת לקליפ אחד
-    // בדיוק. הכלה מלאה (start≥ ו-end≤) הפילה מילים כשגבול החיתוך מוקם לפי
-    // מדידה אקוסטית ולא לפי חותמת התמלול — מילה שהמנוע תיארך רחב מדי נעלמה.
-    const ws = (includeNonSpeech ? raw : raw.filter(isSpeechWord))
-      .filter((w) => {
-        const middle = (w.start + w.end) / 2;
-        return middle >= c.start - 0.02 && middle <= c.end + 0.02;
-      })
-      .sort((a, b) => a.start - b.start);
-    const clipEnd = base + clipDur(c);
-    for (const w of ws) {
-      // מילה ששייכת לקליפ אך גולשת מעבר לגבולותיו נחתכת לתחום הקליפ,
-      // אחרת הכתובית תופיע לפני שהקליפ מתחיל או אחרי שהוא נגמר.
-      const start = Math.max(base, base + (w.start - c.start));
-      const end = Math.min(clipEnd, base + (w.end - c.start));
-      if (end <= start) continue;
-      out.push({
-        text: w.text,
-        start,
-        end,
-        type: w.type,
-        speakerId: w.speakerId,
-      });
-    }
+    const words = includeNonSpeech ? raw : raw.filter(isSpeechWord);
+
+    words.forEach((w, wi) => {
+      const overlap = Math.min(w.end, c.end) - Math.max(w.start, c.start);
+      if (overlap <= 0) return; // נאמרה כולה בקטע שנחתך
+      const key = `${c.sourceId}:${wi}`;
+      const duration = Math.max(1e-6, w.end - w.start);
+
+      if (overlap / duration > 0.5) {
+        settled.add(key);
+        out.push(placeWord(w, c, base));
+        return;
+      }
+      const prior = fallback.get(key);
+      if (!prior || overlap > prior.overlap) fallback.set(key, { word: w, clipIndex: ci, overlap });
+    });
   });
-  return out;
+
+  for (const [key, candidate] of fallback) {
+    if (settled.has(key)) continue;
+    const c = active[candidate.clipIndex];
+    out.push(placeWord(candidate.word, c, assembledStart(active, candidate.clipIndex)));
+  }
+
+  return out.sort((a, b) => a.start - b.start);
+}
+
+/** ממקם מילה על הציר וחותך אותה לגבולות הקליפ. */
+function placeWord(w: Word, c: Clip, base: number): Word {
+  const clipEnd = base + clipDur(c);
+  const start = Math.min(clipEnd, Math.max(base, base + (w.start - c.start)));
+  let end = Math.min(clipEnd, base + (w.end - c.start));
+  if (end <= start) end = start + 0.02;
+  return { text: w.text, start, end, type: w.type, speakerId: w.speakerId };
 }
 
 /** משך הציר הפעיל (כמו בנגן, בלי קליפים מושבתים). */

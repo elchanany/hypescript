@@ -19,6 +19,19 @@ export interface TranscribeMediaOpts {
   onProgress?: (r: number) => void;
 }
 
+/** הודעה קריאה לתשובות שלא הגיעו מהראוט שלנו ולכן אינן JSON. */
+function httpErrorHe(status: number, body: string, chunkBytes: number): string {
+  const mb = (chunkBytes / (1024 * 1024)).toFixed(1);
+  if (status === 413 || /request entity too large/i.test(body)) {
+    return `קטע האודיו יצא ${mb}MB — מעל מגבלת השרת. זו תקלה בחלוקה לקטעים, לא בקובץ שלך.`;
+  }
+  if (status === 504 || status === 408) return "שרת התמלול לא הספיק לענות. נסה שוב.";
+  if (status === 502 || status === 503) return "שירות התמלול אינו זמין כרגע. נסה שוב בעוד רגע.";
+  if (status === 401 || status === 403) return "אין הרשאה לשירות התמלול. התחבר מחדש ונסה שוב.";
+  const snippet = body.replace(/\s+/g, " ").trim().slice(0, 120);
+  return `התמלול נכשל (שגיאה ${status})${snippet ? `: ${snippet}` : "."}`;
+}
+
 export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Word[]> {
   const {
     file, durationSec,
@@ -66,8 +79,12 @@ export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Wo
     let data: any;
     try {
       const resp = await fetch("/api/transcribe", { method: "POST", body: fd, signal: local.signal });
-      data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "התמלול נכשל.");
+      // לא JSON.parse עיוור: תשובות שנוצרות לפני הראוט (413 מ-Vercel, 504
+      // משער) הן טקסט רגיל, וניסיון לפרסר אותן הסתיר את השגיאה האמיתית.
+      const body = await resp.text();
+      try { data = body ? JSON.parse(body) : null; } catch { data = null; }
+      if (!resp.ok) throw new Error(data?.error || httpErrorHe(resp.status, body, blob.size));
+      if (!data) throw new Error("שירות התמלול החזיר תשובה ריקה. נסה שוב.");
       if (resp.headers.get("X-Hypescript-Transcription-Quality") === "reduced") {
         onPhase?.("התמלול הושלם במנוע הגיבוי. האיכות עשויה להיות נמוכה יותר; Pro עם מכסה זמינה משתמש ב־ElevenLabs.");
       }

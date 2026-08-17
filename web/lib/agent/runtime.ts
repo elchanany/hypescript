@@ -122,6 +122,32 @@ function formatLlmError(status: number, body: string): string {
   return body.slice(0, 200) || `שגיאת סוכן (HTTP ${status})`;
 }
 
+/** כמה הודעות-פריים נשמרות בהיסטוריה. ישנות מהן מוחלפות בטקסט. */
+export const MAX_IMAGE_MESSAGES = 2;
+
+export const DROPPED_IMAGES_NOTE =
+  "[פריימים קודמים הוסרו מההקשר כדי לא לנפח את הבקשה. צלם שוב אם צריך לראות אותם.]";
+
+/**
+ * משאיר רק את הודעות-הפריים האחרונות ומחליף את הישנות בטקסט.
+ *
+ * ההיסטוריה נשלחת במלואה בכל תור, אז כל פריים שנשאר בה משלם על עצמו שוב ושוב
+ * עד שגוף הבקשה חוצה את מגבלת הפלטפורמה. ברגע שזה קורה גם ניסיון חוזר נכשל,
+ * כי הוא שולח בדיוק את אותה היסטוריה — וזו שיחה שמתה בלי דרך חזרה.
+ */
+export function pruneImageMessages(history: ChatMessage[], keep = MAX_IMAGE_MESSAGES): ChatMessage[] {
+  let seen = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const message = history[i];
+    if (!Array.isArray(message.content)) continue;
+    if (!message.content.some((part) => part?.type === "image_url")) continue;
+    seen++;
+    if (seen <= keep) continue;
+    history[i] = { ...message, content: DROPPED_IMAGES_NOTE };
+  }
+  return history;
+}
+
 export class AgentRunner {
   history: ChatMessage[] = [];
   // מצב הסוכן. ask/plan אינם מקבלים כלים -> אינם יכולים לשנות את הפרויקט.
@@ -156,6 +182,10 @@ export class AgentRunner {
   private guardLoop(name: string): string | null {
     // count אינו כולל את הקריאה הנוכחית, שעדיין לא נדחפה.
     return agentLoopGuard(this.recentTools, name);
+  }
+
+  private dropStaleImages() {
+    pruneImageMessages(this.history);
   }
 
   private noteTool(name: string) {
@@ -341,6 +371,7 @@ export class AgentRunner {
             ],
           });
           imgs.length = 0;
+          this.dropStaleImages();
         }
       }
     } finally {

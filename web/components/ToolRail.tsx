@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Captions, Type, Settings, Blend, WandSparkles } from "@/components/icons";
+import { Film, Captions, Type, Settings, Blend, WandSparkles, Palette, Layers } from "@/components/icons";
 
-export type LeftTab = "media" | "text" | "captions" | "transitions" | "effects";
+export type LeftTab = "media" | "text" | "captions" | "effects" | "transitions" | "stickers" | "elements";
 
 const TABS: { id: LeftTab; icon: typeof Film; label: string }[] = [
   { id: "media", icon: Film, label: "מדיה" },
-  { id: "text", icon: Type, label: "טקסט" },
+  { id: "text", icon: Type, label: "טקסט וגופנים" },
   { id: "captions", icon: Captions, label: "כתוביות" },
+  { id: "effects", icon: WandSparkles, label: "אפקטים ולוקים" },
   { id: "transitions", icon: Blend, label: "מעברים" },
-  { id: "effects", icon: WandSparkles, label: "אפקטים" },
+  { id: "stickers", icon: Palette, label: "סטיקרים ו-GIFs" },
+  { id: "elements", icon: Layers, label: "אלמנטים וצורות" },
 ];
 
 export default function ToolRail({ active, onSelect }: { active: LeftTab; onSelect: (t: LeftTab) => void }) {

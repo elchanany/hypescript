@@ -557,7 +557,17 @@ export default function Timeline(p: Props) {
       }
     } else if (d.mode === "move" && d.moved) {
       // Direct 2D Video/Audio Clip Drag: Free-floating across all layers & rows (CapCut style)
-      const hoveredLane = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-track-lane]");
+      let hoveredLane = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-track-lane]");
+      if (!hoveredLane) {
+        const lanes = Array.from(document.querySelectorAll<HTMLElement>("[data-track-lane]"));
+        for (const lane of lanes) {
+          const rect = lane.getBoundingClientRect();
+          if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            hoveredLane = lane;
+            break;
+          }
+        }
+      }
       const targetLaneId = hoveredLane?.dataset.trackLane;
       const laneType = hoveredLane?.dataset.trackType;
 
@@ -565,12 +575,17 @@ export default function Timeline(p: Props) {
         el.classList.remove("magnetic-target", "active-target");
       });
 
-      if (targetLaneId === "__new_track__" || (!hoveredLane && e.clientY > (scrollRef.current?.getBoundingClientRect().bottom || 0) - 70)) {
+      if (d.trackType === "audio") {
+        d.targetTrackId = audioId;
+        document.querySelector(`[data-track-lane="${audioId}"]`)?.classList.add("magnetic-target");
+      } else if (targetLaneId === "__new_track__" || (!hoveredLane && e.clientY > (scrollRef.current?.getBoundingClientRect().bottom || 0) - 70)) {
         d.targetTrackId = "__new_track__";
         hoveredLane?.closest(".dynamic-new-track-zone")?.classList.add("active-target");
       } else if (hoveredLane && (laneType === d.trackType || targetLaneId?.startsWith("trk_video"))) {
         d.targetTrackId = targetLaneId || d.sourceTrackId || primaryId;
         hoveredLane.classList.add("magnetic-target");
+      } else {
+        d.targetTrackId = d.sourceTrackId || primaryId;
       }
 
       const rawStart = Math.max(0, (d.assembled0 || 0) + dt);
@@ -698,13 +713,14 @@ export default function Timeline(p: Props) {
     } else if (d.mode === "move") {
       if (!d.moved) { /* selected on mousedown */ }
       else {
-        if (d.targetTrackId === "__new_track__" && p.onMoveAtTime) {
-          p.onMoveAtTime(d.id, "__new_track__", d.timelineStart);
+        const targetTrackId = d.targetTrackId || d.sourceTrackId || primaryId;
+        if (targetTrackId === "__new_track__" && p.onMoveAtTime) {
+          p.onMoveAtTime(d.id, "__new_track__", d.timelineStart ?? 0);
           drag.current = null;
           return;
         }
-        if (d.targetTrackId && d.timelineStart != null && p.onMoveAtTime && (d.targetTrackId !== d.sourceTrackId || d.snapped || Math.abs(d.timelineStart - d.assembled0) > 0.02)) {
-          p.onMoveAtTime(d.id, d.targetTrackId, d.timelineStart);
+        if (p.onMoveAtTime && d.timelineStart != null) {
+          p.onMoveAtTime(d.id, targetTrackId, d.timelineStart);
           drag.current = null;
           return;
         }

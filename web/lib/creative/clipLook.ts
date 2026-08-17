@@ -6,6 +6,7 @@
 
 import { Clip, clipContrast, clipEffectAmount, clipSaturation } from "@/lib/editor/model";
 import { effectById, scaleEffect } from "./effects";
+import { filterById, filterToImplementation } from "./filters";
 
 export interface ClipLook {
   /** ערך מוכן ל-CSS filter בתצוגה המקדימה. */
@@ -18,7 +19,7 @@ const EMPTY: ClipLook = { css: "none", ffmpeg: "" };
 
 /**
  * מרכיב את מראה הקליפ משני מקורות:
- *  1. הלוק מהקטלוג (`effectId`), בעוצמה `effectAmount`.
+ *  1. האפקט או הפילטר מהקטלוג (`effectId`), בעוצמה `effectAmount`.
  *  2. תיקוני contrast/saturation ידניים שהמשתמש כיוונן ב-Inspector.
  * הידני מוחל *אחרי* הלוק, כך שכיוונון תמיד גובר — בשני המסלולים.
  */
@@ -27,8 +28,14 @@ export function clipLook(clip: Clip): ClipLook {
   const cssParts: string[] = [];
 
   const effect = effectById(clip.effectId);
+  const filter = !effect ? filterById(clip.effectId) : undefined;
+
   if (effect && effect.id !== "none") {
     const scaled = scaleEffect(effect, clipEffectAmount(clip));
+    if (scaled.ffmpeg) parts.push(scaled.ffmpeg);
+    if (scaled.css && scaled.css !== "none") cssParts.push(scaled.css);
+  } else if (filter) {
+    const scaled = filterToImplementation(filter, clipEffectAmount(clip));
     if (scaled.ffmpeg) parts.push(scaled.ffmpeg);
     if (scaled.css && scaled.css !== "none") cssParts.push(scaled.css);
   }

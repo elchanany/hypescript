@@ -309,12 +309,37 @@ function alignBanded(
   ];
 }
 
+/** מילה קצרה בלבד יכולה להיבלע בשכנתה. */
+const MERGE_MAX_LEN = 4;
+
+/**
+ * האם המילה החסרה נבלעה בתוך טוקן ASR של שכנתה.
+ *
+ * בעברית מדוברת אות שימוש נצמדת למילה הבאה: "שאם אדם" נשמע "שאדם", ו-ASR
+ * מתמלל טוקן אחד. המילה נאמרה — היא פשוט לא קיבלה טוקן משלה. בלי ההבחנה הזו
+ * הדיווח אומר "לא נמצאה בתמלול", וזה שולח לחיפוש אחרי מילה שנמצאת באודיו.
+ */
+function absorbedBy(missing: HebrewToken, neighbour: HebrewToken, asr: HebrewToken): boolean {
+  const word = missing.base;
+  const next = neighbour.base;
+  const heard = asr.base;
+  if (!word || !heard) return false;
+  if (heard.includes(word)) return true;
+  if (word.length > MERGE_MAX_LEN) return false;
+  return !!next && heard.length > next.length && heard.startsWith(word[0]) && heard.endsWith(next);
+}
+
 export interface AlignmentReport {
   pairs: AlignPair[];
   /** אינדקסי סקריפט שהותאמו לטוקן ASR. */
   matchedScript: number[];
   /** אינדקסי סקריפט שלא נמצאו בתמלול — זה מה שהיה "נעלם" בשקט. */
   missingScript: number[];
+  /**
+   * אינדקסי סקריפט שנבלעו בהגייה בתוך המילה השכנה ("שאם אדם" → "שאדם").
+   * הן נאמרו והאודיו שלהן נשמר — אין מה לחפש.
+   */
+  mergedScript: number[];
   /** אינדקסי ASR שנאמרו ואינם בסקריפט (מיועדים לחיתוך). */
   droppedAsr: number[];
   /**
@@ -327,15 +352,22 @@ export interface AlignmentReport {
   meanSimilarity: number;
 }
 
-export function summarizeAlignment(pairs: AlignPair[], scriptLength: number): AlignmentReport {
+export function summarizeAlignment(
+  pairs: AlignPair[],
+  scriptLength: number,
+  tokens?: { asr: HebrewToken[]; script: HebrewToken[] },
+): AlignmentReport {
   const matchedScript: number[] = [];
   const missingScript: number[] = [];
+  const mergedScript: number[] = [];
   const droppedAsr: number[] = [];
   const weakMatches: number[] = [];
   let similaritySum = 0;
+  const asrForScript = new Map<number, number>();
   for (const pair of pairs) {
     if (pair.asrIndex != null && pair.scriptIndex != null) {
       matchedScript.push(pair.scriptIndex);
+      asrForScript.set(pair.scriptIndex, pair.asrIndex);
       if (pair.similarity < WEAK_MATCH) weakMatches.push(pair.scriptIndex);
       similaritySum += pair.similarity;
     } else if (pair.scriptIndex != null) {
@@ -344,13 +376,31 @@ export function summarizeAlignment(pairs: AlignPair[], scriptLength: number): Al
       droppedAsr.push(pair.asrIndex);
     }
   }
+
+  // מילה חסרה שנבלעה בשכנתה נאמרה בפועל — היא יוצאת מרשימת החסרות
+  const trulyMissing: number[] = [];
+  for (const index of missingScript) {
+    const word = tokens?.script[index];
+    let merged = false;
+    if (word) {
+      for (const neighbourIndex of [index + 1, index - 1]) {
+        const neighbour = tokens.script[neighbourIndex];
+        const asrIndex = asrForScript.get(neighbourIndex);
+        if (!neighbour || asrIndex == null) continue;
+        if (absorbedBy(word, neighbour, tokens.asr[asrIndex])) { merged = true; break; }
+      }
+    }
+    (merged ? mergedScript : trulyMissing).push(index);
+  }
+
   return {
     pairs,
     matchedScript,
-    missingScript,
+    missingScript: trulyMissing,
+    mergedScript,
     droppedAsr,
     weakMatches,
-    coverage: scriptLength ? matchedScript.length / scriptLength : 1,
+    coverage: scriptLength ? (matchedScript.length + mergedScript.length) / scriptLength : 1,
     meanSimilarity: matchedScript.length ? similaritySum / matchedScript.length : 0,
   };
 }

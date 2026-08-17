@@ -134,20 +134,44 @@ export async function extractAudioChunks(
     onChunk?: (i: number, n: number) => void;
   },
 ): Promise<{ blob: Blob; offset: number }[]> {
-  const { planChunkOffsets, DEFAULT_CHUNK_SEC } = await import("@/lib/transcribe/chunking");
+  const { planChunkOffsets, DEFAULT_CHUNK_SEC, MAX_UPLOAD_BYTES, AUDIO_BYTES_PER_SEC } =
+    await import("@/lib/transcribe/chunking");
   const chunkSec = opts?.chunkSec ?? DEFAULT_CHUNK_SEC;
   const offsets = planChunkOffsets(mediaDurationSec, chunkSec);
+
   if (offsets.length === 1) {
     opts?.onChunk?.(0, 1);
-    return [{ blob: await extractAudio(file, opts?.onProgress), offset: 0 }];
+    const blob = await extractAudio(file, opts?.onProgress);
+    if (blob.size <= MAX_UPLOAD_BYTES) return [{ blob, offset: 0 }];
+    // המשך שהוצהר היה שגוי (או שלא היה משך בכלל). הגודל אמין יותר: קצב
+    // הקידוד קבוע, אז בייטים → שניות.
+    const realDur = blob.size / AUDIO_BYTES_PER_SEC;
+    return extractAudioChunks(file, realDur, {
+      ...opts,
+      chunkSec: Math.max(30, Math.min(DEFAULT_CHUNK_SEC, realDur / 2)),
+    });
   }
+
   const out: { blob: Blob; offset: number }[] = [];
+  // רשת ביטחון: קטע שיצא גדול מהמותר נחתך לשניים במקום להישלח ולהיכשל.
+  const pushSegment = async (start: number, dur: number, depth: number): Promise<void> => {
+    const blob = await extractAudioSegment(file, start, dur, opts?.onProgress);
+    if (blob.size <= MAX_UPLOAD_BYTES || depth >= 3 || dur <= 20) {
+      out.push({ blob, offset: start });
+      return;
+    }
+    const half = dur / 2;
+    await pushSegment(start, half, depth + 1);
+    await pushSegment(start + half, half, depth + 1);
+  };
+
+  // המרווח האמיתי בין הקטעים, לא מה שהמתקשר ביקש: planChunkOffsets מקצץ
+  // בקשה גדולה מדי, ושימוש ב-chunkSec המקורי היה יוצר קטעים חופפים.
+  const step = offsets[1] - offsets[0];
   for (let i = 0; i < offsets.length; i++) {
     opts?.onChunk?.(i, offsets.length);
     const start = offsets[i];
-    const dur = Math.min(chunkSec, Math.max(0.1, mediaDurationSec - start));
-    const blob = await extractAudioSegment(file, start, dur, opts?.onProgress);
-    out.push({ blob, offset: start });
+    await pushSegment(start, Math.min(step, Math.max(0.1, mediaDurationSec - start)), 0);
   }
   return out;
 }

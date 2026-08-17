@@ -153,32 +153,72 @@ function cueCost(tokens: CaptionToken[], from: number, to: number, policy: Capti
 }
 
 /**
- * חלוקה אופטימלית לכתוביות בתכנות דינמי.
- * כל טוקן משתייך לכתובית אחת בדיוק — ולכן אין חזרה על מילים בין כתוביות.
+ * גבולות המשפטים בטקסט. סוף משפט הוא גבול *קשיח* של כתובית.
+ *
+ * זו לא העדפה אלא כלל: כתובית שגוררת מילה אחת מהמשפט הבא ("...אפשר לעזור מה")
+ * נקראת שבורה, ומשפט קצר כמו "נשאלת השאלה." חייב לעמוד לבדו. כשהניקוד היה רק
+ * שיקול בפונקציית העלות, מגבלת התווים הכריעה אותו וגררה מילים בין משפטים.
  */
-export function segmentTokens(tokens: CaptionToken[], policy: CaptionPolicy = CAPTION_POLICY): Array<[number, number]> {
-  const n = tokens.length;
-  if (!n) return [];
-  const best = new Float64Array(n + 1).fill(Infinity);
-  const from = new Int32Array(n + 1).fill(-1);
-  best[0] = 0;
-  for (let end = 1; end <= n; end++) {
-    const lowest = Math.max(0, end - policy.maxWords);
-    for (let start = lowest; start < end; start++) {
-      if (!Number.isFinite(best[start])) continue;
-      const candidate = best[start] + cueCost(tokens, start, end, policy);
-      if (candidate < best[end]) { best[end] = candidate; from[end] = start; }
+export function sentenceGroups(tokens: CaptionToken[]): Array<[number, number]> {
+  const groups: Array<[number, number]> = [];
+  let start = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const closes = SENTENCE_END.test(tokens[i].text.trimEnd());
+    if (closes || i === tokens.length - 1) {
+      groups.push([start, i + 1]);
+      start = i + 1;
     }
   }
+  return groups;
+}
+
+/**
+ * החלוקה האופטימלית *בתוך* משפט אחד, בתכנות דינמי.
+ *
+ * מכסת המילים נשארת כפי שהיא: משפט ארוך ממנה מתפצל בנקודת השבירה הפנימית
+ * הטובה ביותר. משפט שנכנס במכסה נשאר שלם מעצמו, כי השבירה בסופו מקבלת 100.
+ */
+function segmentSentence(
+  tokens: CaptionToken[], from: number, to: number, policy: CaptionPolicy,
+): Array<[number, number]> {
+  const n = to - from;
+  if (n <= 0) return [];
+  const window = Math.min(n, policy.maxWords);
+
+  const best = new Float64Array(n + 1).fill(Infinity);
+  const back = new Int32Array(n + 1).fill(-1);
+  best[0] = 0;
+  for (let end = 1; end <= n; end++) {
+    const lowest = Math.max(0, end - window);
+    for (let start = lowest; start < end; start++) {
+      if (!Number.isFinite(best[start])) continue;
+      const candidate = best[start] + cueCost(tokens, from + start, from + end, policy);
+      if (candidate < best[end]) { best[end] = candidate; back[end] = start; }
+    }
+  }
+
   const spans: Array<[number, number]> = [];
   let cursor = n;
   while (cursor > 0) {
-    const start = from[cursor];
-    if (start < 0) { spans.push([0, cursor]); break; }
-    spans.push([start, cursor]);
+    const start = back[cursor];
+    if (start < 0) { spans.push([from, from + cursor]); break; }
+    spans.push([from + start, from + cursor]);
     cursor = start;
   }
   spans.reverse();
+  return spans;
+}
+
+/**
+ * חלוקה אופטימלית לכתוביות: קודם לפי משפטים, ואז בתוך כל משפט.
+ * כל טוקן משתייך לכתובית אחת בדיוק — ולכן אין חזרה על מילים בין כתוביות.
+ */
+export function segmentTokens(tokens: CaptionToken[], policy: CaptionPolicy = CAPTION_POLICY): Array<[number, number]> {
+  if (!tokens.length) return [];
+  const spans: Array<[number, number]> = [];
+  for (const [from, to] of sentenceGroups(tokens)) {
+    for (const span of segmentSentence(tokens, from, to, policy)) spans.push(span);
+  }
   return spans;
 }
 

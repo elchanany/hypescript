@@ -47,7 +47,7 @@ export function captionTokensFromScript(words: TimedWord[], scriptText: string):
 
   const asrTokens = timed.map((w) => makeToken(w.text));
   const pairs = alignTokens(asrTokens, scriptTokens);
-  const report = summarizeAlignment(pairs, scriptTokens.length);
+  const report = summarizeAlignment(pairs, scriptTokens.length, { asr: asrTokens, script: scriptTokens });
 
   // זמן לכל מילת סקריפט; null = לא הותאמה
   const starts: Array<number | null> = new Array(scriptTokens.length).fill(null);
