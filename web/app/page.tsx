@@ -285,6 +285,9 @@ export default function EditorPage() {
     | { kind: "media"; id: string; name: string }
     | { kind: "overlayText"; id: string; text: string }
   >({ kind: "none" });
+  const relinkInputRef = useRef<HTMLInputElement>(null);
+  const relinkTargetIdRef = useRef<string | null>(null);
+  const uploadingAssetsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -593,6 +596,42 @@ export default function EditorPage() {
     }, 500);
     return () => clearTimeout(t);
   }, [words, clips, subs, tracks, overlays, canvas, captionStyle, restored, projectId, media]);
+
+  // Auto-sync un-uploaded local media assets to Cloudflare R2 in the background
+  useEffect(() => {
+    if (!restored || !projectId) return;
+    let cancelled = false;
+    (async () => {
+      const policy = await getProjectPolicy(projectId);
+      if (!policy?.cloudProjectId || policy.dataMode === "local" || policy.storageBackend !== "r2") return;
+
+      const unSynced = media.filter(
+        (m) => !m.missing && m.file && m.file.size > 0 && !m.cloudAssetId && !uploadingAssetsRef.current.has(m.id)
+      );
+      if (!unSynced.length) return;
+
+      for (const asset of unSynced) {
+        if (cancelled) return;
+        uploadingAssetsRef.current.add(asset.id);
+        try {
+          const cloud = await uploadCloudAsset(policy.cloudProjectId, asset.file);
+          if (cancelled) return;
+          setMedia((current) =>
+            current.map((item) =>
+              item.id === asset.id
+                ? { ...item, cloudAssetId: cloud.assetId, cloudObjectKey: cloud.objectKey, cloudState: "available" }
+                : item
+            )
+          );
+        } catch (err) {
+          console.warn("Background cloud upload failed for asset:", asset.name, err);
+        } finally {
+          uploadingAssetsRef.current.delete(asset.id);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [media, restored, projectId]);
 
   const clearProjectWorkspace = () => {
     // A project switch used to leave the previous project's clips alive for one
@@ -1625,6 +1664,7 @@ export default function EditorPage() {
                   onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
                   onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
                   onCanvasDetected={onCanvasDetected} captionStyle={captionStyle}
+                  onRelinkMedia={(id) => { relinkTargetIdRef.current = id; relinkInputRef.current?.click(); }}
                 />
               )}
             />
@@ -1714,7 +1754,8 @@ export default function EditorPage() {
                 onCancelOverlay={cancelTransaction}
                 onEditOverlayText={(id, current) => setNameDlg({ kind: "overlayText", id, text: current })}
                 onCanvasDetected={onCanvasDetected}
-                captionStyle={captionStyle} />
+                captionStyle={captionStyle}
+                onRelinkMedia={(id) => { relinkTargetIdRef.current = id; relinkInputRef.current?.click(); }} />
               {(working || phase) && (
                 <div className="status-strip">
                   <span className="s-msg">{phase}</span>
@@ -1917,6 +1958,19 @@ export default function EditorPage() {
           }
           setNameDlg({ kind: "none" });
           toast.success("הטקסט עודכן");
+        }}
+      />
+      <input
+        ref={relinkInputRef}
+        type="file"
+        accept="video/*,image/*,audio/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          const id = relinkTargetIdRef.current;
+          if (f && id) relinkMedia(id, f);
+          e.currentTarget.value = "";
+          relinkTargetIdRef.current = null;
         }}
       />
     </div>

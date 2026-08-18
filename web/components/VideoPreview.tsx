@@ -11,7 +11,7 @@ import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { audioTrack, primaryVideoTrackId, TrackMeta, videoTracks } from "@/lib/editor/project";
 import { clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music, RotateCcw, RotateCw } from "@/components/icons";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music, RotateCcw, RotateCw, TriangleAlert } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import PreviewOverlays from "@/components/PreviewOverlays";
@@ -42,6 +42,7 @@ interface Props {
   onEditOverlayText?: (id: string, text: string) => void;
   onCanvasDetected?: (w: number, h: number) => void;
   captionStyle?: CaptionStyle;
+  onRelinkMedia?: (id: string) => void;
 }
 
 const FRAME = 1 / 30;
@@ -53,7 +54,7 @@ function download(blob: Blob, name: string) {
 }
 
 const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(props, ref) {
-  const { media, clips, tracks, subs, selectedSubId, onSelectSub, onEditSub, onCaptionPosition, onTime, onCopyPosition, audioMuted, canvas, onChangeCanvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle } = props;
+  const { media, clips, tracks, subs, selectedSubId, onSelectSub, onEditSub, onCaptionPosition, onTime, onCopyPosition, audioMuted, canvas, onChangeCanvas, overlays, selectedOverlayId, onSelectOverlay, onBeginOverlay, onOverlayLive, onCommitOverlay, onCancelOverlay, onEditOverlayText, onCanvasDetected, captionStyle, onRelinkMedia } = props;
   const mediaARef = useRef<HTMLVideoElement>(null);
   const mediaBRef = useRef<HTMLVideoElement>(null);
   const mediaRefs = [mediaARef, mediaBRef] as const;
@@ -474,7 +475,26 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
           style={{ visibility: activeKind === "video" && activeSlot === slot ? "visible" : "hidden", opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />)}
         <audio ref={extraAudioRef} onEnded={() => syncExtraAudio(t, playing)} />
         {activeKind === "image" && activeImageUrl && <img className="pv-still" src={activeImageUrl} alt="תמונה בציר הזמן" style={{ opacity: activeOpacity, filter: activeFilter, transform: activeTransform }} />}
-        {activeKind === "missing" && <div className="pv-gap" aria-hidden />}
+        {activeKind === "missing" && (
+          <div className="pv-missing-overlay">
+            <TriangleAlert size={36} color="#f59e0b" strokeWidth={1.75} />
+            <span className="pv-missing-title">קובץ המקור טרם סונכרן למכשיר זה</span>
+            <span className="pv-missing-sub">הקובץ נשמר מקומית במחשב שבו נוצר או ממתין לסיום סנכרון ענן (R2).</span>
+            {onRelinkMedia && edl[idx.current]?.sourceId && (
+              <button
+                type="button"
+                className="btn primary sm"
+                style={{ marginTop: "8px", pointerEvents: "auto" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRelinkMedia(edl[idx.current].sourceId);
+                }}
+              >
+                בחר קובץ לקישור (Relink)
+              </button>
+            )}
+          </div>
+        )}
         {activeKind === "gap" && <div className="pv-gap" aria-hidden />}
         {cue && <div className={`pv-caption ${cue.id === selectedSubId ? "selected" : ""}`} style={captionStyleToCss(st)}
           contentEditable={cue.id === selectedSubId} suppressContentEditableWarning
