@@ -1192,36 +1192,44 @@ export default function EditorPage() {
         && audioClips.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
         && overlays.every((overlay) => overlay.kind === "image" && !!mediaById(media, overlay.assetId || "")?.cloudAssetId)
         && !(burnCaptions && subs?.length);
-      let blob: Blob;
+      let blob: Blob | null = null;
       if (cloudCapable && policy?.cloudProjectId) {
-        setPhase("מכין את הסרטון בשרת המהיר…");
-        blob = await renderCloudProject({
-          projectId: policy.cloudProjectId,
-          clips: edl.map((clip) => isGapClip(clip)
-            ? ({ gap: true, start: 0, end: clip.end - clip.start })
-            : ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
-          audioClips: (() => { let timelineStart = 0; return audioClips.flatMap((clip) => {
-            const duration = clip.end - clip.start;
-            const startAt = timelineStart;
-            timelineStart += duration;
-            if (isGapClip(clip)) return [];
-            const fades = clipAudioFades(clip);
-            return [{ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end, timelineStart: startAt, volume: clipVolume(clip), ...fades }];
-          }); })(),
-          overlays: [...overlays].sort((a, b) => a.zIndex - b.zIndex).map((overlay) => ({
-            assetId: mediaById(media, overlay.assetId || "")!.cloudAssetId!, start: overlay.start, end: overlay.end,
-            x: overlay.transform.x, y: overlay.transform.y, width: overlay.transform.w, height: overlay.transform.h,
-            rotation: overlay.transform.rotation, opacity: overlay.transform.opacity, fadeIn: overlay.fadeIn, fadeOut: overlay.fadeOut,
-          })),
-          target: { width: canvas.width, height: canvas.height, fps: policy.fps },
-        }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
-      } else {
+        try {
+          setPhase("מכין את הסרטון בשרת המהיר…");
+          blob = await renderCloudProject({
+            projectId: policy.cloudProjectId,
+            clips: edl.map((clip) => isGapClip(clip)
+              ? ({ gap: true, start: 0, end: clip.end - clip.start })
+              : ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
+            audioClips: (() => { let timelineStart = 0; return audioClips.flatMap((clip) => {
+              const duration = clip.end - clip.start;
+              const startAt = timelineStart;
+              timelineStart += duration;
+              if (isGapClip(clip)) return [];
+              const fades = clipAudioFades(clip);
+              return [{ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end, timelineStart: startAt, volume: clipVolume(clip), ...fades }];
+            }); })(),
+            overlays: [...overlays].sort((a, b) => a.zIndex - b.zIndex).map((overlay) => ({
+              assetId: mediaById(media, overlay.assetId || "")!.cloudAssetId!, start: overlay.start, end: overlay.end,
+              x: overlay.transform.x, y: overlay.transform.y, width: overlay.transform.w, height: overlay.transform.h,
+              rotation: overlay.transform.rotation, opacity: overlay.transform.opacity, fadeIn: overlay.fadeIn, fadeOut: overlay.fadeOut,
+            })),
+            target: { width: canvas.width, height: canvas.height, fps: policy.fps },
+          }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
+        } catch (cloudErr) {
+          if (controller.signal.aborted) throw cloudErr;
+          console.warn("Cloud render unavailable, falling back to local render:", cloudErr);
+          blob = null;
+        }
+      }
+
+      if (!blob) {
         const { getRenderBackend } = await import("@/lib/render/RenderBackend");
         const backend = getRenderBackend();
-        setPhase("מכין את הסרטון…");
+        setPhase("מכין את הסרטון במכשיר…");
         blob = await backend.renderProject(
           { media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas, audioClips, subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length },
-          (r) => { setPhase("מרנדר את הסרטון…"); setProgress(Math.min(1, r)); },
+          (r) => { setPhase("מרנדר את הסרטון במכשיר…"); setProgress(Math.min(1, r)); },
           controller.signal,
         );
       }

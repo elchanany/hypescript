@@ -216,7 +216,8 @@ export async function extractAssembledAudio(
       const existing = inputIndex.get(asset.id);
       if (existing != null) return existing;
       const fn = `asm_${written.size}.${extOf(asset.file.name)}`;
-      await ff.writeFile(fn, await fetchFile(asset.file));
+      const source = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
+      await ff.writeFile(fn, await fetchFile(source));
       const idx = nextInput++;
       inputArgs.push("-i", fn);
       written.set(asset.id, fn);
@@ -336,7 +337,8 @@ export async function renderEDL(
         const assetId = mat?.assetId || wsr.assetId;
         const asset = mediaById(media, assetId);
         if (!asset) throw new Error(`חסר מקור לרינדור: ${assetId}`);
-        await ff.writeFile(wsr.filename, await fetchFile(asset.file));
+        const source = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
+        await ff.writeFile(wsr.filename, await fetchFile(source));
       }
     }
 
