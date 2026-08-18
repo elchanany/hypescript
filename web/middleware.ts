@@ -38,6 +38,7 @@ export async function middleware(req: NextRequest) {
     applyDetectedLocale(response);
   }
 
+  let authedUser = false;
   if (authConfigured) {
     const supabase = createServerClient(url, anon, {
       cookies: {
@@ -60,24 +61,23 @@ export async function middleware(req: NextRequest) {
     });
 
     // Touches/refreshes session cookies when needed.
-    await supabase.auth.getUser();
+    const { data } = await supabase.auth.getUser();
+    authedUser = !!data?.user;
   }
 
   const { pathname } = req.nextUrl;
   if (pathname !== "/") return response;
 
-  const hasSession = req.cookies.getAll().some(
-    (c) => c.name.includes("-auth-token") || c.name.startsWith("sb-"),
+  const hasSession = authedUser || req.cookies.getAll().some(
+    (c) => c.name.includes("-auth-token") || c.name.startsWith("sb-") || c.name.includes("supabase"),
   );
   if (hasSession) return response;
 
-  // Explicit local/QA escape hatch. Production remains gated unless the
-  // deployment deliberately sets ALLOW_GUEST_EDITOR.
-  if (allowGuest) return response;
+  // Explicit local/QA escape hatch or direct project link
+  if (allowGuest || req.nextUrl.searchParams.has("project")) return response;
 
   const welcome = req.nextUrl.clone();
   welcome.pathname = "/welcome";
-  welcome.search = "";
   return applyDetectedLocale(NextResponse.redirect(welcome));
 }
 
