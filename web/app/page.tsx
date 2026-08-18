@@ -454,8 +454,11 @@ export default function EditorPage() {
         } catch { /* fallback */ }
       }
 
-      const existing = await listProjects();
-      if (!existing.length) { window.location.replace("/dashboard?welcome=1"); return; }
+      let existing = await listProjects();
+      if (!existing.length) {
+        await ensureProject();
+        existing = await listProjects();
+      }
       const requested = requestedProjectId(existing, queryParam);
       const id = requested || await ensureProject();
       if (id) {
