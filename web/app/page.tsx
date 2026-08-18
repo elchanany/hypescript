@@ -43,8 +43,8 @@ import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 import { getProjectPolicy } from "@/lib/projects/policy";
-import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
-import { createProjectWithPolicy } from "@/lib/projects/create";
+import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, listCloudProjects, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
+import { createProjectWithPolicy, ensureCloudProjectMirror } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
 import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
@@ -437,6 +437,13 @@ export default function EditorPage() {
 
   useEffect(() => {
     (async () => {
+      try {
+        const cloud = await listCloudProjects();
+        if (Array.isArray(cloud) && cloud.length > 0) {
+          await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
+        }
+      } catch { /* offline / local fallback */ }
+
       const existing = await listProjects();
       if (!existing.length) { window.location.replace("/dashboard?welcome=1"); return; }
       const requested = requestedProjectId(existing, new URLSearchParams(window.location.search).get(PROJECT_QUERY_KEY));
