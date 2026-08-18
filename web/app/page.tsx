@@ -437,6 +437,7 @@ export default function EditorPage() {
 
   useEffect(() => {
     (async () => {
+      const queryParam = new URLSearchParams(window.location.search).get(PROJECT_QUERY_KEY);
       try {
         const cloud = await listCloudProjects();
         if (Array.isArray(cloud) && cloud.length > 0) {
@@ -444,13 +445,22 @@ export default function EditorPage() {
         }
       } catch { /* offline / local fallback */ }
 
+      if (queryParam && /^[0-9a-f-]{36}$/i.test(queryParam)) {
+        try {
+          const direct = await getCloudProject(queryParam);
+          if (direct?.project) {
+            await ensureCloudProjectMirror(direct.project);
+          }
+        } catch { /* fallback */ }
+      }
+
       const existing = await listProjects();
       if (!existing.length) { window.location.replace("/dashboard?welcome=1"); return; }
-      const requested = requestedProjectId(existing, new URLSearchParams(window.location.search).get(PROJECT_QUERY_KEY));
+      const requested = requestedProjectId(existing, queryParam);
       const id = requested || await ensureProject();
-      if (requested) {
-        await setCurrentProject(requested);
-        window.history.replaceState({}, "", "/");
+      if (id) {
+        await setCurrentProject(id);
+        if (queryParam) window.history.replaceState({}, "", "/");
       }
       setProjects(existing);
       setProjectId(id);

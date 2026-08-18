@@ -239,7 +239,7 @@ export default function DashboardPage() {
   }, [authError]);
 
   useEffect(() => {
-    if (loading || !user || welcomed.current) return;
+    if (loading || projectsLoading || !user || welcomed.current) return;
     const flag = sessionStorage.getItem("hs_just_logged_in");
     if (flag) {
       sessionStorage.removeItem("hs_just_logged_in");
@@ -258,7 +258,7 @@ export default function DashboardPage() {
       setDlg({ kind: "create" });
       window.history.replaceState({}, "", "/dashboard");
     }
-  }, [loading, user, projects.length]);
+  }, [loading, projectsLoading, user, projects.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
