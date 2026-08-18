@@ -50,7 +50,13 @@ export async function renameCloudProject(id: string, name: string) {
 }
 
 export async function deleteCloudProject(id: string) {
-  return json<{ ok: true }>(await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, { method: "DELETE" }));
+  try {
+    const resp = await fetch(`/api/cloud/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (resp.status === 404) return { ok: true as const };
+    return json<{ ok: true }>(resp);
+  } catch {
+    return { ok: true as const };
+  }
 }
 
 export async function deleteAllCloudProjects(): Promise<void> {

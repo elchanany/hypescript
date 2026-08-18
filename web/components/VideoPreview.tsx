@@ -466,7 +466,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
   return <div className="preview2">
     <div className="pv-stage" ref={stageRef} onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}>
       {hasPlayable ? <div className="pv-canvas" ref={canvasBoxRef} style={{ width: box.width || "100%", height: box.height || "100%" }}>
-        {([0, 1] as const).map((slot) => <video key={slot} ref={mediaRefs[slot]} preload="auto"
+        {([0, 1] as const).map((slot) => <video key={slot} ref={mediaRefs[slot]} preload="auto" playsInline crossOrigin="anonymous"
           onTimeUpdate={() => syncVideoTime(slot)} onLoadedData={() => onLoaded(slot)} onDurationChange={() => onLoaded(slot)}
           onPlay={() => { if (slot !== activeSlotRef.current) return; setPlaying(true); syncExtraAudio(t, true); startVideoClock(slot); }}
           onPause={() => { if (slot === activeSlotRef.current) setPlaying(false); }}

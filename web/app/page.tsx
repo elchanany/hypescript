@@ -466,8 +466,9 @@ export default function EditorPage() {
             if (raw.chatStore) {
               await kvSet(pk(projectId, "chat"), raw.chatStore);
             }
-            if (Array.isArray(raw.mediaMeta)) {
-              cloudMediaMeta = raw.mediaMeta;
+            const rawMedia = Array.isArray(raw.media) ? raw.media : (Array.isArray(raw.mediaMeta) ? raw.mediaMeta : []);
+            if (rawMedia.length > 0) {
+              cloudMediaMeta = rawMedia;
             }
           }
         } catch { /* offline / local fallback */ }
@@ -475,6 +476,10 @@ export default function EditorPage() {
 
       if (!raw) {
         raw = await kvGet<any>(pk(projectId, "state"));
+        const rawMedia = Array.isArray(raw?.media) ? raw.media : (Array.isArray(raw?.mediaMeta) ? raw.mediaMeta : []);
+        if (rawMedia.length > 0 && cloudMediaMeta.length === 0) {
+          cloudMediaMeta = rawMedia;
+        }
       }
 
       const sm = await kvGet<any[]>(pk(projectId, "media"));
@@ -568,6 +573,7 @@ export default function EditorPage() {
         canvas,
         captionStyle,
         chatStore: chatStore || undefined,
+        media: mediaMeta,
         mediaMeta,
       };
       await kvSet(pk(projectId, "state"), state);
