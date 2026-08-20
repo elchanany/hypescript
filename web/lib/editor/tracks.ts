@@ -119,20 +119,19 @@ export function moveClipAtTimeline(
   const sourceTrackId = clipTrackId(clip, primaryId);
   const sourceTrack = clipsOnTrack(clips, sourceTrackId, primaryId);
   
-  let sourceNext: Clip[];
-  if (sourceTrackId !== primaryId) {
-    const replaced = sourceTrack.map((item) =>
-      item.id === id
-        ? { id: uid("g"), sourceId: "__gap__", start: 0, end: clipDur(item), trackId: sourceTrackId }
-        : item
-    );
-    sourceNext = normalizeTrackGaps(replaced);
-    if (!sourceNext.some((item) => !isGapClip(item))) {
-      sourceNext = [];
-    }
-  } else {
-    sourceNext = sourceTrack.filter((item) => item.id !== id);
-  }
+  // The vacated space becomes a gap on EVERY track, including the primary one.
+  // Filtering the clip out instead would slide every later clip left, silently moving
+  // material the user never touched (B-01/B-02: "I moved one clip and the next one jumped").
+  const replaced = sourceTrack.map((item) =>
+    item.id === id
+      ? { id: uid("g"), sourceId: "__gap__", start: 0, end: clipDur(item), trackId: sourceTrackId }
+      : item
+  );
+  let sourceNext: Clip[] = normalizeTrackGaps(replaced);
+  // A track left with nothing but gaps has no content to hold open.
+  if (!sourceNext.some((item) => !isGapClip(item))) sourceNext = [];
+  // Never keep a trailing gap: it would pad the project with dead time at the end.
+  while (sourceNext.length && isGapClip(sourceNext[sourceNext.length - 1])) sourceNext.pop();
 
   let without = replaceTrackClips(
     clips,
