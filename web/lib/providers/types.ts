@@ -1,8 +1,9 @@
 export type ProviderKind = "llm" | "transcribe" | "voice" | "image";
 export type ProviderBillingRisk = "no_charge" | "metered_external" | "unknown";
 
-/** `ready` is reserved for a successful live probe; an env key alone is unverified. */
-export type ProviderStatus = "ready" | "configured_unverified" | "missing_key" | "unavailable";
+/** `ready` is reserved for a successful live probe; an env key alone is unverified.
+ *  `unhealthy` = a key IS configured but the live probe failed (bad/expired key, quota, outage). */
+export type ProviderStatus = "ready" | "unhealthy" | "configured_unverified" | "missing_key" | "unavailable";
 
 export type ProviderId =
   | "deepseek"
