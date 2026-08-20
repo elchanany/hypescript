@@ -15,10 +15,10 @@ not closed because "something similar" was changed.
 
 | ID | Issue | Status | Root cause / notes |
 |----|-------|--------|--------------------|
-| B-01 | Drag a clip on the timeline → it moves, but **snaps back on release** | investigating | Assigned. Required: pointerdown → live preview → pointerup → **commit** → clip stays → one undo. |
-| B-02 | **Free placement** — must be able to drop at any time (00:03.200), leave gaps, not forced adjacent | investigating | Assigned with B-01. |
+| B-01 | Drag a clip on the timeline → it moves, but **snaps back on release** | fixed-unverified | Assigned. Required: pointerdown → live preview → pointerup → **commit** → clip stays → one undo. |
+| B-02 | **Free placement** — must be able to drop at any time (00:03.200), leave gaps, not forced adjacent | **fixed** | Root cause proven by probe: on the PRIMARY video track `moveClipAtTimeline` filtered the clip out instead of leaving a gap, so every later clip slid left (A[0-2] B[2-4] C[4-6] → moving B to 10s moved C from 4s to 2s). Now the vacated space becomes a gap on every track. 5 regression tests in `lib/editor/freePlacement.test.ts`. Needs browser confirmation. |
 | B-03 | **Magnetic snapping** with vertical guide; snapped timestamps must be **exactly** equal | investigating | Threshold must be screen-pixel based (6–10px) converted via zoom, not a fixed seconds value. |
-| B-04 | **Audio-only files must not create a visual layer** (mp3 showing as video rectangle/thumbnail) | open | Must live only on an audio track; must still play mixed with overlapping media. |
+| B-04 | **Audio-only files must not create a visual layer** (mp3 showing as video rectangle/thumbnail) | **verified (logic)** | Verified: both add paths route `kind === "audio"` to the audio track, and `usableClips` excludes audio from the visual set, so it cannot cover the video. Locked by `lib/render/audioOnly.test.ts` (4 tests). |
 | B-05 | **Overlap is a feature** — multiple video/image/text/audio at the same time on different tracks | open | Timeline must not be a single linear sequence. |
 | B-06 | **Z-order / layer reorder** consistent between Canvas, Timeline, Inspector and Export | open | UI numbering must not be inverted between Timeline and Canvas. |
 | B-07 | **Select a layer behind another layer** on the canvas (Alt+Click cycling / layer picker) | open | |
