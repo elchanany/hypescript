@@ -7,7 +7,7 @@ import { Overlay } from "@/lib/editor/overlay";
 import { audioTrack, primaryVideoTrackId, sortedTracks, TrackMeta, videoTrack } from "@/lib/editor/project";
 import { clipTrackId, clipsOnTrack } from "@/lib/editor/tracks";
 import { isGapClip } from "@/lib/editor/timelineOps";
-import { formatTimecode, MagneticTarget, snapRangeStart, snapToMagneticTarget } from "@/lib/editor/time";
+import { formatTimecode, MagneticTarget, snapRangeStart, snapToMagneticTarget, snapToleranceSec } from "@/lib/editor/time";
 import { nextZoom, scrollLeftAfterZoom, timelineContentWidth, TIMELINE_GUTTER } from "@/lib/editor/zoom";
 import { MEDIA_DRAG_MIME } from "@/lib/editor/mediaDrag";
 import { Film, AudioLines, Captions, Layers, Lock, Unlock, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronsUpDown, Plus, Eye } from "@/components/icons";
@@ -15,6 +15,9 @@ import { IconButton } from "@/components/ui";
 import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";
 import StillStrip from "@/components/StillStrip";
+
+/** Magnet radius on screen. The spec calls for 6–10px; 10 keeps it findable without stickiness. */
+const SNAP_PIXELS = 10;
 
 interface Props {
   media: MediaAsset[];
@@ -313,8 +316,7 @@ export default function Timeline(p: Props) {
 
   const snapTol = () => {
     const laneW = laneRef.current?.clientWidth || overlayLaneRef.current?.clientWidth || portW || 800;
-    const pxTol = 12;
-    return Math.max(0.04, Math.min(0.45, (pxTol / Math.max(1, laneW)) * visibleTotal));
+    return snapToleranceSec(SNAP_PIXELS, laneW, visibleTotal);
   };
 
   const applySnap = (t: number, exclude?: number[], bypass = false) => {
@@ -1012,6 +1014,12 @@ export default function Timeline(p: Props) {
                   onDrop={(e) => onLaneDrop(e, track.id)}
                 >
                   <Grid />
+                  {tClips.length === 0 && (
+                    <div className="tl-empty-lane-placeholder">
+                      <Film size={16} strokeWidth={1.5} />
+                      <span>Drag material here and start to create</span>
+                    </div>
+                  )}
                   {tClips.map((c, i) => {
                     const gap = isGapClip(c);
                     const isDraggingThis = activeDrag?.id === c.id;

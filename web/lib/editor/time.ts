@@ -107,3 +107,23 @@ export function snapRangeStart(
     edge: useStart ? "start" : "end",
   };
 }
+
+/**
+ * Snap radius in seconds for a given zoom, derived from a SCREEN-PIXEL threshold so the
+ * magnet feels identical at every zoom level (the spec's 6–10px rule).
+ *
+ * There is deliberately no lower clamp in seconds: a floor such as 0.04s exceeds one frame
+ * at 30fps, which makes frame-accurate placement impossible exactly when the user has zoomed
+ * in to do it. The upper clamp only stops the magnet becoming absurdly sticky when zoomed far
+ * out, where a few pixels can span many seconds.
+ */
+export function snapToleranceSec(
+  pixelThreshold: number,
+  laneWidthPx: number,
+  visibleSpanSec: number,
+  maxSec = 0.45,
+): number {
+  const w = Math.max(1, laneWidthPx);
+  const span = Math.max(0, visibleSpanSec);
+  return Math.min(maxSec, (Math.max(0, pixelThreshold) / w) * span);
+}
