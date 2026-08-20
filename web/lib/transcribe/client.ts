@@ -32,6 +32,27 @@ function httpErrorHe(status: number, body: string, chunkBytes: number): string {
   return `התמלול נכשל (שגיאה ${status})${snippet ? `: ${snippet}` : "."}`;
 }
 
+/**
+ * Explains — in plain Hebrew — why the premium engine was skipped, so a quota problem is
+ * never silently experienced as "the transcription is just inaccurate".
+ */
+export function fallbackMessageHe(reason: string | null): string {
+  switch (reason) {
+    case "elevenlabs_quota_exhausted":
+      return "מכסת ElevenLabs נוצלה — התמלול בוצע במנוע גיבוי, לכן הדיוק נמוך יותר. שדרוג המסלול יחזיר את התמלול המדויק.";
+    case "elevenlabs_key_rejected":
+      return "מפתח ElevenLabs נדחה (שגוי או שפג תוקפו) — התמלול בוצע במנוע גיבוי בדיוק נמוך יותר.";
+    case "elevenlabs_file_too_large":
+      return "קטע האודיו גדול מדי ל-ElevenLabs — התמלול בוצע במנוע גיבוי.";
+    case "elevenlabs_unavailable":
+      return "ElevenLabs אינו זמין כרגע — התמלול בוצע במנוע גיבוי. אפשר לנסות שוב מאוחר יותר.";
+    case "elevenlabs_not_configured":
+      return "לא מוגדר מפתח ElevenLabs — התמלול בוצע במנוע גיבוי בדיוק נמוך יותר.";
+    default:
+      return "התמלול הושלם במנוע הגיבוי; הדיוק עשוי להיות נמוך יותר.";
+  }
+}
+
 export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Word[]> {
   const {
     file, durationSec,
@@ -92,7 +113,7 @@ export async function transcribeMediaFile(opts: TranscribeMediaOpts): Promise<Wo
         if (!resp.ok) throw new Error(data?.error || httpErrorHe(resp.status, body, blob.size));
         if (!data) throw new Error("שירות התמלול החזיר תשובה ריקה. נסה שוב.");
         if (resp.headers.get("X-Hypescript-Transcription-Quality") === "reduced") {
-          onPhase?.("התמלול הושלם במנוע הגיבוי. האיכות עשויה להיות נמוכה יותר; Pro עם מכסה זמינה משתמש ב־ElevenLabs.");
+          onPhase?.(fallbackMessageHe(resp.headers.get("X-Hypescript-Fallback-Reason")));
         }
         lastError = null;
         break;

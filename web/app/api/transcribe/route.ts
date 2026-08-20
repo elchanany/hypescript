@@ -8,6 +8,7 @@ import { elevenLabsErrorHe, elevenLabsFetch } from "@/lib/elevenlabs/client";
 import { DEFAULT_STT_MODEL, DEFAULT_STT_OPTIONS } from "@/lib/elevenlabs/constants";
 import { normalizeElevenLabsStt, toCompatResponse } from "@/lib/elevenlabs/normalize";
 import { requireCloudUser } from "@/lib/cloud/auth";
+import { elevenLabsFallbackReason } from "@/lib/transcribe/fallbackReason";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -31,20 +32,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (requested === "auto") {
+      // Why the premium engine was skipped. Surfaced to the client so a quota problem
+      // is never silently experienced as "the transcription is just inaccurate".
+      let fallbackReason = "";
       if ((process.env.ELEVENLABS_API_KEY || "").trim()) {
         try {
           const primary = await transcribeElevenLabs(form, file, language);
           if (primary.ok) return withQuality(primary, "premium", "elevenlabs");
           if (primary.status === 400) return withQuality(primary, "premium", "elevenlabs");
-        } catch {
-          // fallback to groq or openai
+          fallbackReason = elevenLabsFallbackReason(primary.status);
+        } catch (e) {
+          fallbackReason = `elevenlabs_error:${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`;
         }
+      } else {
+        fallbackReason = "elevenlabs_not_configured";
       }
       if ((process.env.GROQ_API_KEY || "").trim()) {
-        return withQuality(await transcribeOpenAiCompat(form, file, "groq", language), "reduced", "groq");
+        return withQuality(await transcribeOpenAiCompat(form, file, "groq", language), "reduced", "groq", fallbackReason);
       }
       if ((process.env.OPENAI_API_KEY || "").trim()) {
-        return withQuality(await transcribeOpenAiCompat(form, file, "openai", language), "reduced", "openai");
+        return withQuality(await transcribeOpenAiCompat(form, file, "openai", language), "reduced", "openai", fallbackReason);
       }
       return NextResponse.json({ error: "שירות התמלול אינו זמין כרגע." }, { status: 503 });
     }
@@ -59,9 +66,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function withQuality(response: NextResponse, quality: "premium" | "reduced", provider: string): NextResponse {
+function withQuality(response: NextResponse, quality: "premium" | "reduced", provider: string, fallbackReason = ""): NextResponse {
   response.headers.set("X-Hypescript-Transcription-Quality", quality);
   response.headers.set("X-Hypescript-Transcription-Provider", provider);
+  if (fallbackReason) response.headers.set("X-Hypescript-Fallback-Reason", fallbackReason);
   return response;
 }
 
