@@ -6,7 +6,7 @@
 // canvas (מידות הפרויקט) הוא מצב נפרד שאינו נרשם ל-History.
 
 import { useCallback, useRef, useState } from "react";
-import { Clip } from "@/lib/editor/model";
+import { Clip, MediaAsset } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { createHistory } from "@/lib/editor/history";
@@ -14,10 +14,15 @@ import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { defaultTracks, DEFAULT_CANVAS, TrackMeta } from "@/lib/editor/project";
 import { CaptionStyle, DEFAULT_CAPTION_STYLE, normalizeCaptionStyle } from "@/lib/editor/captionStyle";
 
-export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; tracks: TrackMeta[]; overlays: Overlay[]; }
+export interface EditorSnapshot { clips: Clip[] | null; subs: Sub[] | null; tracks: TrackMeta[]; overlays: Overlay[]; media?: MediaAsset[]; }
 type Updater<T> = T | ((prev: T) => T);
 
-export function useEditor() {
+export interface UseEditorOptions {
+  getMedia?: () => MediaAsset[];
+  setMedia?: (media: MediaAsset[]) => void;
+}
+
+export function useEditor(options?: UseEditorOptions) {
   const [clips, setClipsRaw] = useState<Clip[] | null>(null);
   const [subs, setSubsRaw] = useState<Sub[] | null>(null);
   const [tracks, setTracksRaw] = useState<TrackMeta[]>(defaultTracks());
@@ -32,7 +37,13 @@ export function useEditor() {
   const [, force] = useState(0);
   const touch = useCallback(() => force((v) => v + 1), []);
 
-  const now = (): EditorSnapshot => ({ clips: clipsRef.current, subs: subsRef.current, tracks: tracksRef.current, overlays: overlaysRef.current });
+  const now = (): EditorSnapshot => ({ 
+    clips: clipsRef.current, 
+    subs: subsRef.current, 
+    tracks: tracksRef.current, 
+    overlays: overlaysRef.current,
+    media: options?.getMedia ? options.getMedia() : undefined,
+  });
   const apply = (s: EditorSnapshot) => {
     // Keep the imperative EditorApi coherent across several commands in the
     // same tick (Agent workflows and convert-to-logo both do this). React state
@@ -42,6 +53,9 @@ export function useEditor() {
     tracksRef.current = s.tracks;
     overlaysRef.current = s.overlays || [];
     setClipsRaw(s.clips); setSubsRaw(s.subs); setTracksRaw(s.tracks); setOverlaysRaw(s.overlays || []);
+    if (s.media && options?.setMedia) {
+      options.setMedia(s.media);
+    }
   };
 
   const commit = useCallback((next: EditorSnapshot) => {
@@ -49,6 +63,10 @@ export function useEditor() {
     apply(next);
     touch();
   }, [touch]);
+
+  const commitSnapshot = useCallback((next: EditorSnapshot) => {
+    commit(next);
+  }, [commit]);
 
   const setClips = useCallback((u: Updater<Clip[] | null>) => {
     const next = typeof u === "function" ? (u as any)(clipsRef.current) : u;
@@ -64,7 +82,13 @@ export function useEditor() {
     commit({ ...now(), clips: c, subs: s });
   }, [commit]);
   const restoreSnapshot = useCallback((snapshot: EditorSnapshot) => {
-    commit({ clips: snapshot.clips, subs: snapshot.subs, tracks: snapshot.tracks, overlays: snapshot.overlays || [] });
+    commit({
+      clips: snapshot.clips,
+      subs: snapshot.subs,
+      tracks: snapshot.tracks,
+      overlays: snapshot.overlays || [],
+      media: snapshot.media,
+    });
   }, [commit]);
 
   const updateClip = useCallback((id: string, patch: Partial<Clip>) => {
@@ -78,7 +102,9 @@ export function useEditor() {
     const next = typeof u === "function" ? (u as any)(overlaysRef.current) : u;
     commit({ ...now(), overlays: next });
   }, [commit]);
-  const addOverlay = useCallback((o: Overlay) => { commit({ ...now(), overlays: [...overlaysRef.current, o] }); }, [commit]);
+  const addOverlay = useCallback((overlay: Overlay) => {
+    commit({ ...now(), overlays: [...overlaysRef.current, overlay] });
+  }, [commit]);
   const updateOverlay = useCallback((id: string, patch: Partial<Overlay>) => {
     commit({ ...now(), overlays: overlaysRef.current.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
   }, [commit]);
@@ -144,7 +170,7 @@ export function useEditor() {
 
   return {
     clips, subs, tracks, overlays, canvas, captionStyle,
-    setClips, setSubs, setProject, restoreSnapshot, updateClip,
+    setClips, setSubs, setProject, restoreSnapshot, updateClip, commitSnapshot,
     setOverlays, addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas, setCaptionStyle,
     renameTrack, setTrackHeight, toggleLock, toggleMute, reorderTrack, setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
