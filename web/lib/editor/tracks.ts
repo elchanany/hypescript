@@ -14,6 +14,30 @@ export function clipsOnTrack(clips: Clip[], trackId: string, primaryId = "trk_vi
   return clips.filter((c) => clipTrackId(c, primaryId) === trackId);
 }
 
+/**
+ * מחיל את דגל ההשתקה של כל רצועה על הקליפים שלה (volume -> 0).
+ *
+ * למה זה קיים: לפני כן ההשתקה נקראה כ-`audioMuted(tracks)` — כלומר *רצועת
+ * האודיו* בלבד — והופעלה כמכפיל גלובלי על כל הסאונד. שתי תוצאות שגויות:
+ * השתקת רצועת המוזיקה השתיקה גם את הדיבור שבווידאו, והשתקת רצועת וידאו לא
+ * עשתה כלום. ההשתקה היא תכונה של הרצועה, ולכן היא חייבת להיפתר לכל קליפ
+ * בנפרד — גם בתצוגה המקדימה וגם בייצוא, מאותה פונקציה, כדי שלא יסטו.
+ *
+ * מוחזר אותו מערך (זהות reference) כשאין רצועה מושתקת, כדי לא לשבור memo.
+ */
+export function applyTrackMute(clips: Clip[], tracks: TrackMeta[]): Clip[] {
+  const muted = new Set(tracks.filter((t) => t.muted).map((t) => t.id));
+  if (!muted.size) return clips;
+  const primaryId = primaryVideoTrackId(tracks);
+  let changed = false;
+  const next = clips.map((c) => {
+    if (!muted.has(clipTrackId(c, primaryId)) || clipVolume(c) === 0) return c;
+    changed = true;
+    return { ...c, volume: 0 };
+  });
+  return changed ? next : clips;
+}
+
 /** מחליף את קליפי הרצועה ב־next (שומר trackId), משאיר קליפים מרצועות אחרות. */
 export function replaceTrackClips(
   all: Clip[],

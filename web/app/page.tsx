@@ -6,7 +6,7 @@ import {
   assembledStart, Clip, clipDur, MediaAsset, MediaKind, clipAudioFades, clipVolume, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
-  audioMuted, audioTrack, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
+  audioTrack, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
 } from "@/lib/editor/project";
 import { migrateState } from "@/lib/editor/migrate";
 import { scriptToClips } from "@/lib/editor/scriptClips";
@@ -16,7 +16,7 @@ import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
-import { clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
+import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
 import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
 import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
 import type { GiphyAssetItem } from "@/lib/creative/giphy";
@@ -1297,9 +1297,12 @@ export default function EditorPage() {
     setExportResult(null); setExportError(""); setExportOpen(true); setRenderElapsed(0);
     setError(""); setRendering(true); setProgress(0);
     try {
-      let edl = flattenVideoTracks(clips, tracks);
+      // ההשתקה היא תכונה של הרצועה ונפתרת לכל קליפ (applyTrackMute) — לא כמכפיל
+      // גלובלי. קודם לכן הועבר audioMuted(tracks), כלומר דגל ההשתקה של *רצועת
+      // האודיו*, והוא השתיק גם את הדיבור שבווידאו; והשתקת רצועת וידאו לא עשתה כלום.
+      let edl = applyTrackMute(flattenVideoTracks(clips, tracks), tracks);
       const aid = audioTrack(tracks)?.id;
-      const audioClips = aid ? clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)) : [];
+      const audioClips = aid ? applyTrackMute(clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)), tracks) : [];
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
       const policy = projectId ? await getProjectPolicy(projectId) : null;
       const cloudCapable = policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId
@@ -1343,7 +1346,7 @@ export default function EditorPage() {
         const backend = getRenderBackend();
         setPhase("מכין את הסרטון במכשיר…");
         blob = await backend.renderProject(
-          { media, clips: edl, audioMuted: audioMuted(tracks), overlays, canvas, audioClips, subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length },
+          { media, clips: edl, overlays, canvas, audioClips, subs, captionStyle, burnCaptions: burnCaptions && !!subs?.length },
           (r) => { setPhase("מרנדר את הסרטון במכשיר…"); setProgress(Math.min(1, r)); },
           controller.signal,
         );
@@ -1823,7 +1826,7 @@ export default function EditorPage() {
                     const result = runCommand("caption.setStyle", editorApiRef.current, { position });
                     if (!result.ok) setError(result.error);
                   }}
-                  onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
+                  onCopyPosition={quotePlace}
                   canvas={canvas} onChangeCanvas={setCanvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                   onSelectOverlay={selectOverlay} onBeginOverlay={beginTransaction}
                   onOverlayLive={(u) => setOverlaysLive(u)} onCommitOverlay={commitTransaction} onCancelOverlay={cancelTransaction}
@@ -1910,7 +1913,7 @@ export default function EditorPage() {
                   const result = runCommand("caption.setStyle", editorApiRef.current, { position });
                   if (!result.ok) setError(result.error);
                 }}
-                onCopyPosition={quotePlace} audioMuted={audioMuted(tracks)}
+                onCopyPosition={quotePlace}
                 canvas={canvas} onChangeCanvas={setCanvas} overlays={overlays} selectedOverlayId={selectedOverlayId}
                 onSelectOverlay={selectOverlay}
                 onBeginOverlay={beginTransaction}

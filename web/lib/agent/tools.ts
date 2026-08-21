@@ -44,8 +44,8 @@ import {
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
 import { CommandId, EditorApi, runCommand } from "@/lib/editor/commands";
 import { getActiveBrandKit, brandKitPrompt, summarizeBrandKit } from "@/lib/brand/kit";
-import { audioMuted, audioTrack, TrackMeta, primaryVideoTrackId, videoTracks, createVideoTrack } from "@/lib/editor/project";
-import { clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline, projectDuration } from "@/lib/editor/tracks";
+import { audioTrack, TrackMeta, primaryVideoTrackId, videoTracks, createVideoTrack } from "@/lib/editor/project";
+import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, moveClipAtTimeline, projectDuration } from "@/lib/editor/tracks";
 import { ToolSchema } from "./types";
 import { buildTimelineEnergyEvidence, buildTimelineEvidence, evidenceCounts } from "@/lib/editor/semanticTimeline";
 import { colorPreset } from "@/lib/editor/colorPresets";
@@ -2223,9 +2223,10 @@ export const TOOLS: ToolMeta[] = [
       let renderEDL: typeof import("@/lib/ffmpeg").renderEDL;
       try { ({ renderEDL } = await import("@/lib/ffmpeg")); }
       catch { throw new Error("נפרסה גרסה חדשה של האפליקציה — רענן את הדף (Ctrl+Shift+R) והרץ ייצוא שוב."); }
-      let edl = flattenVideoTracks(ctx.clips!, ctx.tracks || []);
+      // ההשתקה נפתרת לכל רצועה בנפרד (applyTrackMute) — זהה ל-app/page.tsx ולתצוגה המקדימה.
+      let edl = applyTrackMute(flattenVideoTracks(ctx.clips!, ctx.tracks || []), ctx.tracks || []);
       const aid = audioTrack(ctx.tracks || [])?.id;
-      const audioClips = aid ? clipsOnTrack(ctx.clips!, aid, primaryVideoTrackId(ctx.tracks || [])) : [];
+      const audioClips = aid ? applyTrackMute(clipsOnTrack(ctx.clips!, aid, primaryVideoTrackId(ctx.tracks || [])), ctx.tracks || []) : [];
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(ctx.tracks || []) }];
       const secs = edl.reduce((s, c) => s + (c.end - c.start), 0);
       report(secs > 90 ? `מרנדר ${Math.round(secs)}s בדפדפן — ייקח זמן…` : "מרנדר בדפדפן…");
@@ -2233,7 +2234,7 @@ export const TOOLS: ToolMeta[] = [
         ctx.media, edl,
         (r) => report(`מרנדר… ${Math.min(100, Math.round(r * 100))}%`),
         undefined,
-        { audioMuted: audioMuted(ctx.tracks || []), audioClips, overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
+        { audioClips, overlays: ctx.overlays || [], canvas: ctx.canvas || defaultCanvasFor() },
       );
       ctx.lastRender = blob;
       const base = (mainVideo(ctx)?.name || "video").replace(/\.[^.]+$/, "");

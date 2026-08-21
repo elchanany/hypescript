@@ -10,7 +10,7 @@ import { Overlay } from "@/lib/editor/overlay";
 import { CanvasSize, displayRect } from "@/lib/editor/canvasCoords";
 import { CaptionStyle, captionStyleToCss, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { audioTrack, primaryVideoTrackId, TrackMeta, videoTracks } from "@/lib/editor/project";
-import { clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
+import { applyTrackMute, clipsOnTrack, flattenVideoTracks } from "@/lib/editor/tracks";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, MoreHorizontal, Camera, MapPin, Film, Music, RotateCcw, RotateCw, TriangleAlert } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem } from "@/components/ui";
 import { AspectRatioPicker } from "@/components/AspectRatioPicker";
@@ -107,7 +107,9 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     if (!tracks?.length) return clips.filter((c) => media.find((m) => m.id === c.sourceId)?.kind !== "audio");
     const visualIds = new Set(videoTracks(tracks).map((track) => track.id));
     const visuals = clips.filter((c) => visualIds.has(c.trackId || primaryId));
-    return flattenVideoTracks(visuals, tracks);
+    // השתקה נפתרת לכל רצועה בנפרד ולפני השטיחה — בדיוק כמו בייצוא (app/page.tsx),
+    // אחרת "מה ששומעים" בתצוגה המקדימה שונה מהקובץ הסופי.
+    return applyTrackMute(flattenVideoTracks(visuals, tracks), tracks);
   }, [clips, tracks, media, primaryId]);
   const audioClips = useMemo(() => {
     if (!clips) {
@@ -116,7 +118,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     }
     if (!clips.length || !tracks?.length) return [];
     const id = audioTrack(tracks)?.id;
-    return id ? clipsOnTrack(clips, id, primaryId) : [];
+    return id ? applyTrackMute(clipsOnTrack(clips, id, primaryId), tracks) : [];
   }, [clips, tracks, primaryId, media]);
   const visualDuration = totalDur(visualClips);
   const audioDuration = totalDur(audioClips);
