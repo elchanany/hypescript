@@ -39,6 +39,11 @@ export interface Conversation {
   mode?: AgentMode;
   /** האם כבר נוצרה כותרת אוטומטית (LLM) לשיחה — פעם אחת בלבד, לא בכל הודעה. */
   titleGenerated?: boolean;
+  /**
+   * המשתמש נתן שם ידנית. שם ידני מנצח תמיד: כותרת אוטומטית שעדיין ב-flight
+   * כשהמשתמש שינה שם לא תדרוס אותו (B-35 — לעולם לא לדרוס עריכה ידנית).
+   */
+  titleManual?: boolean;
 }
 
 /** מצב תקף של שיחה, עם נפילה בטוחה ל-"act" עבור שיחות ישנות/פגומות בלי שדה mode. */
@@ -108,6 +113,7 @@ export function migrateChatStore(raw: unknown): ChatStoreV2 {
           // שצריכה Plan); רק emptyConversation/addConversation נותנים "plan".
           mode: c.mode === "ask" || c.mode === "plan" || c.mode === "act" ? c.mode : "act",
           titleGenerated: c.titleGenerated === true || items.some((it: ChatItem) => it.kind === "user"),
+          titleManual: c.titleManual === true,
         };
       }),
       memorySummary: o.memorySummary && typeof o.memorySummary === "object" ? o.memorySummary : undefined,
@@ -167,7 +173,7 @@ export function renameConversation(store: ChatStoreV2, id: string, title: string
     // titleGenerated=true גם על שינוי-שם ידני: כותרת שהמשתמש בחר לעולם לא
     // תידרס אחר כך על ידי כותרת אוטומטית שעדיין ב-flight.
     conversations: store.conversations.map((conversation) => conversation.id === id
-      ? { ...conversation, title: clean, titleGenerated: true, updatedAt: Date.now() }
+      ? { ...conversation, title: clean, titleGenerated: true, titleManual: true, updatedAt: Date.now() }
       : conversation),
   };
 }
@@ -192,13 +198,23 @@ export function markTitleGenerated(store: ChatStoreV2, id: string): ChatStoreV2 
   };
 }
 
-/** מחיל כותרת שנוצרה על ידי LLM. אם ריקה — רק מסמן שכבר נוצרה (בלי לדרוס כותרת קיימת). */
+/**
+ * מחיל כותרת שנוצרה על ידי LLM. אם ריקה — רק מסמן שכבר נוצרה (בלי לדרוס
+ * כותרת קיימת). אם המשתמש שינה שם ידנית בזמן שהקריאה הייתה באוויר, השם הידני
+ * נשמר: כותרת אוטומטית לעולם לא דורסת בחירה של המשתמש.
+ * updatedAt לא משתנה — כותרת אוטומטית אינה "פעילות" ואסור לה לקפוץ בראש הרשימה.
+ */
 export function applyGeneratedTitle(store: ChatStoreV2, id: string, title: string): ChatStoreV2 {
   const clean = title.trim().replace(/\s+/g, " ").slice(0, 80);
   return {
     ...store,
     conversations: store.conversations.map((conversation) => conversation.id === id
-      ? { ...conversation, title: clean || conversation.title, titleGenerated: true, updatedAt: conversation.updatedAt }
+      ? {
+          ...conversation,
+          title: conversation.titleManual || !clean ? conversation.title : clean,
+          titleGenerated: true,
+          updatedAt: conversation.updatedAt,
+        }
       : conversation),
   };
 }

@@ -136,9 +136,9 @@ const MODE_LABELS: Record<AgentMode, string> = { ask: "שאל", plan: "תכנן"
 /** ההודעה שחוזרת ל-LLM (כתוצאת-כלי) וגם מוצגת למשתמש כשקריאה נחסמת לפי מצב. */
 export function formatModeBlock(mode: AgentMode, toolName: string): string {
   if (mode === "ask") {
-    return `⛔ נחסם: מצב "${MODE_LABELS.ask}" הוא ייעוץ בלבד ואינו מריץ כלים (כולל ${toolName}). אפשר להסביר ולהמליץ בטקסט; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.plan}" או "${MODE_LABELS.act}".`;
+    return `נחסם: מצב "${MODE_LABELS.ask}" הוא ייעוץ בלבד ואינו מריץ כלים (כולל ${toolName}). אפשר להסביר ולהמליץ בטקסט; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.plan}" או "${MODE_LABELS.act}".`;
   }
-  return `⛔ נחסם: מצב "${MODE_LABELS.plan}" מריץ רק כלי קריאה/בדיקה — ${toolName} משנה את הפרויקט. הצע תוכנית וחכה לאישור; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.act}".`;
+  return `נחסם: מצב "${MODE_LABELS.plan}" מריץ רק כלי קריאה/בדיקה — ${toolName} משנה את הפרויקט. הצע תוכנית וחכה לאישור; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.act}".`;
 }
 
 function formatLlmError(status: number, body: string): string {
