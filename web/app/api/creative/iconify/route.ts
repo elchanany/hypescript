@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   IconCategory, fetchIconifyCollections, searchIconifyIcons, searchVectorElements,
 } from "@/lib/creative/iconify";
+import { isHebrewQuery, translateSearchQuery } from "@/lib/creative/hebrewSearchTerms";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -23,10 +24,28 @@ export async function GET(req: Request) {
   }
 
   if (query) {
+    // Iconify מחפש באנגלית בלבד. בלי התרגום הזה כל חיפוש טבעי בעברית ("חץ",
+    // "לב") היה מחזיר רשימה ריקה, מה שנראה כמו שירות תקול ולא כמו מגבלת שפה.
+    const englishQuery = translateSearchQuery(query);
+    if (!englishQuery) {
+      const items = searchVectorElements(query, category);
+      return NextResponse.json({
+        source: "curated_fallback",
+        items,
+        total: items.length,
+        untranslatedQuery: isHebrewQuery(query) ? query : undefined,
+        noteHe: isHebrewQuery(query)
+          ? "ספריית האייקונים החיצונית מחפשת באנגלית. נסה מונח באנגלית, או אחד מהאלמנטים המובנים שמוצגים כאן."
+          : undefined,
+      });
+    }
     try {
-      const result = await searchIconifyIcons(query, limit);
+      const result = await searchIconifyIcons(englishQuery, limit);
       if (result.items.length > 0) {
-        return NextResponse.json({ source: "iconify_api", items: result.items, total: result.total });
+        return NextResponse.json({
+          source: "iconify_api", items: result.items, total: result.total,
+          translatedQuery: englishQuery !== query ? englishQuery : undefined,
+        });
       }
     } catch (err) {
       console.warn("Iconify search נכשל, נופלים לרשימת האלמנטים המובנית:", err);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GiphyAssetItem, STARTER_STICKERS } from "@/lib/creative/giphy";
+import { isHebrewQuery, translateSearchQuery } from "@/lib/creative/hebrewSearchTerms";
 
 function starterFallback(query: string, hasApiKey: boolean, error?: string) {
   const q = query.toLowerCase();
@@ -31,20 +32,24 @@ export async function GET(req: Request) {
   }
 
   try {
-    const endpoint = query ? "search" : "trending";
+    // GIPHY, כמו Iconify, מתייג באנגלית בלבד. שאילתה עברית שאין לה תרגום מוכר
+    // תיפול ל-trending במקום להחזיר רשימה ריקה בלי שום הסבר.
+    const englishQuery = translateSearchQuery(query);
+    const endpoint = englishQuery ? "search" : "trending";
     const targetType = type === "gifs" ? "gifs" : "stickers";
     const url = new URL(`https://api.giphy.com/v1/${targetType}/${endpoint}`);
     url.searchParams.set("api_key", apiKey);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("rating", "g");
-    if (query) url.searchParams.set("q", query);
+    if (englishQuery) url.searchParams.set("q", englishQuery);
 
     const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
     if (!res.ok) {
       return starterFallback(query, true, `GIPHY החזיר HTTP ${res.status}`);
     }
 
+    const untranslated = isHebrewQuery(query) && !englishQuery ? query : undefined;
     const data = await res.json();
     const items: GiphyAssetItem[] = (data.data || []).map((item: any) => ({
       id: item.id,
@@ -62,6 +67,11 @@ export async function GET(req: Request) {
       items,
       pagination: data.pagination,
       hasApiKey: true,
+      translatedQuery: englishQuery && englishQuery !== query ? englishQuery : undefined,
+      untranslatedQuery: untranslated,
+      noteHe: untranslated
+        ? "GIPHY מתייג באנגלית בלבד, ולכן מוצג כאן התוכן הפופולרי. נסה מונח באנגלית לחיפוש מדויק."
+        : undefined,
       attribution: "Powered by GIPHY",
     });
   } catch (err) {
