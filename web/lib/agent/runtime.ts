@@ -7,6 +7,7 @@ import {
   type ToolArtifact, type ToolRunResult,
 } from "./tools";
 import { repairToolMessages } from "./normalize";
+import { fitHistoryToBudget } from "./requestBudget";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
 export interface AgentEvents {
@@ -141,13 +142,19 @@ export function formatModeBlock(mode: AgentMode, toolName: string): string {
   return `נחסם: מצב "${MODE_LABELS.plan}" מריץ רק כלי קריאה/בדיקה — ${toolName} משנה את הפרויקט. הצע תוכנית וחכה לאישור; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.act}".`;
 }
 
-function formatLlmError(status: number, body: string): string {
+export function formatLlmError(status: number, body: string): string {
   const lower = body.toLowerCase();
   if (status === 503 || /service.?unavailable|too busy|overloaded/i.test(lower)) {
     return "הספק עמוס (503). נסה שוב בעוד רגע, או החלף מודל/ספק בהגדרות הצ'אט.";
   }
   if (status === 429 || /rate.?limit/i.test(lower)) {
     return "חריגת קצב (429). המתן מעט ונסה שוב.";
+  }
+  // 413 = הבקשה גדולה מדי. השיחה מקוצצת אוטומטית לפני השליחה, אז אם זה בכל
+  // זאת קרה — ההודעה האחרונה עצמה גדולה מדי. "נסה שוב" ישלח בדיוק את אותו
+  // גוף וייכשל שוב, ולכן אסור להציג פה "נסה שוב" בלי הסבר.
+  if (status === 413 || /payload too large|entity too large|too_large/i.test(lower)) {
+    return "הבקשה גדולה מדי לשליחה. פתח שיחה חדשה (ההקשר יישמר בזיכרון הקצר), או קצר את ההודעה ואת מספר הפריימים שצירפת.";
   }
   return body.slice(0, 200) || `שגיאת סוכן (HTTP ${status})`;
 }
@@ -336,12 +343,15 @@ export class AgentRunner {
             signal: ctrl.signal,
             body: JSON.stringify({
               provider: this.provider,
-              messages: [
+              // ההיסטוריה נשלחת במלואה בכל תור, ולכן היא מקוצצת לתקציב *לפני*
+              // השליחה. בלי זה שיחה ארוכה מגיעה ל-413 ואז גם ניסיון חוזר נכשל,
+              // כי הוא שולח בדיוק את אותו גוף (B-22).
+              messages: repairToolMessages(fitHistoryToBudget([
                 { role: "system", content: SYSTEM_PROMPT + MODE_PROMPTS[this.mode] },
                 ...(memory ? [{ role: "system" as const, content: `זיכרון קצר משיחות קודמות באותו פרויקט: ${memory}` }] : []),
                 { role: "system", content: mediaNote },
                 ...this.history,
-              ],
+              ]).messages),
               tools: toolsForMode,
             }),
           });
