@@ -28,6 +28,7 @@ import {
 } from "@/lib/agent/chatStore";
 import { requestConversationTitle, shouldGenerateTitle } from "@/lib/agent/title";
 import { refreshMemorySummary, requestMemorySummary } from "@/lib/agent/memorySummary";
+import { clampComposeDrag, clampComposeHeight, COMPOSE_H_DEFAULT } from "@/lib/ui/composeBox";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
@@ -178,9 +179,6 @@ function ChatUserText({ text }: { text: string }) {
   );
 }
 const COMPOSE_H_KEY = "hs_compose_h";
-const COMPOSE_H_DEFAULT = 82;
-const COMPOSE_H_MIN = 64;
-const COMPOSE_H_MAX = 280;
 
 export interface SteeringNote {
   id: string;
@@ -244,8 +242,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   storeRef.current = store;
 
   useEffect(() => {
-    const h = parseInt(localStorage.getItem(COMPOSE_H_KEY) || "0", 10);
-    if (h >= COMPOSE_H_MIN && h <= COMPOSE_H_MAX) setComposeH(h);
+    // גובה שנשמר לפני שאזורי הכפתורים גדלו יכול להיות קטן מדי מכדי להכיל שורה —
+    // clampComposeHeight מחזיר אותו לברירת המחדל במקום להשאיר תיבה חתוכה.
+    setComposeH(clampComposeHeight(parseInt(localStorage.getItem(COMPOSE_H_KEY) || "0", 10)));
   }, []);
 
   const startResizeCompose = (e: React.MouseEvent) => {
@@ -253,8 +252,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     const startY = e.clientY;
     const startH = composeHRef.current;
     const onMove = (ev: MouseEvent) => {
-      const next = Math.max(COMPOSE_H_MIN, Math.min(COMPOSE_H_MAX, startH + (startY - ev.clientY)));
-      setComposeH(next);
+      setComposeH(clampComposeDrag(startH + (startY - ev.clientY)));
     };
     const onUp = () => {
       window.removeEventListener("mousemove", onMove);
@@ -1186,7 +1184,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   <div className="s-actions">
                     {note.status === "queued" ? (
                       <button type="button" className="btn-push-now" onClick={() => applySteeringNote(note.id)} title="החל הנחיה זו עכשיו באמצע העבודה">
-                        החל עכשיו ⚡
+                        החל עכשיו
                       </button>
                     ) : (
                       <span className="s-applied-badge"><Check size={11} /> הוחל</span>
@@ -1219,7 +1217,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           </div>
         )}
 
-        <div className="chat-compose">
+        {/* running מרחיב את האזור המוגן בתחתית: בזמן עבודה יש שם *שני* כפתורים
+            (שליחה + עצירה), והטקסט היה נכנס מתחת לכפתור העצירה. */}
+        <div className={`chat-compose ${running ? "running" : ""}`}>
 
           <div className="chat-compose-tools">
             <button className="iconbtn lg plus-attach-btn" data-tip="הוסף קבצים ומדיה (+)" data-tippos="up" onClick={() => attachRef.current?.click()} aria-label="הוסף קבצים ומדיה">

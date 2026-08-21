@@ -1323,8 +1323,11 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   background: var(--accent); clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 .playhead2::after {
-  content: ""; position: absolute; inset: -4px -6px; /* אזור לחיצה רחב */
+  content: ""; position: absolute; inset: -4px -7px; /* אזור לחיצה רחב (14px) */
 }
+/* בקצה ההתחלתי אותו רוחב תפיסה מוזז כולו פנימה — אחרת חציו נבלע מתחת ל-.tl-head2
+   (sticky, z-index 12 מול 8 של ראש-הנגן) ונשארים 7px בלבד. נמדד בדפדפן. */
+.playhead2.at-start::after { inset: -4px -14px -4px 0; }
 .playhead2:hover, .playhead2.dragging {
   background: var(--accent-hover, #4be0bb);
   box-shadow: 0 0 0 1px rgba(108,146,255,.35), 0 0 10px rgba(108,146,255,.35);
@@ -1557,9 +1560,18 @@ button.quote-chip:hover svg { color: var(--accent); }
 .chat-starters>span { flex:none; color:var(--text-3); font-size:9px; font-weight:700; }
 .chat-starters button { flex:none; min-height:28px; padding:0 9px; border:1px solid var(--border); border-radius:9px; color:var(--text-2); background:var(--panel-2); font:inherit; font-size:10px; cursor:pointer; }
 .chat-starters button:hover { color:var(--text); border-color:var(--border-strong); background:var(--hover); }
-.chat-compose { position:relative; display:block; min-height:96px; margin:0 10px 10px; padding:0; overflow:hidden; border:1px solid var(--border-strong); border-radius:18px; background:var(--panel-2); box-shadow:0 8px 24px rgba(0,0,0,.07); }
+/* אזורים מוגנים לכפתורים. המספרים חייבים להישאר תואמים ל-lib/ui/composeBox.ts:
+   ‎--compose-pad-top = 6 (top) + 28 (שורת הכלים) + 8, ‎--compose-pad-start = 8 + 34 (שליחה) + 8.
+   בזמן עבודה נוסף כפתור עצירה, ולכן האזור המוגן מתרחב ל-8 + 34 + 5 + 28 + 8. */
+.chat-compose { --compose-pad-top:42px; --compose-pad-bottom:12px; --compose-pad-start:50px;
+  position:relative; display:block; margin:0 10px 10px; padding:0; overflow:hidden; border:1px solid var(--border-strong); border-radius:18px; background:var(--panel-2); box-shadow:0 8px 24px rgba(0,0,0,.07); }
+.chat-compose.running { --compose-pad-start:83px; }
 .chat-compose:focus-within { border-color:color-mix(in srgb,var(--accent) 52%,var(--border)); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 9%,transparent),0 8px 24px rgba(0,0,0,.07); }
-.chat-compose textarea { display:block; width:100%; min-height:68px; margin:0; padding:44px 14px 40px 56px; resize:none; border:0!important; border-radius:0; color:var(--text); background:transparent!important; box-shadow:none!important; font:inherit; line-height:1.55; scrollbar-width:none!important; -ms-overflow-style:none; }
+.chat-compose textarea { display:block; width:100%; margin:0;
+  /* border-box: ה-padding נספר בתוך הגובה, ולכן min-height חייב לכלול אותו —
+     אחרת נשארים לטקסט אפס פיקסלים (זה היה הבאג: גובה 82 מול padding 84). */
+  min-height:calc(var(--compose-pad-top) + var(--compose-pad-bottom) + 21px);
+  padding:var(--compose-pad-top) 14px var(--compose-pad-bottom) var(--compose-pad-start); resize:none; border:0!important; border-radius:0; color:var(--text); background:transparent!important; box-shadow:none!important; font:inherit; line-height:1.55; scrollbar-width:none!important; -ms-overflow-style:none; }
 .chat-compose textarea::-webkit-scrollbar { display:none!important; width:0!important; height:0!important; }
 .chat-compose textarea:focus { outline:0; }
 .chat-compose-tools { position:absolute; z-index:2; top:6px; right:8px; display:flex; align-items:center; gap:3px; }

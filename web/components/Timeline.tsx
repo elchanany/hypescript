@@ -1012,9 +1012,16 @@ export default function Timeline(p: Props) {
     window.addEventListener("mouseup", onUp);
   };
 
+  // אזור התפיסה של ראש-הנגן רחב מהקו עצמו (::after ב-globals.css), אבל בקצה
+  // ההתחלתי חצי ממנו נופל מתחת לעמודת שמות הרצועות (‎.tl-head2, sticky, z-index
+  // גבוה יותר) — שם נמדדו 7px תפיסה במקום 14px. at-start מזיז את אותו רוחב
+  // תפיסה כולו פנימה, בלי להזיז את הקו (שחייב להישאר מדויק) ובלי לצייר מעל
+  // הכותרת כשגוללים.
+  const PLAYHEAD_GRAB_PX = 7;
+  const playheadAtStart = (pct(currentAssembled) / 100) * (laneRef.current?.clientWidth || 0) < PLAYHEAD_GRAB_PX;
   const Playhead = ({ laneEl }: { laneEl?: HTMLElement | null }) => (
     <div
-      className={`playhead2 ${phDrag ? "dragging" : ""}`}
+      className={`playhead2 ${phDrag ? "dragging" : ""} ${playheadAtStart ? "at-start" : ""}`}
       style={{ left: `${pct(currentAssembled)}%` }}
       title="גרור לניווט בציר"
       onMouseDown={(e) => {
