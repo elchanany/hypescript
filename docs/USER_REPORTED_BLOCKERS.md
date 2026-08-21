@@ -39,7 +39,7 @@ not closed because "something similar" was changed.
 | B-16 | Agent output media (image/audio/video) needs real previews + players + "add to timeline" | open | |
 | B-17 | Upload progress widget is off to the side; should be centred under the player | open | |
 | B-18 | Clear **back-to-projects** button in the editor | likely-fixed | TopBar now has two dashboard links; needs visual verification. |
-| B-19 | App-level **z-index architecture** (dropdown behind preview, etc.) | open | Needs stacking tokens, not scattered z-index numbers. |
+| B-19 | App-level **z-index architecture** (dropdown behind preview, etc.) | **fixed, measured in browser** | There were ~70 z-index values scattered between 1 and 10000, and they contradicted each other in ways that produced real bugs: the aspect-ratio dropdown sat at `9999 !important` and floated over open dialogs *and* over the cookie banner; toasts sat at 100 and therefore vanished under the export dialog (900), the admin dialog (1000) and the shortcuts dialog (9999); the onboarding tour at 10000 covered the legally-required consent banner at 5000; and the timeline's drag ghost at 10000 floated over modals. There are now nine documented tokens on `:root` and every floating layer uses one. Measured live: all five dialog variants resolve to 800, toast 900, popovers 300, context menu 400 (backdrop 399), tour 1000, consent 1100, timeline floats 200. Component-local values (1-15 inside the timeline or a card) were deliberately left alone — they are local stacking, not part of the ladder. |
 
 ## P2 — Platform / SaaS
 
