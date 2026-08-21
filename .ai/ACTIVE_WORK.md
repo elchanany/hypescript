@@ -228,8 +228,8 @@ Continue the professional editor roadmap from a verified baseline: chat-first UX
 - Localized onboarding, account preferences, sign-in, cookie consent and the editor top bar; remaining product surfaces must move into the same typed catalog before claiming complete five-language coverage.
 - Supabase migration `locale_address_preferences` applied and schema verified. Verification: 10 focused tests plus the new locale normalization test, `tsc --noEmit`, isolated production build, and Playwright HE/EN/AR/RU/HI direction/auth checks.
 
-## 2026-08-21 — recognizable Brain + Play raster refinement
+## 2026-08-22 — user-selected Brain + Play raster master
 
-- Replaced only the two surrounding rails in the approved raster master with mirrored, minimal cerebral hemispheres using three broad folds that remain readable at favicon size.
-- Preserved the isolated rounded play triangle, navy surface, overall symmetry and subtle H composition; regenerated every favicon, PWA icon, horizontal lockup, social card and plan image through the existing deterministic asset pipeline.
-- Verification: 32px/favicon and horizontal/social derivatives inspected, brand asset tests 4/4, `tsc --noEmit`, and isolated production build `brand-brain-v2` pass.
+- Replaced the rejected segmented-lobe draft with the exact user-selected concept: two continuous mirrored hemispheres, four restrained engraved folds, straight inner H rails and an isolated rounded play triangle.
+- Regenerated every favicon, PWA icon, horizontal lockup, social card and plan image through the existing deterministic asset pipeline; the 32px derivative and full lockup were visually inspected.
+- Verification: brand asset tests 4/4, `tsc --noEmit`, and isolated production build `selected-brain-logo` pass.
