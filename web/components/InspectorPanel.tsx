@@ -6,6 +6,7 @@
 // Every edit flows through onUpdate / onUpdateOverlay / onUpdateSub -> useEditor -> History.
 import { Clip, clipAudioFades, clipContrast, clipEnabled, clipFlipX, clipFlipY, clipOpacity, clipSaturation, clipVisualFades, clipVolume } from "@/lib/editor/model";
 import { Overlay } from "@/lib/editor/overlay";
+import { isAtZOrderBoundary, layerDepth, type ZOrderOp } from "@/lib/editor/layerStack";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { CaptionBg, CaptionPosition, CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
@@ -21,6 +22,8 @@ interface Props {
   width?: number;
   clip: Clip | null;
   overlay?: Overlay | null;
+  /** כל השכבות בפרויקט — נדרש כדי לחשב מיקום/גבולות בסדר-Z (Bring/Send). */
+  overlays?: Overlay[];
   sub?: Sub | null;
   focus?: InspectorFocus;
   assetName: string;
@@ -31,6 +34,8 @@ interface Props {
   onUpdate: (patch: Partial<Clip>) => void;
   onConvertImageClipToOverlay?: () => void;
   onUpdateOverlay?: (patch: Partial<Overlay>) => void;
+  /** Bring to front / Bring forward / Send backward / Send to back — דרך ה-CommandBus (Undo תקין). */
+  onReorderOverlay?: (op: ZOrderOp) => void;
   onUpdateSub?: (patch: Partial<Sub>) => void;
   canvas?: CanvasSize;
   onChangeCanvas?: (canvas: CanvasSize) => void;
@@ -70,7 +75,7 @@ export default function InspectorPanel(p: Props) {
       </div>
       <div className="insp-scroll">
         {overlay ? (
-          <OverlayInspector overlay={overlay} onUpdate={p.onUpdateOverlay!} assetName={p.assetName} canvas={p.canvas} />
+          <OverlayInspector overlay={overlay} overlays={p.overlays || [overlay]} onUpdate={p.onUpdateOverlay!} onReorder={p.onReorderOverlay} assetName={p.assetName} canvas={p.canvas} />
         ) : sub ? (
           <SubInspector
             sub={sub}
@@ -169,8 +174,9 @@ function SubInspector({ sub, onUpdate, captionStyle, onCaptionStyle }: {
   );
 }
 
-function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
-  overlay: Overlay; onUpdate: (patch: Partial<Overlay>) => void; assetName: string; canvas?: CanvasSize;
+function OverlayInspector({ overlay, overlays, onUpdate, onReorder, assetName, canvas }: {
+  overlay: Overlay; overlays: Overlay[]; onUpdate: (patch: Partial<Overlay>) => void; onReorder?: (op: ZOrderOp) => void;
+  assetName: string; canvas?: CanvasSize;
   onChangeCanvas?: (canvas: CanvasSize) => void;
 }) {
   const t = overlay.transform;
@@ -266,11 +272,27 @@ function OverlayInspector({ overlay, onUpdate, assetName, canvas }: {
           <button type="button" className="btn sm" onClick={() => onUpdate({ borderRadius: 0 })}>ללא עיגול</button>
           <button type="button" className="btn sm" onClick={() => onUpdate({ borderRadius: Math.min(t.w, t.h) / 2 })}>עגול מלא</button>
         </div>
-        <div className="prop"><span className="k">סדר שכבה</span><span className="v mono">{overlay.zIndex}</span></div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          <button type="button" className="btn sm" onClick={() => onUpdate({ zIndex: Math.max(0, overlay.zIndex - 1) })}>שלח אחורה</button>
-          <button type="button" className="btn sm" onClick={() => onUpdate({ zIndex: overlay.zIndex + 1 })}>הבא קדימה</button>
-        </div>
+        {(() => {
+          // מוסכמת התצוגה למשתמש (layerStack.layerDepth): 1 = השכבה העליונה ביותר,
+          // ויורד כלפי מטה. זה בדיוק אותו מספר שמופיע בתג "שכבה X/Y" על הקנבס
+          // (PreviewOverlays) — אסור ששני המסכים יראו מספר שונה לאותה שכבה.
+          const pos = layerDepth(overlays, overlay.id);
+          const atFront = isAtZOrderBoundary(overlays, overlay.id, "front");
+          const atBack = isAtZOrderBoundary(overlays, overlay.id, "back");
+          return (
+            <>
+              <div className="prop"><span className="k">סדר שכבה</span>
+                <span className="v mono">{pos ? `${pos.depth}/${pos.total}` : "—"}{atFront && pos && pos.total > 1 ? " · קדמית ביותר" : atBack && pos && pos.total > 1 ? " · אחורית ביותר" : ""}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <button type="button" className="btn sm" onClick={() => onReorder?.("back")} disabled={!onReorder || atBack} data-tip="שלח לגמרי אחורה">שלח לרקע</button>
+                <button type="button" className="btn sm" onClick={() => onReorder?.("backward")} disabled={!onReorder || atBack} data-tip="צעד אחד אחורה">שלח אחורה</button>
+                <button type="button" className="btn sm" onClick={() => onReorder?.("forward")} disabled={!onReorder || atFront} data-tip="צעד אחד קדימה">הבא קדימה</button>
+                <button type="button" className="btn sm" onClick={() => onReorder?.("front")} disabled={!onReorder || atFront} data-tip="הבא לגמרי לחזית">הבא לחזית</button>
+              </div>
+            </>
+          );
+        })()}
         <div className="prop-input" style={{ marginTop: 8 }}><span className="k">Fade in (שנ׳)</span>
           <input type="number" min={0} max={(overlay.end - overlay.start) / 2} step={0.05} value={num(overlay.fadeIn || 0, 2)}
             onChange={(e) => onUpdate({ fadeIn: Math.max(0, Math.min((overlay.end - overlay.start) / 2, +e.target.value)) })} /></div>

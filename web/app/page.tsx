@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Word } from "@/lib/models";
 import {
-  assembledStart, Clip, MediaAsset, MediaKind, clipAudioFades, clipVolume, firstVideo, mediaById, totalDur, trimClip, uid,
+  assembledStart, Clip, clipDur, MediaAsset, MediaKind, clipAudioFades, clipVolume, firstVideo, mediaById, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
 import {
   audioMuted, audioTrack, createVideoTrack, primaryVideoTrackId, SCHEMA_VERSION, videoLocked, videoTrack,
@@ -16,7 +16,7 @@ import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
-import { clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
+import { clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
 import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
 import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
 import type { GiphyAssetItem } from "@/lib/creative/giphy";
@@ -24,7 +24,7 @@ import type { VectorElement } from "@/lib/creative/iconify";
 import type { VectorShape } from "@/lib/creative/shapes";
 import type { MotionAsset } from "@/lib/creative/motionAssets";
 import { loadGoogleFont } from "@/lib/creative/fonts";
-import { deleteProject, ensureProject, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
+import { deleteProject, ensureProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil } from "@/components/icons";
 import { ContextMenu, CtxItem } from "@/components/ui";
@@ -44,7 +44,7 @@ import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 import { getProjectPolicy } from "@/lib/projects/policy";
 import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, listCloudProjects, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
-import { createProjectWithPolicy, ensureCloudProjectMirror } from "@/lib/projects/create";
+import { createProjectWithPolicy, ensureCloudProjectId, syncCloudProjects } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
 import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
@@ -76,15 +76,22 @@ function probeDuration(file: File, kind: MediaKind): Promise<number> {
 
 export default function EditorPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
+  const mediaRef = useRef(media); mediaRef.current = media;
   const [words, setWords] = useState<Word[] | null>(null);
   const {
-    clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, restoreSnapshot, updateClip,
+    clips, subs, tracks, overlays, canvas, setClips, setSubs, setProject, restoreSnapshot, updateClip, commitSnapshot,
     addOverlay, updateOverlay, removeOverlay, setOverlaysLive, setCanvas,
     setTracks,
     beginTransaction, setClipsLive, commitTransaction, cancelTransaction,
     setOverlays, reset: resetEditor, undo, redo, canUndo, canRedo,
     captionStyle, setCaptionStyle,
-  } = useEditor();
+  } = useEditor({
+    getMedia: () => mediaRef.current,
+    setMedia: (next) => {
+      mediaRef.current = next;
+      setMedia(next);
+    },
+  });
   const [cur, setCur] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -165,7 +172,6 @@ export default function EditorPage() {
   const pendingMentionRef = useRef<MediaAsset | null>(null);
   const clipsRef = useRef<Clip[] | null>(clips); clipsRef.current = clips;
   const overlaysRef = useRef(overlays); overlaysRef.current = overlays;
-  const mediaRef = useRef(media); mediaRef.current = media;
   const subsRef = useRef(subs); subsRef.current = subs;
   const tracksRef = useRef(tracks); tracksRef.current = tracks;
   const canvasRef = useRef(canvas); canvasRef.current = canvas;
@@ -195,16 +201,20 @@ export default function EditorPage() {
         updateClip(id, patch);
       },
       getMedia: () => mediaRef.current,
-      removeMediaAsset: (id) => setMedia((items) => {
-        const asset = items.find((item) => item.id === id);
-        if (!asset) return items;
-        if (asset.url) URL.revokeObjectURL(asset.url);
-        const referenced = !!clipsRef.current?.some((clip) => clip.sourceId === id)
-          || overlaysRef.current.some((overlay) => overlay.assetId === id);
-        return referenced
-          ? items.map((item) => item.id === id ? { ...item, file: new File([], item.name, { type: item.file.type }), url: "", missing: true } : item)
-          : items.filter((item) => item.id !== id);
-      }),
+      removeMediaAsset: (id) => {
+        const nextMedia = mediaRef.current.filter((item) => item.id !== id);
+        const nextClips = clipsRef.current ? clipsRef.current.filter((c) => c.sourceId !== id) : null;
+        const nextOverlays = overlaysRef.current.filter((o) => o.assetId !== id);
+        mediaRef.current = nextMedia;
+        setMedia(nextMedia);
+        commitSnapshot({
+          clips: nextClips,
+          subs: subsRef.current,
+          tracks: tracksRef.current,
+          overlays: nextOverlays,
+          media: nextMedia,
+        });
+      },
       addMediaAsset: (asset) => {
         const next = mediaRef.current.some((item) => item.id === asset.id)
           ? mediaRef.current
@@ -277,8 +287,10 @@ export default function EditorPage() {
   const [restored, setRestored] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const projectName = useMemo(() => projects.find((p) => p.id === projectId)?.name || "", [projects, projectId]);
   const [projDlg, setProjDlg] = useState<"none" | "create" | "rename" | "delete">("none");
   const [burnCaptions, setBurnCaptions] = useState(true);
+  const [activeTool, setActiveTool] = useState<"select" | "blade">("select");
   const [nameDlg, setNameDlg] = useState<
     | { kind: "none" }
     | { kind: "track"; id: string; name: string }
@@ -438,10 +450,12 @@ export default function EditorPage() {
   useEffect(() => {
     (async () => {
       const queryParam = new URLSearchParams(window.location.search).get(PROJECT_QUERY_KEY);
+      let existing = await listProjects();
+
       try {
         const cloud = await listCloudProjects();
         if (Array.isArray(cloud) && cloud.length > 0) {
-          await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
+          existing = await syncCloudProjects(cloud.filter((project) => project.state !== "deleting"));
         }
       } catch { /* offline / local fallback */ }
 
@@ -449,21 +463,23 @@ export default function EditorPage() {
         try {
           const direct = await getCloudProject(queryParam);
           if (direct?.project) {
-            await ensureCloudProjectMirror(direct.project);
+            existing = await syncCloudProjects([direct.project]);
           }
         } catch { /* fallback */ }
       }
 
-      let existing = await listProjects();
       if (!existing.length) {
         await ensureProject();
         existing = await listProjects();
       }
+
       const requested = requestedProjectId(existing, queryParam);
-      const id = requested || await ensureProject();
+      const currentSaved = await getCurrentProjectId();
+      const validSaved = currentSaved && existing.some((p) => p.id === currentSaved) ? currentSaved : null;
+      const id = requested || validSaved || (existing.length ? existing[0].id : await ensureProject());
+
       if (id) {
         await setCurrentProject(id);
-        if (queryParam) window.history.replaceState({}, "", "/");
       }
       setProjects(existing);
       setProjectId(id);
@@ -622,8 +638,16 @@ export default function EditorPage() {
     if (!restored || !projectId) return;
     let cancelled = false;
     (async () => {
-      const policy = await getProjectPolicy(projectId);
-      if (!policy?.cloudProjectId || policy.dataMode === "local" || policy.storageBackend !== "r2") return;
+      let policy = await getProjectPolicy(projectId);
+      if (policy?.dataMode === "local") return;
+
+      let cloudProjectId = policy?.cloudProjectId;
+      if (!cloudProjectId) {
+        cloudProjectId = (await ensureCloudProjectId(projectId, projectName)) || undefined;
+        if (cloudProjectId) policy = await getProjectPolicy(projectId);
+      }
+
+      if (!cloudProjectId || policy?.dataMode === "local") return;
 
       const unSynced = media.filter(
         (m) => !m.missing && m.file && m.file.size > 0 && !m.cloudAssetId && !uploadingAssetsRef.current.has(m.id)
@@ -634,7 +658,7 @@ export default function EditorPage() {
         if (cancelled) return;
         uploadingAssetsRef.current.add(asset.id);
         try {
-          const cloud = await uploadCloudAsset(policy.cloudProjectId, asset.file);
+          const cloud = await uploadCloudAsset(cloudProjectId, asset.file);
           if (cancelled) return;
           setMedia((current) =>
             current.map((item) =>
@@ -651,7 +675,7 @@ export default function EditorPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [media, restored, projectId]);
+  }, [media, restored, projectId, projectName]);
 
   const clearProjectWorkspace = () => {
     // A project switch used to leave the previous project's clips alive for one
@@ -748,20 +772,33 @@ export default function EditorPage() {
       const next = { count: arr.length, fileName: file.name, loadedBytes, totalBytes, ratio: totalBytes ? loadedBytes / totalBytes : 1, startedAt };
       setUploadProgress(next); setProgress(next.ratio); onProgress?.(next.ratio);
     };
-    const policy = projectId ? await getProjectPolicy(projectId) : null;
-    const shouldUpload = !!policy?.cloudProjectId && policy.storageBackend === "r2" && policy.dataMode !== "local";
+
+    let policy = projectId ? await getProjectPolicy(projectId) : null;
+    let cloudProjectId = policy?.cloudProjectId;
+    if (projectId && !cloudProjectId && policy?.dataMode !== "local") {
+      cloudProjectId = (await ensureCloudProjectId(projectId, projectName)) || undefined;
+      if (cloudProjectId) {
+        policy = await getProjectPolicy(projectId);
+      }
+    }
+    const shouldUpload = !!cloudProjectId && policy?.dataMode !== "local";
+
     try {
-      setPhase(shouldUpload ? "מעלה את הקבצים…" : "מכין את הקבצים…");
+      setPhase(shouldUpload ? "מעלה את הקבצים לענן…" : "מכין את הקבצים…");
       const assets = await Promise.all(arr.map(async (f) => {
         publishProgress(f, shouldUpload ? 0 : 0.08);
         const kind = kindOf(f);
         const matchingMissing = mediaRef.current.find((item) => item.missing && item.name === f.name && item.kind === kind);
         const asset: MediaAsset = { id: matchingMissing?.id || uid("m"), name: f.name, kind, file: f, duration: await probeDuration(f, kind), url: URL.createObjectURL(f), missing: false };
-        if (shouldUpload && policy?.cloudProjectId) {
-          const cloud = await uploadCloudAsset(policy.cloudProjectId, f, (ratio) => publishProgress(f, ratio));
-          asset.cloudAssetId = cloud.assetId;
-          asset.cloudObjectKey = cloud.objectKey;
-          asset.cloudState = "available";
+        if (shouldUpload && cloudProjectId) {
+          try {
+            const cloud = await uploadCloudAsset(cloudProjectId, f, (ratio) => publishProgress(f, ratio));
+            asset.cloudAssetId = cloud.assetId;
+            asset.cloudObjectKey = cloud.objectKey;
+            asset.cloudState = "available";
+          } catch (uploadErr) {
+            console.warn("Direct cloud upload failed for file:", f.name, uploadErr);
+          }
         }
         publishProgress(f, 1);
         return asset;
@@ -771,7 +808,7 @@ export default function EditorPage() {
         return [...current.filter((item) => !restoredIds.has(item.id)), ...assets];
       });
       onProgress?.(1);
-      if (shouldUpload) toast.success("הקבצים הועלו בהצלחה", arr.length === 1 ? arr[0].name : `${arr.length} קבצים מוכנים לעריכה`);
+      if (shouldUpload) toast.success("הקבצים הועלו לענן בהצלחה", arr.length === 1 ? arr[0].name : `${arr.length} קבצים מוכנים לעריכה`);
       return true;
     } catch (uploadError) {
       const technical = uploadError instanceof Error ? uploadError.message : "";
@@ -792,7 +829,7 @@ export default function EditorPage() {
     if (!editorApiRef.current) return;
     const result = runCommand("media.remove", editorApiRef.current, { id });
     if (!result.ok) setError(result.error);
-    else toast.success("המדיה הוסרה", "מופעים קיימים בציר סומנו כחסרים וניתן לקשר את הקובץ מחדש.");
+    else toast.success("קובץ המדיה והעריכות שלו הוסרו", "לחיצה על שחזור / Ctrl+Z תחזיר את הקובץ וכל עריכותיו לציר הזמן.");
   };
   const renameMedia = (id: string, requestedName: string) => {
     const asset = mediaRef.current.find((item) => item.id === id);
@@ -866,20 +903,18 @@ export default function EditorPage() {
     setSelectionTrack(asset.kind === "audio" ? "audio" : "video");
   };
   const dropMediaOnTimeline = (assetId: string, atIndex: number, trackId?: string, timelineStart?: number) => {
-    const asset = mediaById(media, assetId);
+    const asset = mediaById(mediaRef.current, assetId);
     if (!asset) return;
     const api = editorApiRef.current;
     if (!api) return;
     let tid = trackId;
     if (trackId === "__new_track__") {
-      const { tracks: next, track } = createVideoTrack(tracks);
-      setTracks(next);
-      tid = track.id;
+      tid = api.addVideoTrack?.() || primaryVideoTrackId(tracksRef.current);
     } else {
-      const requested = tracks.find((track) => track.id === trackId);
+      const requested = tracksRef.current.find((track) => track.id === trackId);
       tid = asset.kind === "audio"
-        ? (audioTrack(tracks)?.id || "trk_audio")
-        : requested?.type === "video" ? requested.id : primaryVideoTrackId(tracks);
+        ? (audioTrack(tracksRef.current)?.id || "trk_audio")
+        : requested?.type === "video" ? requested.id : primaryVideoTrackId(tracksRef.current);
     }
     const result = runCommand("clip.add", api, {
       sourceId: asset.id,
@@ -899,27 +934,87 @@ export default function EditorPage() {
     if (!api) return;
     let tid = trackId;
     if (trackId === "__new_track__") {
-      const { tracks: next, track } = createVideoTrack(tracks);
-      setTracks(next);
-      tid = track.id;
+      tid = api.addVideoTrack?.() || primaryVideoTrackId(tracksRef.current);
     } else {
       const clip = clipsRef.current?.find((c) => c.id === id);
       const asset = clip ? mediaById(mediaRef.current, clip.sourceId) : null;
       if (asset?.kind === "audio") {
-        tid = audioTrack(tracks)?.id || "trk_audio";
-      } else if (!tracks.some((t) => t.id === tid && t.type === "video")) {
-        tid = primaryVideoTrackId(tracks);
+        tid = audioTrack(tracksRef.current)?.id || "trk_audio";
+      } else if (!tracksRef.current.some((t) => t.id === tid && t.type === "video")) {
+        tid = primaryVideoTrackId(tracksRef.current);
       }
     }
     const result = runCommand("clip.moveAtTimeline", api, { id, trackId: tid, timeline_start: timelineStart });
     if (!result.ok) { setError(result.error); return; }
     setSelectedOverlayId(null);
     setSelectedSubId(null);
-    setSelectionTrack(tracks.find((track) => track.id === tid)?.type === "audio" ? "audio" : "video");
+    setSelectionTrack(tracksRef.current.find((track) => track.id === tid)?.type === "audio" ? "audio" : "video");
+  };
+  const moveSubAtTimeline = (id: string, start: number, end: number) => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    runCommand("subtitle.retime", api, { id, start, end });
+  };
+  const moveMultiAtTimeline = (ids: string[], dt: number) => {
+    const api = editorApiRef.current;
+    if (!api || !ids.length || Math.abs(dt) < 0.001) return;
+
+    const curClips = api.getClips();
+    const curOverlays = api.getOverlays();
+    const curSubs = api.getSubs();
+
+    let nextClips: Clip[] | null = curClips ? [...curClips] : null;
+    if (nextClips) {
+      let workingClips: Clip[] = [...nextClips];
+      const affectedTrackIds = new Set<string>();
+      for (const id of ids) {
+        const c = workingClips.find((item) => item.id === id);
+        if (c) affectedTrackIds.add(clipTrackId(c, primaryVideoTrackId(tracksRef.current)));
+      }
+      for (const tid of Array.from(affectedTrackIds)) {
+        const trackClips = clipsOnTrack(workingClips, tid, primaryVideoTrackId(tracksRef.current));
+        const clipEntries = trackClips.map((c, idx) => {
+          const currentStart = assembledStart(trackClips, idx);
+          const newStart = ids.includes(c.id) ? Math.max(0, currentStart + dt) : currentStart;
+          return { clip: c, start: newStart };
+        });
+        clipEntries.sort((a, b) => a.start - b.start);
+        const reorderedTrackClips = clipEntries.map((e) => e.clip);
+        const otherClips: Clip[] = workingClips.filter((c) => clipTrackId(c, primaryVideoTrackId(tracksRef.current)) !== tid);
+        workingClips = [...otherClips, ...reorderedTrackClips];
+      }
+      nextClips = workingClips;
+    }
+
+    const nextOverlays = curOverlays.map((o) => {
+      if (!ids.includes(o.id)) return o;
+      const dur = Math.max(0.05, o.end - o.start);
+      const newStart = Math.max(0, o.start + dt);
+      return { ...o, start: newStart, end: newStart + dur };
+    });
+
+    const nextSubs = curSubs ? curSubs.map((s) => {
+      if (!ids.includes(s.id)) return s;
+      const dur = Math.max(0.05, s.end - s.start);
+      const newStart = Math.max(0, s.start + dt);
+      return { ...s, start: newStart, end: newStart + dur };
+    }) : null;
+
+    commitSnapshot({
+      clips: nextClips,
+      overlays: nextOverlays,
+      subs: nextSubs,
+      tracks: tracksRef.current,
+      media: mediaRef.current,
+    });
   };
   const addVideoTrack = () => {
-    const { tracks: next } = createVideoTrack(tracks);
-    setTracks(next);
+    const api = editorApiRef.current;
+    if (api && api.addVideoTrack) api.addVideoTrack();
+    else {
+      const { tracks: next } = createVideoTrack(tracks);
+      setTracks(next);
+    }
   };
   const addTextOverlay = () => {
     if (!editorApiRef.current) return;
@@ -1311,6 +1406,42 @@ export default function EditorPage() {
     const res = runCommand("clip.splitAtPlayhead", editorApiRef.current!);
     if (!res.ok) setError(res.error);
   };
+
+  const trimStartAtPlayhead = () => {
+    if (!clips?.length || videoLocked(tracks) || !editorApiRef.current) return;
+    const at = cur;
+    let acc = 0;
+    for (const c of clips) {
+      const start = acc;
+      const end = acc + clipDur(c);
+      if (at >= start && at <= end) {
+        const offset = Math.max(0, at - start);
+        if (offset > 0.05) {
+          runCommand("clip.trim", editorApiRef.current, { id: c.id, start: c.start + offset, end: c.end });
+        }
+        return;
+      }
+      acc = end;
+    }
+  };
+
+  const trimEndAtPlayhead = () => {
+    if (!clips?.length || videoLocked(tracks) || !editorApiRef.current) return;
+    const at = cur;
+    let acc = 0;
+    for (const c of clips) {
+      const start = acc;
+      const end = acc + clipDur(c);
+      if (at >= start && at <= end) {
+        const offset = Math.max(0, at - start);
+        if (clipDur(c) - offset > 0.05) {
+          runCommand("clip.trim", editorApiRef.current, { id: c.id, start: c.start, end: c.start + offset });
+        }
+        return;
+      }
+      acc = end;
+    }
+  };
   const deleteClipById = (id: string, leaveGap = false) => {
     if (!clips || videoLocked(tracks) || !editorApiRef.current) return;
     const c = clips.find((x) => x.id === id);
@@ -1324,6 +1455,8 @@ export default function EditorPage() {
       for (const id of selectedIds) {
         if (overlays.some((o) => o.id === id)) {
           runCommand("overlay.delete", editorApiRef.current!, { id });
+        } else if (subs?.some((s) => s.id === id)) {
+          runCommand("subtitle.delete", editorApiRef.current!, { id });
         } else if (clips?.some((c) => c.id === id)) {
           deleteClipById(id, leaveGap);
         }
@@ -1331,6 +1464,7 @@ export default function EditorPage() {
       setSelectedIds([]);
       setSelectedId(null);
       setSelectedOverlayId(null);
+      setSelectedSubId(null);
       return;
     }
     if (selectedOverlayId) {
@@ -1364,14 +1498,18 @@ export default function EditorPage() {
   const reorderTrack = (id: string, direction: -1 | 1) => { const api = editorApiRef.current; if (!api) return; const r = runCommand("track.reorder", api, { trackId: id, direction }); if (!r.ok && !r.error.includes("כבר בקצה") && !r.error.includes("מאותו סוג")) setError(r.error); };
   const toggleOverlayLock = (id: string) => { const item = overlays.find((o) => o.id === id); if (item) updateOverlay(id, { locked: !item.locked }); };
   const toggleOverlayVisibility = (id: string) => { const item = overlays.find((o) => o.id === id); if (item) updateOverlay(id, { hidden: !item.hidden }); };
-  const reorderOverlay = (id: string, dir: -1 | 1) => {
-    const ordered = [...overlays].sort((a, b) => a.zIndex - b.zIndex);
-    const index = ordered.findIndex((o) => o.id === id);
-    const other = ordered[index + dir];
-    const current = ordered[index];
-    if (!current || !other) return;
-    setOverlays(overlays.map((o) => o.id === current.id ? { ...o, zIndex: other.zIndex } : o.id === other.id ? { ...o, zIndex: current.zIndex } : o));
+  // סדר-Z תמיד דרך ה-CommandBus (overlay.bringToFront/.../sendToBack) כדי
+  // ש-Undo יעבוד ותוצאה תישאר עקבית בין הקנבס, ה-Inspector והייצוא (B-06) —
+  // ולא swap גולמי של zIndex, שיכול היה להתנגש עם שכבה שכנה.
+  const reorderOverlayOp = (id: string, op: "front" | "forward" | "backward" | "back") => {
+    const api = editorApiRef.current; if (!api) return;
+    const commandId = op === "front" ? "overlay.bringToFront" : op === "forward" ? "overlay.bringForward" : op === "backward" ? "overlay.sendBackward" : "overlay.sendToBack";
+    const r = runCommand(commandId, api, { id });
+    if (!r.ok) setError(r.error);
   };
+  // חתימה (id, dir) נשמרת בכוונה — Timeline.tsx (לא בהיקף הריפקטור הזה) עדיין
+  // קורא ל-onOverlayReorder(id, ±1) עבור חצי מעלה/מטה בטרק השכבות.
+  const reorderOverlay = (id: string, dir: -1 | 1) => reorderOverlayOp(id, dir === 1 ? "forward" : "backward");
 
   const selectedClip = clips?.find((c) => c.id === selectedId) || null;
   const selectedIsGap = !!selectedClip && isGapClip(selectedClip);
@@ -1480,7 +1618,6 @@ export default function EditorPage() {
   // the unedited source duration here stretched a 60s edit across a 1048s ruler.
   const timelineDuration = Math.max(clips ? totalEdited : duration, ...overlays.map((o) => o.end), 0.001);
   const vLocked = videoLocked(tracks);
-  const projectName = projects.find((p) => p.id === projectId)?.name || "";
   const agentSelLabel = selectedOverlay
     ? (selectedOverlay.kind === "text" ? (selectedOverlay.text || "טקסט") : (mediaById(media, selectedOverlay.assetId || "")?.name || "תמונה"))
     : selectedSub
@@ -1799,6 +1936,7 @@ export default function EditorPage() {
               width={inspW}
               clip={selectedClip}
               overlay={selectedOverlay}
+              overlays={overlays}
               sub={selectedSub}
               focus={inspectorFocus}
               assetName={selectedClip ? mediaById(media, selectedClip.sourceId)?.name || "?" : (selectedOverlay?.kind === "image" ? (mediaById(media, selectedOverlay.assetId || "")?.name || "?") : "")}
@@ -1813,6 +1951,7 @@ export default function EditorPage() {
                 const result = runCommand("overlay.update", editorApiRef.current, { id: selectedOverlay.id, patch });
                 if (!result.ok) setError(result.error);
               }}
+              onReorderOverlay={(op) => selectedOverlay && reorderOverlayOp(selectedOverlay.id, op)}
               onUpdateSub={(patch) => selectedSub && updateSubFromInspector(selectedSub, patch)}
               canvas={canvas}
               onChangeCanvas={setCanvas}
@@ -1832,14 +1971,34 @@ export default function EditorPage() {
               aria-orientation="horizontal" aria-label="שינוי הגובה בין הנגן לטיימליין"><span /></div>
             <TimelineToolbar
               selInfo={selectedOverlay ? `${(selectedOverlay.end - selectedOverlay.start).toFixed(1)}s` : selectedClip ? `${(selectedClip.end - selectedClip.start).toFixed(1)}s` : ""}
-              canSplit={!!clips?.length && !vLocked && !selectedIsGap} canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId || !!selectedSubId}
-              onSplit={splitAtPlayhead} onDelete={deleteSel}
-              onDeleteLeaveGap={() => deleteSel(true)} canLeaveGap={!!selectedClip && !selectedIsGap && !vLocked}
+              canSplit={!!clips?.length && !vLocked && !selectedIsGap}
+              canDelete={(!!selectedId && !vLocked) || !!selectedOverlayId || !!selectedSubId}
+              onSplit={splitAtPlayhead}
+              onTrimStart={trimStartAtPlayhead}
+              canTrimStart={!!clips?.length && !vLocked}
+              onTrimEnd={trimEndAtPlayhead}
+              canTrimEnd={!!clips?.length && !vLocked}
+              onDelete={deleteSel}
+              onDeleteLeaveGap={() => deleteSel(true)}
+              canLeaveGap={!!selectedClip && !selectedIsGap && !vLocked}
               canRoll={!!selectedId && !vLocked && !!clips && clips.length >= 2 && !selectedIsGap}
               canSlip={!!selectedId && !vLocked && !selectedIsGap}
-              onRoll={rollSelected} onSlip={slipSelected}
-              zoom={zoom} onZoom={setZoom} onFit={() => setZoom(1)}
-              avLinked={avLinked} onAvLinked={setAvLinked}
+              onRoll={rollSelected}
+              onSlip={slipSelected}
+              canUndo={canUndo}
+              onUndo={undo}
+              canRedo={canRedo}
+              onRedo={redo}
+              activeTool={activeTool}
+              onSelectTool={setActiveTool}
+              snap={snap}
+              onToggleSnap={() => setSnap((s) => !s)}
+              onAddMarker={() => toast.info("סימניה נוספה", `${cur.toFixed(1)}s`)}
+              zoom={zoom}
+              onZoom={setZoom}
+              onFit={() => setZoom(1)}
+              avLinked={avLinked}
+              onAvLinked={setAvLinked}
             />
             {clips || media.length > 0 ? (
               <Timeline
@@ -1848,7 +2007,7 @@ export default function EditorPage() {
                 currentAssembled={cur} selectedId={selectedId} selectedIds={selectedIds} selectedOverlayId={selectedOverlayId}
                 selectedSubId={selectedSubId} selectionTrack={selectionTrack} avLinked={avLinked}
                 zoom={zoom} onZoom={setZoom} snap={snap}
-                onSeek={seek} onSelect={selectClip} onSelectMulti={(ids) => setSelectedIds(ids)} onSelectOverlay={selectOverlay} onSelectSub={selectSub}
+                onSeek={seek} onSelect={selectClip} onSelectMulti={(ids) => setSelectedIds(ids)} onMoveMulti={moveMultiAtTimeline} onSelectOverlay={selectOverlay} onSelectSub={selectSub} onSubMove={moveSubAtTimeline}
                 onTrimBegin={beginTransaction}
                 onTrim={(id, s, e) => setClipsLive((c) => {
                   if (!c) return c;

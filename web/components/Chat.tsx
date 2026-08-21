@@ -22,9 +22,12 @@ import { ChatMessage } from "@/lib/agent/types";
 import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
 import { approvedPlanPrompt, parsePlanSteps } from "@/lib/agent/planApproval";
 import {
-  activeConversation, addConversation, ChatItem, ChatStoreV2, emptyStore, migrateChatStore, removeConversation,
-  pinnedConversationCount, renameConversation, setConversationPinned, sortConversations, switchConversation, upsertActive,
+  activeConversation, addConversation, applyGeneratedTitle, ChatItem, ChatStoreV2, conversationMode, emptyStore,
+  markTitleGenerated, migrateChatStore, removeConversation, pinnedConversationCount, renameConversation, setConversationMode,
+  setConversationPinned, setMemorySummaryCache, sortConversations, switchConversation, upsertActive,
 } from "@/lib/agent/chatStore";
+import { requestConversationTitle, shouldGenerateTitle } from "@/lib/agent/title";
+import { refreshMemorySummary, requestMemorySummary } from "@/lib/agent/memorySummary";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
 import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
@@ -204,7 +207,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [uploading, setUploading] = useState<TransferProgress | null>(null);
   const [ask, setAsk] = useState<{ q: string; options: string[]; resolve: (v: string) => void } | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
-  const [mode, setMode] = useState<AgentMode>("act");
+  // plan הוא ברירת המחדל הראשונית — נדרס מיד כש-loadConversation קורא את
+  // המצב האמיתי של השיחה הפעילה (הוא נשמר לפי שיחה, ראו chatStore.conversationMode).
+  const [mode, setMode] = useState<AgentMode>("plan");
   const [pop, setPop] = useState<{ kind: "slash" | "mention"; query: string } | null>(null);
   const [composeH, setComposeH] = useState(COMPOSE_H_DEFAULT);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -262,8 +267,13 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     window.addEventListener("mouseup", onUp);
   };
 
-  useEffect(() => { const m = localStorage.getItem("hs_agentmode"); if (m === "ask" || m === "plan" || m === "act") setMode(m); }, []);
-  const changeMode = (m: AgentMode) => { setMode(m); localStorage.setItem("hs_agentmode", m); if (runnerRef.current) runnerRef.current.mode = m; };
+  // המצב נשמר על השיחה עצמה (לא גלובלית) — כדי שמעבר בין שיחות לא "יזליג" Act
+  // לשיחה שעדיין בתכנון. הטעינה הראשונית קורית ב-loadConversation.
+  const changeMode = (m: AgentMode) => {
+    setMode(m);
+    persistConversationStore(setConversationMode(storeRef.current, storeRef.current.activeId, m));
+    if (runnerRef.current) runnerRef.current.mode = m;
+  };
 
   // ישויות זמינות ל-@mention (נבנות מהפרויקט האמיתי — ללא Mock)
   const mentionItems = useMemo(() => {
@@ -307,6 +317,19 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     setAsk(null);
     setInput("");
     setComposerReferences([]);
+    // המצב נשמר לפי שיחה — לא גלובלי, אחרת מעבר לשיחה ישנה "מזליג" Act אליה.
+    setMode(conversationMode(active));
+  };
+
+  /** מפעיל סיכום-זיכרון קצר (עד 5 שיחות קודמות) רק אם ה-cache הקיים לא תקף עוד — ראו memorySummary.ts. */
+  const refreshMemorySummaryForStore = async (nextStore: ChatStoreV2) => {
+    const cache = await refreshMemorySummary({
+      conversations: nextStore.conversations,
+      activeId: nextStore.activeId,
+      cache: nextStore.memorySummary,
+      request: (sources) => requestMemorySummary(sources, providerMode === "byok" ? { provider } : undefined),
+    });
+    if (cache) persistConversationStore(setMemorySummaryCache(storeRef.current, cache));
   };
 
   const startNewChat = () => {
@@ -316,7 +339,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       items: items.filter((it) => it.kind !== "output"),
       history: runnerRef.current?.history || savedHistory.current,
     });
-    loadConversation(addConversation(cur));
+    const next = addConversation(cur);
+    loadConversation(next);
+    void refreshMemorySummaryForStore(next);
   };
 
   const selectChat = (id: string) => {
@@ -396,8 +421,11 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           }
         } catch { /* use local fallback */ }
       }
-      loadConversation(migrateChatStore(raw));
+      const migrated = migrateChatStore(raw);
+      loadConversation(migrated);
       setRestoredChat(true);
+      // השיחה הפעילה עדיין ריקה (למשל נסגר האפליקציה תוך כדי "שיחה חדשה") — כאילו התחילה עכשיו.
+      if (!activeConversation(migrated).items?.length) void refreshMemorySummaryForStore(migrated);
     })();
   }, [projectId]);
 
@@ -427,10 +455,14 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       c.overlays = overlays; c.tracks = tracks?.length ? tracks : defaultTracks();
     }
     c.canvas = canvas || defaultCanvasFor();
+    c.currentAssembled = playhead;
     c.editorApi = editorApi || null;
     c.captionStyle = captionStyle || null;
     if (script.trim()) c.script = script.trim();
-  }, [media, words, clips, subs, overlays, tracks, canvas, script, editorApi, captionStyle]);
+  }, [media, words, clips, subs, overlays, tracks, canvas, script, editorApi, captionStyle, playhead]);
+
+  // זיכרון קצר מ-cache (עד 5 שיחות קודמות) — מוזרק ל-ctx כדי ש-runtime.send יצרף אותו כהודעת-מערכת.
+  useEffect(() => { ctxRef.current.memorySummary = store.memorySummary?.text || null; }, [store.memorySummary]);
 
   useEffect(() => {
     setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
@@ -613,6 +645,8 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         onUsage: (next) => setUsage((prev) => ({ inputTokens: prev.inputTokens + next.inputTokens, outputTokens: prev.outputTokens + next.outputTokens, totalTokens: prev.totalTokens + next.totalTokens })),
         onCheckpoint: (call, checkpoint) => setItems((p) => p.map((it) => it.kind === "tool" && it.id === call.id ? { ...it, checkpoint } : it)),
         onArtifact: (artifact) => addOutput(artifact.blob, artifact.name, artifact.kind),
+        // ה-runtime כבר חסם את הקריאה בפועל — כאן רק מוסיפים כפתור מעבר-מצב על כרטיס הכלי שנכשל.
+        onModeBlocked: (call, blockedMode) => setItems((p) => p.map((it) => it.kind === "tool" && it.id === call.id ? { ...it, modeBlocked: blockedMode } : it)),
       });
       if (savedHistory.current.length) runnerRef.current.history = repairToolMessages(savedHistory.current);
     }
@@ -621,7 +655,16 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     return runnerRef.current;
   }
 
+  /** כותרת אוטומטית (LLM זול) — פעם אחת בלבד לשיחה, ראו title.ts / chatStore.titleGenerated. */
+  const generateTitleForConversation = async (conversationId: string, message: string) => {
+    persistConversationStore(markTitleGenerated(storeRef.current, conversationId));
+    const title = await requestConversationTitle(message, providerMode === "byok" ? { provider } : undefined);
+    if (title) persistConversationStore(applyGeneratedTitle(storeRef.current, conversationId, title));
+  };
+
   const sendAgentRequest = (text: string, selectedProvider: Provider = provider, displayText = text, references: ComposerReference[] = []) => {
+    const activeConv = activeConversation(storeRef.current);
+    const userMessageCountBeforeSend = items.filter((it) => it.kind === "user").length;
     setItems((p) => [...p, { kind: "user", text: displayText, time: now(), references }]);
     lastUserPromptRef.current = text;
     setInput("");
@@ -630,6 +673,9 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
     const runner = getRunner();
     runner.provider = selectedProvider;
     runner.send(text);
+    if (shouldGenerateTitle(activeConv.titleGenerated, userMessageCountBeforeSend)) {
+      void generateTitleForConversation(activeConv.id, displayText);
+    }
   };
 
   const submit = () => {
@@ -962,7 +1008,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
                   {it.state === "ok" && <Check size={15} className="stt ok" />}
                   {it.state === "error" && <AlertTriangle size={15} className="stt err" />}
-                  {it.state === "error" && it.args && <button className="btn sm" onClick={() => retryTool(it)} disabled={running}>נסה שוב</button>}
+                  {/* חסימת-מצב: נסיון חוזר יחסם שוב באותו מצב — כפתורי מעבר מצב במקום "נסה שוב" */}
+                  {it.state === "error" && it.args && !it.modeBlocked && <button className="btn sm" onClick={() => retryTool(it)} disabled={running}>נסה שוב</button>}
+                  {it.state === "error" && it.modeBlocked === "ask" && <button className="btn sm" onClick={() => changeMode("plan")} disabled={running}>עבור לתכנון</button>}
+                  {it.state === "error" && it.modeBlocked && <button className="btn sm primary" onClick={() => changeMode("act")} disabled={running}>עבור לביצוע</button>}
                   {it.state === "ok" && it.checkpoint && <button className="btn sm" onClick={() => restoreToolCheckpoint(it)} disabled={running || it.restored}>{it.restored ? "שוחזר" : "שחזר"}</button>}
                 </span>
               </div>

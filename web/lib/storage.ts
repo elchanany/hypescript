@@ -70,46 +70,100 @@ const CUR = "currentProjectId";
 export const pk = (id: string, key: string) => `p:${id}:${key}`;
 
 export async function listProjects(): Promise<ProjectMeta[]> {
-  return (await kvGet<ProjectMeta[]>(IDX)) || [];
+  let list = (await kvGet<ProjectMeta[]>(IDX)) || [];
+  if ((!list || list.length === 0) && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("hs_projects_mirror");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          list = parsed;
+          await kvSet(IDX, list);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  return list;
 }
+
 export async function getCurrentProjectId(): Promise<string | null> {
-  return await kvGet<string>(CUR);
+  let id = await kvGet<string>(CUR);
+  if (!id && typeof window !== "undefined") {
+    try {
+      id = localStorage.getItem("hs_current_project_mirror");
+    } catch { /* ignore */ }
+  }
+  return id;
 }
+
 export async function setCurrentProject(id: string): Promise<void> {
   await kvSet(CUR, id);
+  if (typeof window !== "undefined") {
+    try {
+      if (id) localStorage.setItem("hs_current_project_mirror", id);
+      else localStorage.removeItem("hs_current_project_mirror");
+    } catch { /* ignore */ }
+  }
 }
+
 export async function createProject(name: string): Promise<string> {
   const id = "prj_" + Math.random().toString(36).slice(2, 9);
   const list = await listProjects();
   list.unshift({ id, name, updatedAt: Date.now() });
   await kvSet(IDX, list);
-  await kvSet(CUR, id);
+  if (typeof window !== "undefined") {
+    try { localStorage.setItem("hs_projects_mirror", JSON.stringify(list)); } catch { /* ignore */ }
+  }
+  await setCurrentProject(id);
   return id;
 }
+
 export async function renameProject(id: string, name: string): Promise<void> {
   const list = await listProjects();
   const p = list.find((x) => x.id === id);
-  if (p) { p.name = name; p.updatedAt = Date.now(); await kvSet(IDX, list); }
+  if (p) {
+    p.name = name;
+    p.updatedAt = Date.now();
+    await kvSet(IDX, list);
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem("hs_projects_mirror", JSON.stringify(list)); } catch { /* ignore */ }
+    }
+  }
 }
+
 export async function deleteProject(id: string): Promise<void> {
   const list = (await listProjects()).filter((x) => x.id !== id);
   await kvSet(IDX, list);
+  if (typeof window !== "undefined") {
+    try { localStorage.setItem("hs_projects_mirror", JSON.stringify(list)); } catch { /* ignore */ }
+  }
   await kvSet(pk(id, "media"), null);
   await kvSet(pk(id, "state"), null);
   await kvSet(pk(id, "chat"), null);
-  if ((await getCurrentProjectId()) === id) await kvSet(CUR, list[0]?.id || null);
+  if ((await getCurrentProjectId()) === id) await setCurrentProject(list[0]?.id || "");
 }
+
 export async function touchProject(id: string): Promise<void> {
   const list = await listProjects();
   const p = list.find((x) => x.id === id);
-  if (p) { p.updatedAt = Date.now(); await kvSet(IDX, list); }
+  if (p) {
+    p.updatedAt = Date.now();
+    await kvSet(IDX, list);
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem("hs_projects_mirror", JSON.stringify(list)); } catch { /* ignore */ }
+    }
+  }
 }
+
 // מחזיר פרויקט נוכחי תקין, יוצר ראשון אם אין. גם מהגר סשן ישן (media/state/chat גלובליים).
 export async function ensureProject(): Promise<string> {
   const cur = await getCurrentProjectId();
   const list = await listProjects();
   if (cur && list.some((p) => p.id === cur)) return cur;
-  if (list.length) { await kvSet(CUR, list[0].id); return list[0].id; }
+  if (list.length) {
+    await setCurrentProject(list[0].id);
+    return list[0].id;
+  }
   const id = await createProject("פרויקט 1");
   // מיגרציה: אם קיים סשן ישן בשורש — נעביר לפרויקט הראשון.
   for (const k of ["media", "state", "chat"] as const) {

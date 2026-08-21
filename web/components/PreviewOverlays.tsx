@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MediaAsset, mediaById } from "@/lib/editor/model";
 import { clampOverlayTransform, Overlay, overlayVisibleAt } from "@/lib/editor/overlay";
+import { cycleLayerSelection, hitTestOverlayStack, layerDepth } from "@/lib/editor/layerStack";
 import { CanvasSize, rotatePoint } from "@/lib/editor/canvasCoords";
 import { RotateCw } from "@/components/icons";
 
@@ -49,6 +50,9 @@ interface DragState {
 export default function PreviewOverlays({ boxRef, canvas, overlays, media, currentTime, selectedId, onSelect, onBegin, onLive, onCommit, onCancel, onEditText }: Props) {
   const drag = useRef<DragState | null>(null);
   const [boxPx, setBoxPx] = useState({ w: 1, h: 1 });
+  // Hover הוא אך ורק אפקט ויזואלי (מתאר עדין) — לעולם לא משנה את הבחירה בפועל,
+  // רק קליק (B-07: "hover must NOT change the active selection").
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     const el = boxRef.current; if (!el) return;
@@ -130,20 +134,40 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
     window.addEventListener("pointerup", onPointerUp);
   };
 
+  /** Pointer -> project coordinates (the same space as transform.x/y). */
+  const projectPoint = (clientX: number, clientY: number) => {
+    const box = boxRef.current?.getBoundingClientRect();
+    if (!box || !box.width) return null;
+    const s = box.width / Math.max(1, canvas.width);
+    return { x: (clientX - box.left) / s, y: (clientY - box.top) / s };
+  };
+
+  /** Every layer under the cursor right now, topmost first. Geometry-based, not
+   *  DOM-based: a fully covered layer is still in the list, which is exactly the
+   *  case elementsFromPoint used to get wrong once a box had pointer-events off. */
+  const stackAt = (clientX: number, clientY: number): Overlay[] => {
+    const pt = projectPoint(clientX, clientY);
+    if (!pt) return [];
+    return hitTestOverlayStack(overlays, pt.x, pt.y, { time: currentTime });
+  };
+
   const onBoxPointerDown = (e: React.PointerEvent, o: Overlay) => {
-    // Layer cycling with Alt+Click or repeated click when multiple visual layers overlap
-    const elements = document.elementsFromPoint(e.clientX, e.clientY);
-    const hitOverlayEls = elements.filter((el) => el.classList.contains("ov-box")) as HTMLElement[];
-    if (hitOverlayEls.length > 1 && (e.altKey || o.id === selectedId)) {
-      e.stopPropagation();
-      e.preventDefault();
-      const currentIdx = hitOverlayEls.findIndex((el) => el.dataset.overlayId === selectedId);
-      const nextIdx = (currentIdx + 1) % hitOverlayEls.length;
-      const nextId = hitOverlayEls[nextIdx].dataset.overlayId;
-      if (nextId && nextId !== selectedId) {
-        onSelect(nextId);
+    const stack = stackAt(e.clientX, e.clientY);
+    if (stack.length > 1) {
+      // Alt+Click walks one step *down* the stack, so a layer completely hidden
+      // behind another is still reachable from the canvas itself (B-07).
+      if (e.altKey) {
+        const nextId = cycleLayerSelection(stack, selectedId);
+        e.stopPropagation();
+        e.preventDefault();
+        if (nextId) onSelect(nextId);
         return;
       }
+      // Plain click keeps manipulating the layer that is already selected when it
+      // sits under the cursor. Without this, a layer reached via Alt+Click could
+      // never be dragged: the next press would snap the selection back to the top.
+      const held = stack.find((s) => s.id === selectedId);
+      if (held && held.id !== o.id) { startDrag(e, held, "move"); return; }
     }
     startDrag(e, o, "move");
   };
@@ -169,7 +193,9 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
           opacity: opacity * Math.min(fadeInFactor, fadeOutFactor),
         };
         return (
-          <div key={o.id} data-overlay-id={o.id} className={`ov-box ${sel ? "sel" : ""} ${o.locked ? "locked" : ""}`} style={style}
+          <div key={o.id} data-overlay-id={o.id} className={`ov-box ${sel ? "sel" : ""} ${!sel && hoveredId === o.id ? "hover" : ""} ${o.locked ? "locked" : ""}`} style={style}
+            onPointerEnter={() => setHoveredId(o.id)}
+            onPointerLeave={() => setHoveredId((prev) => (prev === o.id ? null : prev))}
             onPointerDown={(e) => onBoxPointerDown(e, o)}
             onDoubleClick={(e) => { if (o.kind === "text") { e.stopPropagation(); onEditText(o.id, o.text || ""); } }}>
             {o.kind === "image" && asset ? (
@@ -185,7 +211,8 @@ export default function PreviewOverlays({ boxRef, canvas, overlays, media, curre
 
             {sel && !o.locked && (
               <>
-                <span className="ov-layer-badge">שכבה {visible.findIndex((item) => item.id === o.id) + 1}/{visible.length} · מעל הווידאו</span>
+                {/* מספור אחיד בכל המסכים: 1 = השכבה העליונה ביותר (layerStack.layerDepth). */}
+                <span className="ov-layer-badge">שכבה {layerDepth(overlays, o.id)?.depth ?? 1}/{overlays.length} · מעל הווידאו</span>
                 {CORNERS.map((c) => (
                   <span key={c.h} className="ov-handle" style={{ left: `${c.cx * 100}%`, top: `${c.cy * 100}%`, cursor: c.cursor }}
                     onPointerDown={(e) => startDrag(e, o, c.h)} />

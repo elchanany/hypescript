@@ -17,6 +17,7 @@ export type CollapsibleTool = {
   durationMs?: number;
   checkpoint?: import("@/hooks/useEditor").EditorSnapshot;
   restored?: boolean;
+  modeBlocked?: import("./types").AgentMode;
 };
 
 export type CollapsedToolView = CollapsibleTool & { count: number };
@@ -53,6 +54,7 @@ export function collapseConsecutiveTools<T extends { kind: string }>(
       prev.durationMs = tool.durationMs;
       prev.checkpoint = tool.checkpoint;
       prev.restored = tool.restored;
+      prev.modeBlocked = tool.modeBlocked;
       continue;
     }
     out.push({ ...tool, count: 1 });

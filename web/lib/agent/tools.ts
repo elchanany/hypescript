@@ -64,11 +64,14 @@ export interface AgentContext {
   script?: string;
   /** מה המשתמש באמת רוצה — נקבע ב-set_project_brief ומיישר את שאר הכלים. */
   brief?: ProjectBrief | null;
+  /** זיכרון קצר מ-cache (עד 5 שיחות קודמות בפרויקט) — מוזרק לתחילת שיחה חדשה בלבד. */
+  memorySummary?: string | null;
   clips: Clip[] | null;
   subs: Sub[] | null;
   overlays: Overlay[];
   tracks: TrackMeta[];
   canvas: CanvasSize;
+  currentAssembled?: number;
   /** סגנון כתוביות נוכחי מהפאנל — לצריבה בפריימים מורכבים (capture_frame timeline=true) */
   captionStyle?: CaptionStyle | null;
   lastRender: Blob | null;
@@ -164,6 +167,24 @@ function overlayTarget(args: any, ctx: AgentContext): { overlay: Overlay; index:
     }
   }
   return { overlay, index };
+}
+
+export function parseTimelinePosition(val: unknown, ctx: AgentContext, defaultPos: number = 0): number {
+  if (val == null) return defaultPos;
+  if (typeof val === "number" && Number.isFinite(val)) return Math.max(0, val);
+  const s = String(val).trim().toLowerCase();
+  if (!s) return defaultPos;
+  if (s === "end" || s === "סוף" || s === "סוף הסרטון" || s === "בסוף" || s === "last") {
+    return totalDur(ctx.clips || []);
+  }
+  if (s === "start" || s === "התחלה" || s === "0" || s === "first") {
+    return 0;
+  }
+  if (s === "cursor" || s === "playhead" || s === "סמן" || s === "current") {
+    return typeof ctx.currentAssembled === "number" ? Math.max(0, ctx.currentAssembled) : 0;
+  }
+  const parsed = parseFloat(s);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : defaultPos;
 }
 
 export type CaptureFrameMode = "timeline" | "source";
@@ -1289,8 +1310,11 @@ export const TOOLS: ToolMeta[] = [
       const matchAsset = a.match_source != null ? resolveAsset(ctx, a.match_source) : undefined;
       if (a.match_source != null && !matchAsset) return `לא נמצא מקור התאמה "${a.match_source}". השתמש ב-list_media.`;
       const matchedDuration = matchAsset && Number.isFinite(matchAsset.duration) && matchAsset.duration > 0 ? matchAsset.duration : 0;
+      const tlStart = a.timeline_start != null || a.position != null
+        ? parseTimelinePosition(a.timeline_start ?? a.position, ctx, 0)
+        : undefined;
       if (asset.kind === "image" && String(a.placement || "timeline") === "overlay") {
-        const start = a.timeline_start != null ? Math.max(0, +a.timeline_start) : a.start != null ? Math.max(0, +a.start) : 0;
+        const start = tlStart != null ? tlStart : a.start != null ? Math.max(0, +a.start) : 0;
         const duration = Number(a.duration_seconds);
         const end = matchedDuration > 0
           ? start + matchedDuration
@@ -1327,10 +1351,10 @@ export const TOOLS: ToolMeta[] = [
           duration_seconds: Number.isFinite(effectiveDuration) && effectiveDuration > 0 ? effectiveDuration : undefined,
           trackId,
           at_index: a.at_index != null ? (a.at_index | 0) - 1 : undefined,
-          timeline_start: a.timeline_start != null ? Math.max(0, +a.timeline_start) : undefined,
+          timeline_start: tlStart,
         });
         if (e && e !== "NO_API") return e;
-        if (!e) return `נוסף קליפ מ-"${asset.name}" לרצועה. ${clipsSummary(ctx.clips!)}`;
+        if (!e) return `נוסף קליפ מ-"${asset.name}" לרצועה (מיקום: ${tlStart != null ? `${tlStart.toFixed(1)}s` : "סוף/אינדקס"}). ${clipsSummary(ctx.clips!)}`;
       }
       const clip: Clip = ensureTrackId(ctx, { id: uid(), sourceId: asset.id, start, end: Math.max(start + 0.1, end), trackId });
       setClips(ctx, addClip(ctx.clips || [], clip, a.at_index != null ? (a.at_index | 0) - 1 : undefined));
@@ -1554,22 +1578,54 @@ export const TOOLS: ToolMeta[] = [
   },
   {
     name: "move_clip", label: "הזזת קליפ", color: "#0ea5e9", icon: "↕️",
-    schema: { name: "move_clip", description: "מזיז קליפ למיקום אחר *בתוך אותה רצועה* (משנה סדר). להעברה בין רצועות — move_clip_to_track.", parameters: { type: "object", properties: { index: { type: "number" }, to_index: { type: "number", description: "מיקום יעד ברצועה (1-based)" } }, required: ["index", "to_index"] } },
+    schema: {
+      name: "move_clip",
+      description: "מזיז קליפ למיקום אחר בתוך הרצועה — לפי to_index (1-based) או לפי position ('start' / 'end' / 'cursor' / שניות).",
+      parameters: {
+        type: "object",
+        properties: {
+          index: { type: "number", description: "אינדקס הקליפ להזזה (1-based)" },
+          to_index: { type: "number", description: "אינדקס יעד ברצועה (1-based)" },
+          position: { type: "string", description: "מיקום יעד בציר: 'end', 'start', 'cursor', או שניות" },
+          timeline_start: { type: "number", description: "זמן יעד מדויק בשניות" },
+        },
+        required: ["index"],
+      },
+    },
     run: async (a, ctx) => {
       const err = requireClips(ctx); if (err) return err;
       const c = ctx.clips![(a.index | 0) - 1]; if (!c) return "אינדקס לא תקין.";
+      let targetIndex = a.to_index != null ? (a.to_index | 0) - 1 : undefined;
+      if (targetIndex === undefined && (a.position != null || a.timeline_start != null)) {
+        const pos = parseTimelinePosition(a.position ?? a.timeline_start, ctx, -1);
+        if (pos >= 0) {
+          const primary = primaryVideoTrackId(ctx.tracks || []);
+          const tid = clipTrackId(c, primary);
+          const onTrack = clipsOnTrack(ctx.clips!, tid, primary).filter((x) => x.id !== c.id);
+          let acc = 0;
+          let idx = onTrack.length;
+          for (let i = 0; i < onTrack.length; i++) {
+            if (pos <= acc + clipDur(onTrack[i]) / 2) {
+              idx = i;
+              break;
+            }
+            acc += clipDur(onTrack[i]);
+          }
+          targetIndex = idx;
+        }
+      }
+      if (targetIndex === undefined) targetIndex = ctx.clips!.length - 1;
       if (ctx.editorApi) {
         const primary = primaryVideoTrackId(ctx.tracks || []);
         const tid = clipTrackId(c, primary);
         const onTrack = clipsOnTrack(ctx.clips!, tid, primary);
         const localIdx = onTrack.findIndex((x) => x.id === c.id);
-        // to_index is 1-based within track for agent UX — convert via local list length
-        const e = dispatch(ctx, "clip.move", { id: c.id, to_index: (a.to_index | 0) - 1 });
+        const e = dispatch(ctx, "clip.move", { id: c.id, to_index: targetIndex });
         if (e) return e;
-        return `הוזז (ברצועה, היה ${localIdx + 1}). ${clipsSummary(ctx.clips!)}`;
+        return `הוזז (ברצועה, היה ${localIdx + 1} -> עכשיו ${targetIndex + 1}). ${clipsSummary(ctx.clips!)}`;
       }
-      setClips(ctx, moveClip(ctx.clips!, c.id, (a.to_index | 0) - 1));
-      return `הוזז. ${clipsSummary(ctx.clips!)}`;
+      setClips(ctx, moveClip(ctx.clips!, c.id, targetIndex));
+      return `הוזז למיקום ${targetIndex + 1}. ${clipsSummary(ctx.clips!)}`;
     },
   },
   {
@@ -1944,8 +2000,8 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx) => {
       const asset = resolveAsset(ctx, String(a.source || ""));
       if (!asset || asset.kind !== "image") return "שגיאה: נכס תמונה לא נמצא.";
-      let start = a.start != null ? Math.max(0, +a.start) : 0;
-      let end = a.end != null ? Math.max(start + 0.05, +a.end) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      let start = a.start != null ? parseTimelinePosition(a.start, ctx, 0) : a.position != null ? parseTimelinePosition(a.position, ctx, 0) : 0;
+      let end = a.end != null ? parseTimelinePosition(a.end, ctx, start + 4) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       if (a.match_clip_id != null) {
         if (a.start != null || a.end != null) return "שגיאה: match_clip_id קובע זמן מדויק; אין להעביר איתו start/end.";
         const matchId = String(a.match_clip_id);
@@ -1992,12 +2048,12 @@ export const TOOLS: ToolMeta[] = [
     schema: {
       name: "add_text_overlay",
       description: "מוסיף שכבת טקסט או כרטיס CapCut-style אמיתי: source_popup, speaker_card או dedication_card. כל הסגנונות מופיעים ב-Preview ובייצוא.",
-      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" }, preset: { type: "string", enum: ["plain", "source_popup", "speaker_card", "dedication_card"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, color: { type: "string" }, background: { type: "string" }, font_size: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, border_radius: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } } },
+      parameters: { type: "object", properties: { text: { type: "string" }, start: { type: "number" }, end: { type: "number" }, position: { type: "string", description: "מיקום על הציר (start, end, cursor, או שניות)" }, preset: { type: "string", enum: ["plain", "source_popup", "speaker_card", "dedication_card"] }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, color: { type: "string" }, background: { type: "string" }, font_size: { type: "number" }, border_color: { type: "string" }, border_width: { type: "number" }, border_radius: { type: "number" }, fade_in: { type: "number" }, fade_out: { type: "number" } } },
     },
     run: async (a, ctx) => {
       const canvas = ctx.canvas || defaultCanvasFor();
-      const start = a.start != null ? +a.start : 0;
-      const end = a.end != null ? +a.end : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
+      const start = a.start != null ? parseTimelinePosition(a.start, ctx, 0) : a.position != null ? parseTimelinePosition(a.position, ctx, 0) : 0;
+      const end = a.end != null ? parseTimelinePosition(a.end, ctx, start + 4) : Math.max(start + 4, totalDur(ctx.clips || []) || 4);
       let o: Overlay;
       const presetName = String(a.preset || "plain");
       const popup = presetName === "source_popup" || presetName === "speaker_card" || presetName === "dedication_card";
@@ -2273,12 +2329,14 @@ export const TOOLS: ToolMeta[] = [
     name: "set_caption_style", label: "עיצוב כתוביות", color: "#8b5cf6", icon: "✨",
     schema: {
       name: "set_caption_style",
-      description: "מגדיר עיצוב כתוביות אמיתי בתצוגה המקדימה ובצריבה לייצוא. לפרסומת עברית מומלץ: bold=true, bg=box או soft, position=bottom, font_size=5.5.",
+      description: "מגדיר עיצוב כתוביות מלא בתצוגה המקדימה ובצריבה לייצוא (גופן, גודל, צבע, מיקום, רקע, תבנית מוכנה).",
       parameters: {
         type: "object",
         properties: {
-          font_size: { type: "number", description: "אחוז מהצלע הקצרה, 2..12" },
-          color: { type: "string", description: "צבע hex כגון #ffffff" },
+          preset_id: { type: "string", description: "מזהה תבנית מוכנה כגון tiktok_yellow, clean_modern, boxed_black, neon_glow, lecture_soft" },
+          font_family: { type: "string", description: "שם גופן עברי כגון Heebo, Rubik, Assistant, Suez One, Secular One, David Libre" },
+          font_size: { type: "number", description: "אחוז מהצלע הקצרה, 2..12 (ברירת מחדל 4.5–5.5)" },
+          color: { type: "string", description: "צבע hex כגון #ffffff, #ffd166, #ff0055" },
           bold: { type: "boolean" },
           position: { type: "string", enum: ["bottom", "center", "top"] },
           bg: { type: "string", enum: ["none", "soft", "box"] },
@@ -2287,6 +2345,19 @@ export const TOOLS: ToolMeta[] = [
     },
     run: async (a, ctx) => {
       const patch: Record<string, unknown> = {};
+      if (a.preset_id) {
+        const { CAPTION_PRESETS } = await import("@/lib/creative/captionStyles");
+        const preset = CAPTION_PRESETS.find((p) => p.id === a.preset_id);
+        if (preset) {
+          if (preset.style.fontFamily) patch.fontFamily = preset.style.fontFamily;
+          if (preset.style.fontSize != null) patch.fontSize = preset.style.fontSize;
+          if (preset.style.color) patch.color = preset.style.color;
+          if (preset.style.bold != null) patch.bold = preset.style.bold;
+          if (preset.style.position) patch.position = preset.style.position;
+          if (preset.style.bg) patch.bg = preset.style.bg;
+        }
+      }
+      if (a.font_family != null) patch.fontFamily = String(a.font_family).trim();
       if (a.font_size != null) patch.fontSize = +a.font_size;
       if (a.color != null) patch.color = String(a.color);
       if (a.bold != null) patch.bold = a.bold === true;
@@ -2295,7 +2366,7 @@ export const TOOLS: ToolMeta[] = [
       const commandError = dispatch(ctx, "caption.setStyle", patch);
       if (commandError === "NO_API") return "עיצוב כתוביות אינו זמין בלי עורך פעיל.";
       if (commandError) return `שגיאה: ${commandError}`;
-      return "עיצוב הכתוביות עודכן בתצוגה המקדימה ובייצוא.";
+      return "עיצוב הכתוביות עודכן בהצלחה בתצוגה המקדימה ובייצוא.";
     },
   },
   {
@@ -2743,10 +2814,16 @@ export const TOOLS: ToolMeta[] = [
       parameters: { type: "object", properties: {} },
     },
     run: async () => {
+      const { CAPTION_PRESETS } = await import("@/lib/creative/captionStyles");
+      const { CURATED_FONTS } = await import("@/lib/creative/fonts");
       const styles = Object.values(CAPTION_STYLES).map((s) =>
-        `${s.id} (${s.labelHe}) — ${s.descriptionHe}\n   גופן ${s.look.fontFamily} · ${s.look.fontSize}% · הדגשת מילה: ${s.look.highlight}`
-        + (s.policy.targetWords ? ` · ~${s.policy.targetWords} מילים בפעימה · עד ${s.policy.maxCps} תווים/שנייה` : ""));
-      return `${styles.join("\n")}\n\nגופנים עבריים זמינים (OFL, ארוזים מקומית):\n  ${HEBREW_FONTS.map((f) => f.labelHe).join("\n  ")}`;
+        `• מבנה ${s.id} (${s.labelHe}): ${s.descriptionHe}`
+      );
+      const presets = CAPTION_PRESETS.slice(0, 10).map((p) =>
+        `• תבנית ${p.id} (${p.labelHe}): גופן ${p.style.fontFamily || "Heebo"}, צבע ${p.style.color}, רקע ${p.style.bg}`
+      );
+      const fonts = CURATED_FONTS.filter((f) => f.hebrew).map((f) => f.family);
+      return `סגנונות כתוביות מבניים:\n${styles.join("\n")}\n\nתבניות ויראליות נבחרות (הפעל דרך set_caption_style(preset_id="...")):\n${presets.join("\n")}\n\nגופנים עבריים נתמכים:\n${fonts.join(", ")}`;
     },
   },
   {
@@ -2942,6 +3019,24 @@ export const TOOLS: ToolMeta[] = [
 export const TOOL_SCHEMAS = TOOLS.map((t) => t.schema);
 export const TOOL_BY_NAME: Record<string, ToolMeta> = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 
+/**
+ * כלי-קריאה/בדיקה בלבד המותרים במצב PLAN. הרשימה היא allow-list ידני (לא
+ * "כל מה שאינו MUTATING_TOOLS") כי כלים כמו rename_media/set_aspect_ratio
+ * משנים את הפרויקט בלי checkpoint ב-runtime — ולכן אינם "קריאה בלבד" אמיתית.
+ * discover_intent/set_project_brief/get_project_brief נכללים כי הם בדיוק
+ * עבודת ה-PLAN (הבנת הכוונה וקיבוע בריף) ואינם נוגעים בקליפים/כתוביות/שכבות.
+ */
+export const PLAN_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "get_video_info", "list_media", "transcribe_video", "find_in_transcript",
+  "inspect_timeline_evidence", "inspect_timeline_layers", "get_transcript", "transcribe_timeline",
+  "analyze_audio", "capture_frame", "list_clips", "list_tracks", "get_brand_kit", "list_overlays",
+  "list_subtitles", "list_stt_models", "list_voices", "discover_intent", "set_project_brief",
+  "get_project_brief", "list_caption_styles", "list_looks", "list_transitions", "list_text_templates",
+  "audit_edit", "ask_user",
+]);
+
+export const PLAN_TOOL_SCHEMAS = TOOLS.filter((t) => PLAN_TOOL_NAMES.has(t.name)).map((t) => t.schema);
+
 export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hypescript. אתה עורך בשיחה סרטונים מכל סוג — תוכן בעברית, רשתות, עסקים, אירועים, משפחה, הרצאות ופודקאסטים — מחומר גלם ועד ייצוא מוכן.
 
 ═══ מה נחשב הצלחה ═══
@@ -3041,6 +3136,6 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
 export const MODE_PROMPTS: Record<import("./types").AgentMode, string> = {
   ask: `\n\nמצב נוכחי: ASK (קריאה בלבד). אין לך כלים במצב זה ואינך יכול לשנות את הפרויקט. ענה על שאלות, הסבר את הפרויקט/התמלול/הציר, והצע צעדים. אם המשתמש מבקש לבצע עריכה — הסבר בקצרה מה צריך לעשות והצע לעבור למצב Act.`,
-  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). אין לך כלים ואינך משנה דבר. פתח בסיווג הבריף לחמשת הסוגים (טקסט מדובר לשמירה / מטא-כותרות / טקסט מסך / הוראות עריכה / טקסט CTA חדש), ורק אחר כך החזר checklist ב-Markdown, פעולה אחת בשורה בפורמט \"- [ ] ...\". ציין את ה-pacing המתאים (broadcast לשיעור, tight לפרסומת), את שער הקבלה audit_edit לפני הרינדור, מה יימחק, אילו כתוביות/נכסים יושפעו, ואילו החלטות באמת דורשות אישור. כשנאמר \"אביא אחר כך\", אל תהפוך את הנכס החסר לחסם. אל תטען שביצעת — רק תכנן; ממשק המשתמש יציג כפתור אישור שמעביר ל-Act.`,
+  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). מותר לך להריץ כלי קריאה/בדיקה בלבד (למשל discover_intent, list_media, get_video_info, capture_frame, get_transcript) כדי להבין את החומר והכוונה — לרוב המשתמש לא ינסח בדיוק מה הוא רוצה, ולכן שווה "להסתכל" על המדיה לפני שמנחשים. אסור לך להריץ שום כלי שמשנה את הפרויקט (ה-runtime חוסם זאת בפועל בכל מקרה). פתח בסיווג הבריף לחמשת הסוגים (טקסט מדובר לשמירה / מטא-כותרות / טקסט מסך / הוראות עריכה / טקסט CTA חדש), ורק אחר כך החזר checklist ב-Markdown, פעולה אחת בשורה בפורמט \"- [ ] ...\". ציין את ה-pacing המתאים (broadcast לשיעור, tight לפרסומת), את שער הקבלה audit_edit לפני הרינדור, מה יימחק, אילו כתוביות/נכסים יושפעו, ואילו החלטות באמת דורשות אישור. כשנאמר \"אביא אחר כך\", אל תהפוך את הנכס החסר לחסם. אל תטען שביצעת — רק תכנן ובדוק; ממשק המשתמש יציג כפתור אישור שמעביר ל-Act.`,
   act: ``,
 };

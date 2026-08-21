@@ -783,7 +783,12 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .pv-missing span { font-size: 11px; opacity: .82; }
 .pv-empty { color: var(--text-3); font-size: var(--fs); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pv-empty svg { color: var(--text-3); opacity: .6; }
-.pv-caption { position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: auto; white-space: pre-line; line-height: 1.35; z-index: 7; margin: 0 4%; cursor: move; }
+.pv-caption {
+  position: absolute; left: 0; right: 0; text-align: center; direction: rtl; pointer-events: auto;
+  white-space: pre-wrap; word-break: keep-all; overflow-wrap: normal;
+  line-height: 1.35; z-index: 7; margin: 0 auto; cursor: move;
+  width: max-content; max-width: 94%;
+}
 .pv-caption.selected { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 4px; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 30%, transparent); }
 .pv-caption.selected[contenteditable="true"] { cursor: text; }
 .pv-caption-overlap { position: absolute; inset-inline-end: 10px; top: 10px; z-index: 9; border: 1px solid #f59e0b; background: rgba(74,45,5,.92); color: #fde68a; border-radius: 999px; padding: 4px 9px; font-size: 11px; cursor: pointer; }
@@ -888,6 +893,8 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .ov-box .ov-text { width: 100%; height: 100%; display: flex; align-items: center; text-align: center; direction: rtl; line-height: 1.2; overflow: hidden; word-break: break-word; text-shadow: 0 2px 6px rgba(0,0,0,.55); pointer-events: none; }
 .ov-box .ov-missing { width: 100%; height: 100%; display: grid; place-items: center; background: var(--danger-tint); color: var(--danger); font-size: 12px; }
 .ov-box.sel { outline: 1.5px solid var(--accent); outline-offset: 0; }
+/* Hover = רמז ויזואלי בלבד. הוא לעולם אינו משנה את הבחירה בפועל — רק קליק. */
+.ov-box.hover { outline: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); outline-offset: 0; }
 .ov-box.locked { cursor: default; }
 .ov-handle { position: absolute; width: 16px; height: 16px; background: #fff; border: 2px solid var(--accent); border-radius: 4px; transform: translate(-50%, -50%); pointer-events: auto; z-index: 4; box-shadow: 0 1px 5px rgba(0,0,0,.65); }
 .ov-layer-badge { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%) rotate(0deg); white-space: nowrap; background: rgba(8,12,20,.94); color: #e7faff; border: 1px solid var(--accent); border-radius: 999px; padding: 3px 8px; font-size: 10px; line-height: 1.2; pointer-events: none; z-index: 5; }
@@ -937,12 +944,15 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   padding: 0 4px; border-radius: 2px; line-height: 15px;
 }
 .media-cell .cell-thumb .cell-kind { position: absolute; inset-inline-start: 3px; top: 3px; color: rgba(255,255,255,.9); filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
-.media-cell .cell-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.media-cell .cell-badge { position: absolute; inset-inline-start: 6px; top: 6px; font-size: 9px; color: #fff; background: var(--accent); border-radius: 999px; padding: 0 5px; height: 15px; display: inline-flex; align-items: center; z-index: 2; }
-.media-cell .cell-actions { position: absolute; inset-inline-end: 5px; top: 5px; display: none; gap: 1px; z-index: 2; }
+.media-cell .cell-actions {
+  position: absolute; inset-inline-end: 4px; top: 4px; display: none;
+  gap: 2px; z-index: 4; flex-wrap: wrap; max-width: calc(100% - 8px); justify-content: flex-end;
+}
 .media-cell:hover .cell-actions, .media-cell.selected .cell-actions, .media-cell:focus-within .cell-actions { display: flex; }
-.media-cell .cell-actions .iconbtn { background: rgba(0,0,0,.55); }
-.media-cell .cell-actions .iconbtn:hover { background: rgba(0,0,0,.8); color: #fff; }
+.media-cell .cell-actions .iconbtn {
+  background: rgba(0,0,0,.75); width: 22px; height: 22px; padding: 0; border-radius: 4px;
+}
+.media-cell .cell-actions .iconbtn:hover { background: rgba(0,0,0,.95); color: #fff; transform: scale(1.08); }
 .strip-loading.cover { position: absolute; inset: 0; }
 .media-item {
   display: flex; align-items: center; gap: 9px; padding: 6px 7px; border-radius: var(--r-md);
@@ -1024,6 +1034,14 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   font-variant-numeric: tabular-nums; direction: ltr;
 }
 .tl-selinfo { font-size: var(--fs-2); color: var(--text-2); font-family: var(--mono); direction: ltr; padding: 0 6px; }
+.tl-btn-group { display: flex; align-items: center; gap: 2px; }
+.tl-empty-lane-placeholder {
+  position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+  border-radius: 8px; border: 1px dashed rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03); color: var(--text-3, rgba(255, 255, 255, 0.45));
+  font-size: 12px; font-weight: 500; pointer-events: none; user-select: none; z-index: 1;
+}
 
 /* scroll area */
 .tl-scroll {
@@ -1205,13 +1223,19 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
 .caption-row.collapsed .hd-ctrls { display:none; }
 .caption-row.expanded .cue2 { top:5px!important; height:17px!important; }
 
+.cue2.marquee-selected {
+  border-color: #60a5fa !important;
+  background: rgba(96, 165, 250, 0.45) !important;
+  box-shadow: 0 0 0 1.5px #60a5fa, 0 0 10px rgba(96, 165, 250, 0.5) !important;
+}
+
 /* CapCut-style 2D direct clip dragging */
-.clip2.is-dragging-origin, .clip-ov.is-dragging-origin, .clip-audio.is-dragging-origin, .clip-gap.is-dragging-origin {
+.clip2.is-dragging-origin, .clip-ov.is-dragging-origin, .clip-audio.is-dragging-origin, .clip-gap.is-dragging-origin, .cue2.is-dragging-origin {
   opacity: 0.22 !important;
   outline: 1.5px dashed rgba(255, 255, 255, 0.35) !important;
   filter: grayscale(0.7) !important;
 }
-.clip2.is-dragging-active, .clip-ov.is-dragging-active, .clip-audio.is-dragging-active, .clip-gap.is-dragging-active {
+.clip2.is-dragging-active, .clip-ov.is-dragging-active, .clip-audio.is-dragging-active, .clip-gap.is-dragging-active, .cue2.is-dragging-active {
   opacity: 0.22 !important;
   outline: 1.5px dashed rgba(255, 255, 255, 0.35) !important;
 }
@@ -1571,8 +1595,20 @@ button.quote-chip:hover svg { color: var(--accent); }
 .export-stats { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
 .export-note { margin-top: 15px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); color: var(--text-2); font-size: 12px; }
 .export-cancel { margin-top: 10px; color: var(--text-2); }
-.export-result video { width: 100%; max-height: 360px; display: block; background: #000; border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.3); }
-.export-file { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.export-vplayer {
+  position: relative; border-radius: 14px; overflow: hidden; background: #000;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.export-video-el { width: 100%; max-height: 380px; display: block; background: #000; cursor: pointer; object-fit: contain; }
+.export-vplayer-controls {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: rgba(15, 20, 28, 0.95); backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.export-seek { flex: 1; accent-color: var(--accent); cursor: pointer; }
+.export-time { font-size: 11px; font-family: var(--mono); color: var(--text-2); white-space: nowrap; }
+.export-vplayer-controls .speed-btn { font-size: 11px; font-family: var(--mono); padding: 2px 6px; height: 24px; }
+.export-file { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .export-file > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .export-file strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: right; }
 .export-file span { color: var(--text-2); font-size: 12px; direction: ltr; text-align: right; }
@@ -3338,6 +3374,27 @@ html[data-locale="hi"] :is(.topbar,.dashboard-shell,.settings-page,.account-page
   gap: 12px;
 }
 
+/* הודעת מצב כנה — לרשת שנפלה או שירות שלא מוגדר. לעולם לא "מחובר" כשזה לא נכון. */
+.creative-status-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 12px 8px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  font-size: 10.5px;
+  line-height: 1.45;
+  background: var(--inset);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+
+.creative-status-note.warn {
+  background: color-mix(in srgb, var(--warning) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+  color: var(--warning);
+}
+
 /* Active Effect Banner */
 .active-effect-banner {
   background: var(--accent-tint);
@@ -4222,3 +4279,26 @@ html[data-locale="hi"] :is(.topbar,.dashboard-shell,.settings-page,.account-page
 }
 
 
+
+/* ===================================================================
+   Workspace width protection (B-08)
+   The centre column — preview + timeline — IS the product. The side panels had
+   fixed widths with `flex: none`, so the centre was the only thing that could
+   yield: measured at a 1100px viewport the preview collapsed to 2px and the
+   timeline lane to 122px, which is why the playhead and clips became impossible
+   to grab. The panels must give up space before the centre does.
+   =================================================================== */
+.main-area { min-width: 420px; }
+.center-col { min-width: 320px; }
+.leftpanel { flex: 0 1 auto; min-width: 190px; }
+.inspector2 { flex: 0 1 auto; min-width: 210px; }
+.agent-dock { flex: 0 1 auto; min-width: 280px; }
+
+@media (max-width: 1500px) {
+  .leftpanel { width: 224px; }
+  .inspector2 { width: 252px; }
+}
+@media (max-width: 1200px) {
+  .leftpanel { width: 196px; }
+  .inspector2 { width: 216px; }
+}

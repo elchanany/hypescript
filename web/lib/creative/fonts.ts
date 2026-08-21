@@ -1,7 +1,12 @@
-// קטלוג גופנים ואינטגרציית Google Fonts Developer API
+// קטלוג גופנים ואינטגרציית Google Fonts
 //
 // תמיכה מלאה בכל גופני Google Fonts, עם עדיפות עליונה לגופנים בעברית (Hebrew Subset).
 // כולל טוען גופנים דינמי (Dynamic WebFont Loader) להזרקת הגופן ישירות ל-DOM של התצוגה המקדימה.
+//
+// המקור העיקרי הוא https://fonts.google.com/metadata/fonts — נקודת קצה ציבורית ללא
+// מפתח, שחושפת את כל קטלוג Google Fonts (כ-1,942 משפחות, מתוכן כ-62 עם subset עברי).
+// GOOGLE_FONTS_API_KEY (Developer API הרשמי) הוא שיפור אופציונלי בלבד; אסור שהיעדרו
+// יגרום למסך "חסר מפתח" — המוצר חייב לעבוד במלואו בלעדיו.
 
 export type FontCategory = "sans-serif" | "serif" | "display" | "handwriting" | "monospace";
 
@@ -279,14 +284,157 @@ export function getHebrewFonts(): FontMetadata[] {
   return CURATED_FONTS.filter((f) => f.hebrew);
 }
 
-export function searchCuratedFonts(query: string, category?: FontCategory | "all", hebrewOnly = false): FontMetadata[] {
-  const q = String(query || "").trim().toLowerCase();
-  return CURATED_FONTS.filter((f) => {
-    if (hebrewOnly && !f.hebrew) return false;
-    if (category && category !== "all" && f.category !== category) return false;
+/** מסננים גנריים המשותפים לקטלוג המובנה ולקטלוג המלא שמגיע מ-Google Fonts. */
+export interface FontFilterOptions {
+  query?: string;
+  category?: FontCategory | "all";
+  /** "hebrew" | "latin" | subset ספציפי אחר | "all" (ברירת מחדל: ללא סינון). */
+  subset?: string;
+}
+
+export function filterFonts(fonts: readonly FontMetadata[], opts: FontFilterOptions = {}): FontMetadata[] {
+  const q = String(opts.query || "").trim().toLowerCase();
+  const subset = opts.subset && opts.subset !== "all" ? opts.subset : undefined;
+  return fonts.filter((f) => {
+    if (subset) {
+      if (subset === "hebrew" ? !f.hebrew : !f.subsets.includes(subset)) return false;
+    }
+    if (opts.category && opts.category !== "all" && f.category !== opts.category) return false;
     if (!q) return true;
     return f.family.toLowerCase().includes(q) || (f.previewSampleHe && f.previewSampleHe.includes(q));
   });
+}
+
+export function searchCuratedFonts(query: string, category?: FontCategory | "all", hebrewOnly = false): FontMetadata[] {
+  return filterFonts(CURATED_FONTS, { query, category, subset: hebrewOnly ? "hebrew" : "all" });
+}
+
+// ── Google Fonts Metadata (קטלוג מלא, ללא מפתח) ────────────────────────────
+
+export const GOOGLE_FONTS_METADATA_URL = "https://fonts.google.com/metadata/fonts";
+
+/** גוגל ממפה קטגוריה כ-"Sans Serif" וכד' — כאן ממפים לטיפוסי ה-FontCategory שלנו. */
+const GOOGLE_CATEGORY_MAP: Record<string, FontCategory> = {
+  "sans serif": "sans-serif",
+  "serif": "serif",
+  "display": "display",
+  "handwriting": "handwriting",
+  "monospace": "monospace",
+};
+
+function mapGoogleCategory(raw: unknown): FontCategory {
+  const key = String(raw || "").trim().toLowerCase();
+  return GOOGLE_CATEGORY_MAP[key] || "sans-serif";
+}
+
+interface RawGoogleFontFamily {
+  family?: string;
+  category?: string;
+  subsets?: string[];
+  fonts?: Record<string, unknown>;
+  popularity?: number;
+  defaultSort?: number;
+}
+
+interface RawGoogleFontsMetadata {
+  familyMetadataList?: RawGoogleFontFamily[];
+}
+
+/**
+ * גוגל לפעמים (לא תמיד, תלוי בקשה) מקדימה guard אנטי-hijacking לפני ה-JSON האמיתי
+ * (כמו `)]}'`). חותכים מה-`{` הראשון כדי שזה יעבוד גם אם ה-guard קיים וגם אם לא —
+ * במקום להניח על תבנית קבועה שעלולה להשתנות.
+ */
+export function stripXssiGuard(raw: string): string {
+  const start = raw.indexOf("{");
+  return start >= 0 ? raw.slice(start) : raw;
+}
+
+/** "menu" הוא subset פנימי של גוגל (טקסט הדוגמה בתפריט), לא שפה/כתב אמיתיים. */
+const NON_LANGUAGE_SUBSETS = new Set(["menu"]);
+
+export function parseGoogleFontsMetadata(raw: string): FontMetadata[] {
+  let data: RawGoogleFontsMetadata;
+  try {
+    data = JSON.parse(stripXssiGuard(raw));
+  } catch {
+    return [];
+  }
+  const list = Array.isArray(data.familyMetadataList) ? data.familyMetadataList : [];
+  const result: FontMetadata[] = [];
+  for (const f of list) {
+    if (!f.family) continue;
+    const subsets = (f.subsets || []).filter((s) => !NON_LANGUAGE_SUBSETS.has(s));
+    const variantKeys = f.fonts ? Object.keys(f.fonts) : [];
+    result.push({
+      family: f.family,
+      category: mapGoogleCategory(f.category),
+      hebrew: subsets.includes("hebrew"),
+      variants: variantKeys.length ? variantKeys : ["400"],
+      subsets,
+      // popularity הוא דירוג (1 = הכי פופולרי); defaultSort הוא גיבוי כשהוא חסר.
+      popularityRank: typeof f.popularity === "number" ? f.popularity
+        : typeof f.defaultSort === "number" ? f.defaultSort
+        : undefined,
+    });
+  }
+  return result;
+}
+
+export function sortFontsByPopularity(fonts: readonly FontMetadata[]): FontMetadata[] {
+  return [...fonts].sort((a, b) => {
+    const ra = a.popularityRank ?? Number.MAX_SAFE_INTEGER;
+    const rb = b.popularityRank ?? Number.MAX_SAFE_INTEGER;
+    if (ra !== rb) return ra - rb;
+    return a.family.localeCompare(b.family);
+  });
+}
+
+export interface GoogleFontsCatalogResult {
+  fonts: FontMetadata[];
+  /** "live" = הגיע עכשיו מגוגל. "cache" = קאש (טרי או ישן-אך-עדיף-על-כלום בכשל רשת). */
+  source: "live" | "cache";
+  error?: string;
+}
+
+interface GoogleFontsCacheEntry {
+  fonts: FontMetadata[];
+  fetchedAt: number;
+}
+
+let googleFontsCache: GoogleFontsCacheEntry | null = null;
+
+/** קטלוג גופנים כמעט ולא משתנה בין שעה לשעה — קאש ל-24 שעות חוסך אלפי בקשות. */
+export const GOOGLE_FONTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * שולף את קטלוג הגופנים המלא של גוגל (ללא מפתח), עם קאש בזיכרון בצד השרת.
+ * בכשל רשת: אם יש קאש ישן — עדיף להחזיר אותו מאשר ליפול לרשימה המצומצמת.
+ */
+export async function fetchGoogleFontsCatalog(opts: { ttlMs?: number; force?: boolean } = {}): Promise<GoogleFontsCatalogResult> {
+  const ttl = opts.ttlMs ?? GOOGLE_FONTS_CACHE_TTL_MS;
+  const now = Date.now();
+  if (!opts.force && googleFontsCache && now - googleFontsCache.fetchedAt < ttl) {
+    return { fonts: googleFontsCache.fonts, source: "cache" };
+  }
+  try {
+    const res = await fetch(GOOGLE_FONTS_METADATA_URL, { next: { revalidate: 86400 } } as RequestInit);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = await res.text();
+    const parsed = sortFontsByPopularity(parseGoogleFontsMetadata(raw));
+    if (!parsed.length) throw new Error("קטלוג ריק אחרי parsing");
+    googleFontsCache = { fonts: parsed, fetchedAt: now };
+    return { fonts: parsed, source: "live" };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (googleFontsCache) return { fonts: googleFontsCache.fonts, source: "cache", error: message };
+    return { fonts: [], source: "cache", error: message };
+  }
+}
+
+/** מאפס את הקאש בין טסטים — לא לשימוש בקוד המוצר. */
+export function __resetGoogleFontsCacheForTests(): void {
+  googleFontsCache = null;
 }
 
 const loadedFonts = new Set<string>();

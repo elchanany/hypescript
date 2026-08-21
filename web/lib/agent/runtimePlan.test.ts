@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentRunner, type AgentEvents } from "./runtime";
-import type { AgentContext } from "./tools";
+import { PLAN_TOOL_SCHEMAS, type AgentContext } from "./tools";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("AgentRunner plan mode", () => {
-  it("sends no tools and identifies the response as a non-mutating plan", async () => {
+  it("sends only read-only tool schemas and identifies the response as a non-mutating plan", async () => {
     let requestBody: any;
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       requestBody = JSON.parse(String(init.body));
@@ -29,7 +29,9 @@ describe("AgentRunner plan mode", () => {
 
     await runner.send("תכנן עריכה");
 
-    expect(requestBody.tools).toEqual([]);
+    // Plan may inspect (PLAN_TOOL_SCHEMAS) but the schemas sent never include a mutating tool.
+    expect(requestBody.tools).toEqual(PLAN_TOOL_SCHEMAS);
+    expect(requestBody.tools.some((t: any) => t.name === "delete_clip" || t.name === "keep_by_script")).toBe(false);
     expect(assistant).toEqual([{ text: "- [ ] חתוך פתיח", mode: "plan" }]);
     expect(runner.history.at(-1)).toMatchObject({ role: "assistant", content: "- [ ] חתוך פתיח" });
   });

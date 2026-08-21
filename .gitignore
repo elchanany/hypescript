@@ -66,3 +66,10 @@ graphify-out/.needs_update
 # בילדים מבודדים לכל סוכן (scripts/agent-build.mjs) ורישום התהליכים שלהם
 .next-*/
 .ai/locks/
+.env*
+
+# ארטיפקטים של QA ידני (וידאו בדיקה, פלטי scratch)
+web/public/hs-qa.mp4
+.tmp/
+all_headings.txt
+scratch_headings.py

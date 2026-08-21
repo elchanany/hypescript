@@ -1,7 +1,11 @@
-// אינטגרציית Iconify API וספריית אלמנטים ואייקונים וקטוריים עשירה (150,000+ אייקונים פתוחים)
+// אינטגרציית Iconify API וספריית אלמנטים ואייקונים וקטוריים עשירה
 //
-// כולל אימות מטא-דאטה של רישיונות (MIT / Apache-2.0 / CC0), חיפוש דינמי,
-// וחבילת Starter Icons עשירה ב-SVG טהור להוספה מיידית לשכבות הווידאו.
+// api.iconify.design הוא API ציבורי ללא מפתח, עם 236 חבילות איקונים (כ-334,000
+// אייקונים). כל חבילה מגיעה עם רישיון משלה (MIT / Apache-2.0 / CC BY 4.0 / OFL /
+// CC BY-SA 4.0 ...) — לכן אסור לאחד לרישיון גורף אחד; כל VectorElement נושא את
+// הרישיון האמיתי של החבילה שממנה הוא הגיע.
+//
+// חבילת ה-Starter מטה נשארת כגיבוי offline/כשל-רשת וכבסיס דל-רעש כשאין שאילתה.
 
 export type IconCategory = "arrows" | "social" | "badges" | "symbols" | "ui" | "decorative";
 
@@ -230,4 +234,208 @@ export function searchVectorElements(query: string, category?: IconCategory | "a
     if (!q) return true;
     return el.id.includes(q) || el.nameHe.includes(q) || el.category.includes(q);
   });
+}
+
+// ── Iconify API (ללא מפתח) ───────────────────────────────────────────────
+
+export interface IconifyLicense {
+  title: string;
+  spdx?: string;
+  url?: string;
+}
+
+export interface IconifyCollectionMeta {
+  prefix: string;
+  name: string;
+  total: number;
+  author?: string;
+  license: IconifyLicense;
+  category?: string;
+  samples?: string[];
+}
+
+interface RawIconifyCollection {
+  name?: string;
+  total?: number;
+  author?: { name?: string; url?: string };
+  license?: { title?: string; spdx?: string; url?: string };
+  category?: string;
+  samples?: string[];
+}
+
+/** גזירת רישיון בטוחה — כל חבילה ברישיון משלה, לעולם לא ברירת מחדל גורפת שקרית. */
+function extractLicense(coll: RawIconifyCollection | undefined): IconifyLicense {
+  const license = coll?.license;
+  return {
+    title: license?.title || license?.spdx || "רישיון לא ידוע",
+    spdx: license?.spdx,
+    url: license?.url,
+  };
+}
+
+export function parseIconifyCollections(raw: Record<string, RawIconifyCollection> | null | undefined): IconifyCollectionMeta[] {
+  if (!raw || typeof raw !== "object") return [];
+  return Object.entries(raw).map(([prefix, coll]) => ({
+    prefix,
+    name: coll?.name || prefix,
+    total: typeof coll?.total === "number" ? coll.total : 0,
+    author: coll?.author?.name,
+    license: extractLicense(coll),
+    category: coll?.category,
+    samples: coll?.samples,
+  }));
+}
+
+/** "prefix:name" (כמו שמחזיר /search) -> Map<prefix, names[]>, כדי לאצווה בקשות icon-data. */
+export function groupIconNamesByPrefix(fullNames: readonly string[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const full of fullNames) {
+    const idx = full.indexOf(":");
+    if (idx <= 0) continue;
+    const prefix = full.slice(0, idx);
+    const name = full.slice(idx + 1);
+    if (!name) continue;
+    const bucket = map.get(prefix);
+    if (bucket) bucket.push(name);
+    else map.set(prefix, [name]);
+  }
+  return map;
+}
+
+interface RawIconifyIconEntry {
+  body: string;
+  width?: number;
+  height?: number;
+}
+
+interface RawIconifyIconData {
+  prefix: string;
+  width?: number;
+  height?: number;
+  icons: Record<string, RawIconifyIconEntry>;
+  aliases?: Record<string, { parent: string; width?: number; height?: number }>;
+}
+
+/**
+ * ממיר תשובת icon-data גולמית (מ-`/{prefix}.json?icons=...`) ל-VectorElement[].
+ * שמות מבוקשים יכולים להיות alias שמצביע ל-icon "אמיתי" תחת שם אחר (כמו
+ * "arrow" -> "redo" ב-mdi) — ה-body נמצא תמיד תחת השם ה"אמיתי" ב-`icons`.
+ */
+export function buildVectorElementsFromIconifyData(
+  data: RawIconifyIconData,
+  license: IconifyLicense,
+  collectionName: string,
+): VectorElement[] {
+  if (!data || typeof data !== "object") return [];
+  const items: VectorElement[] = [];
+  const requestedNames = new Set<string>([
+    ...Object.keys(data.icons || {}),
+    ...Object.keys(data.aliases || {}),
+  ]);
+  for (const name of requestedNames) {
+    const alias = data.aliases?.[name];
+    const entry = alias ? data.icons?.[alias.parent] : data.icons?.[name];
+    if (!entry || !entry.body) continue;
+    const width = alias?.width ?? entry.width ?? data.width ?? 16;
+    const height = alias?.height ?? entry.height ?? data.height ?? 16;
+    items.push({
+      id: `${data.prefix}:${name}`,
+      nameHe: name.replace(/[-_]/g, " "),
+      category: "ui",
+      svgPath: entry.body,
+      viewBox: `0 0 ${width} ${height}`,
+      defaultColor: "#ffffff",
+      license: license.title,
+      iconSet: collectionName,
+    });
+  }
+  return items;
+}
+
+const ICONIFY_API_BASE = "https://api.iconify.design";
+
+export interface IconifySearchResult {
+  items: VectorElement[];
+  total: number;
+}
+
+/**
+ * חיפוש חי מול Iconify: /search מחזיר שמות + מטא-דאטה של חבילות (כולל רישיון),
+ * ואז שולפים body בפועל לכל חבילה בבקשה מרוכזת אחת (icon-data batch) —
+ * לא מאות בקשות SVG בודדות לכל תוצאה.
+ */
+export async function searchIconifyIcons(query: string, limit = 32): Promise<IconifySearchResult> {
+  const searchRes = await fetch(`${ICONIFY_API_BASE}/search?query=${encodeURIComponent(query)}&limit=${limit}`, {
+    next: { revalidate: 3600 },
+  } as RequestInit);
+  if (!searchRes.ok) throw new Error(`Iconify search נכשל: HTTP ${searchRes.status}`);
+  const searchData = await searchRes.json();
+  const fullNames: string[] = Array.isArray(searchData.icons) ? searchData.icons : [];
+  const collections: Record<string, RawIconifyCollection> = searchData.collections || {};
+  const grouped = groupIconNamesByPrefix(fullNames);
+
+  const batches = await Promise.all(
+    [...grouped.entries()].map(async ([prefix, names]) => {
+      const coll = collections[prefix];
+      const license = extractLicense(coll);
+      try {
+        const iconsRes = await fetch(
+          `${ICONIFY_API_BASE}/${encodeURIComponent(prefix)}.json?icons=${names.map(encodeURIComponent).join(",")}`,
+          { next: { revalidate: 86400 } } as RequestInit,
+        );
+        if (!iconsRes.ok) return [];
+        const iconData = await iconsRes.json();
+        return buildVectorElementsFromIconifyData(iconData, license, coll?.name || prefix);
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  return {
+    items: batches.flat(),
+    total: typeof searchData.total === "number" ? searchData.total : fullNames.length,
+  };
+}
+
+export interface IconifyCollectionsResult {
+  collections: IconifyCollectionMeta[];
+  source: "live" | "cache";
+  error?: string;
+}
+
+interface IconifyCollectionsCacheEntry {
+  collections: IconifyCollectionMeta[];
+  fetchedAt: number;
+}
+
+let iconifyCollectionsCache: IconifyCollectionsCacheEntry | null = null;
+
+/** רשימת 236 החבילות כמעט ואינה משתנה בין יום ליום — קאש ל-24 שעות. */
+export const ICONIFY_COLLECTIONS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function fetchIconifyCollections(opts: { ttlMs?: number; force?: boolean } = {}): Promise<IconifyCollectionsResult> {
+  const ttl = opts.ttlMs ?? ICONIFY_COLLECTIONS_CACHE_TTL_MS;
+  const now = Date.now();
+  if (!opts.force && iconifyCollectionsCache && now - iconifyCollectionsCache.fetchedAt < ttl) {
+    return { collections: iconifyCollectionsCache.collections, source: "cache" };
+  }
+  try {
+    const res = await fetch(`${ICONIFY_API_BASE}/collections`, { next: { revalidate: 86400 } } as RequestInit);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = await res.json();
+    const parsed = parseIconifyCollections(raw);
+    if (!parsed.length) throw new Error("רשימת חבילות ריקה");
+    iconifyCollectionsCache = { collections: parsed, fetchedAt: now };
+    return { collections: parsed, source: "live" };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (iconifyCollectionsCache) return { collections: iconifyCollectionsCache.collections, source: "cache", error: message };
+    return { collections: [], source: "cache", error: message };
+  }
+}
+
+/** מאפס את הקאש בין טסטים — לא לשימוש בקוד המוצר. */
+export function __resetIconifyCollectionsCacheForTests(): void {
+  iconifyCollectionsCache = null;
 }

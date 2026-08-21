@@ -41,8 +41,10 @@ interface Props {
   onSeek: (assembled: number) => void;
   onSelect: (id: string | null, track?: "video" | "audio") => void;
   onSelectMulti?: (ids: string[]) => void;
+  onMoveMulti?: (ids: string[], dt: number) => void;
   onSelectOverlay?: (id: string | null) => void;
   onSelectSub?: (id: string | null) => void;
+  onSubMove?: (id: string, start: number, end: number) => void;
   onTrimBegin: () => void;
   onTrim: (id: string, start: number, end: number) => void;
   onTrimEnd: () => void;
@@ -124,7 +126,7 @@ export default function Timeline(p: Props) {
 
   // Active floating 2D drag state across all tracks without overflow clipping
   const [activeDrag, setActiveDrag] = useState<{
-    kind: "clip" | "overlay";
+    kind: "clip" | "overlay" | "sub";
     id: string;
     dx: number;
     dy: number;
@@ -139,6 +141,8 @@ export default function Timeline(p: Props) {
     snapped: boolean;
     clip?: Clip | null;
     overlay?: Overlay | null;
+    sub?: Sub | null;
+    multiCount?: number;
   } | null>(null);
 
   // HTML5 media drag state from library
@@ -153,7 +157,7 @@ export default function Timeline(p: Props) {
   const [captionExpanded, setCaptionExpanded] = useState(false);
 
   const drag = useRef<{
-    kind: "clip" | "overlay";
+    kind: "clip" | "overlay" | "sub";
     mode: "move" | "l" | "r";
     id: string;
     x0: number;
@@ -169,12 +173,13 @@ export default function Timeline(p: Props) {
     moved: boolean;
     px: number;
     py: number;
-    assembled0: number;
-    sourceTrackId: string;
-    targetTrackId: string;
-    trackType: "video" | "audio";
-    timelineStart: number;
-    snapped: boolean;
+    assembled0?: number;
+    sourceTrackId?: string;
+    targetTrackId?: string;
+    trackType?: "video" | "audio";
+    timelineStart?: number;
+    snapped?: boolean;
+    multiIds?: string[];
   } | null>(null);
 
   const zoomRef = useRef(zoom);
@@ -295,21 +300,21 @@ export default function Timeline(p: Props) {
       let cursor = 0;
       for (const clip of clipsOnTrack(clips, track.id, primary)) {
         const d = clipDur(clip);
-        points.push({ time: cursor, label: `${track.name} · התחלה`, kind: "clip", priority: 5 });
+        points.push({ time: cursor, label: `${track.name} · התחלה`, kind: "clip", priority: 6 });
         points.push({ time: cursor + d / 2, label: `${track.name} · אמצע`, kind: "clip", priority: 4 });
         cursor += d;
-        points.push({ time: cursor, label: `${track.name} · סוף`, kind: "clip", priority: 5 });
+        points.push({ time: cursor, label: `${track.name} · סוף`, kind: "clip", priority: 6 });
       }
     }
     for (const overlay of overlays) {
-      points.push({ time: overlay.start, label: "שכבה · התחלה", kind: "overlay", priority: 4 });
+      points.push({ time: overlay.start, label: "שכבה · התחלה", kind: "overlay", priority: 5 });
       points.push({ time: (overlay.start + overlay.end) / 2, label: "שכבה · אמצע", kind: "overlay", priority: 3 });
-      points.push({ time: overlay.end, label: "שכבה · סוף", kind: "overlay", priority: 4 });
+      points.push({ time: overlay.end, label: "שכבה · סוף", kind: "overlay", priority: 5 });
     }
     for (const cue of (subs || [])) {
-      points.push({ time: cue.start, label: "כתובית · התחלה", kind: "caption", priority: 2 });
+      points.push({ time: cue.start, label: "כתובית · התחלה", kind: "caption", priority: 4 });
       points.push({ time: (cue.start + cue.end) / 2, label: "כתובית · אמצע", kind: "caption", priority: 2 });
-      points.push({ time: cue.end, label: "כתובית · סוף", kind: "caption", priority: 2 });
+      points.push({ time: cue.end, label: "כתובית · סוף", kind: "caption", priority: 4 });
     }
     return points;
   }, [clips, tracks, overlays, subs, total, currentAssembled]);
@@ -385,6 +390,7 @@ export default function Timeline(p: Props) {
     const targetEl = e.currentTarget as HTMLElement;
     const targetRect = targetEl.getBoundingClientRect();
     const innerRect = innerRef.current?.getBoundingClientRect() || targetRect;
+    const isMulti = !!(p.selectedIds && p.selectedIds.includes(clip.id) && p.selectedIds.length > 1);
 
     dropLaneRef.current = trackId && e.currentTarget.parentElement
       ? { trackId, el: e.currentTarget.parentElement as HTMLElement }
@@ -404,6 +410,7 @@ export default function Timeline(p: Props) {
       trackType: mediaById(media, clip.sourceId)?.kind === "audio" ? "audio" : "video",
       timelineStart: assembled0,
       snapped: false,
+      multiIds: isMulti ? p.selectedIds : undefined,
     };
     selectClip(clip.id, track);
 
@@ -422,6 +429,7 @@ export default function Timeline(p: Props) {
     const targetEl = e.currentTarget as HTMLElement;
     const targetRect = targetEl.getBoundingClientRect();
     const innerRect = innerRef.current?.getBoundingClientRect() || targetRect;
+    const isMulti = !!(p.selectedIds && p.selectedIds.includes(overlay.id) && p.selectedIds.length > 1);
 
     drag.current = {
       kind: "overlay",
@@ -446,10 +454,53 @@ export default function Timeline(p: Props) {
       trackType: "video",
       timelineStart: overlay.start,
       snapped: false,
+      multiIds: isMulti ? p.selectedIds : undefined,
     };
     if (mode === "l" || mode === "r") {
       p.onOverlayTrimBegin?.();
     }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const onSubDown = (e: React.MouseEvent, sub: Sub) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    p.onSelect(null);
+    p.onSelectOverlay?.(null);
+    p.onSelectSub?.(sub.id);
+    const dur = Math.max(0.05, sub.end - sub.start);
+    const targetEl = e.currentTarget as HTMLElement;
+    const targetRect = targetEl.getBoundingClientRect();
+    const innerRect = innerRef.current?.getBoundingClientRect() || targetRect;
+    const isMulti = !!(p.selectedIds && p.selectedIds.includes(sub.id) && p.selectedIds.length > 1);
+
+    drag.current = {
+      kind: "sub",
+      mode: "move",
+      id: sub.id,
+      x0: e.clientX,
+      y0: e.clientY,
+      originLeft: targetRect.left - innerRect.left,
+      originTop: targetRect.top - innerRect.top,
+      originWidth: targetRect.width,
+      originHeight: targetRect.height,
+      laneW: targetEl.parentElement?.clientWidth || laneRef.current?.clientWidth || 1,
+      s0: sub.start,
+      e0: sub.end,
+      dur,
+      moved: false,
+      px: e.clientX,
+      py: e.clientY,
+      assembled0: sub.start,
+      sourceTrackId: "caption",
+      targetTrackId: "caption",
+      trackType: "video",
+      timelineStart: sub.start,
+      snapped: false,
+      multiIds: isMulti ? p.selectedIds : undefined,
+    };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
@@ -486,6 +537,45 @@ export default function Timeline(p: Props) {
       } else {
         stopAutoScroll();
       }
+    }
+
+    if (d.kind === "sub") {
+      if (d.moved) {
+        const rawStart = Math.max(0, d.s0 + dt);
+        const candidates = snapTargets.filter((t) => Math.abs(t.time - d.s0) > 0.001 && Math.abs(t.time - d.e0) > 0.001);
+        const rangeHit = (!snap || e.altKey)
+          ? { start: rawStart, snapped: false, target: null, match: null, edge: null }
+          : snapRangeStart(rawStart, d.dur, candidates, snapTol());
+
+        d.timelineStart = Math.max(0, rangeHit.start);
+        d.snapped = rangeHit.snapped;
+
+        showSnapGuide(
+          rangeHit.snapped ? rangeHit.target : d.timelineStart,
+          rangeHit.snapped && rangeHit.target != null
+            ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הכתובית מיושר" : "תחילת הכתובית מיושרת"}`
+            : `${formatTimecode(d.timelineStart)} · Alt לביטול מגנט`,
+          rangeHit.snapped,
+        );
+
+        setActiveDrag({
+          kind: "sub",
+          id: d.id,
+          dx,
+          dy,
+          originLeft: d.originLeft,
+          originTop: d.originTop,
+          originWidth: d.originWidth,
+          originHeight: d.originHeight,
+          timelineStart: d.timelineStart,
+          dur: d.dur,
+          targetTrackId: "caption",
+          snapped: rangeHit.snapped,
+          sub: (subs || []).find((s) => s.id === d.id) || null,
+          multiCount: d.multiIds?.length,
+        });
+      }
+      return;
     }
 
     if (d.kind === "overlay") {
@@ -536,6 +626,7 @@ export default function Timeline(p: Props) {
           targetTrackId: d.targetTrackId,
           snapped: rangeHit.snapped,
           overlay: overlays.find((o) => o.id === d.id) || null,
+          multiCount: d.multiIds?.length,
         });
       }
       return;
@@ -603,7 +694,7 @@ export default function Timeline(p: Props) {
       showSnapGuide(
         rangeHit.snapped ? rangeHit.target : d.timelineStart,
         rangeHit.snapped && rangeHit.target != null
-          ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הקטע" : "תחילת הקטע"}`
+          ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הקטע מיושר" : "תחילת הקטע מיושרת"}`
           : `${formatTimecode(d.timelineStart)} · Alt לביטול מגנט`,
         rangeHit.snapped,
       );
@@ -626,6 +717,7 @@ export default function Timeline(p: Props) {
         targetTrackName,
         snapped: rangeHit.snapped,
         clip: clips.find((c) => c.id === d.id) || null,
+        multiCount: d.multiIds?.length,
       });
     }
   };
@@ -642,16 +734,29 @@ export default function Timeline(p: Props) {
 
   const hasMediaDrag = (dt: DataTransfer) => Array.from(dt.types || []).includes(MEDIA_DRAG_MIME);
 
-  const pointerTime = (clientX: number, lane: HTMLElement) => {
+  const pointerTime = (clientX: number, targetEl: HTMLElement) => {
+    const lane = targetEl.classList.contains("tl-lane2")
+      ? targetEl
+      : (targetEl.querySelector<HTMLElement>(".tl-lane2") || laneRef.current || targetEl);
     const rect = lane.getBoundingClientRect();
     return Math.max(0, Math.min(visibleTotal, ((clientX - rect.left) / Math.max(1, rect.width)) * visibleTotal));
   };
 
-  const showMediaDropAt = (clientX: number, lane: HTMLElement, bypass = false) => {
+  const showMediaDropAt = (clientX: number, lane: HTMLElement, bypass = false, mediaDur = 5) => {
     const raw = pointerTime(clientX, lane);
-    const hit = applySnap(raw, [], bypass);
-    const time = hit.snapped ? hit.time : raw;
-    showSnapGuide(time, hit.snapped ? `${formatTimecode(time)} · ${hit.match?.label || "קצה"}` : `${formatTimecode(time)} · מיקום חופשי`, hit.snapped);
+    if (bypass || !snap) {
+      showSnapGuide(raw, `${formatTimecode(raw)} · מיקום חופשי`, false);
+      return raw;
+    }
+    const hit = snapRangeStart(raw, mediaDur, snapTargets, snapTol());
+    const time = hit.snapped ? hit.start : raw;
+    showSnapGuide(
+      hit.snapped ? (hit.target ?? time) : time,
+      hit.snapped
+        ? `${formatTimecode(time)} · ${hit.match?.label || "קצה"} · ${hit.edge === "end" ? "סוף המדיה מיושר" : "תחילת המדיה מיושרת"}`
+        : `${formatTimecode(time)} · מיקום חופשי`,
+      hit.snapped,
+    );
     return time;
   };
 
@@ -660,9 +765,15 @@ export default function Timeline(p: Props) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     e.currentTarget.classList.add("drop-target");
-    dropLaneRef.current = { trackId, el: e.currentTarget as HTMLElement };
-    const time = showMediaDropAt(e.clientX, e.currentTarget as HTMLElement, e.altKey);
-    setHtml5Drop({ trackId, start: time, dur: 5 });
+    const targetLane = (e.currentTarget as HTMLElement).classList.contains("tl-lane2")
+      ? (e.currentTarget as HTMLElement)
+      : ((e.currentTarget as HTMLElement).querySelector<HTMLElement>(".tl-lane2") || (e.currentTarget as HTMLElement));
+    dropLaneRef.current = { trackId, el: targetLane };
+    const id = e.dataTransfer.getData(MEDIA_DRAG_MIME);
+    const asset = id ? mediaById(media, id) : undefined;
+    const dur = asset?.duration || 5;
+    const time = showMediaDropAt(e.clientX, targetLane, e.altKey, dur);
+    setHtml5Drop({ trackId, start: time, dur });
   };
 
   const onLaneDragLeave = (e: React.DragEvent) => {
@@ -679,9 +790,13 @@ export default function Timeline(p: Props) {
     const id = e.dataTransfer.getData(MEDIA_DRAG_MIME);
     if (!id || !p.onDropMedia) return;
     const tid = trackId || primaryId;
-    const list = clipsOf(tid);
-    const { index } = dropTarget(e.clientX, list, e.currentTarget as HTMLElement);
-    const timelineStart = showMediaDropAt(e.clientX, e.currentTarget as HTMLElement, e.altKey);
+    const list = tid === "__new_track__" ? [] : clipsOf(tid);
+    const targetLane = (e.currentTarget as HTMLElement).classList.contains("tl-lane2")
+      ? (e.currentTarget as HTMLElement)
+      : ((e.currentTarget as HTMLElement).querySelector<HTMLElement>(".tl-lane2") || (e.currentTarget as HTMLElement));
+    const { index } = dropTarget(e.clientX, list, targetLane);
+    const asset = mediaById(media, id);
+    const timelineStart = showMediaDropAt(e.clientX, targetLane, e.altKey, asset?.duration || 5);
     p.onDropMedia(id, index, tid, timelineStart);
     endDragVisuals();
   };
@@ -697,13 +812,30 @@ export default function Timeline(p: Props) {
     if (!drag.current) return;
     const d = drag.current;
 
+    // Multi-selection synchronous dragging
+    if (d.moved && d.multiIds && d.multiIds.length > 1) {
+      const dt = (d.timelineStart ?? (d.assembled0 ?? d.s0)) - (d.assembled0 ?? d.s0);
+      p.onMoveMulti?.(d.multiIds, dt);
+      drag.current = null;
+      return;
+    }
+
+    if (d.kind === "sub") {
+      if (!d.moved) { p.onSelectSub?.(d.id); }
+      else if (p.onSubMove && d.timelineStart != null) {
+        p.onSubMove(d.id, d.timelineStart, d.timelineStart + d.dur);
+      }
+      drag.current = null;
+      return;
+    }
+
     if (d.kind === "overlay") {
       if (d.mode === "l" || d.mode === "r") {
         /* committed via onOverlayTrim */
       } else if (d.mode === "move") {
         if (!d.moved) { p.onSelectOverlay?.(d.id); }
         else if (p.onOverlayMove) {
-          p.onOverlayMove(d.id, d.timelineStart, d.timelineStart + d.dur);
+          p.onOverlayMove(d.id, d.timelineStart ?? d.s0, (d.timelineStart ?? d.s0) + d.dur);
         }
       }
       drag.current = null;
@@ -747,7 +879,7 @@ export default function Timeline(p: Props) {
   const onTimelineMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
-    if (target.closest(".clip2, .clip-audio, .clip-ov, .cue-chip, button, .tl-head2, .trim, .tl-ruler2, .playhead2, .tl-tick2")) return;
+    if (target.closest(".clip2, .clip-audio, .clip-ov, .cue2, .cue-chip, button, .tl-head2, .trim, .tl-ruler2, .playhead2, .tl-tick2")) return;
 
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
@@ -789,7 +921,7 @@ export default function Timeline(p: Props) {
         bottom: Math.max(marqueeRef.current.clientY0, ev.clientY),
       };
 
-      const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov, .clip-gap");
+      const foundClips = document.querySelectorAll<HTMLElement>(".clip2, .clip-audio, .clip-ov, .clip-gap, .cue2");
       const currentHits = new Set<string>();
 
       for (let i = 0; i < foundClips.length; i++) {
@@ -829,6 +961,7 @@ export default function Timeline(p: Props) {
         p.onSelectMulti?.([]);
         p.onSelect(null);
         p.onSelectOverlay?.(null);
+        p.onSelectSub?.(null);
       }
     };
 
@@ -1185,12 +1318,15 @@ export default function Timeline(p: Props) {
                   {(subs || []).map((s, _cueIndex, allSubs) => {
                     const overlapping = allSubs.filter((other) => other.start < s.end && other.end > s.start);
                     const overlapLevel = overlapping.findIndex((other) => other.id === s.id);
+                    const isDraggingThis = activeDrag?.id === s.id;
                     return (
                       <div
                         key={s.id}
-                        className={`cue2 ${overlapping.length > 1 ? "overlap" : ""} ${selectedSubId === s.id ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""}`}
+                        data-clip-id={s.id}
+                        className={`cue2 ${overlapping.length > 1 ? "overlap" : ""} ${selectedSubId === s.id || isMultiSel(s.id) ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
                         style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%`, top: `${4 + Math.max(0, overlapLevel) * 18}px`, height: 17, bottom: "auto" }}
                         title={`${s.text}${overlapping.length > 1 ? ` · חפיפה עם ${overlapping.length - 1} כתוביות` : ""}`}
+                        onMouseDown={(e) => onSubDown(e, s)}
                         onClick={(e) => { e.stopPropagation(); p.onSelect(null); p.onSelectOverlay?.(null); p.onSelectSub?.(s.id); }}
                         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); p.onSelectSub?.(s.id); p.onSubMenu?.(s.id, e.clientX, e.clientY); }}
                         onMouseEnter={() => setHoveredSubId(s.id)}
@@ -1337,6 +1473,33 @@ export default function Timeline(p: Props) {
               height: `${activeDrag.originHeight}px`,
             }}
           >
+            {activeDrag.multiCount && activeDrag.multiCount > 1 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: -12,
+                  insetInlineEnd: -12,
+                  background: "#3b82f6",
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: "2px 7px",
+                  borderRadius: 999,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                  zIndex: 100,
+                  pointerEvents: "none",
+                }}
+              >
+                {activeDrag.multiCount} פריטים
+              </div>
+            )}
+
+            {activeDrag.kind === "sub" && activeDrag.sub && (
+              <div className="cue2 selected" style={{ inset: 0, width: "100%", height: "100%", position: "relative" }}>
+                <span className="cue-txt">{activeDrag.sub.text}</span>
+              </div>
+            )}
+
             {activeDrag.kind === "overlay" && activeDrag.overlay && (() => {
               const o = activeDrag.overlay;
               const asset = o.assetId ? mediaById(media, o.assetId) : undefined;
@@ -1395,6 +1558,23 @@ export default function Timeline(p: Props) {
             })()}
           </div>
         )}
+
+        {/* CapCut-style Vertical Snap Guide line across all tracks */}
+        <div
+          ref={snapGuideRef}
+          className="tl-snap-guide"
+          style={{
+            display: "none",
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            width: "2px",
+            zIndex: 40,
+            pointerEvents: "none",
+          }}
+        >
+          <span ref={snapLabelRef} />
+        </div>
       </div>
     </div>
   );

@@ -58,29 +58,51 @@ export default function CaptionsPanel({
           </div>
         </Section>
 
-        <Section title="סגנונות ויראליים מוכנים (1-Click)">
+        <Section title="סגנונות ותבניות כתוביות (1-Click)">
           <div className="cap-body" style={{ padding: 0 }}>
-            <div className="caption-presets-mini-grid">
-              {CAPTION_PRESETS.slice(0, 8).map((preset) => {
-                const isCurrent = captionStyle.color === preset.style.color && captionStyle.bg === preset.style.bg;
+            <div className="caption-presets-mini-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 6 }}>
+              {CAPTION_PRESETS.map((preset) => {
+                const isCurrent = captionStyle.color === preset.style.color && captionStyle.bg === preset.style.bg && (preset.style.fontFamily ? captionStyle.fontFamily === preset.style.fontFamily : true);
                 return (
                   <button
                     key={preset.id}
                     className={`mini-caption-pill ${isCurrent ? "active" : ""}`}
                     onClick={() => applyPreset(preset)}
                     title={preset.descriptionHe}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 8px",
+                      borderRadius: 6,
+                      border: isCurrent ? "1px solid var(--accent)" : "1px solid var(--border)",
+                      background: isCurrent ? "rgba(108,146,255,0.12)" : "var(--card-bg, rgba(255,255,255,0.03))",
+                      cursor: "pointer",
+                      textAlign: "right",
+                    }}
                   >
                     <span
                       className="swatch"
                       style={{
-                        background: preset.style.bg === "box" ? "#000" : preset.style.bg === "soft" ? "#333" : "transparent",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 4,
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        background: preset.style.bg === "box" ? "#000" : preset.style.bg === "soft" ? "#222" : "transparent",
                         color: preset.style.color,
-                        borderColor: preset.style.color,
+                        border: `1px solid ${preset.style.color || "#fff"}`,
                       }}
                     >
                       Aa
                     </span>
-                    <span className="name">{preset.labelHe}</span>
+                    <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                      <span className="name" style={{ fontSize: 11, fontWeight: 600, color: "var(--text-1)" }}>{preset.labelHe}</span>
+                      <span style={{ fontSize: 9, color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preset.style.fontFamily || "ברירת מחדל"}</span>
+                    </div>
                   </button>
                 );
               })}
@@ -88,10 +110,10 @@ export default function CaptionsPanel({
           </div>
         </Section>
 
-        <Section title="התאמה אישית">
+        <Section title="התאמה אישית של עיצוב">
           <div className="cap-body cap-style" style={{ padding: 0 }}>
             <label className="cap-field">
-              <span>גופן</span>
+              <span>גופן עברי</span>
               <select
                 value={captionStyle.fontFamily || "Heebo"}
                 onChange={(e) => {
@@ -99,9 +121,20 @@ export default function CaptionsPanel({
                   onCaptionStyle({ fontFamily: e.target.value });
                 }}
               >
-                {HEBREW_FONTS.map((font) => (
-                  <option key={font.id} value={font.id}>{font.labelHe}</option>
-                ))}
+                <optgroup label="גופנים מובילים בעברית">
+                  {HEBREW_FONTS.map((font) => (
+                    <option key={font.id} value={font.id}>{font.labelHe}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="גופני כותרות ועיצוב נוספים">
+                  <option value="Secular One">Secular One — כותרות עבות</option>
+                  <option value="Suez One">Suez One — מודגש מלא</option>
+                  <option value="Varela Round">Varela Round — עגול וחם</option>
+                  <option value="Karantina">Karantina — קומפקטי וצר</option>
+                  <option value="Frank Ruhl Libre">Frank Ruhl Libre — סריפי קלאסי</option>
+                  <option value="David Libre">David Libre — תורני מסורתי</option>
+                  <option value="Amiri">Amiri — אוריינטלי</option>
+                </optgroup>
               </select>
             </label>
             <label className="cap-field">
@@ -114,12 +147,33 @@ export default function CaptionsPanel({
               <span className="mono">{captionStyle.fontSize.toFixed(1)}</span>
             </label>
             <label className="cap-field">
-              <span>צבע</span>
-              <input
-                type="color"
-                value={captionStyle.color}
-                onChange={(e) => onCaptionStyle({ color: e.target.value })}
-              />
+              <span>צבע טקסט</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%" }}>
+                <input
+                  type="color"
+                  value={captionStyle.color}
+                  onChange={(e) => onCaptionStyle({ color: e.target.value })}
+                  style={{ width: 28, height: 28, padding: 0, border: "none", borderRadius: 4, cursor: "pointer" }}
+                />
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["#ffffff", "#ffd166", "#06d6a0", "#118ab2", "#ef476f", "#ff9f1c"].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => onCaptionStyle({ color: c })}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: c,
+                        border: captionStyle.color.toLowerCase() === c ? "2px solid var(--accent)" : "1px solid rgba(255,255,255,0.2)",
+                        cursor: "pointer",
+                      }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
             </label>
             <label className="cap-field">
               <span>מיקום</span>
@@ -140,18 +194,18 @@ export default function CaptionsPanel({
               >
                 <option value="soft">רך</option>
                 <option value="box">קופסה</option>
-                <option value="none">ללא</option>
+                <option value="none">ללא (שקוף)</option>
               </select>
             </label>
             <div className="cap-field">
-              <span>מודגש</span>
+              <span>מודגש (Bold)</span>
               <Toggle checked={captionStyle.bold} onChange={(v) => onCaptionStyle({ bold: v })} />
             </div>
             <div className="cap-field">
-              <span>צריבה</span>
-              <Toggle checked={burnCaptions} onChange={onBurnCaptions} tip="צרוב כתוביות בתוך הייצוא" />
+              <span>צריבה בייצוא</span>
+              <Toggle checked={burnCaptions} onChange={onBurnCaptions} tip="צרוב כתוביות בתוך קובץ הווידאו הסופי" />
             </div>
-            <div className="cap-hint">הסגנון מופיע בתצוגה המקדימה. עם «צריבה» — נכלל גם בקובץ הייצוא.</div>
+            <div className="cap-hint">הסגנון מופיע מיד בתצוגה המקדימה. אם נבחר «צריבה בייצוא» — ייצרב גם בווידאו המיוצא.</div>
           </div>
         </Section>
 

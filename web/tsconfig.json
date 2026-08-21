@@ -32,7 +32,13 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next-agent-timeline-improvements/types/**/*.ts",
+    ".next-agent-storage-persistence-fix/types/**/*.ts",
+    ".next-agent-cloud-upload-fix/types/**/*.ts",
+    ".next-agent-verify/types/**/*.ts",
+    ".next-agent-timeline-snapping-and-captions/types/**/*.ts",
+    ".next-agent-multi-drag-snap/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

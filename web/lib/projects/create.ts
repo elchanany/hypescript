@@ -70,57 +70,123 @@ export async function createProjectWithPolicy(input: CreateProjectInput): Promis
   return id;
 }
 
-/** Creates or updates a local cache entry for a project that exists in Supabase. */
-export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<string> {
+/** Atomic synchronization of cloud projects into local storage without race conditions. */
+export async function syncCloudProjects(cloudList: CloudProject[]): Promise<ProjectMetaV2[]> {
   const list = (await listProjects()) as ProjectMetaV2[];
-  const existing = list.find((project) => project.cloudProjectId === cloud.id);
-  const cloudUpdated = Date.parse(cloud.updated_at) || Date.now();
+  const localMapByCloudId = new Map<string, ProjectMetaV2>();
+  for (const p of list) {
+    if (p.cloudProjectId) {
+      localMapByCloudId.set(p.cloudProjectId, p);
+    }
+  }
 
-  if (existing) {
-    existing.name = cloud.name || existing.name;
-    existing.updatedAt = Math.max(existing.updatedAt || 0, cloudUpdated);
-    await kvSet("projects", list);
+  let listChanged = false;
+  const nextList = [...list];
 
-    if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
-      await kvSet(`p:${existing.id}:state`, cloud.editor_state);
-      const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
-      if (chat && typeof chat === "object") {
-        await kvSet(`p:${existing.id}:chat`, chat);
+  for (const cloud of cloudList) {
+    if (cloud.state === "deleting") continue;
+    const cloudUpdated = Date.parse(cloud.updated_at) || Date.now();
+    const existing = localMapByCloudId.get(cloud.id);
+
+    if (existing) {
+      if (existing.name !== cloud.name || cloudUpdated > (existing.updatedAt || 0)) {
+        existing.name = cloud.name || existing.name;
+        existing.updatedAt = Math.max(existing.updatedAt || 0, cloudUpdated);
+        listChanged = true;
+      }
+      if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
+        await kvSet(`p:${existing.id}:state`, cloud.editor_state);
+        const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
+        if (chat && typeof chat === "object") {
+          await kvSet(`p:${existing.id}:chat`, chat);
+        }
+      }
+    } else {
+      const id = "prj_" + Math.random().toString(36).slice(2, 9);
+      const newMeta: ProjectMetaV2 = {
+        id,
+        name: cloud.name || "פרויקט בענן",
+        updatedAt: cloudUpdated,
+        createdAt: Date.parse(cloud.created_at) || Date.now(),
+        dataMode: "cloud",
+        cloudProjectId: cloud.id,
+        archived: false,
+        trashedAt: null,
+      };
+      nextList.unshift(newMeta);
+      localMapByCloudId.set(cloud.id, newMeta);
+      listChanged = true;
+
+      const policy = DEFAULT_POLICY();
+      policy.dataMode = "cloud";
+      policy.cloudProjectId = cloud.id;
+      policy.storageBackend = "r2";
+      policy.allowCloudMetadata = true;
+      policy.processingPreset = "cloud_fast";
+      policy.capabilities.render = { providerId: "cloud-run-ffmpeg", execution: "cloud" };
+      policy.capabilities.storage = { providerId: "cloudflare-r2", execution: "cloud" };
+      await saveProjectPolicy(id, policy);
+
+      if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
+        await kvSet(`p:${id}:state`, cloud.editor_state);
+        const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
+        if (chat && typeof chat === "object") {
+          await kvSet(`p:${id}:chat`, chat);
+        }
       }
     }
-    return existing.id;
   }
 
-  const id = await createProject(cloud.name || "פרויקט בענן");
-  const next = (await listProjects()) as ProjectMetaV2[];
-  const row = next.find((project) => project.id === id);
-  if (row) {
-    row.dataMode = "cloud";
-    row.cloudProjectId = cloud.id;
-    row.createdAt = Date.parse(cloud.created_at) || Date.now();
-    row.updatedAt = cloudUpdated;
-    await kvSet("projects", next);
+  if (listChanged) {
+    await kvSet("projects", nextList);
   }
-  const policy = DEFAULT_POLICY();
-  policy.dataMode = "cloud";
-  policy.cloudProjectId = cloud.id;
-  policy.storageBackend = "r2";
-  policy.allowCloudMetadata = true;
-  policy.processingPreset = "cloud_fast";
-  policy.capabilities.render = { providerId: "cloud-run-ffmpeg", execution: "cloud" };
-  policy.capabilities.storage = { providerId: "cloudflare-r2", execution: "cloud" };
-  await saveProjectPolicy(id, policy);
-  if (cloud.editor_state && Object.keys(cloud.editor_state).length > 0) {
-    await kvSet(`p:${id}:state`, cloud.editor_state);
-    const chat = (cloud.editor_state as Record<string, unknown>).chatStore;
-    if (chat && typeof chat === "object") {
-      await kvSet(`p:${id}:chat`, chat);
-    }
-  }
-  return id;
+
+  return nextList;
+}
+
+/** Creates or updates a local cache entry for a single project from Supabase. */
+export async function ensureCloudProjectMirror(cloud: CloudProject): Promise<string> {
+  const synced = await syncCloudProjects([cloud]);
+  const matched = synced.find((p) => p.cloudProjectId === cloud.id);
+  return matched ? matched.id : "";
 }
 
 export async function getProjectMeta(id: string): Promise<ProjectMetaV2 | null> {
   const list = (await kvGet<ProjectMeta[]>("projects")) || [];
   return (list.find((p) => p.id === id) as ProjectMetaV2) || null;
+}
+
+/** Ensures a local project has an active cloud registration and cloudProjectId in Supabase. */
+export async function ensureCloudProjectId(projectId: string, name?: string): Promise<string | null> {
+  const { ensureProjectPolicy, saveProjectPolicy } = await import("./policy");
+  const policy = await ensureProjectPolicy(projectId);
+  if (policy.cloudProjectId) return policy.cloudProjectId;
+  if (policy.dataMode === "local") return null;
+
+  try {
+    const list = (await listProjects()) as ProjectMetaV2[];
+    const meta = list.find((p) => p.id === projectId);
+    const projectName = name || meta?.name || "פרויקט";
+    const cloud = await createCloudProject(projectName);
+    policy.cloudProjectId = cloud.id;
+    policy.dataMode = "cloud";
+    policy.storageBackend = "r2";
+    policy.allowCloudMetadata = true;
+    policy.capabilities = {
+      ...policy.capabilities,
+      storage: { providerId: "cloudflare-r2", execution: "cloud" },
+      render: { providerId: "cloud-run-ffmpeg", execution: "cloud" },
+    };
+    await saveProjectPolicy(projectId, policy);
+
+    if (meta) {
+      meta.cloudProjectId = cloud.id;
+      meta.dataMode = "cloud";
+      await kvSet("projects", list);
+    }
+    return cloud.id;
+  } catch (err) {
+    console.warn("Could not automatically create cloud project:", err);
+    return null;
+  }
 }

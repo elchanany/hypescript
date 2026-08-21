@@ -309,10 +309,18 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
         setActiveImageUrl(null);
         setActiveKind(asset.kind);
         inPlace.muted = false;
-        if (Math.abs(inPlace.currentTime - clip.start) > 0.004) inPlace.currentTime = clip.start;
+        if (Math.abs(inPlace.currentTime - clip.start) > 0.008) {
+          if ("fastSeek" in inPlace && typeof (inPlace as any).fastSeek === "function") {
+            try { (inPlace as any).fastSeek(clip.start); } catch { inPlace.currentTime = clip.start; }
+          } else {
+            inPlace.currentTime = clip.start;
+          }
+        }
         publishTime(from, play);
-        if (play) { void inPlace.play().catch(() => undefined); startVideoClock(activeSlotRef.current); }
-        else inPlace.pause();
+        if (play && inPlace.paused) {
+          void inPlace.play().catch(() => undefined);
+        }
+        startVideoClock(activeSlotRef.current);
         prepareNext(i + 1);
         return;
       }
@@ -378,6 +386,20 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
     void audioContextRef.current?.close();
   }, []);
   useEffect(() => { if (playing) startAudioMeter(); else stopAudioMeter(); }, [playing]);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName?.toUpperCase();
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
+      e.preventDefault();
+      toggle();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggle, edl.length, playing, t, total]);
+
   useEffect(() => {
     const el = stageRef.current; if (!el) return;
     const measure = () => setStageSize({ w: el.clientWidth, h: el.clientHeight }); measure();

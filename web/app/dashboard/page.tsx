@@ -19,8 +19,7 @@ import { toast } from "@/lib/ui/toast";
 import {
   formatDurationHe, getProjectCardInfo, type ProjectCardInfo,
 } from "@/lib/projects/preview";
-import { createProjectWithPolicy } from "@/lib/projects/create";
-import { ensureCloudProjectMirror } from "@/lib/projects/create";
+import { createProjectWithPolicy, syncCloudProjects } from "@/lib/projects/create";
 import { deleteAllCloudProjects, deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
@@ -221,7 +220,11 @@ export default function DashboardPage() {
       if (user) {
         try {
           const cloud = await listCloudProjects();
-          await Promise.all(cloud.filter((project) => project.state !== "deleting").map(ensureCloudProjectMirror));
+          if (Array.isArray(cloud) && cloud.length > 0) {
+            const synced = await syncCloudProjects(cloud.filter((project) => project.state !== "deleting"));
+            setProjects(synced);
+            return;
+          }
         } catch { /* show local cache while offline */ }
       }
       setProjects(await listProjects());

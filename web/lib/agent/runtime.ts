@@ -2,7 +2,10 @@
 // (במקביל — כך "בזמן שהתמלול רץ אפשר לעשות עוד"), ומחזירה תוצאות ל-LLM עד שסיים.
 
 import { AgentMode, AgentUsage, ChatMessage, Provider, ToolCall } from "./types";
-import { AgentContext, MODE_PROMPTS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS, type ToolArtifact, type ToolRunResult } from "./tools";
+import {
+  AgentContext, MODE_PROMPTS, PLAN_TOOL_NAMES, PLAN_TOOL_SCHEMAS, SYSTEM_PROMPT, TOOL_BY_NAME, TOOL_SCHEMAS,
+  type ToolArtifact, type ToolRunResult,
+} from "./tools";
 import { repairToolMessages } from "./normalize";
 import type { EditorSnapshot } from "@/hooks/useEditor";
 
@@ -16,6 +19,12 @@ export interface AgentEvents {
   onUsage?: (usage: AgentUsage, provider: Provider, model?: string) => void;
   onCheckpoint?: (call: ToolCall, snapshot: EditorSnapshot) => void;
   onArtifact?: (artifact: ToolArtifact, call: ToolCall) => void;
+  /**
+   * המודל ניסה להריץ כלי שהמצב הנוכחי חוסם (Ask: הכל, Plan: כל מה שאינו
+   * קריאה-בלבד). ה-runtime כבר חסם את הקריאה בפועל — זה רק ל-UI, כדי להציג
+   * כפתור מעבר-מצב במקום להשאיר את המשתמש עם שגיאת כלי סתומה.
+   */
+  onModeBlocked?: (call: ToolCall, mode: AgentMode) => void;
 }
 
 export function normalizeToolResult(result: ToolRunResult): { text: string; artifacts: ToolArtifact[] } {
@@ -111,6 +120,27 @@ export function agentLoopGuard(recent: string[], name: string): string | null {
   return count + 1 > guard.limit ? guard.hint : null;
 }
 
+/**
+ * אכיפת מצב ברמת ה-runtime (לא רק הנחיה למודל): Ask לא מריץ שום כלי, Plan
+ * מריץ רק כלי-קריאה/בדיקה. גם אם ה-fetch יצא עם TOOL_SCHEMAS מלא (למשל
+ * המצב הוחלף תוך כדי בקשה תלויה) — זו הבדיקה שבאמת מונעת הרצה.
+ */
+export function modeAllowsTool(mode: AgentMode, name: string): boolean {
+  if (mode === "act") return true;
+  if (mode === "plan") return PLAN_TOOL_NAMES.has(name);
+  return false; // ask: שום כלי, גם לא קריאה-בלבד — ייעוץ בלבד.
+}
+
+const MODE_LABELS: Record<AgentMode, string> = { ask: "שאל", plan: "תכנן", act: "בצע" };
+
+/** ההודעה שחוזרת ל-LLM (כתוצאת-כלי) וגם מוצגת למשתמש כשקריאה נחסמת לפי מצב. */
+export function formatModeBlock(mode: AgentMode, toolName: string): string {
+  if (mode === "ask") {
+    return `⛔ נחסם: מצב "${MODE_LABELS.ask}" הוא ייעוץ בלבד ואינו מריץ כלים (כולל ${toolName}). אפשר להסביר ולהמליץ בטקסט; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.plan}" או "${MODE_LABELS.act}".`;
+  }
+  return `⛔ נחסם: מצב "${MODE_LABELS.plan}" מריץ רק כלי קריאה/בדיקה — ${toolName} משנה את הפרויקט. הצע תוכנית וחכה לאישור; לביצוע בפועל המשתמש צריך לעבור למצב "${MODE_LABELS.act}".`;
+}
+
 function formatLlmError(status: number, body: string): string {
   const lower = body.toLowerCase();
   if (status === 503 || /service.?unavailable|too busy|overloaded/i.test(lower)) {
@@ -150,7 +180,8 @@ export function pruneImageMessages(history: ChatMessage[], keep = MAX_IMAGE_MESS
 
 export class AgentRunner {
   history: ChatMessage[] = [];
-  // מצב הסוכן. ask/plan אינם מקבלים כלים -> אינם יכולים לשנות את הפרויקט.
+  // מצב הסוכן. ask לא מקבל כלים כלל; plan מקבל רק כלי-קריאה (PLAN_TOOL_SCHEMAS);
+  // שניהם אינם יכולים לשנות את הפרויקט — modeAllowsTool אוכף זאת גם אם הבקשה יצאה במצב אחר.
   mode: AgentMode = "act";
   private stopped = false;
   private running = false;
@@ -199,6 +230,15 @@ export class AgentRunner {
     if (!meta) {
       const content = `כלי לא ידוע: ${tc.name}`;
       this.events.onToolEnd(tc.id, false, content);
+      return { tool_call_id: tc.id, name: tc.name, content };
+    }
+    // חסימה אמיתית ברמת ה-runtime — לא רק הנחיה למודל. בודקים לפני checkpoint/
+    // loop-guard כדי שקריאה חסומה לא תיצור checkpoint על מוטציה שלא קרתה.
+    if (!modeAllowsTool(this.mode, tc.name)) {
+      const content = formatModeBlock(this.mode, tc.name);
+      this.noteTool(tc.name);
+      this.events.onToolEnd(tc.id, false, content);
+      this.events.onModeBlocked?.(tc, this.mode);
       return { tool_call_id: tc.id, name: tc.name, content };
     }
     if (MUTATING_TOOLS.has(tc.name)) {
@@ -278,11 +318,16 @@ export class AgentRunner {
         const mediaNote = media.length
           ? "מדיה זמינה כרגע:\n" + media.map((m, i) => `${i + 1}. ${m.name} (${m.kind}, ${m.duration.toFixed(1)}s, id=${m.id}, mention=@media:${m.id})`).join("\n")
           : "עדיין לא נטענה מדיה.";
+        // זיכרון קצר מ-cache (עד 5 שיחות קודמות באותו פרויקט) — קיים רק כשיש
+        // מה לזכור; לא לצטט מילה-במילה, רק הקשר כדי לא לחזור על שאלות שכבר נענו.
+        const memory = String(this.ctx.memorySummary || "").trim();
         const ctrl = new AbortController();
         this.currentAbort = ctrl;
         const to = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
-        // אכיפת מצב: ב-ask/plan לא מעבירים כלים כלל, לכן אין אפשרות לשנות את הפרויקט.
-        const toolsForMode = this.mode === "act" ? TOOL_SCHEMAS : [];
+        // אכיפת מצב שלב 1: ask לא מקבל כלים כלל, plan מקבל רק PLAN_TOOL_SCHEMAS (קריאה/בדיקה).
+        // שלב 2 (אכיפה אמיתית) הוא modeAllowsTool בתוך executeTool — גם אם הבקשה הזו יצאה
+        // בזמן שהמצב היה אחר (למשל המשתמש עבר ל-ask תוך כדי שיחה שכבר בדרך).
+        const toolsForMode = this.mode === "act" ? TOOL_SCHEMAS : this.mode === "plan" ? PLAN_TOOL_SCHEMAS : [];
         let data: any;
         try {
           const resp = await fetch("/api/agent", {
@@ -293,6 +338,7 @@ export class AgentRunner {
               provider: this.provider,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT + MODE_PROMPTS[this.mode] },
+                ...(memory ? [{ role: "system" as const, content: `זיכרון קצר משיחות קודמות באותו פרויקט: ${memory}` }] : []),
                 { role: "system", content: mediaNote },
                 ...this.history,
               ],

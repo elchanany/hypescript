@@ -2,6 +2,7 @@
 import { addClip, assembledToSource, clipAudioFades, clipDur, clipVisualFades, splitClip, trimClip, uid, type Clip } from "./model";
 import type { Sub } from "./subtitlesEdl";
 import { clampOverlayTransform, imageOverlayGeometry, makeImageOverlay, makeTextOverlay, makeTitlePopup, type ImageOverlayPreset, type TitlePopupPreset } from "./overlay";
+import { reorderOverlayZ, type ZOrderOp } from "./layerStack";
 import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBoundary, slipClip } from "./timelineOps";
 import { normalizeCaptionStyle } from "./captionStyle";
 import { audioTrack, createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
@@ -662,6 +663,29 @@ export function ensureBuiltinCommands() {
       api.updateOverlay(id, patch);
     },
   });
+
+  // ארבע פקודות סדר-Z נפרדות (ולא "overlay.reorder" עם args.op) כדי ש-
+  // listRunnableCommands/inferArgs (commandSurface.ts) יוכלו לגזור args={id}
+  // אוטומטית מהבחירה, בדיוק כמו overlay.delete. run() משתמש בפונקציה הטהורה
+  // היחידה (layerStack.reorderOverlayZ) כך שתצוגה, Inspector וייצוא לא יסטו.
+  const registerZOrder = (id: "overlay.bringToFront" | "overlay.bringForward" | "overlay.sendBackward" | "overlay.sendToBack", op: ZOrderOp, label: string, labelHe: string, order: number) => {
+    registerCommand({
+      id, label, labelHe,
+      contexts: ["editor", "context-menu"],
+      presentation: { target: "overlay", icon: "layers", order },
+      run: (api, args) => {
+        const overlayId = String(args?.id || "");
+        const current = api.getOverlays();
+        if (!current.find((o) => o.id === overlayId)) throw new Error("שכבה לא נמצאה");
+        const next = reorderOverlayZ(current, overlayId, op);
+        if (next !== current) api.setOverlays(next); // כבר בקצה => no-op, בלי צעד Undo מיותר
+      },
+    });
+  };
+  registerZOrder("overlay.bringToFront", "front", "Bring overlay to front", "הבא לחזית", 61);
+  registerZOrder("overlay.bringForward", "forward", "Bring overlay forward", "הבא קדימה", 62);
+  registerZOrder("overlay.sendBackward", "backward", "Send overlay backward", "שלח אחורה", 63);
+  registerZOrder("overlay.sendToBack", "back", "Send overlay to back", "שלח לרקע", 64);
 
   registerCommand({
     id: "media.remove",

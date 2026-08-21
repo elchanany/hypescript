@@ -61,7 +61,9 @@ import {
   MagnifyingGlassIcon,
   MagnifyingGlassMinusIcon,
   MagnifyingGlassPlusIcon,
+  MagnetIcon,
   MapPinIcon,
+  MicrophoneIcon,
   MoonIcon,
   MusicNoteIcon,
   PaletteIcon,
@@ -72,6 +74,10 @@ import {
   PushPinIcon,
   PlayIcon,
   PlusIcon,
+  BookmarkSimpleIcon,
+  CursorIcon,
+  FlagIcon,
+  SplitHorizontalIcon,
   PulseIcon,
   QuestionIcon,
   QuotesIcon,
@@ -178,6 +184,12 @@ export const Info = defineIcon(InfoIcon, "Info");
 export const Layers = defineIcon(StackIcon, "Layers");
 export const Layers3 = defineIcon(StackIcon, "Layers3");
 export const LayoutGrid = defineIcon(GridFourIcon, "LayoutGrid");
+export const Bookmark = defineIcon(BookmarkSimpleIcon, "Bookmark");
+export const Cursor = defineIcon(CursorIcon, "Cursor");
+export const Flag = defineIcon(FlagIcon, "Flag");
+export const Magnet = defineIcon(MagnetIcon, "Magnet");
+export const Mic = defineIcon(MicrophoneIcon, "Mic");
+export const Split = defineIcon(SplitHorizontalIcon, "Split");
 export const Link2 = defineIcon(LinkIcon, "Link2");
 export const List = defineIcon(ListIcon, "List");
 export const Loader2 = defineIcon(SpinnerGapIcon, "Loader2");

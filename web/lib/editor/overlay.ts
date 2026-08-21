@@ -41,6 +41,9 @@ export interface Overlay {
   transform: VisualTransform;
   locked?: boolean;
   hidden?: boolean;
+  // מוסכמת סדר-Z (יחידה בכל הקוד — תצוגה מקדימה / Inspector / ייצוא, ראו
+  // web/lib/editor/layerStack.ts): ערך גבוה יותר = קרוב יותר לצופה (מעל).
+  // אין למיין ביחס הפוך באף מסך — זה בדיוק מה שגורם לתצוגה ולייצוא לסטות.
   zIndex: number;
 }
 
