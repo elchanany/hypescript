@@ -1052,7 +1052,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
             );
           }
           if (it.kind === "output") {
-            return <ChatMediaCard key={i} url={it.url} name={it.name} mkind={it.mkind} />;
+            return <ChatMediaCard key={i} url={it.url} name={it.name} mkind={it.mkind} onAddToProject={async (file) => { await onAddMedia([file]); }} />;
           }
           const isLatestAssistant = i === displayItems.reduce((last, item, index) => item.kind === "assistant" ? index : last, -1);
           return (
@@ -1116,7 +1116,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         {latestExport && (
           <div className="pinned-export">
             <div className="pinned-label">הייצוא האחרון מוכן</div>
-            <ChatMediaCard url={latestExport.url} name={latestExport.name} mkind="video" />
+            <ChatMediaCard url={latestExport.url} name={latestExport.name} mkind="video" onAddToProject={async (file) => { await onAddMedia([file]); }} />
           </div>
         )}
       </div>

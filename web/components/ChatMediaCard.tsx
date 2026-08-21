@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Captions, Download, ExternalLink, Film, Image as ImageIcon, Maximize, Music, Pause, Play, Volume2, VolumeX } from "@/components/icons";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Captions, Download, ExternalLink, Film, Image as ImageIcon, Loader2, Maximize, Music, Pause, Play, Plus, Volume2, VolumeX, X } from "@/components/icons";
 import { safeDownloadName } from "@/lib/render/videoCard";
 
 type MKind = "video" | "audio" | "image" | "srt";
@@ -10,6 +10,8 @@ interface Props {
   url: string;
   name: string;
   mkind: MKind;
+  /** מוסיף את הפריט לספריית המדיה של הפרויקט. חסר => הכפתור לא מוצג. */
+  onAddToProject?: (file: File) => void | Promise<void>;
 }
 
 const LABEL: Record<MKind, string> = {
@@ -20,13 +22,37 @@ const LABEL: Record<MKind, string> = {
 };
 
 /** כרטיס פלט מדיה מעוצב — נגן שמע עם פעימות, וידאו, תמונה, SRT. */
-export default function ChatMediaCard({ url, name, mkind }: Props) {
+export default function ChatMediaCard({ url, name, mkind, onAddToProject }: Props) {
   const Icon = mkind === "video" ? Film : mkind === "image" ? ImageIcon : mkind === "audio" ? Music : Captions;
+  const [zoomed, setZoomed] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  // הכרטיס מציג פריים בגובה 200px לכל היותר, ופריים של ייצוא בגודל מלא נהיה
+  // שם קטן מכדי לבדוק אותו. לחיצה פותחת אותו בגודל מלא (B-15).
+  const addToProject = useCallback(async () => {
+    if (!onAddToProject || adding || added) return;
+    setAdding(true);
+    try {
+      const blob = await (await fetch(url)).blob();
+      await onAddToProject(new File([blob], name, { type: blob.type || undefined }));
+      setAdded(true);
+    } catch {
+      /* נשאר ניתן לניסיון חוזר */
+    } finally {
+      setAdding(false);
+    }
+  }, [onAddToProject, adding, added, url, name]);
+
   return (
     <div className={`out2 out-${mkind}`}>
       <div className="oh"><Icon size={14} />{LABEL[mkind]}</div>
       {mkind === "video" && <VideoPlayer src={url} />}
-      {mkind === "image" && <img className="out-img" src={url} alt="" />}
+      {mkind === "image" && (
+        <button type="button" className="out-img-btn" onClick={() => setZoomed(true)} title="לחץ להגדלה">
+          <img className="out-img" src={url} alt={name} />
+        </button>
+      )}
       {mkind === "audio" && <BeatAudioPlayer src={url} />}
       {mkind === "srt" && <SrtPreview url={url} />}
       <div style={{ display: "flex", gap: 8 }}>
@@ -38,7 +64,29 @@ export default function ChatMediaCard({ url, name, mkind }: Props) {
             <ExternalLink size={14} strokeWidth={2} />פתח בחלון חדש
           </a>
         )}
+        {onAddToProject && mkind !== "srt" && (
+          <button type="button" className="btn sm" onClick={addToProject} disabled={adding || added}>
+            {adding ? <Loader2 size={14} className="spin" /> : <Plus size={14} strokeWidth={2} />}
+            {added ? "נוסף לפרויקט" : "הוסף לפרויקט"}
+          </button>
+        )}
       </div>
+      {zoomed && <Lightbox url={url} name={name} onClose={() => setZoomed(false)} />}
+    </div>
+  );
+}
+
+/** תצוגת גודל-מלא לפריים. Escape או לחיצה ברקע סוגרים. */
+function Lightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="out-lightbox" role="dialog" aria-modal="true" aria-label={name} onClick={onClose}>
+      <button type="button" className="iconbtn out-lightbox-close" onClick={onClose} aria-label="סגור"><X size={18} /></button>
+      <img src={url} alt={name} onClick={(e) => e.stopPropagation()} />
     </div>
   );
 }

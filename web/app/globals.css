@@ -2158,6 +2158,15 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
 .pinned-label { font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--accent); }
 
 /* ============================ Video player (chat media card) ============================ */
+/* פריים בכרטיס מוגבל ל-200px גובה — לחיצה פותחת אותו בגודל מלא (B-15). */
+.out-img-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.out-lightbox {
+  position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: 24px;
+  background: rgba(2, 6, 16, .82); backdrop-filter: blur(6px); cursor: zoom-out;
+}
+.out-lightbox img { max-width: min(1400px, 96vw); max-height: 92vh; border-radius: var(--r-md); cursor: default; }
+.out-lightbox-close { position: absolute; top: 14px; inset-inline-end: 14px; color: #fff; background: rgba(255,255,255,.12); }
+.out-lightbox-close:hover { background: rgba(255,255,255,.22); color: #fff; }
 .vplayer { background: #000; border-radius: var(--r-sm); overflow: hidden; }
 .vplayer video { display: block; width: 100%; max-height: 200px; object-fit: contain; background: #000; }
 .vplayer-err { padding: 10px 12px; color: var(--danger); font-size: 12px; text-align: center; }
