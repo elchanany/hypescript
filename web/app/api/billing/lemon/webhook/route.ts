@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { mapSubscriptionStatus, subscriptionPlan } from "@/lib/billing/lemon";
+import { billingModeMismatchError, billingProviderName, matchesBillingMode } from "@/lib/billing/mode";
 
 export const runtime = "nodejs";
 
@@ -24,7 +25,11 @@ export async function POST(request: NextRequest) {
   const event = String(payload.meta?.event_name || request.headers.get("x-event-name") || "");
   if (!event.startsWith("subscription_")) return NextResponse.json({ received: true, ignored: true });
   const attrs = payload.data?.attributes || {};
-  if (attrs.test_mode !== true) return NextResponse.json({ error: "live_event_blocked" }, { status: 409 });
+  // אירוע חייב להתאים למצב החיוב של הפריסה הזו. 409 מסמן ל-Lemon שהאירוע לא
+  // התקבל, כך שהוא יישלח שוב לפריסה הנכונה במקום להיבלע כאן בשקט.
+  if (!matchesBillingMode(attrs.test_mode)) {
+    return NextResponse.json({ error: billingModeMismatchError(attrs.test_mode) }, { status: 409 });
+  }
   const userId = String(payload.meta?.custom_data?.user_id || "");
   const planId = subscriptionPlan(attrs, payload.meta?.custom_data);
   if (!userId || !planId || planId === "free") return NextResponse.json({ error: "subscription_identity_missing" }, { status: 422 });
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
     target_plan_id: planId,
     plan_version: 1,
     status: expired ? "active" : status,
-    provider: "lemonsqueezy_test",
+    provider: billingProviderName(),
     provider_customer_id: attrs.customer_id ? String(attrs.customer_id) : null,
     provider_subscription_id: String(payload.data?.id || ""),
     current_period_start: attrs.created_at || null,

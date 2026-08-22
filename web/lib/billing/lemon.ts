@@ -1,6 +1,7 @@
 import "server-only";
 
 import { BILLING_PLANS, BillingInterval, BillingPlanId, hasRequiredTrial, inferPlanId } from "./plans";
+import { billingModeMismatchError, checkoutTestMode, matchesBillingMode } from "./mode";
 
 const API = "https://api.lemonsqueezy.com/v1";
 
@@ -38,7 +39,14 @@ export async function lemonRequest<T>(path: string, init: RequestInit = {}): Pro
 export async function getStore() {
   const configured = (process.env.LEMONSQUEEZY_STORE_ID || "").trim();
   const result = await lemonRequest<{ data: LemonResource[] }>("/stores");
-  const store = result.data.find((item) => item.id === configured) || result.data[0];
+  // חשבון עם יותר מחנות אחת: נפילה שקטה לחנות הראשונה הייתה יוצרת checkouts
+  // מול החנות הלא נכונה, וזה נראה בדיוק כמו "התשלום פשוט לא עובד".
+  if (configured) {
+    const exact = result.data.find((item) => item.id === configured);
+    if (!exact) throw new Error(`lemon_store_mismatch:${configured}`);
+    return exact;
+  }
+  const store = result.data[0];
   if (!store) throw new Error("lemon_store_missing");
   return store;
 }
@@ -67,7 +75,11 @@ export async function resolveVariant(planId: BillingPlanId, interval: BillingInt
   });
   if (matches.length !== 1) throw new Error(matches.length ? "billing_variant_ambiguous" : "billing_variant_missing");
   const variant = matches[0];
-  if (variant.attributes.test_mode !== true) throw new Error("live_billing_blocked_while_in_review");
+  // הוריאנט חייב להיות באותו מצב שבו אנחנו רצים — לשני הכיוונים. בילד Preview
+  // (מצב Test) לא ימכור מוצר אמיתי, ובילד Live לא ימכור מוצר בדיקה.
+  if (!matchesBillingMode(variant.attributes.test_mode)) {
+    throw new Error(billingModeMismatchError(variant.attributes.test_mode));
+  }
   if (!hasRequiredTrial(variant.attributes)) throw new Error("billing_trial_missing");
   return variant;
 }
@@ -88,7 +100,7 @@ export async function createCheckout(input: {
       data: {
         type: "checkouts",
         attributes: {
-          test_mode: true,
+          test_mode: checkoutTestMode(),
           custom_price: input.customPriceMinor,
           checkout_data: {
             email: input.email || undefined,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { createCheckout } from "@/lib/billing/lemon";
+import { checkoutTestMode } from "@/lib/billing/mode";
 import type { BillingInterval, BillingPlanId } from "@/lib/billing/plans";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { readPricing } from "@/lib/admin/server";
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     });
     const url = checkout.data.attributes.url;
     if (!url) throw new Error("checkout_url_missing");
-    return NextResponse.json({ url, testMode: true, trialIncluded: !subscription?.trial_used_at });
+    return NextResponse.json({ url, testMode: checkoutTestMode(), trialIncluded: !subscription?.trial_used_at });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "checkout_failed" }, { status: 503 });
   }
