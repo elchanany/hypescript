@@ -5,6 +5,8 @@ import { toast } from "@/lib/ui/toast";
 import { LoadingState } from "@/components/LoadingState";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SUPPORTED_LOCALES, type AddressForm, type AppLocale } from "@/lib/i18n/config";
+import { readStoredA11yPrefs, writeStoredA11yPrefs } from "@/lib/a11y/apply";
+import { mergeAccountSettingsIntoPrefs } from "@/lib/a11y/prefs";
 type State = {
   profile: {
     display_name: string;
@@ -25,6 +27,22 @@ type State = {
     provider_mode: string;
   };
 };
+// סדר עדיפויות בין הווידג'ט הצף (localStorage, לכל מבקר כולל אנונימי) לבין
+// שלוש ההעדפות שנשמרות בחשבון (high_contrast / font_scale / reduced_motion,
+// user_settings ב-Supabase): החשבון הוא "מקור האמת" עבור משתמש מחובר, כי
+// הוא חוצה מכשירים ומבטא בחירה מכוונת. לכן בכל טעינה של עמוד החשבון, וגם
+// אחרי כל שמירה מוצלחת, אנחנו דורסים את שלושת השדות המקבילים ב-localStorage
+// (ומחילים מיד על ה-DOM) — כדי שהמכשיר הזה יתיישר עם החשבון. שדות שקיימים
+// רק בווידג'ט (הדגשת קישורים, גופן קריא) אין להם מקבילה בחשבון ונשארים
+// כפי שהיו. שינוי הפוך — מהווידג'ט לחשבון בשרת — לא ממומש בכוונה: זה היה
+// דורש קריאת רשת בכל טעינת עמוד ציבורי כדי לבדוק אם המבקר מחובר, מה
+// שסותר את הדרישה שהווידג'ט יעבוד באופן מקומי לגמרי למבקר אנונימי. כך
+// שני המנגנונים לעולם לא "רבים": כל עוד לא ביקרת ב-/account, הווידג'ט
+// שולט; ברגע שביקרת (או שמרת שם), החשבון דורס ומאותו רגע הוא הערך המקומי.
+function syncA11yFromAccount(settings: State["settings"]) {
+  writeStoredA11yPrefs(mergeAccountSettingsIntoPrefs(settings, readStoredA11yPrefs()));
+}
+
 export default function AccountPreferences() {
   const { locale, addressForm, setLocale, setAddressForm, t } = useI18n();
   const [v, setV] = useState<State | null>(null),
@@ -38,6 +56,7 @@ export default function AccountPreferences() {
         setV(data);
         if (SUPPORTED_LOCALES.includes(data.profile?.locale)) setLocale(data.profile.locale as AppLocale);
         if (data.profile?.address_form) setAddressForm(data.profile.address_form);
+        if (data.settings) syncA11yFromAccount(data.settings);
       })
       .catch(() => setUnavailable(true));
     fetch("/api/providers/byok").then((r) => r.ok ? r.json() : null).then((data) => setCanUseByok(data?.canUseByok === true)).catch(() => {});
@@ -53,7 +72,12 @@ export default function AccountPreferences() {
       body: JSON.stringify(v),
     });
     setBusy(false);
-    r.ok ? toast.success(t("common.saved")) : toast.error(t("common.saveFailed"));
+    if (r.ok) {
+      toast.success(t("common.saved"));
+      syncA11yFromAccount(v.settings);
+    } else {
+      toast.error(t("common.saveFailed"));
+    }
   };
   const del = async () => {
     if (

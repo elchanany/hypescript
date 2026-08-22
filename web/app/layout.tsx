@@ -7,6 +7,7 @@ import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { BRAND_NAME, BRAND_PATHS, BRAND_TAGLINE_EN, BRAND_TAGLINE_HE } from "@/lib/brand/assets";
 import CookieConsent from "@/components/CookieConsent";
 import GlobalTooltip from "@/components/GlobalTooltip";
+import AccessibilityWidget from "@/components/AccessibilityWidget";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
@@ -67,7 +68,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Prevent theme flash before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=localStorage.getItem('hs_theme')||'light';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var c=document.cookie.match(/(?:^|; )hs_locale=([^;]+)/);var l=localStorage.getItem('hs_locale')||(c&&c[1])||'he';var rtl=l==='he'||l==='ar';document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light';document.documentElement.dataset.locale=l;document.documentElement.lang=l;document.documentElement.dir=rtl?'rtl':'ltr';}catch(e){}})();`,
+            // שני חלקים באותו IIFE, בכוונה: אם parsing של העדפות הנגישות
+            // ייכשל ויזרוק, ה-catch המשותף לא "מבטל" את התאמת ערכת הנושא
+            // והשפה שכבר בוצעה שורות קודם לכן — JS מריץ עד לחריגה, לא אחריה.
+            __html: `(function(){try{var m=localStorage.getItem('hs_theme')||'light';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var c=document.cookie.match(/(?:^|; )hs_locale=([^;]+)/);var l=localStorage.getItem('hs_locale')||(c&&c[1])||'he';var rtl=l==='he'||l==='ar';document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light';document.documentElement.dataset.locale=l;document.documentElement.lang=l;document.documentElement.dir=rtl?'rtl':'ltr';}catch(e){}try{var a=JSON.parse(localStorage.getItem('hs_a11y_prefs')||'null')||{};var fs=Number(a.fontScale)||1;fs=Math.max(.85,Math.min(1.35,fs));var root=document.documentElement;root.style.setProperty('--hs-font-scale',String(fs));if(a.highContrast===true)root.dataset.contrast='high';if(a.reducedMotion===true)root.dataset.motion='reduce';if(a.readableFont===true)root.dataset.readableFont='1';if(a.highlightLinks===true)root.dataset.linkHighlight='1';}catch(e){}})();`,
           }}
         />
       </head>
@@ -79,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <GlobalTooltip />
             <ToastHost />
             <CookieConsent />
+            <AccessibilityWidget />
           </ThemeProvider>
         </I18nProvider>
       </body>

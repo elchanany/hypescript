@@ -7,6 +7,7 @@ import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
 import LandingThemeToggle from "@/components/LandingThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import T from "@/components/LandingText";
+import LandingLocalizedBody, { LandingHebrewOnly } from "@/components/LandingLocalizedBody";
 import "./landing-v2.css";
 
 export const metadata: Metadata = {
@@ -67,7 +68,7 @@ export default function WelcomePage() {
           <LandingThemeToggle />
           <LanguageSwitcher compact />
           <Link href="/login" className="btn ghost"><T id="nav.login" /></Link>
-          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary"><span><T id="nav.trial" /></span><ArrowLeft size={15} /></Link>
+          <Link href="/login?next=/dashboard" className="btn primary"><span><T id="nav.trial" /></span><ArrowLeft size={15} /></Link>
         </div>
       </header>
 
@@ -75,7 +76,7 @@ export default function WelcomePage() {
         <h1><T id="hero.line1" /><br /><span><T id="hero.line2" /></span></h1>
         <p><T id="hero.copy" /></p>
         <div className="marketing-hero-actions">
-          <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link>
+          <Link href="/login?next=/dashboard" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link>
           <a href="#how" className="btn secondary marketing-cta"><Play size={16} /><T id="hero.see" /></a>
         </div>
         <div className="marketing-trust"><LockKeyhole size={15} /><T id="hero.trust" /></div>
@@ -83,6 +84,8 @@ export default function WelcomePage() {
         <LandingProductExperience />
       </section>
 
+      <LandingLocalizedBody />
+      <LandingHebrewOnly>
       <div className="hsx-kinetic" aria-hidden="true"><div><span>TikTok מתוך ראיון</span><i>✦</i><span>מצגת מתמונות וקול</span><i>✦</i><span>סרטון מוצר ממותג</span><i>✦</i><span>קליפים מפודקאסט</span><i>✦</i><span>מבקשים בשיחה</span><i>✦</i><span>מקבלים סרטון מוכן</span><i>✦</i></div></div>
 
       <section className="marketing-proof" aria-label="עקרונות המוצר">
@@ -154,9 +157,11 @@ export default function WelcomePage() {
         <div className="marketing-section-head"><span><T id="audience.eyebrow" /></span><h2><T id="audience.title" /></h2></div>
         <div className="marketing-use-cases">{useCases.map((item, index) => <article key={item.title}><b>0{index + 1}</b><WandSparkles size={21} /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
+      </LandingHebrewOnly>
 
       <LandingDeviceShowcase />
 
+      <LandingHebrewOnly>
       <section className="marketing-section" id="pricing">
         <div className="marketing-section-head"><span><T id="pricing.eyebrow" /></span><h2><T id="pricing.title" /></h2><p><T id="pricing.copy" /></p></div>
         <div className="marketing-pricing">
@@ -185,9 +190,10 @@ export default function WelcomePage() {
           <i className="hsx-orbit-line one" /><i className="hsx-orbit-line two" /><i className="hsx-orbit-line three" />
         </div>
       </section>
+      </LandingHebrewOnly>
 
-      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
-      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="auto" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
+      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=/dashboard" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
+      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="auto" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/legal/refund"><T id="footer.refund" /></Link><Link href="/legal/accessibility"><T id="footer.accessibility" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
     </main>
   );
 }

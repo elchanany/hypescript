@@ -120,6 +120,27 @@ for (const [name, min] of Object.entries(REQUIRED_SECRET_LENGTHS)) {
   }
 }
 
+// Public values that are printed on pages the outside world reads. Unlike a
+// missing secret, an unset one here fails silently and *looks* fine: the legal
+// pages fall back to a placeholder address, so the site ships a support email
+// nobody can receive. A payment provider reviewing the store, or a customer
+// exercising a statutory cancellation right, would write into a black hole.
+const REQUIRED_PUBLIC = {
+  NEXT_PUBLIC_SUPPORT_EMAIL: "shown as the contact address on the legal pages and as the accessibility coordinator",
+};
+for (const [name, why] of Object.entries(REQUIRED_PUBLIC)) {
+  const value = (env[name] || "").trim();
+  if (!value) {
+    weak++;
+    console.log(`MISSING  ${name} is not set — ${why}`);
+  } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
+    weak++;
+    console.log(`INVALID  ${name} is not a valid email address`);
+  } else {
+    console.log(`ok       ${name}`);
+  }
+}
+
 console.log("");
 if (missing || weak) {
   console.error(`FAIL: ${missing} missing table(s), ${weak} misconfigured secret(s).`);

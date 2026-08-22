@@ -157,7 +157,7 @@
 
 html[data-locale="en"], html[data-locale="ru"], html[data-locale="hi"] { --ui-dir: ltr; }
 
-.language-switcher{display:grid;gap:6px;color:var(--text-2);font-size:11px;text-align:start}.language-switcher select{min-width:150px;height:36px;padding:0 10px;color:var(--text);border:1px solid var(--border);border-radius:10px;background:var(--panel-2);font:inherit;cursor:pointer}.language-switcher.compact{display:inline-flex;align-items:center}.language-switcher.compact select{min-width:84px;width:84px;height:30px;padding-inline:7px;border-radius:9px;font-size:10px}
+.language-switcher{display:grid;gap:6px;color:var(--text-2);font-size:11px;text-align:start}.language-switcher-control{position:relative;min-width:158px;height:40px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:7px;padding-inline:8px;border:1px solid var(--border);border-radius:13px;background:color-mix(in srgb,var(--panel-2) 88%,transparent);box-shadow:0 8px 24px rgba(7,21,30,.07);transition:border-color .2s ease,background .2s ease,transform .2s ease}.language-switcher-control:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:var(--panel)}.language-switcher-control:focus-within{outline:3px solid color-mix(in srgb,var(--accent) 24%,transparent);outline-offset:2px}.language-switcher-control>b{min-width:27px;padding:4px 5px;color:var(--accent);border-radius:7px;background:var(--accent-tint);font:800 9px/1 var(--mono);text-align:center}.language-switcher-control>svg{pointer-events:none;color:var(--text-2)}.language-switcher select{min-width:0;width:100%;height:100%;padding:0;color:var(--text);border:0;outline:0;appearance:none;background:transparent;font:inherit;cursor:pointer}.language-switcher.compact{display:inline-flex;align-items:center}.language-switcher.compact .language-switcher-control{min-width:106px;width:106px;height:38px;border-radius:12px}.language-switcher.compact select{font-size:10px}
 .auth-shell,.auth-card,.onboarding-card,.account-page,.site-header,.container,.dash-root,.leftpanel,.inspector2,.agent-dock,.chat-history-drawer,.upload-progress-card,.ask2,.composer-reference,.marketing-page{direction:var(--ui-dir)}
 .auth-form,.onboarding-card,.ask2,.ask2 .free input{ text-align:start }
 
@@ -527,6 +527,129 @@ html[data-theme="dark"] {
   --sidebar-accent-foreground: var(--text);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--focus);
+}
+
+/* =====================================================================
+   העדפות נגישות (ווידג'ט צף + עמוד חשבון)
+   מוחלות דרך תכונות data-* על <html>, שמוגדרות גם ע"י סקריפט קדם-הציור
+   ב-layout.tsx (כדי שלא יהיה הבהוב) וגם דרך web/lib/a11y/dom.ts בזמן ריצה.
+   ממוקם אחרי בלוקי הערכות הנושא כדי ש-html[data-contrast="high"] ינצח
+   כשהוא משולב עם html[data-theme="dark"] (אותה ספציפיות — מכריע סדר).
+   ===================================================================== */
+
+/* גודל טקסט: מערכת העיצוב כאן מבוססת px מוחלט כמעט בכל מקום, לא rem —
+   כך ש-font-size על html לא היה מגיע לרוב הרכיבים. zoom על body מבצע
+   הגדלה אמיתית שכן משפיעה על הכול (כולל position:fixed), בלי לגעת בכל
+   קובץ CSS בנפרד. כברירת מחדל הערך 1 = ללא שינוי חזותי. */
+body { zoom: var(--hs-font-scale, 1); }
+
+html[data-contrast="high"] {
+  --border: rgba(16, 43, 55, .5);
+  --border-strong: rgba(16, 43, 55, .72);
+  --text-2: #26343c;
+  --text-3: #3c4b53;
+}
+html[data-theme="dark"][data-contrast="high"] {
+  --border: rgba(255, 255, 255, .4);
+  --border-strong: rgba(255, 255, 255, .62);
+  --text-2: #eaf1f2;
+  --text-3: #cdd9dc;
+}
+html[data-contrast="high"] :focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/* הדגשת קישורים: מעבר לצבע ההיכר, קו תחתון תמידי שלא תלוי ביכולת להבחין
+   בין גוונים. לא נוגע בקישורים שהם בפועל כפתורים מעוצבים (.btn). */
+html[data-link-highlight="1"] a:not(.btn) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* גופן קריא: sans-serif פשוט ורווח שורות נדיב, במקום גופן העיצוב. */
+html[data-readable-font="1"] body {
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
+  letter-spacing: .01em;
+  line-height: 1.65;
+}
+
+/* הפחתת תנועה: מקביל ל-@media (prefers-reduced-motion: reduce) הקיים,
+   אבל כבחירה מפורשת של המשתמש בווידג'ט — לא תלוי בהגדרת מערכת ההפעלה,
+   וחל גם על רכיבים שלא נכללו ברשימות הידניות של אותם media queries. */
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: .001ms !important;
+  animation-delay: -1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* =====================================================================
+   ווידג'ט נגישות צף (AccessibilityWidget.tsx)
+   מוצמד לשולי המסך, ממורכז אנכית — כדי לא להתנגש עם הקומפוזר (bottom
+   center), ה-toast (bottom-inline-end) או באנר הקוקיז (bottom, כמעט
+   ברוחב מלא). z-index: var(--z-popover), כמו כל תפריט שצמוד לפקד.
+   ===================================================================== */
+.a11y-widget {
+  position: fixed;
+  z-index: var(--z-popover);
+  top: 50%;
+  inset-inline-start: 14px;
+  transform: translateY(-50%);
+}
+.a11y-fab {
+  width: 46px; height: 46px; flex: none;
+  display: grid; place-items: center;
+  border: 1px solid var(--border-strong); border-radius: 50%;
+  background: var(--elevated); color: var(--accent);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+.a11y-fab:hover { background: var(--hover); }
+.a11y-fab[aria-expanded="true"] { color: var(--accent-contrast); background: var(--accent); border-color: var(--accent); }
+.a11y-panel {
+  position: absolute;
+  top: 0;
+  inset-inline-start: calc(100% + 10px);
+  width: min(300px, calc(100vw - 48px));
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--elevated);
+  box-shadow: var(--shadow-lg);
+  direction: var(--ui-dir);
+  text-align: start;
+}
+.a11y-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.a11y-panel-head h2 { margin: 0; font-size: var(--fs-h); }
+.a11y-panel-close {
+  width: 28px; height: 28px; flex: none; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--panel-2); color: var(--text-2); cursor: pointer;
+}
+.a11y-panel-close:hover { color: var(--text); background: var(--hover); }
+.a11y-text-size { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 13px; color: var(--text-2); font-size: 11px; }
+.a11y-text-size-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.a11y-text-size-controls button {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--panel-2); color: var(--text); font: 700 12px/1 var(--font); cursor: pointer;
+}
+.a11y-text-size-controls button:hover { background: var(--hover); }
+.a11y-text-size-controls output { color: var(--text); font: 700 12px/1 var(--mono); }
+.a11y-panel-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.a11y-panel-foot a { color: var(--accent); font-size: 11px; }
+.a11y-panel-foot a:hover { text-decoration: underline; }
+@media (max-width: 560px) {
+  .a11y-panel { width: min(280px, calc(100vw - 32px)); }
 }
 
 * { box-sizing: border-box; }
@@ -1504,9 +1627,13 @@ button.quote-chip:hover svg { color: var(--accent); }
 .tool2 .stt.err { color: var(--danger); }
 .tool2 .stt.run { color: var(--accent); }
 
-.out2 { align-self: stretch; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px; display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; overflow: hidden; }
-.out2 .oh { display: flex; align-items: center; gap: 7px; font-size: var(--fs-2); font-weight: 500; }
-.out2 video, .out2 img, .out-video, .out-img { width: 100%; border-radius: var(--r-sm); background: #000; max-height: 200px; object-fit: contain; }
+.out2 { width: 100%; min-width: 0; align-self: stretch; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px; display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; overflow: hidden; }
+.out2 .oh { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 9px; font-size: var(--fs-2); font-weight: 500; }
+.out2 .oh > span { flex: none; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.out2 .oh > strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 550; color: var(--text-3); direction: auto; }
+.out2 video, .out2 img, .out-video, .out-img { width: 100%; border-radius: var(--r-sm); background: #000; object-fit: contain; }
+.out-actions { min-width: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.out-actions .btn { min-width: 0; max-width: 100%; }
 .out-srt {
   margin: 0; max-height: 140px; overflow: auto; padding: 8px;
   background: var(--inset); border-radius: var(--r-sm); border: 1px solid var(--border);
@@ -2160,6 +2287,8 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
 /* ============================ Video player (chat media card) ============================ */
 /* פריים בכרטיס מוגבל ל-200px גובה — לחיצה פותחת אותו בגודל מלא (B-15). */
 .out-img-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.out-media-frame { min-height: 120px; max-height: min(420px, 52vh); overflow: hidden; border-radius: var(--r-sm); background: color-mix(in srgb, var(--inset) 82%, #000); }
+.out-media-frame .out-img { display: block; width: 100%; height: 100%; max-height: min(420px, 52vh); object-fit: contain; }
 .out-lightbox {
   position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: 24px;
   background: rgba(2, 6, 16, .82); backdrop-filter: blur(6px); cursor: zoom-out;
@@ -2167,14 +2296,21 @@ html[data-theme="dark"] .timeline-region { box-shadow: 0 10px 32px rgba(0, 0, 0,
 .out-lightbox img { max-width: min(1400px, 96vw); max-height: 92vh; border-radius: var(--r-md); cursor: default; }
 .out-lightbox-close { position: absolute; top: 14px; inset-inline-end: 14px; color: #fff; background: rgba(255,255,255,.12); }
 .out-lightbox-close:hover { background: rgba(255,255,255,.22); color: #fff; }
-.vplayer { background: #000; border-radius: var(--r-sm); overflow: hidden; }
-.vplayer video { display: block; width: 100%; max-height: 200px; object-fit: contain; background: #000; }
+.vplayer { min-width: 0; background: #000; border-radius: var(--r-sm); overflow: hidden; }
+.vplayer video { display: block; width: 100%; height: auto; max-height: min(420px, 52vh); aspect-ratio: 16 / 9; object-fit: contain; background: #000; }
 .vplayer-err { padding: 10px 12px; color: var(--danger); font-size: 12px; text-align: center; }
 .vplayer-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #000; }
 .vplayer-bar .iconbtn { color: #fff; }
 .vplayer-bar .iconbtn:hover:not(:disabled) { background: rgba(255, 255, 255, .12); color: #fff; }
 .vplayer-bar input[type="range"] { flex: 1; }
 .vplayer-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); direction: ltr; white-space: nowrap; }
+@media (max-width: 560px) {
+  .out2 { padding: 7px; }
+  .out-actions .btn { flex: 1 1 calc(50% - 4px) !important; justify-content: center; }
+  .vplayer-bar { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; }
+  .vplayer-time { grid-column: 2; grid-row: 2; justify-self: center; }
+  .out-media-frame,.out-media-frame .out-img,.vplayer video { max-height: 44vh; }
+}
 
 /* Final light-first page surfaces (kept last so legacy rules cannot re-add neon gradients). */
 .auth-shell,

@@ -3,6 +3,7 @@ import { requireCloudUser } from "@/lib/cloud/auth";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { getAiAccess } from "@/lib/billing/aiAccess.server";
 import { isLocale, normalizedAddressForm } from "@/lib/i18n/config";
+import { clampFontScale } from "@/lib/a11y/prefs";
 
 export async function GET() {
   const auth = await requireCloudUser();
@@ -70,7 +71,7 @@ export async function PATCH(req: NextRequest) {
     analytics_consent: !!s.analytics_consent,
     cookie_consent: s.analytics_consent ? "analytics" : "essential",
     high_contrast: !!s.high_contrast,
-    font_scale: Math.max(0.85, Math.min(1.35, Number(s.font_scale) || 1)),
+    font_scale: clampFontScale(s.font_scale),
     marketing_email: !!s.marketing_email,
     provider_mode: s.provider_mode === "byok" && aiAccess.canUseByok ? "byok" : "managed",
     updated_at: new Date().toISOString(),

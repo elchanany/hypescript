@@ -19,6 +19,22 @@ import StillStrip from "@/components/StillStrip";
 /** Magnet radius on screen. The spec calls for 6–10px; 10 keeps it findable without stickiness. */
 const SNAP_PIXELS = 10;
 
+/**
+ * רוחב אלמנט בפיקסלים *ויזואליים* — אותה יחידה שבה מגיעים e.clientX ו-
+ * getBoundingClientRect().
+ *
+ * למה לא clientWidth: ווידג'ט הנגישות מגדיל טקסט באמצעות `zoom` על ה-body,
+ * ו-zoom מפצל בין שתי מערכות היחידות — clientWidth נשאר בפיקסלי פריסה בזמן
+ * ש-clientX ו-getBoundingClientRect עוברים לפיקסלים ויזואליים. כל חישובי
+ * הגרירה כאן מחלקים דלתא של מצביע ברוחב המסלול, ולכן ערבוב של השניים היה
+ * מייצר שגיאה בגודל ה-zoom עצמו — בהגדלה של 1.3 כל גרירה, חיתוך והצמדה
+ * היו מוסטים ב-30%. נמדד: ב-zoom 1.3 אותו אלמנט מחזיר rect=1270 מול
+ * clientWidth=977.
+ */
+function visualWidth(el: HTMLElement | null | undefined): number {
+  return el ? el.getBoundingClientRect().width : 0;
+}
+
 interface Props {
   media: MediaAsset[];
   clips: Clip[];
@@ -320,7 +336,7 @@ export default function Timeline(p: Props) {
   }, [clips, tracks, overlays, subs, total, currentAssembled]);
 
   const snapTol = () => {
-    const laneW = laneRef.current?.clientWidth || overlayLaneRef.current?.clientWidth || portW || 800;
+    const laneW = visualWidth(laneRef.current) || visualWidth(overlayLaneRef.current) || portW || 800;
     return snapToleranceSec(SNAP_PIXELS, laneW, visibleTotal);
   };
 
@@ -403,7 +419,7 @@ export default function Timeline(p: Props) {
       originTop: targetRect.top - innerRect.top,
       originWidth: targetRect.width,
       originHeight: targetRect.height,
-      laneW: laneRef.current?.clientWidth || 1,
+      laneW: visualWidth(laneRef.current) || 1,
       s0: clip.start, e0: clip.end, dur,
       moved: false, px: e.clientX, py: e.clientY, assembled0,
       sourceTrackId, targetTrackId: sourceTrackId,
@@ -441,7 +457,7 @@ export default function Timeline(p: Props) {
       originTop: targetRect.top - innerRect.top,
       originWidth: targetRect.width,
       originHeight: targetRect.height,
-      laneW: overlayLaneRef.current?.clientWidth || 1,
+      laneW: visualWidth(overlayLaneRef.current) || 1,
       s0: overlay.start,
       e0: overlay.end,
       dur,
@@ -485,7 +501,7 @@ export default function Timeline(p: Props) {
       originTop: targetRect.top - innerRect.top,
       originWidth: targetRect.width,
       originHeight: targetRect.height,
-      laneW: targetEl.parentElement?.clientWidth || laneRef.current?.clientWidth || 1,
+      laneW: visualWidth(targetEl.parentElement) || visualWidth(laneRef.current) || 1,
       s0: sub.start,
       e0: sub.end,
       dur,
@@ -1018,7 +1034,7 @@ export default function Timeline(p: Props) {
   // תפיסה כולו פנימה, בלי להזיז את הקו (שחייב להישאר מדויק) ובלי לצייר מעל
   // הכותרת כשגוללים.
   const PLAYHEAD_GRAB_PX = 7;
-  const playheadAtStart = (pct(currentAssembled) / 100) * (laneRef.current?.clientWidth || 0) < PLAYHEAD_GRAB_PX;
+  const playheadAtStart = (pct(currentAssembled) / 100) * visualWidth(laneRef.current) < PLAYHEAD_GRAB_PX;
   const Playhead = ({ laneEl }: { laneEl?: HTMLElement | null }) => (
     <div
       className={`playhead2 ${phDrag ? "dragging" : ""} ${playheadAtStart ? "at-start" : ""}`}
