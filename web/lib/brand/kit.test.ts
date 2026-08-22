@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BRAND_KIT_VERSION,
   BrandKv,
@@ -14,7 +14,9 @@ import {
   normalizeColors,
   normalizeHexColor,
   sanitizeBrandKit,
+  fetchBrandKitFromCloud,
   setActiveBrandKit,
+  syncActiveBrandKitToCloud,
   summarizeBrandKit,
   updateBrandKit,
   BRAND_ACTIVE_KEY,
@@ -214,5 +216,54 @@ describe("summary redaction (LLM boundary)", () => {
     expect(prompt).toContain("לוגו"); // role label
     expect(prompt).toContain("ייחוס"); // reference role label
     expect(prompt).not.toContain("blob");
+  });
+});
+
+// סנכרון ענן: מה שנשבר קודם היה שקט מוחלט — הכתיבה נכשלה, ה-catch בלע, והקורא
+// לא ידע. הבדיקות האלה נועלות את ההתנהגות החדשה: תוצאה אמיתית, ובלי לזרוק.
+describe("brand kit cloud sync", () => {
+  // שתי הפונקציות יוצאות מוקדם כשאין window (הן רצות בדפדפן בלבד). כאן מריצים
+  // אותן בסביבת node, ולכן window מזויף — אחרת הבדיקה הייתה "עוברת" בלי לבדוק כלום.
+  beforeEach(() => vi.stubGlobal("window", {}));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reports failure instead of swallowing it", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 500 })));
+    const kv = memoryKv();
+    const kit = await createBrandKit({ organization: "מוסד" }, kv);
+    await expect(syncActiveBrandKitToCloud(kit)).resolves.toBe(false);
+  });
+
+  it("reports success when the server accepted it", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 })));
+    const kv = memoryKv();
+    const kit = await createBrandKit({ organization: "מוסד" }, kv);
+    await expect(syncActiveBrandKitToCloud(kit)).resolves.toBe(true);
+  });
+
+  it("never throws when the network is down — local editing must keep working", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    const kv = memoryKv();
+    const kit = await createBrandKit({ organization: "מוסד" }, kv);
+    await expect(syncActiveBrandKitToCloud(kit)).resolves.toBe(false);
+  });
+
+  it("returns null rather than a half-empty kit when the cloud has nothing", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ brandKit: null }) })));
+    await expect(fetchBrandKitFromCloud()).resolves.toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ brandKit: {} }) })));
+    await expect(fetchBrandKitFromCloud()).resolves.toBeNull();
+  });
+
+  it("returns the stored kit when there is one", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true, json: async () => ({ brandKit: { organization: "מוסד", colors: ["#112233"] } }),
+    })));
+    await expect(fetchBrandKitFromCloud()).resolves.toMatchObject({ organization: "מוסד" });
+  });
+
+  it("treats a failed read as no kit, so it can never wipe the local one", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 502 })));
+    await expect(fetchBrandKitFromCloud()).resolves.toBeNull();
   });
 });

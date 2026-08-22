@@ -253,6 +253,9 @@ export async function createBrandKit(input: BrandKitInput, adapter: BrandKv = de
   const index = await listBrandKits(adapter);
   index.unshift({ id: kit.id, organization: kit.organization, updatedAt: now });
   await writeIndex(index, adapter);
+  // מסנכרנים גם ביצירה ובעדכון, לא רק בהפעלה. קודם רק setActiveBrandKit סנכרן,
+  // ולכן עריכה של ערכה פעילה לא הגיעה לענן בכלל.
+  void syncActiveBrandKitToCloud(kit);
   return kit;
 }
 
@@ -282,6 +285,7 @@ export async function updateBrandKit(
     entry.updatedAt = next.updatedAt;
   }
   await writeIndex(index, adapter);
+  if ((await adapter.get<string>(BRAND_ACTIVE_KEY)) === id) void syncActiveBrandKitToCloud(next);
   return next;
 }
 
@@ -326,16 +330,42 @@ export async function setActiveBrandKit(id: string, adapter: BrandKv = defaultBr
   return id;
 }
 
-export async function syncActiveBrandKitToCloud(kit: BrandKit | null): Promise<void> {
-  if (typeof window === "undefined" || !kit) return;
+/**
+ * דוחף את הערכה הפעילה לענן. מחזיר האם ההעלאה באמת הצליחה — קודם התוצאה נבלעה
+ * ב-catch ריק, ולכן כשל סנכרון נראה בדיוק כמו הצלחה. הקורא יכול להתעלם, אבל
+ * מסך ההגדרות משתמש בערך הזה כדי להציג מצב סנכרון אמיתי.
+ */
+export async function syncActiveBrandKitToCloud(kit: BrandKit | null): Promise<boolean> {
+  if (typeof window === "undefined" || !kit) return false;
   try {
     const summary = summarizeBrandKit(kit);
-    await fetch("/api/cloud/brand", {
+    const response = await fetch("/api/cloud/brand", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ kit: summary }),
-    }).catch(() => {});
+    });
+    return response.ok;
   } catch {
-    // Local-first non-blocking fallback
+    // עבודה מקומית ממשיכה כרגיל; רק מדווחים שהענן לא עודכן.
+    return false;
+  }
+}
+
+/**
+ * מושך את ערכת המותג מהענן. זה החלק שחסר לגמרי: שום קוד לא קרא את ה-GET, ולכן
+ * מכשיר שני נפתח בלי לוגו ובלי הנחיות כתיבה גם אילו הכתיבה הייתה עובדת.
+ * מחזיר null כשאין ערכה בענן או כשהקריאה נכשלה — המקומי נשאר מקור האמת.
+ */
+export async function fetchBrandKitFromCloud(): Promise<BrandKitSummary | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const response = await fetch("/api/cloud/brand", { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const kit = data?.brandKit;
+    if (!kit || typeof kit !== "object" || !Object.keys(kit).length) return null;
+    return kit as BrandKitSummary;
+  } catch {
+    return null;
   }
 }

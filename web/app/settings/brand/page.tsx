@@ -4,6 +4,7 @@
 // הנחיות ניסוח, לוגו ותמונות ייחוס. כל הנתונים נשארים במכשיר; לא נשלח כלום לענן.
 
 import { useEffect, useRef, useState } from "react";
+import { Check } from "@/components/icons";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import {
@@ -14,6 +15,7 @@ import {
   deleteBrandKit,
   getActiveBrandKitId,
   getBrandKit,
+  fetchBrandKitFromCloud,
   listBrandKits,
   setActiveBrandKit,
   updateBrandKit,
@@ -66,6 +68,30 @@ export default function BrandSettingsPage() {
   };
 
   useEffect(() => { void refreshIndex(); }, []);
+
+  // שחזור ממכשיר אחר: אם אין ערכות מקומיות אבל יש ערכה בענן — מייצרים אותה
+  // מקומית. בלי זה, מכשיר שני נפתח בלי לוגו ובלי הנחיות כתיבה לסוכן, גם אחרי
+  // שהסנכרון לענן תוקן. נעשה פעם אחת, ורק כשאין מה לדרוס.
+  const [cloudRestore, setCloudRestore] = useState<"idle" | "restored" | "none">("idle");
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const local = await listBrandKits();
+      if (cancelled || local.length) { setCloudRestore("none"); return; }
+      const remote = await fetchBrandKitFromCloud();
+      if (cancelled || !remote) { setCloudRestore("none"); return; }
+      await createBrandKit({
+        organization: remote.organization,
+        ...(remote.tagline ? { tagline: remote.tagline } : {}),
+        writingGuidelines: remote.writingGuidelines || "",
+        colors: remote.colors || [],
+      });
+      if (cancelled) return;
+      await refreshIndex();
+      setCloudRestore("restored");
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // מעדכן את מפת התצוגות: משחרר בדיוק את ה-URLs שלא נשארו במפה החדשה,
   // מעדכן את הרף ואת ה-state.
@@ -210,9 +236,24 @@ export default function BrandSettingsPage() {
             פרופיל ארגון לשיתוף בין הפרויקטים: שם, סלוגן, פלטת צבעים, הנחיות ניסוח, לוגו ותמונות ייחוס.
             הסוכן קורא את הערכה הפעילה ומשתמש בנכסים שלה.
           </p>
+          {/* הטקסט הקודם הבטיח "לא נשלח לענן ואין סנכרון ענן" — וזה לא היה נכון
+              גם אז: syncActiveBrandKitToCloud כבר שלח PUT בכל הפעלת ערכה. אמירה
+              שגויה על מה נשלח החוצה היא בדיוק מה שאסור להשאיר. */}
           <p style={{ color: "var(--text-2)", fontSize: 13 }}>
-            <span className="ok">✓ נשמר מקומית במכשיר בלבד (IndexedDB) — לא נשלח לענן, לא למערכת ההזדהות, ואין סנכרון ענן.</span>
+            <span className="ok">
+              <Check size={13} strokeWidth={2.5} style={{ verticalAlign: "-2px" }} />{" "}
+              הטקסט של הערכה (שם, סלוגן, צבעים והנחיות ניסוח) מסונכרן לחשבון שלך כדי שיהיה זמין
+              גם ממכשיר אחר. הלוגו ותמונות הייחוס נשמרים במכשיר בלבד (IndexedDB) ואינם נשלחים.
+            </span>
           </p>
+          {cloudRestore === "restored" && (
+            <p style={{ color: "var(--text-2)", fontSize: 13 }}>
+              <span className="ok">
+                <Check size={13} strokeWidth={2.5} style={{ verticalAlign: "-2px" }} />{" "}
+                שוחזרה ערכת המותג מהחשבון שלך. הלוגו ותמונות הייחוס לא עוברים בין מכשירים — אפשר להעלות אותם כאן.
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="card">
