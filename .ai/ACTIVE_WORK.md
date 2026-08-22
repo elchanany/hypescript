@@ -1,5 +1,11 @@
 # ACTIVE_WORK.md
 
+## 2026-08-22 — landing demo and chat-media clarity
+- Rebuilt the landing editor simulation as an explicit conversation and visible edit sequence, including a real result card in the mobile chat column.
+- Added responsive, uncropped chat cards for video/audio/image/SRT and localized their controls in all five supported locales.
+- Added a fully localized non-Hebrew landing body while preserving the richer Hebrew composition; free entry is cardless and paid trials remain separately labeled.
+- Browser verified desktop + 390px mobile, EN + AR/RTL, no horizontal overflow; full suite 814/814 and isolated build 54/54 pass.
+
 ## 2026-08-17 — Upload Banner Z-Index, Responsive Transport, Space Key Anywhere, Chat Composer Spacing & Fast 120s Transcription Failover
 
 - **Upload Banner Layering & Position (`globals.css`, `page.tsx`)**:

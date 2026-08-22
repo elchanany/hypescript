@@ -52,8 +52,8 @@ def wordmark(dark: bool = False) -> Image.Image:
     canvas.alpha_composite(icon, (0, 0))
     draw = ImageDraw.Draw(canvas)
     main = WHITE if dark else NAVY
-    draw.text((316, 48), "Hypescript", font=font(122, True), fill=main)
-    draw.text((323, 184), "AI VIDEO EDITOR", font=font(34, True), fill=MINT, spacing=4)
+    draw.text((316, 32), "Hypescript", font=font(114, True), fill=main)
+    draw.text((323, 204), "AI VIDEO EDITOR", font=font(27, True), fill=MINT, spacing=3)
     return canvas
 
 

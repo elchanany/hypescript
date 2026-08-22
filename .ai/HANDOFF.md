@@ -1,6 +1,13 @@
 # Goal
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
+## 2026-08-22 — clear live demo, responsive chat media, and landing locale coverage
+- The hero demo now shows a readable request → assistant acknowledgement → live edit operation → playable finished-video card, with matching player/timeline direction and a slower result hold.
+- Chat output cards render video, audio, images and SRT without cropping, wrap controls on mobile, and localize all card controls in HE/EN/AR/RU/HI.
+- The free entry CTA now says Start free and explicitly needs no card; paid-plan trials keep their separate card notice.
+- The full visible landing body now switches cleanly in HE/EN/AR/RU/HI. Browser QA found only the intentional language-name “עברית” in English/Arabic, correct RTL for Arabic, and zero horizontal overflow.
+- Verification: 94 Vitest files / 814 tests, TypeScript, isolated production build (54/54 pages), desktop/mobile browser screenshots, Graphify update.
+
 # Current State
 - 2026-08-17: Vercel Production Cloud Build Fixed & Deployed (Live Ready)
   1. Identified & resolved build failure: `TEXT_PRESETS` value import in `web/app/page.tsx` was missing (imported as type only).

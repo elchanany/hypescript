@@ -41,7 +41,7 @@
 .hsx-app-brand .brand-logo { width: 25px; height: 25px; }
 .hsx-appbar > span { color: #9eabba; }
 .hsx-appbar > button { justify-self: start; border: 0; border-radius: 8px; padding: 6px 12px; color: #07151a; background: #35dfb6; font: inherit; font-weight: 800; }
-.hsx-workspace { display: grid; grid-template-columns: 170px minmax(0, 1fr) 190px; min-height: 0; }
+.hsx-workspace { display: grid; grid-template-columns: 140px minmax(0, 1fr) 250px; min-height: 0; }
 .hsx-media-panel, .hsx-inspector { padding: 14px 12px; background: #111b29; border-inline: 1px solid #253142; overflow: hidden; }
 .hsx-media-panel { border-inline-end: 0; }
 .hsx-media-panel strong, .hsx-inspector small { display: block; color: #b8c3d1; margin-bottom: 10px; }
@@ -95,7 +95,7 @@
 .hsx-audio-track i { flex: 1; max-width: 5px; background: #48d7a9; }
 .hsx-caption-track { grid-template-columns: 48px 1fr 1.25fr 1fr; gap: 3px; }
 .hsx-caption-track span { display: grid; place-items: center; color: #ded5ff; background: #533c88; border-radius: 4px; }
-.hsx-playhead { position: absolute; top: 12px; bottom: 7px; width: 1px; background: #b9f65d; transition: right .1s linear; }
+.hsx-playhead { position: absolute; top: 12px; bottom: 7px; width: 1px; background: #b9f65d; transition: left .1s linear; }
 .hsx-playhead::before { content: ""; position: absolute; top: 0; left: 50%; translate: -50%; border: 5px solid transparent; border-top-color: #b9f65d; }
 
 .hsx-orbit { position: absolute; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 10px 13px; border: 1px solid rgba(255,255,255,.75); border-radius: 999px; color: #172636; background: rgba(255,255,255,.72); backdrop-filter: blur(14px); box-shadow: 0 12px 32px rgba(27,45,63,.13); font-size: 12px; font-weight: 800; animation: hsx-float 5s ease-in-out infinite; }
@@ -154,8 +154,7 @@
   .marketing-nav > a { min-width: 0; }
   .marketing-nav .marketing-actions { flex: none; }
   .marketing-nav .marketing-actions .primary { min-height: 36px; padding-inline: 10px; gap: 4px; font-size: 11px; }
-  .marketing-nav .marketing-actions .primary span { font-size: 0; }
-  .marketing-nav .marketing-actions .primary span::after { content: "ניסיון חינם"; font-size: 11px; white-space: nowrap; }
+  .marketing-nav .marketing-actions .primary span { font-size: 10px; white-space: nowrap; }
   .hsx-product-stage { width: 100%; min-height: 420px; margin-top: 2rem; }
   .hsx-laptop { width: 111vw; transform: translateX(5.5%) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); }
   .hsx-laptop-lid { padding: 7px; border-radius: 14px 14px 7px 7px; }
@@ -199,13 +198,13 @@
 
 /* Landing clarity pass: one calm surface system and a legible phone demo. */
 .marketing-page{
-  --hs-paper:#eaf1ee;
-  --hs-panel:#f3f8f5;
-  --hs-panel-strong:#e1eee8;
+  --hs-paper:#cddfd8;
+  --hs-panel:#e5f0eb;
+  --hs-panel-strong:#cfe3da;
   background:
-    radial-gradient(circle at 8% 7%,rgba(185,246,93,.22),transparent 24rem),
-    radial-gradient(circle at 92% 20%,rgba(34,211,166,.17),transparent 31rem),
-    linear-gradient(180deg,#f1f6f3 0,#e6efeb 48%,#eef4f1 100%);
+    radial-gradient(circle at 8% 7%,rgba(185,246,93,.25),transparent 24rem),
+    radial-gradient(circle at 92% 20%,rgba(34,211,166,.2),transparent 31rem),
+    linear-gradient(180deg,#d9e8e1 0,#c9ddd5 48%,#d5e6de 100%);
 }
 .marketing-page .marketing-hero h1{color:var(--hs-ink);-webkit-text-fill-color:currentColor}
 .marketing-page .marketing-hero h1 span{
@@ -227,7 +226,7 @@
 /* The demo uses explicit areas so the AI conversation always stays at right. */
 .hsx-workspace{
   direction:ltr;
-  grid-template-columns:170px minmax(0,1fr) 190px;
+  grid-template-columns:140px minmax(0,1fr) 250px;
   grid-template-areas:"media canvas chat";
 }
 .hsx-media-panel{grid-area:media;direction:rtl}
@@ -268,6 +267,13 @@
   .hsx-chat-thread{gap:5px;padding:7px 0}
   .hsx-chat-thread p{display:block!important;width:96%;padding:6px;font-size:7.5px;line-height:1.35}
   .hsx-chat-thread .from-agent span{display:none}
+  .hsx-app[data-demo-step="2"] .hsx-chat-thread .from-user,
+  .hsx-app[data-demo-step="3"] .hsx-chat-thread .from-user,
+  .hsx-app[data-demo-step="4"] .hsx-chat-thread .from-user,
+  .hsx-app[data-demo-step="5"] .hsx-chat-thread .from-user,
+  .hsx-app[data-demo-step="6"] .hsx-chat-thread p{display:none!important}
+  .hsx-chat-operation,.hsx-chat-result{width:100%;padding:5px;font-size:7px}
+  .hsx-chat-result>div{height:46px;margin-bottom:4px}.hsx-chat-result small{font-size:6px}
   .hsx-mode-tabs{grid-template-columns:1fr 1fr;gap:3px}
   .hsx-mode-tabs button{min-height:25px;padding:3px;font-size:7px;line-height:1.15}
   .hsx-agent-panel,.hsx-chat-input{display:none}
@@ -340,13 +346,13 @@
 
 /* Landing theme system: readable surfaces, deliberate hierarchy, one dark mode. */
 .marketing-page{
-  --landing-bg:#e5eeea;
-  --landing-surface:#f8fbf9;
-  --landing-surface-2:#edf4f1;
+  --landing-bg:#cddfd8;
+  --landing-surface:#e5f0eb;
+  --landing-surface-2:#cfe3da;
   --landing-ink:#0a1824;
-  --landing-body:#3d4e5b;
-  --landing-muted:#63727d;
-  --landing-border:rgba(11,55,48,.16);
+  --landing-body:#2e4651;
+  --landing-muted:#4e6570;
+  --landing-border:rgba(11,55,48,.24);
   color:var(--landing-ink);
 }
 .marketing-page :is(.marketing-section-head h2,.hsx-scroll-head h2,.hsx-outro-head h2,.marketing-story-copy h2,.marketing-feature-grid h3,.marketing-use-cases h3,.marketing-pricing h3,.marketing-faq summary){color:var(--landing-ink)}
@@ -356,15 +362,39 @@
   box-shadow:0 18px 50px rgba(18,50,43,.07);
 }
 .marketing-page :is(.marketing-feature-grid article,.marketing-use-cases article,.marketing-pricing article,.marketing-faq details,.marketing-compare .old,.hsx-output-orbit article){background:var(--landing-surface)}
-.marketing-page .marketing-nav{background:rgba(248,251,249,.88);color:var(--landing-ink)}
+.marketing-page .marketing-nav{background:rgba(224,238,232,.94);color:var(--landing-ink)}
 .marketing-page .marketing-nav nav a,.marketing-page .marketing-footer a,.marketing-page .marketing-footer>span{color:var(--landing-body)}
-.marketing-page .marketing-proof{background:rgba(248,251,249,.82)}
+.marketing-page .marketing-proof{background:rgba(211,229,221,.94)}
 .marketing-page .marketing-proof span{color:var(--landing-muted)}
 .marketing-page .marketing-compare .new{color:#10291f;background:#dff4e9}
 .marketing-page .marketing-compare-arrow{color:#087c67;background:var(--landing-surface-2);border-color:var(--landing-border)}
-.marketing-page .marketing-footer{background:rgba(248,251,249,.68)}
+.marketing-page .marketing-footer{background:rgba(211,229,221,.9)}
 .marketing-page .hsx-output-orbit article small{color:var(--landing-muted)}
 .marketing-page .marketing-kicker,.marketing-page .marketing-section-head>span,.marketing-page .hsx-scroll-head>span,.marketing-page .hsx-outro-head>span{color:#087c67}
+.marketing-page :is(.marketing-bento article:not(.bento-command),.marketing-story-copy,.marketing-steps article,.hsx-output-orbit article){background:var(--landing-surface);border-color:var(--landing-border)}
+.marketing-page :is(.marketing-bento article:not(.bento-command) h3,.marketing-steps h3,.marketing-proof strong){color:var(--landing-ink)}
+.marketing-page :is(.marketing-bento article:not(.bento-command)>span,.marketing-steps p,.proof-line){color:var(--landing-body)}
+.marketing-page .marketing-section-head>span{font-weight:850}
+
+/* One story, one direction: the transport and timeline now advance together. */
+.hsx-timeline{direction:ltr}
+.hsx-track>b{direction:rtl}
+.hsx-agent-panel{margin-top:8px}
+.hsx-agent-panel ul{margin-block:8px 0}
+.hsx-chat-thread .from-user{border:1px solid rgba(112,146,190,.22)}
+.hsx-inspector{font-size:11px}
+.hsx-chat-thread p{font-size:10px}
+.hsx-chat-thread .from-agent{box-shadow:0 8px 20px rgba(2,12,19,.12)}
+.hsx-chat-thread .from-user small,.hsx-chat-thread .from-user b{display:block}
+.hsx-chat-thread .from-user small{margin-bottom:3px;color:#91a3b7;font-size:7px}
+.hsx-chat-operation{width:94%;display:flex;align-items:center;gap:6px;padding:7px;border:1px solid rgba(76,224,188,.25);border-radius:9px;color:#b9c8d6;background:#152434}
+.hsx-chat-operation>span:nth-child(2){min-width:0;flex:1}.hsx-chat-operation b,.hsx-chat-operation small{display:block}.hsx-chat-operation small{margin-top:2px;color:#75869a;font-size:7px}
+.hsx-chat-result{width:94%;padding:7px;border:1px solid rgba(185,246,93,.4);border-radius:10px;color:#eaf4ef;background:#142821;box-shadow:0 9px 22px rgba(0,0,0,.2)}
+.hsx-chat-result>div{height:52px;margin-bottom:6px;position:relative;overflow:hidden;border-radius:7px}.hsx-chat-result img{width:100%;height:100%;display:block;object-fit:cover}.hsx-chat-result>div span{position:absolute;inset:50% auto auto 50%;translate:-50% -50%;width:24px;aspect-ratio:1;display:grid;place-items:center;border-radius:50%;color:#10221b;background:#b9f65d}
+.hsx-chat-result b,.hsx-chat-result small{display:block}.hsx-chat-result small{margin-top:2px;color:#95aa9f;font-size:7px;line-height:1.35}
+.message-enter{animation:hsx-message-enter .3s cubic-bezier(.2,.75,.2,1) both}
+.hsx-canvas-action{position:absolute;z-index:4;inset:10px auto auto 10px;max-width:72%;display:flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid rgba(106,236,201,.42);border-radius:999px;color:#dffff6;background:rgba(8,25,31,.82);backdrop-filter:blur(8px);box-shadow:0 8px 22px rgba(0,0,0,.25);opacity:1;transform:translateY(0);transition:.3s ease}
+.hsx-canvas-action.action-0{opacity:0;transform:translateY(-8px)}
 
 .landing-theme-toggle{
   width:38px;height:38px;display:grid;place-items:center;flex:none;
@@ -423,6 +453,7 @@ html[data-theme="dark"] .marketing-page .hsx-output-orbit:after{border-color:rgb
 .hsx-app[data-demo-step="2"] .hsx-audio-track>div,.hsx-app[data-demo-step="3"] .hsx-caption-track,.hsx-app[data-demo-step="4"] .hsx-video-frame{animation:hsx-edit-pulse .8s ease}
 .hsx-live-note{transition:transform .25s ease,border-color .25s ease}.hsx-live-note.working>span svg{animation:hsx-spin 1.4s linear infinite}.hsx-live-note.ready{transform:translateY(-3px);border-color:rgba(185,246,93,.5)}
 @keyframes hsx-thinking{0%,70%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-4px);opacity:1}}
+@keyframes hsx-message-enter{from{opacity:0;transform:translateY(7px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes hsx-spin{to{transform:rotate(360deg)}}
 @keyframes hsx-scan{0%{left:3%}50%{left:96%}100%{left:3%}}
 @keyframes hsx-edit-pulse{0%,100%{filter:none}45%{filter:brightness(1.28);box-shadow:0 0 0 2px rgba(185,246,93,.35)}}
