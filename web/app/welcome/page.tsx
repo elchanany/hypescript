@@ -4,6 +4,7 @@ import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, 
 import BrandLogo from "@/components/BrandLogo";
 import LandingProductExperience from "@/components/LandingProductExperience";
 import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
+import LandingThemeToggle from "@/components/LandingThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import T from "@/components/LandingText";
 import "./landing-v2.css";
@@ -55,7 +56,7 @@ export default function WelcomePage() {
     <main className="marketing-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
       <header className="marketing-nav">
-        <Link href="/welcome" aria-label="Hypescript"><BrandLogo variant="horizontal" size="sm" theme="light" priority decorative /></Link>
+        <Link href="/welcome" aria-label="Hypescript"><BrandLogo variant="horizontal" size="sm" theme="auto" priority decorative /></Link>
         <nav aria-label="ניווט ראשי">
           <a href="#features"><T id="nav.features" /></a>
           <a href="#how"><T id="nav.how" /></a>
@@ -63,6 +64,7 @@ export default function WelcomePage() {
           <a href="#pricing"><T id="nav.plans" /></a>
         </nav>
         <div className="marketing-actions">
+          <LandingThemeToggle />
           <LanguageSwitcher compact />
           <Link href="/login" className="btn ghost"><T id="nav.login" /></Link>
           <Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary"><span><T id="nav.trial" /></span><ArrowLeft size={15} /></Link>
@@ -97,15 +99,15 @@ export default function WelcomePage() {
           <div className="hsx-story-wave">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 29) % 76)}%` }} />)}</div>
         </div>
         <div className="marketing-story-copy">
-          <span>זה עורך וידאו מלא — עם שיחה במקום תפריטים מסובכים</span>
-          <h2>אומרים מה צריך.<br />רואים את הסרטון נבנה.</h2>
+          <span>הכול קורה באותו מסך</span>
+          <h2>מבקשים שינוי<br />ורואים אותו קורה</h2>
           <p>Hypescript מבין את הבקשה, בונה תוכנית עריכה ומבצע אותה על טיימליין אמיתי. אפשר להזיז כל שכבה, לשנות כל כיתוב, לבטל כל פעולה ולהמשיך לערוך ידנית בכל רגע.</p>
           <div className="story-metrics"><b><strong>0</strong> חפיפות</b><b><strong>1</strong> פרויקט</b><b><strong>∞</strong> גרסאות</b></div>
         </div>
       </section>
 
       <section className="hsx-scroll-story hsx-reveal" aria-label="תהליך עריכה חי">
-        <div className="hsx-scroll-head"><span>בקשה. עריכה. תוצאה.</span><h2>כך המוצר עובד באמת.</h2></div>
+        <div className="hsx-scroll-head"><span>ככה זה מרגיש</span><h2>שלושה צעדים, והסרטון מתקדם מול העיניים</h2></div>
         <div className="hsx-scroll-rail">
           <article><b>01</b><div><ScanText size={22} /><h3>כותבים את התוצאה הרצויה</h3><p>“הכן TikTok”, “בנה מצגת וידאו” או “צור מודעת מוצר” — בלי לחפש איפה נמצא כל כלי.</p></div><div className="hsx-text-sculpture"><span>TikTok</span><span>מצגת</span><span>מודעה</span><span>פודקאסט</span></div></article>
           <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><BrandLogo variant="icon" size="sm" decorative /></div></article>
@@ -114,7 +116,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section marketing-lab">
-        <div className="marketing-section-head"><span>חדש בדרך שבה עורכים</span><h2>לא עוד עורך עם כפתור AI בצד</h2><p>ממשק שנבנה סביב הפעולה עצמה — שיחה, תמונה, קול וטיימליין שעובדים יחד.</p></div>
+        <div className="marketing-section-head"><span>הצ׳אט והעריכה מחוברים</span><h2>שיחה שמזיזה דברים באמת</h2><p>כל בקשה הופכת לפעולות שרואים על הסרטון ועל הטיימליין, ואפשר להמשיך משם בידיים.</p></div>
         <div className="marketing-bento">
           <article className="bento-command"><Command size={22} /><span>Conversational editing</span><h3>כותבים בקשה.<br />מקבלים עריכה.</h3><div className="command-demo"><i>הפוך את הפרק לקליפ אנכי עם כותרת וכתוביות</i><b><Zap size={13} /> תוכנית העריכה מוכנה</b></div></article>
           <article className="bento-transcript"><ScanText size={22} /><span>Transcript native</span><h3>הטקסט הוא כלי העריכה</h3><div className="word-stream"><i>הפרק</i><i>הזה</i><i className="cut">אה...</i><i>מתחיל</i><i>עכשיו</i></div></article>
@@ -132,7 +134,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-section marketing-before-after">
-        <div className="marketing-section-head"><span>לא עוד תהליך מפורק</span><h2>העריכה נשארת במקום אחד</h2><p>במקום לקפוץ בין תמלול, חיתוך, כתוביות, עיצוב וייצוא.</p></div>
+        <div className="marketing-section-head"><span>כל העבודה במקום אחד</span><h2>מהרעיון ועד הקובץ המוכן</h2><p>תמלול, חיתוך, כתוביות, עיצוב וייצוא נשארים מחוברים לאותו פרויקט.</p></div>
         <div className="marketing-compare">
           <article className="old"><span>הדרך הישנה</span><ul><li>ללמוד איפה מסתתר כל כלי</li><li>להעתיק כתוביות בין תוכנות</li><li>לאבד גרסאות וקבצים בדרך</li><li>לבנות ידנית כל פורמט מחדש</li></ul></article>
           <div className="marketing-compare-arrow"><ArrowLeft size={24} /></div>
@@ -175,7 +177,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="hsx-outro hsx-reveal" aria-label="מתוצאה אחת למערכת תוכן">
-        <div className="hsx-outro-head"><span>לא עוצרים בייצוא הראשון</span><h2>פרויקט אחד.<br />מערכת תוכן שלמה.</h2><p>כל מה שנוצר נשאר מאורגן, ניתן לשינוי ומוכן לגרסה הבאה.</p></div>
+        <div className="hsx-outro-head"><span>ממשיכים מאותה נקודה</span><h2>פרויקט אחד<br />כמה גרסאות שרוצים</h2><p>כל מה שנוצר נשאר מאורגן, ניתן לשינוי ומוכן לגרסה הבאה.</p></div>
         <div className="hsx-output-orbit">
           <div className="hsx-output-core"><img src="/brand/landing-creator-male.webp" alt="סרטון הסבר מוכן לפרסום" /><span><Play size={16} fill="currentColor" /></span><b>הסרטון שלך מוכן</b><small>1080p · 00:35</small></div>
           <article className="output-video"><Film size={17} /><div><b>MP4</b><small>מוכן להורדה</small></div><Check size={14} /></article>
@@ -186,7 +188,7 @@ export default function WelcomePage() {
       </section>
 
       <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=%2Faccount%3Fplan%3Dcreator%26interval%3Dmonth" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
-      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="light" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
+      <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="auto" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
     </main>
   );
 }
