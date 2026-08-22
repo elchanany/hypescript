@@ -4,6 +4,7 @@ import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { getAiAccess } from "@/lib/billing/aiAccess.server";
 import { isLocale, normalizedAddressForm } from "@/lib/i18n/config";
 import { clampFontScale } from "@/lib/a11y/prefs";
+import { reportOwnerError } from "@/lib/errors/report";
 
 export async function GET() {
   const auth = await requireCloudUser();
@@ -34,11 +35,19 @@ export async function GET() {
       ? profileResult
       : { ...legacyProfile, data: { ...legacyProfile.data, address_form: "unspecified" } };
   }
-  if (profileResult.error || settingsResult.error)
+  if (profileResult.error || settingsResult.error) {
+    reportOwnerError({
+      code: "account_schema_pending",
+      status: 503,
+      userId: auth.user.id,
+      path: "/api/account",
+      message: profileResult.error?.message || settingsResult.error?.message,
+    });
     return NextResponse.json(
       { error: "account_schema_pending" },
       { status: 503 },
     );
+  }
   return NextResponse.json({
     profile: profileResult.data,
     settings: settingsResult.data,
@@ -84,22 +93,32 @@ export async function PATCH(req: NextRequest) {
     const { address_form: _pendingMigration, ...legacyProfile } = profile;
     p = await auth.supabase.from("profiles").update(legacyProfile).eq("id", auth.user.id);
   }
-  if (p.error || u.error)
+  if (p.error || u.error) {
+    reportOwnerError({
+      code: "account_update_failed",
+      status: 500,
+      userId: auth.user.id,
+      path: "/api/account",
+      message: p.error?.message || u.error?.message,
+    });
     return NextResponse.json(
       { error: "account_update_failed" },
       { status: 500 },
     );
+  }
   return NextResponse.json({ ok: true });
 }
 export async function DELETE() {
   const auth = await requireCloudUser();
   if (auth.response) return auth.response;
   const service = getSupabaseServiceClient();
-  if (!service)
+  if (!service) {
+    reportOwnerError({ code: "account_delete_unavailable", status: 503, userId: auth.user.id, path: "/api/account" });
     return NextResponse.json(
       { error: "account_delete_unavailable" },
       { status: 503 },
     );
+  }
   const { data: profile } = await service
     .from("profiles")
     .select("system_owner")
@@ -112,10 +131,12 @@ export async function DELETE() {
     );
   await auth.supabase.auth.signOut();
   const { error } = await service.auth.admin.deleteUser(auth.user.id);
-  if (error)
+  if (error) {
+    reportOwnerError({ code: "account_delete_failed", status: 500, userId: auth.user.id, path: "/api/account", message: error.message });
     return NextResponse.json(
       { error: "account_delete_failed" },
       { status: 500 },
     );
+  }
   return NextResponse.json({ ok: true });
 }

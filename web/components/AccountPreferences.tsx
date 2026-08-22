@@ -2,11 +2,13 @@
 import { useEffect, useState } from "react";
 import { Download, Save, Trash2 } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
+import { explainError } from "@/lib/errors/messages";
 import { LoadingState } from "@/components/LoadingState";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SUPPORTED_LOCALES, type AddressForm, type AppLocale } from "@/lib/i18n/config";
 import { readStoredA11yPrefs, writeStoredA11yPrefs } from "@/lib/a11y/apply";
 import { mergeAccountSettingsIntoPrefs } from "@/lib/a11y/prefs";
+import { SelectField } from "@/components/ui";
 type State = {
   profile: {
     display_name: string;
@@ -76,7 +78,9 @@ export default function AccountPreferences() {
       toast.success(t("common.saved"));
       syncA11yFromAccount(v.settings);
     } else {
-      toast.error(t("common.saveFailed"));
+      const body = await r.json().catch(() => ({}));
+      const explanation = explainError(body?.error, r.status);
+      toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
     }
   };
   const del = async () => {
@@ -87,8 +91,10 @@ export default function AccountPreferences() {
     )
       return;
     const r = await fetch("/api/account", { method: "DELETE" });
-    if (r.ok) location.href = "/welcome";
-    else toast.error(t("account.deleteFailed"));
+    if (r.ok) { location.href = "/welcome"; return; }
+    const body = await r.json().catch(() => ({}));
+    const explanation = explainError(body?.error, r.status);
+    toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
   };
   return (
     <section className="account-preferences">
@@ -117,43 +123,39 @@ export default function AccountPreferences() {
         </label>
         <label>
           {t("language.label")}
-          <select value={locale} onChange={(e) => {
-            const next = e.target.value as AppLocale;
+          <SelectField value={locale} ariaLabel={t("language.label")} options={SUPPORTED_LOCALES.map((item) => ({ value: item, label: t(`language.${item}` as const) }))} onValueChange={(value) => {
+            const next = value as AppLocale;
             setLocale(next);
             setV({ ...v, profile: { ...v.profile, locale: next } });
-          }}>
-            {SUPPORTED_LOCALES.map((item) => <option key={item} value={item}>{t(`language.${item}` as const)}</option>)}
-          </select>
+          }} />
         </label>
         <label>
           {t("address.label")}
-          <select value={addressForm} onChange={(e) => {
-            const next = e.target.value as AddressForm;
+          <SelectField value={addressForm} ariaLabel={t("address.label")} options={[
+            { value: "male", label: t("address.male") }, { value: "female", label: t("address.female") },
+            { value: "plural", label: t("address.plural") }, { value: "unspecified", label: t("address.unspecified") },
+          ]} onValueChange={(value) => {
+            const next = value as AddressForm;
             setAddressForm(next);
             setV({ ...v, profile: { ...v.profile, address_form: next } });
-          }}>
-            <option value="male">{t("address.male")}</option>
-            <option value="female">{t("address.female")}</option>
-            <option value="plural">{t("address.plural")}</option>
-            <option value="unspecified">{t("address.unspecified")}</option>
-          </select>
+          }} />
         </label>
         <label>
           {t("account.usageType")}
-          <select
+          <SelectField
             value={v.profile.usage_type || "personal"}
-            onChange={(e) =>
+            ariaLabel={t("account.usageType")}
+            options={[
+              { value: "personal", label: t("usage.personal") }, { value: "business", label: t("usage.business") },
+              { value: "nonprofit", label: t("usage.nonprofit") }, { value: "team", label: t("usage.team") },
+            ]}
+            onValueChange={(value) =>
               setV({
                 ...v,
-                profile: { ...v.profile, usage_type: e.target.value },
+                profile: { ...v.profile, usage_type: value },
               })
             }
-          >
-            <option value="personal">{t("usage.personal")}</option>
-            <option value="business">{t("usage.business")}</option>
-            <option value="nonprofit">{t("usage.nonprofit")}</option>
-            <option value="team">{t("usage.team")}</option>
-          </select>
+          />
         </label>
         <label>
           {t("account.textSize")}

@@ -5,6 +5,7 @@ import { renderObjectKey } from "@/lib/cloud/r2";
 import { cloudQuotaError } from "@/lib/cloud/quota";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { getWorkerCapabilities } from "@/lib/cloud/workerCapabilities.server";
+import { reportOwnerError } from "@/lib/errors/report";
 
 interface ClipInput { assetId?: string; start: number; end: number; gap?: boolean }
 interface AudioInput { assetId: string; start: number; end: number; timelineStart: number; volume: number; fadeIn: number; fadeOut: number }
@@ -39,7 +40,10 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
   const renderer = getRendererConfig();
   const r2 = getR2Config();
-  if (!renderer || !r2) return NextResponse.json({ error: "cloud_render_not_configured" }, { status: 503 });
+  if (!renderer || !r2) {
+    reportOwnerError({ code: "cloud_render_not_configured", status: 503, userId: auth.user.id, path: "/api/cloud/render" });
+    return NextResponse.json({ error: "cloud_render_not_configured" }, { status: 503 });
+  }
   const body = await request.json().catch(() => ({}));
   const projectId = typeof body.projectId === "string" ? body.projectId : "";
   const clips = parseClips(body.clips);
@@ -76,10 +80,16 @@ export async function POST(request: Request) {
   });
   const quota = cloudQuotaError(reserved.error);
   if (quota) return NextResponse.json({ error: quota.code }, { status: quota.status });
-  if (reserved.error || !reserved.data) return NextResponse.json({ error: "render_job_create_failed" }, { status: 500 });
+  if (reserved.error || !reserved.data) {
+    reportOwnerError({ code: "render_job_create_failed", status: 500, userId: auth.user.id, path: "/api/cloud/render", message: reserved.error?.message });
+    return NextResponse.json({ error: "render_job_create_failed" }, { status: 500 });
+  }
   const jobId = String(reserved.data);
   const service = getSupabaseServiceClient();
-  if (!service) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
+  if (!service) {
+    reportOwnerError({ code: "database_not_configured", status: 503, userId: auth.user.id, path: "/api/cloud/render" });
+    return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
+  }
   const outputKey = renderObjectKey(auth.user.id, projectId, jobId);
   const workerPayload = {
     jobId,
@@ -107,8 +117,16 @@ export async function POST(request: Request) {
     if (!response.ok) throw new Error(`worker_${response.status}`);
     await service.from("cloud_jobs").update({ status: "queued", provider_job_id: jobId, output_key: outputKey }).eq("id", jobId).eq("owner_id", auth.user.id).eq("status", "dispatching");
     return NextResponse.json({ jobId, status: "queued" }, { status: 202 });
-  } catch {
+  } catch (dispatchError) {
     await service.from("cloud_jobs").update({ status: "failed", usage_seconds: 0, error_code: "dispatch_failed", finished_at: new Date().toISOString() }).eq("id", jobId).eq("owner_id", auth.user.id);
+    reportOwnerError({
+      code: "render_dispatch_failed",
+      status: 502,
+      userId: auth.user.id,
+      path: "/api/cloud/render",
+      message: dispatchError instanceof Error ? dispatchError.message : String(dispatchError),
+      meta: { jobId },
+    });
     return NextResponse.json({ error: "render_dispatch_failed", jobId }, { status: 502 });
   }
 }

@@ -16,6 +16,7 @@ import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import BrandLogo from "@/components/BrandLogo";
 import NewProjectWizard from "@/components/NewProjectWizard";
 import { toast } from "@/lib/ui/toast";
+import { explainError, looksLikeErrorCode } from "@/lib/errors/messages";
 import {
   formatDurationHe, getProjectCardInfo, type ProjectCardInfo,
 } from "@/lib/projects/preview";
@@ -43,6 +44,21 @@ function fmtRelativeHe(ms: number): string {
   const days = Math.floor(hr / 24);
   if (days < 7) return `לפני ${days} ימים`;
   return fmtDate(ms);
+}
+
+/**
+ * מציג טוסט שגיאה מ-catch: אם ה-message נראה כמו קוד מכונה (project_
+ * create_failed וכו') הוא עובר דרך קטלוג ההסברים; אחרת מוצג כמו שהוא
+ * (התנהגות קודמת), כדי לא לדרוס טקסט שכבר תקין.
+ */
+function toastFromError(fallbackTitle: string, error: unknown) {
+  const code = error instanceof Error ? error.message : "";
+  if (looksLikeErrorCode(code)) {
+    const explanation = explainError(code);
+    toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
+  } else {
+    toast.error(fallbackTitle, code || undefined);
+  }
 }
 
 function userLabel(user: { email?: string | null; user_metadata?: Record<string, unknown> } | null) {
@@ -286,7 +302,7 @@ export default function DashboardPage() {
       if (firstProject) localStorage.setItem("hs_editor_tour_pending", "1");
       await openProject(id);
     } catch (e) {
-      toast.error("יצירת הפרויקט נכשלה", e instanceof Error ? e.message : undefined);
+      toastFromError("יצירת הפרויקט נכשלה", e);
       setBusy(false);
       throw e;
     }
@@ -303,7 +319,7 @@ export default function DashboardPage() {
       await refresh();
       toast.success("השם עודכן", name);
     } catch (e) {
-      toast.error("שינוי השם נכשל", e instanceof Error ? e.message : undefined);
+      toastFromError("שינוי השם נכשל", e);
     }
   };
 
@@ -318,7 +334,7 @@ export default function DashboardPage() {
       await refresh();
       toast.success("הפרויקט נמחק", name);
     } catch (e) {
-      toast.error("המחיקה נכשלה", e instanceof Error ? e.message : undefined);
+      toastFromError("המחיקה נכשלה", e);
     }
   };
 
@@ -331,7 +347,7 @@ export default function DashboardPage() {
       await refresh();
       toast.success("איפוס הושלם", "כל הפרויקטים והשיחות נמחקו בהצלחה.");
     } catch (e) {
-      toast.error("האיפוס נכשל", e instanceof Error ? e.message : undefined);
+      toastFromError("האיפוס נכשל", e);
     } finally {
       setBusy(false);
     }

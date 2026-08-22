@@ -32,6 +32,7 @@ import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2,
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
+import { explainError, looksLikeErrorCode } from "@/lib/errors/messages";
 import TopBar from "@/components/TopBar";
 import ToolRail, { LeftTab } from "@/components/ToolRail";
 import MediaPanel from "@/components/MediaPanel";
@@ -138,7 +139,17 @@ export default function EditorPage() {
   }, [exportResult?.url]);
 
   useEffect(() => {
-    if (error) toast.error("הפעולה לא הושלמה", error);
+    if (!error) return;
+    // רוב ה-error כאן כבר עברית מוכנה (תוצאות runCommand, הודעות שכתבנו
+    // כאן ידנית). רק כשזה נראה כמו קוד מכונה גולמי (snake_case, לפעמים
+    // עם ":פרטים" בסוף) מפרשים אותו דרך הקטלוג — אחרת דורסים הודעה עברית
+    // טובה שכבר קיימת בהודעת נפילה גנרית.
+    if (looksLikeErrorCode(error)) {
+      const explanation = explainError(error);
+      toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
+    } else {
+      toast.error("הפעולה לא הושלמה", error);
+    }
   }, [error]);
 
   // layout state
@@ -635,7 +646,13 @@ export default function EditorPage() {
         } catch (syncError) {
           if (!cloudSyncWarned.current) {
             cloudSyncWarned.current = true;
-            toast.error("השמירה בענן נכשלה", syncError instanceof Error ? `${syncError.message} · העותק המקומי נשמר` : "העותק המקומי נשמר");
+            const code = syncError instanceof Error ? syncError.message : "";
+            if (looksLikeErrorCode(code)) {
+              const explanation = explainError(code);
+              toast.error(explanation.title, `${explanation.detail} · העותק המקומי נשמר`);
+            } else {
+              toast.error("השמירה בענן נכשלה", "העותק המקומי נשמר");
+            }
           }
         }
       }
@@ -736,7 +753,13 @@ export default function EditorPage() {
       setProjDlg("none");
       toast.success("הפרויקט נוצר ונפתח", name);
     } catch (cause) {
-      toast.error("יצירת הפרויקט נכשלה", cause instanceof Error ? cause.message : undefined);
+      const code = cause instanceof Error ? cause.message : "";
+      if (looksLikeErrorCode(code)) {
+        const explanation = explainError(code);
+        toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
+      } else {
+        toast.error("יצירת הפרויקט נכשלה", code || undefined);
+      }
     }
   };
   const submitRename = async (name: string) => {
@@ -1401,7 +1424,16 @@ export default function EditorPage() {
         burnCaptions && subs?.length ? "כולל כתוביות צרובות" : "",
       ].filter(Boolean).join(" · "));
     } catch (e: any) {
-      const message = controller.signal.aborted ? "הייצוא בוטל." : (e?.message || String(e));
+      const raw = e?.message || String(e);
+      // כשהייצוא בוטל ביד זה כבר משפט עברי מוגמר. אחרת raw עלול להיות קוד
+      // מכונה גולמי (מ-throw new Error("...") איפשהו בשרשרת ההכנה) — אז
+      // מפרשים אותו דרך הקטלוג לפני שהוא מוצג בחלון הייצוא.
+      let message = raw;
+      if (controller.signal.aborted) message = "הייצוא בוטל.";
+      else if (looksLikeErrorCode(raw)) {
+        const explanation = explainError(raw);
+        message = [explanation.title, explanation.detail].filter(Boolean).join(" — ");
+      }
       setExportError(message);
       setError(message);
       setPhase("");

@@ -7,6 +7,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/lib/auth/useAuth";
 import { BILLING_PLANS, BillingInterval, BillingPlanId, TRIAL_OFFER } from "@/lib/billing/plans";
 import { toast } from "@/lib/ui/toast";
+import { explainError } from "@/lib/errors/messages";
 import AccountPreferences from "@/components/AccountPreferences";
 import { LoadingState } from "@/components/LoadingState";
 
@@ -70,14 +71,8 @@ export default function AccountPage() {
       window.location.href = body.url;
     } catch (error) {
       const code = error instanceof Error ? error.message : "";
-      const message = code === "billing_variant_missing"
-        ? "אחד ממסלולי התשלום עדיין אינו מוגדר. החשבון נשאר ללא שינוי."
-        : code === "billing_trial_missing"
-          ? "חודש הניסיון עדיין אינו מוגדר בכל אפשרויות המוצר. לא נפתח Checkout מטעה."
-          : code === "subscription_already_exists"
-            ? "כבר קיים בחשבון מנוי או ניסיון. אפשר לנהל אותו דרך כפתור ניהול החיוב."
-            : "פתיחת התשלום נכשלה. נסה שוב בעוד רגע.";
-      toast.error("התשלום עדיין לא זמין", message);
+      const explanation = explainError(code);
+      toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
       setBusy(null);
     }
   };
@@ -86,10 +81,15 @@ export default function AccountPage() {
     setBusy("portal");
     try {
       const response = await fetch("/api/billing/portal", { method: "POST" });
-      const body = await response.json();
-      if (!response.ok || !body.url) throw new Error();
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.url) throw new Error(body.error || "");
       window.location.href = body.url;
-    } catch { toast.error("אין עדיין מנוי פעיל לניהול"); setBusy(null); }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      const explanation = explainError(code, code ? undefined : 404);
+      toast.error(explanation.title, [explanation.detail, explanation.action].filter(Boolean).join(" "));
+      setBusy(null);
+    }
   };
 
   const activePlan = status?.subscription.plan_id || "free";
