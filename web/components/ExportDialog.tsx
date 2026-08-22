@@ -1,3 +1,4 @@
+import type { RenderRouteMessage } from "@/lib/render/renderRoute";
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,8 @@ export interface ExportResult {
 interface Props {
   open: boolean;
   rendering: boolean;
+  /** איפה הרינדור רץ *בפועל*. הכותרת וההערה נגזרות מזה ולא מהנחה. */
+  route: RenderRouteMessage;
   progress: number;
   elapsedSeconds: number;
   phase: string;
@@ -135,7 +138,7 @@ function ExportVideoPlayer({ src }: { src: string }) {
   );
 }
 
-export default function ExportDialog({ open, rendering, progress, elapsedSeconds, phase, error, result, onClose, onCancel, onRetry }: Props) {
+export default function ExportDialog({ open, rendering, route, progress, elapsedSeconds, phase, error, result, onClose, onCancel, onRetry }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -157,7 +160,7 @@ export default function ExportDialog({ open, rendering, progress, elapsedSeconds
             {rendering ? <Loader2 className="spin" size={21} /> : result ? <CheckCircle2 size={21} /> : <Film size={21} />}
           </div>
           <div>
-            <h2 id="export-title">{result ? "הסרטון מוכן להורדה" : error ? "הייצוא נעצר" : "מייצאים את הסרטון בענן"}</h2>
+            <h2 id="export-title">{result ? "הסרטון מוכן להורדה" : error ? "הייצוא נעצר" : route.titleHe}</h2>
             <p>{result ? "הסרטון רונדר בהצלחה. תוכל לצפות בו באיכות מלאה ולהוריד למכשיר שלך." : error || phase || "מכינים את הפרויקט לרינדור…"}</p>
           </div>
           <button type="button" className="iconbtn export-close" onClick={onClose} aria-label={rendering ? "הסתר מצב ייצוא" : "סגור"}><X size={17} /></button>
@@ -165,13 +168,13 @@ export default function ExportDialog({ open, rendering, progress, elapsedSeconds
 
         {rendering && (
           <div className="export-running" aria-live="polite">
-            <div className="export-progress-row"><strong>{percent}%</strong><span>{phase || "מרנדר בענן…"}</span></div>
+            <div className="export-progress-row"><strong>{percent}%</strong><span>{phase || route.titleHe}</span></div>
             <div className="export-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><i style={{ width: `${percent}%` }} /></div>
             <div className="export-stats">
               <span>עברו {formatDurationHe(elapsedSeconds)}</span>
               <span>{remaining == null ? "מחשב זמן שנותר…" : `נותרו בערך ${formatDurationHe(remaining)}`}</span>
             </div>
-            <div className="export-note">הרינדור מתבצע על שרתי הענן של Google. אפשר להסתיר חלון זה ולהמשיך לעבוד כרגיל.</div>
+            <div className="export-note">{route.noteHe}</div>
             <button type="button" className="btn ghost export-cancel" onClick={onCancel}><Square size={13} />בטל ייצוא</button>
           </div>
         )}

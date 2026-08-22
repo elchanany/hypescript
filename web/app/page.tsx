@@ -17,6 +17,7 @@ import { EditorApi, runCommand } from "@/lib/editor/commands";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
+import { cloudFailureReason, decideCloudRoute, renderRouteMessage, type CloudSkipReason, type RenderLocation } from "@/lib/render/renderRoute";
 import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
 import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
 import type { GiphyAssetItem } from "@/lib/creative/giphy";
@@ -300,6 +301,12 @@ export default function EditorPage() {
   const relinkInputRef = useRef<HTMLInputElement>(null);
   const relinkTargetIdRef = useRef<string | null>(null);
   const uploadingAssetsRef = useRef<Set<string>>(new Set());
+  // איפה הרינדור רץ בפועל, ולמה. חלון הייצוא קורא מכאן במקום להניח "ענן".
+  const [renderLocation, setRenderLocation] = useState<RenderLocation>("cloud");
+  const [renderSkipReason, setRenderSkipReason] = useState<CloudSkipReason | undefined>(undefined);
+  // ref במקביל ל-state: ההודעה בסוף הייצוא נקראת בתוך אותה פונקציה שקבעה את
+  // המיקום, לפני שה-state הספיק להתעדכן.
+  const renderLocationRef = useRef<RenderLocation>("cloud");
 
   useEffect(() => {
     try {
@@ -1305,13 +1312,29 @@ export default function EditorPage() {
       const audioClips = aid ? applyTrackMute(clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)), tracks) : [];
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
       const policy = projectId ? await getProjectPolicy(projectId) : null;
-      const cloudCapable = policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId
-        && edl.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
-        && audioClips.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
-        && overlays.every((overlay) => overlay.kind === "image" && !!mediaById(media, overlay.assetId || "")?.cloudAssetId)
-        && !(burnCaptions && subs?.length);
+      // ההחלטה ולמה — פונקציה טהורה (lib/render/renderRoute.ts) כדי שהסיבה
+      // שמוצגת למשתמש תהיה בדיוק הסיבה שהכריעה, ולא ניחוש של ה-UI.
+      const route = decideCloudRoute({
+        policyAllowsCloud: policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId,
+        allMediaInCloud:
+          edl.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
+          && audioClips.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
+          // רק שכבות תמונה נבדקות כאן; שכבת טקסט אין לה נכס, והיא נדחית בנפרד
+          // דרך hasTextOverlay — אחרת הסיבה שתוצג תהיה "המדיה לא בענן", שזה מטעה.
+          && overlays.filter((overlay) => overlay.kind === "image")
+            .every((overlay) => !!mediaById(media, overlay.assetId || "")?.cloudAssetId),
+        uploadInFlight: uploadingAssetsRef.current.size > 0,
+        hasTextOverlay: overlays.some((overlay) => overlay.kind !== "image"),
+        wantsBurnedCaptions: !!(burnCaptions && subs?.length),
+        // העובד הפרוס עדיין לא צורב כתוביות. כשזה ישתנה, הדגל הזה יגיע מ-
+        // /api/cloud/render/capabilities ולא יהיה קבוע כאן.
+        workerBurnsCaptions: false,
+      });
+      renderLocationRef.current = route.eligible ? "cloud" : "device";
+      setRenderLocation(renderLocationRef.current);
+      setRenderSkipReason(route.reason);
       let blob: Blob | null = null;
-      if (cloudCapable && policy?.cloudProjectId) {
+      if (route.eligible && policy?.cloudProjectId) {
         try {
           setPhase("מכין את הסרטון בשרת המהיר…");
           blob = await renderCloudProject({
@@ -1336,7 +1359,12 @@ export default function EditorPage() {
           }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
         } catch (cloudErr) {
           if (controller.signal.aborted) throw cloudErr;
+          // נפילה חזרה למכשיר מותרת — אבל אסור שהיא תישאר שקטה. המשתמש חייב
+          // לדעת שהמחשב שלו עובד עכשיו, ולמה.
           console.warn("Cloud render unavailable, falling back to local render:", cloudErr);
+          renderLocationRef.current = "device";
+          setRenderLocation("device");
+          setRenderSkipReason(cloudFailureReason(cloudErr));
           blob = null;
         }
       }
@@ -1357,7 +1385,12 @@ export default function EditorPage() {
       setChatOpen(true); localStorage.setItem("hs_chatOpen", "1");
       setProgress(1);
       setPhase("הרינדור הושלם");
-      toast.success("הייצוא הושלם", burnCaptions && subs?.length ? "כולל כתוביות צרובות" : undefined);
+      // אומרים איפה זה רץ בפועל — גם בהצלחה. אחרת אין למשתמש שום דרך לדעת
+      // למה ייצוא אחד לקח דקה והשני חצי שעה.
+      toast.success("הייצוא הושלם", [
+        renderLocationRef.current === "cloud" ? "רונדר בענן" : "רונדר על המכשיר",
+        burnCaptions && subs?.length ? "כולל כתוביות צרובות" : "",
+      ].filter(Boolean).join(" · "));
     } catch (e: any) {
       const message = controller.signal.aborted ? "הייצוא בוטל." : (e?.message || String(e));
       setExportError(message);
@@ -1793,6 +1826,7 @@ export default function EditorPage() {
       <ExportDialog
         open={exportOpen}
         rendering={rendering}
+        route={renderRouteMessage(renderLocation, renderSkipReason)}
         progress={progress}
         elapsedSeconds={renderElapsed}
         phase={phase}

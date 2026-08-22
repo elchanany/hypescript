@@ -39,7 +39,8 @@
     ".next-agent-verify/types/**/*.ts",
     ".next-agent-timeline-snapping-and-captions/types/**/*.ts",
     ".next-agent-multi-drag-snap/types/**/*.ts",
-    ".next-agent-billing/types/**/*.ts"
+    ".next-agent-billing/types/**/*.ts",
+    ".next-agent-renderroute/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
