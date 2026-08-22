@@ -1,5 +1,11 @@
 # ACTIVE_WORK.md
 
+## 2026-08-23 — landing motion and creator ecosystem polish
+- Added distinct motion stories across the landing page: cursor-led desktop editing, request/edit/result phases on tablet and phone, animated use-case tools, and staggered section micro-interactions with reduced-motion fallbacks.
+- Expanded the creative ecosystem map to six providers plus animated 9:16 output and branded TikTok, Instagram, YouTube and Facebook destinations.
+- Rebuilt the mobile use-case gallery into full-width documentary cards; the podcast crop now keeps both speakers visible.
+- Verification: 7 focused Vitest tests, `tsc --noEmit`, isolated production build (54/54 routes), and desktop/390px browser QA with zero console warnings or horizontal overflow.
+
 ## 2026-08-22 — landing demo and chat-media clarity
 - Rebuilt the landing editor simulation as an explicit conversation and visible edit sequence, including a real result card in the mobile chat column.
 - Added responsive, uncropped chat cards for video/audio/image/SRT and localized their controls in all five supported locales.

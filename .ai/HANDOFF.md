@@ -1,6 +1,12 @@
 # Goal
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
+## 2026-08-23 — motion-rich landing and provider story
+- Desktop, tablet and phone demos now visibly move through request, editing and completed-result phases instead of showing a static mockup.
+- The AI provider constellation cycles across ElevenLabs, OpenAI, Gemini, DeepSeek, Anthropic and Groq, then routes to a 9:16 deliverable and recognizable social destinations.
+- Use-case imagery has per-card motion/icons; mobile cards are single-column and the podcast image no longer clips either speaker.
+- Verification: 7 focused tests, TypeScript, isolated build (54/54 routes), responsive browser screenshots and clean console. Full-repo suite was not rerun because unrelated agent files are concurrently changing.
+
 ## 2026-08-22 — clear live demo, responsive chat media, and landing locale coverage
 - The hero demo now shows a readable request → assistant acknowledgement → live edit operation → playable finished-video card, with matching player/timeline direction and a slower result hold.
 - Chat output cards render video, audio, images and SRT without cropping, wrap controls on mobile, and localize all card controls in HE/EN/AR/RU/HI.

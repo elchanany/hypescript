@@ -1,6 +1,6 @@
 "use client";
 
-import { AudioWaveform, Film, Image, Sparkles, Users } from "@/components/icons";
+import { AudioWaveform, Camera, Captions, Film, Image, Music, Scissors, Sparkles, Users } from "@/components/icons";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { AppLocale } from "@/lib/i18n/config";
 
@@ -43,12 +43,18 @@ const ITEMS = [
   { image:"/brand/landing-usecase-product.png", icon:Sparkles, className:"product" },
   { image:"/brand/landing-usecase-family.png", icon:Users, className:"family" },
 ] as const;
+const TOOL_ICONS = [
+  [Scissors, Captions, AudioWaveform],
+  [Film, Music, Captions],
+  [Image, Music, Sparkles],
+  [Camera, Music, Users],
+] as const;
 
 export default function LandingUseCaseGallery() {
   const { locale } = useI18n();
   const copy = COPY[locale];
   return (
-    <section className="marketing-section landing-usecase-showcase" aria-labelledby="landing-usecases-title">
+    <section className="marketing-section landing-usecase-showcase hsx-reveal" aria-labelledby="landing-usecases-title">
       <header className="landing-usecase-head">
         <span>{copy.eyebrow}</span>
         <h2 id="landing-usecases-title">{copy.title}</h2>
@@ -57,6 +63,7 @@ export default function LandingUseCaseGallery() {
       <div className="landing-usecase-grid">
         {ITEMS.map(({ image, icon:Icon, className }, index) => {
           const [title, description, output] = copy.items[index];
+          const tools = TOOL_ICONS[index];
           return <article className={`landing-usecase-card ${className}`} key={className}>
             <img src={image} alt="" loading="lazy" />
             <div className="landing-usecase-shade" />
@@ -65,9 +72,12 @@ export default function LandingUseCaseGallery() {
               <h3>{title}</h3>
               <p>{description}</p>
             </div>
+            <div className="landing-usecase-tools" aria-hidden="true">{tools.map((Tool, toolIndex)=><i key={toolIndex}><Tool size={14}/></i>)}</div>
             {className === "podcast" && <div className="landing-usecase-wave" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/></div>}
             {className === "travel" && <div className="landing-usecase-progress" aria-hidden="true"><i /></div>}
             {className === "product" && <div className="landing-usecase-focus" aria-hidden="true"><Image size={16}/></div>}
+            {className === "family" && <div className="landing-usecase-stills" aria-hidden="true"><i/><i/><i/></div>}
+            <div className="landing-usecase-glint" aria-hidden="true" />
           </article>;
         })}
       </div>

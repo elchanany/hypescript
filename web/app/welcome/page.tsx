@@ -93,7 +93,7 @@ export default function WelcomePage() {
       <LandingHebrewOnly>
       <div className="hsx-kinetic" aria-hidden="true"><div><span>TikTok מתוך ראיון</span><i>✦</i><span>מצגת מתמונות וקול</span><i>✦</i><span>סרטון מוצר ממותג</span><i>✦</i><span>קליפים מפודקאסט</span><i>✦</i><span>מבקשים בשיחה</span><i>✦</i><span>מקבלים סרטון מוכן</span><i>✦</i></div></div>
 
-      <section className="marketing-proof" aria-label="עקרונות המוצר">
+      <section className="marketing-proof hsx-reveal" aria-label="עקרונות המוצר">
         <article><BadgeCheck size={18} /><div><strong>דיוק לפני אוטומציה</strong><span>כל שינוי נשאר גלוי וניתן לביטול</span></div></article>
         <article><Gauge size={18} /><div><strong>בקשה אחת, הרבה פעולות</strong><span>חיתוך, עיצוב, כתוביות ופורמטים באותו פרויקט</span></div></article>
         <article><ShieldCheck size={18} /><div><strong>שליטה בעלויות</strong><span>מכסות קשיחות, בלי חיובי חריגה אוטומטיים</span></div></article>
@@ -122,7 +122,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-section marketing-lab">
+      <section className="marketing-section marketing-lab hsx-reveal">
         <div className="marketing-section-head"><span>הצ׳אט והעריכה מחוברים</span><h2>שיחה שמזיזה דברים באמת</h2><p>כל בקשה הופכת לפעולות שרואים על הסרטון ועל הטיימליין, ואפשר להמשיך משם בידיים.</p></div>
         <div className="marketing-bento">
           <article className="bento-command"><Command size={22} /><span>Conversational editing</span><h3>כותבים בקשה.<br />מקבלים עריכה.</h3><div className="command-demo"><i>הפוך את הפרק לקליפ אנכי עם כותרת וכתוביות</i><b><Zap size={13} /> תוכנית העריכה מוכנה</b></div></article>
@@ -133,14 +133,14 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-section" id="features">
+      <section className="marketing-section hsx-reveal" id="features">
         <div className="marketing-section-head"><span><T id="features.eyebrow" /></span><h2><T id="features.title" /></h2><p><T id="features.copy" /></p></div>
         <div className="marketing-feature-grid">
           {features.map(({ icon: Icon, title, text }, index) => <article key={title} className={`feature-${index + 1}`}><Icon size={22} /><small>0{index + 1}</small><h3>{title}</h3><p>{text}</p></article>)}
         </div>
       </section>
 
-      <section className="marketing-section marketing-before-after">
+      <section className="marketing-section marketing-before-after hsx-reveal">
         <div className="marketing-section-head"><span>כל העבודה במקום אחד</span><h2>מהרעיון ועד הקובץ המוכן</h2><p>תמלול, חיתוך, כתוביות, עיצוב וייצוא נשארים מחוברים לאותו פרויקט.</p></div>
         <div className="marketing-compare">
           <article className="old"><span>הדרך הישנה</span><ul><li>ללמוד איפה מסתתר כל כלי</li><li>להעתיק כתוביות בין תוכנות</li><li>לאבד גרסאות וקבצים בדרך</li><li>לבנות ידנית כל פורמט מחדש</li></ul></article>
@@ -149,7 +149,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-section marketing-how" id="how">
+      <section className="marketing-section marketing-how hsx-reveal" id="how">
         <div className="marketing-section-head"><span><T id="how.eyebrow" /></span><h2><T id="how.title" /></h2></div>
         <div className="marketing-steps">
           <article><b>01</b><Film size={24} /><h3>מעלים</h3><p>וידאו, אודיו, תמונות ולוגו נשמרים ישירות בפרויקט הענן.</p></article>
@@ -158,7 +158,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="marketing-section" id="for-whom">
+      <section className="marketing-section hsx-reveal" id="for-whom">
         <div className="marketing-section-head"><span><T id="audience.eyebrow" /></span><h2><T id="audience.title" /></h2></div>
         <div className="marketing-use-cases">{useCases.map((item, index) => <article key={item.title}><b>0{index + 1}</b><WandSparkles size={21} /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
@@ -167,7 +167,7 @@ export default function WelcomePage() {
       <LandingDeviceShowcase />
 
       <LandingHebrewOnly>
-      <section className="marketing-section" id="pricing">
+      <section className="marketing-section hsx-reveal" id="pricing">
         <div className="marketing-section-head"><span><T id="pricing.eyebrow" /></span><h2><T id="pricing.title" /></h2><p><T id="pricing.copy" /></p></div>
         <div className="marketing-pricing">
           {plans.map((plan) => <article key={plan.name} className={plan.featured ? "featured" : ""}>{plan.featured && <em>הכי מתאים ליוצרים</em>}<h3>{plan.name}</h3>{plan.intro && <div className="marketing-intro-price">{plan.intro}</div>}<div className="marketing-price">{plan.price}<small>{plan.suffix}</small></div><p>{plan.text}</p><ul>{plan.items.map((item) => <li key={item}><Check size={15} />{item}</li>)}</ul><Link href={plan.href} className={`btn ${plan.featured ? "primary" : "secondary"}`}>{plan.cta}</Link>{plan.intro && <small className="marketing-card-note"><CreditCard size={12} />כרטיס נדרש · המכסה המלאה נפתחת בחיוב הראשון</small>}</article>)}
@@ -175,7 +175,7 @@ export default function WelcomePage() {
         <p className="marketing-billing-note">בתקופת הניסיון: 5 פרויקטים, 1GB אחסון ו־20 דקות רינדור. כרגע ה־Checkout ב־Test Mode בלבד, ולכן אין חיוב אמיתי.</p>
       </section>
 
-      <section className="marketing-section marketing-faq">
+      <section className="marketing-section marketing-faq hsx-reveal">
         <div className="marketing-section-head"><span><T id="faq.eyebrow" /></span><h2><T id="faq.title" /></h2></div>
         <div className="marketing-faq-list">
           <details><summary>מתי מחייבים את הכרטיס?</summary><p>לא במהלך חודש הניסיון. לאחר מכן המנוי מתחדש לפי המסלול שבחרת, אלא אם ביטלת לפני מועד החיוב.</p></details>
@@ -197,7 +197,7 @@ export default function WelcomePage() {
       </section>
       </LandingHebrewOnly>
 
-      <section className="marketing-final hsx-final-stage"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=/dashboard" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
+      <section className="marketing-final hsx-final-stage hsx-reveal"><div className="hsx-final-beam" /><div className="marketing-final-brand"><BrandLogo variant="horizontal" size="md" theme="dark" decorative /></div><span><T id="final.eyebrow" /></span><h2><T id="final.line1" /><br /><T id="final.line2" /></h2><p><T id="final.copy" /></p><Link href="/login?next=/dashboard" className="btn primary marketing-cta"><T id="hero.start" /> <ArrowLeft size={17} /></Link><small><T id="hero.trust" /></small></section>
       <footer className="marketing-footer"><BrandLogo variant="horizontal" size="xs" theme="auto" decorative /><span>© 2026 Hypescript</span><nav><Link href="/legal/privacy"><T id="footer.privacy" /></Link><Link href="/legal/terms"><T id="footer.terms" /></Link><Link href="/legal/refund"><T id="footer.refund" /></Link><Link href="/legal/accessibility"><T id="footer.accessibility" /></Link><Link href="/login"><T id="footer.login" /></Link></nav></footer>
     </main>
   );
