@@ -47,6 +47,27 @@ libass הוא מנוע טיפוגרפיה אחר. שבירת שורות וריו
 לא ידווח `subtitles: true`, ולכן שום דבר בהתנהגות לא משתנה. הפריסה היא פעולה
 של בעל החשבון, בדיוק כמו המעבר לחיוב אמיתי.
 
+## מצב: נפרס
+
+הפריסה בוצעה. `gcloud run deploy hypescript-render --source cloud-render-worker
+--region me-west1` בנה ב-Cloud Build והעלה את `hypescript-render-00005-x2h`,
+שמקבלת 100% מהתעבורה. הגרסה הקודמת `hypescript-render-00004-f2n` נשארה, וחזרה
+אליה היא פקודה אחת:
+
+```bash
+gcloud run services update-traffic hypescript-render --region me-west1 --to-revisions hypescript-render-00004-f2n=100
+```
+
+`/health` מחזיר בפועל:
+
+```json
+{"ok":true,"activeJobs":0,"capabilities":{"subtitles":true,"imageOverlays":true,"textOverlays":false,"audioMix":true}}
+```
+
+**מה עדיין לא נבדק**: אותיות עבריות על ה-image הפרוס. הגופנים ב-Dockerfile
+והבדיקות עוברות מול FFmpeg אמיתי מקומית, אבל אף שיעור אמיתי עוד לא נצרב דרך
+הגרסה הפרוסה. עד שזה ייבדק, אין לקבוע שכתוביות בענן זהות לתצוגה המקדימה.
+
 ## אחרי הפריסה — איך לוודא
 
 ```bash
@@ -63,5 +84,7 @@ curl -s -H "Authorization: Bearer $CLOUD_RENDER_TOKEN" "$CLOUD_RENDER_URL/health
   טקסט ל-PNG בדפדפן ולהעלות אותה כנכס, כי מסלול התמונות כבר עובד.
 - **העלאה שרצה ברקע** — כבר לא מוריד בשקט לרינדור מקומי; ההודעה אומרת להמתין
   לסיום ההעלאה, שזו פעולה שהמשתמש יכול לעשות.
-- **קיבולת** — `--concurrency 1 --max-instances 3` הם שלושה רינדורים בו-זמנית
-  בכל המערכת. מספיק היום, תקרה קשיחה ברגע שיש לקוחות משלמים.
+- **קיבולת** — נמדד בשירות הפרוס, לא הונח: `containerConcurrency: 1` ביחד עם
+  `autoscaling.knative.dev/maxScale: '1'`. כלומר **רינדור אחד בו-זמנית בכל
+  המערכת**, לא שלושה. משתמש שני ממתין בתור עד שהראשון סיים. מספיק כל עוד יש
+  משתמש אחד, תקרה קשיחה ברגע שיש לקוחות משלמים.
