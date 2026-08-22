@@ -72,7 +72,6 @@ export default function WelcomePage() {
       </header>
 
       <section className="marketing-hero">
-        <div className="marketing-kicker"><Sparkles size={14} /><T id="hero.kicker" /></div>
         <h1><T id="hero.line1" /><br /><span><T id="hero.line2" /></span></h1>
         <p><T id="hero.copy" /></p>
         <div className="marketing-hero-actions">
