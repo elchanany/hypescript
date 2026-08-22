@@ -26,9 +26,9 @@ import type { VectorElement } from "@/lib/creative/iconify";
 import type { VectorShape } from "@/lib/creative/shapes";
 import type { MotionAsset } from "@/lib/creative/motionAssets";
 import { loadGoogleFont } from "@/lib/creative/fonts";
-import { deleteProject, ensureProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
+import { deleteProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil } from "@/components/icons";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen } from "@/components/icons";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -290,7 +290,7 @@ export default function EditorPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const projectName = useMemo(() => projects.find((p) => p.id === projectId)?.name || "", [projects, projectId]);
-  const [projDlg, setProjDlg] = useState<"none" | "create" | "rename" | "delete">("none");
+  const [projDlg, setProjDlg] = useState<"none" | "create" | "createPrompt" | "rename" | "delete">("none");
   const [burnCaptions, setBurnCaptions] = useState(true);
   const [activeTool, setActiveTool] = useState<"select" | "blade">("select");
   const [nameDlg, setNameDlg] = useState<
@@ -477,14 +477,17 @@ export default function EditorPage() {
       }
 
       if (!existing.length) {
-        await ensureProject();
-        existing = await listProjects();
+        setProjects([]);
+        setProjectId(null);
+        setRestored(true);
+        if (localStorage.getItem("hs_editor_tour_done") === "1") setProjDlg("createPrompt");
+        return;
       }
 
       const requested = requestedProjectId(existing, queryParam);
       const currentSaved = await getCurrentProjectId();
       const validSaved = currentSaved && existing.some((p) => p.id === currentSaved) ? currentSaved : null;
-      const id = requested || validSaved || (existing.length ? existing[0].id : await ensureProject());
+      const id = requested || validSaved || existing[0].id;
 
       if (id) {
         await setCurrentProject(id);
@@ -1806,7 +1809,7 @@ export default function EditorPage() {
         onOpenTour={() => setTourOpen(true)}
       />
 
-      {!restored && <div className="editor-hydration-loading"><LoadingState label="טוען את הפרויקט, המדיה וציר הזמן…" lines={4} /></div>}
+      {!restored && <div className="editor-hydration-loading"><LoadingState label="מכין את סביבת העריכה…" variant="editor" /></div>}
 
       {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}
 
@@ -1816,6 +1819,7 @@ export default function EditorPage() {
           setTourOpen(false);
           localStorage.removeItem("hs_editor_tour_pending");
           localStorage.setItem("hs_editor_tour_done", "1");
+          if (!projectId) setProjDlg("createPrompt");
         }}
         onFinish={() => {
           setTourOpen(false);
@@ -1825,9 +1829,16 @@ export default function EditorPage() {
           setChatOpen(true);
           localStorage.setItem("hs_chatFocus", "0");
           localStorage.setItem("hs_chatOpen", "1");
-          window.dispatchEvent(new CustomEvent("hypescript:chat-example", { detail: "הסר שתיקות ונשימות, צור כתוביות בעברית והכן לי סרטון מוכן לייצוא." }));
+          if (projectId) window.dispatchEvent(new CustomEvent("hypescript:chat-example", { detail: "הסר שתיקות ונשימות, צור כתוביות בעברית והכן לי סרטון מוכן לייצוא." }));
+          else setProjDlg("createPrompt");
         }}
       />
+
+      {restored && !projectId && !tourOpen && <section className="editor-project-empty" aria-labelledby="editor-project-empty-title">
+        <span><FolderOpen size={28} strokeWidth={1.5} /></span>
+        <div><h2 id="editor-project-empty-title">עדיין אין כאן פרויקט</h2><p>צור פרויקט ראשון, ואז אפשר להעלות מדיה ולבקש מהסוכן להתחיל לערוך.</p></div>
+        <button type="button" className="btn primary tall" onClick={() => setProjDlg("createPrompt")}><Plus size={15} />יצירת פרויקט</button>
+      </section>}
 
       <ExportDialog
         open={exportOpen}
@@ -2082,7 +2093,7 @@ export default function EditorPage() {
                 cycleHeight={cycleHeight} reorderTrack={reorderTrack}
               />
             ) : (
-              <div className="tl-empty">טען מדיה כדי להתחיל — גרור קבצים מהספרייה לציר, או לחתוך/לפצל. אפשר גם לבקש מהסוכן ב-AI.</div>
+              <div className="tl-empty"><strong>ציר הזמן עדיין ריק</strong><span>העלה מדיה בספרייה משמאל, ואז גרור אותה לכאן או בקש מהסוכן לערוך.</span></div>
             )}
           </div>
         </div>
@@ -2130,6 +2141,14 @@ export default function EditorPage() {
         confirmLabel="צור"
         onClose={() => setProjDlg("none")}
         onSubmit={submitCreate}
+      />
+      <ConfirmDialog
+        open={projDlg === "createPrompt"}
+        title="אין עדיין פרויקט"
+        message="כדי להעלות מדיה ולהתחיל לערוך צריך ליצור פרויקט. ליצור עכשיו את הפרויקט הראשון שלך?"
+        confirmLabel="כן, צור פרויקט"
+        onClose={() => setProjDlg("none")}
+        onConfirm={() => { void submitCreate("הפרויקט הראשון שלי"); }}
       />
       <NameDialog
         open={projDlg === "rename"}

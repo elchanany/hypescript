@@ -142,7 +142,11 @@ export default function MediaPanel({
         }}>
         {media.length === 0 ? (
           <div className={`dropzone ${over ? "over" : ""}`} onClick={() => fileRef.current?.click()}>
-            גרור לכאן קבצי וידאו, שמע או תמונה — או לחץ להעלאה
+            <span className="dropzone-icon"><Upload size={22} /></span>
+            <strong>העלה מדיה כדי להתחיל</strong>
+            <span>וידאו, תמונות, לוגו או אודיו</span>
+            <button type="button" className="btn primary sm">בחירת קבצים</button>
+            <small>אפשר גם לגרור קבצים לכאן</small>
           </div>
         ) : view === "grid" ? (
           <div className="media-grid">

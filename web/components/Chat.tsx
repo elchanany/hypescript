@@ -39,7 +39,7 @@ import {
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
-import { UploadProgressCard } from "@/components/LoadingState";
+import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
 import type { TransferProgress } from "@/lib/ui/progress";
 import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
@@ -944,7 +944,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       </section>}
 
       <div className="chat-body2" ref={scrollRef}>
-        {!restoredChat && <div className="chat-loading-stack" aria-label="טוען את השיחה"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>}
+        {!restoredChat && <LoadingState label="טוען את השיחה…" variant="chat" compact />}
         {restoredChat && items.length === 0 && (
           inFocusMode ? (
             <div className="chat-gpt-hero">

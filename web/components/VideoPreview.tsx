@@ -556,7 +556,7 @@ const VideoPreview = forwardRef<PreviewHandle, Props>(function VideoPreview(prop
             )}
           </div>
         )}
-      </div> : <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><span>טען מדיה כדי לראות תצוגה מקדימה</span></div>}
+      </div> : <div className="pv-empty"><Film size={40} strokeWidth={1.25} /><strong>אין עדיין מדיה בפרויקט</strong><span>העלה וידאו, תמונה או אודיו מספריית המדיה כדי לראות אותם כאן.</span></div>}
     </div>
     <div className="pv-scrubber-wrap" dir="ltr">
       <div

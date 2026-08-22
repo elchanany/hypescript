@@ -497,7 +497,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {loading || projectsLoading ? <div className="dash-project-loading"><LoadingState label="טוען ומסנכרן את הפרויקטים…" lines={4} /></div> : projects.length === 0 ? (
+        {loading || projectsLoading ? <div className="dash-project-loading"><LoadingState label="טוען ומסנכרן את הפרויקטים…" variant="projects" /></div> : projects.length === 0 ? (
           <div className="dash-empty">
             <FolderOpen size={40} strokeWidth={1.25} />
             <p>אין פרויקטים עדיין.</p>

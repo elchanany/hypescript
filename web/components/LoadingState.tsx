@@ -4,12 +4,21 @@ import { useEffect, useState } from "react";
 import { Cloud, Loader2 } from "@/components/icons";
 import { formatBytes, formatRemaining, remainingSeconds, type TransferProgress } from "@/lib/ui/progress";
 
-export function LoadingState({ label = "טוען נתונים…", lines = 3, compact = false }: { label?: string; lines?: number; compact?: boolean }) {
-  return <div className={`loading-state${compact ? " compact" : ""}`} role="status" aria-live="polite" aria-label={label}>
+export type LoadingVariant = "lines" | "projects" | "editor" | "media" | "chat" | "timeline";
+
+function SkeletonLayout({ variant, lines }: { variant: LoadingVariant; lines: number }) {
+  if (variant === "projects") return <div className="loading-project-grid" aria-hidden="true">{Array.from({ length: 4 }, (_, index) => <i className="skeleton-shimmer" key={index}><b /><span /><span /></i>)}</div>;
+  if (variant === "editor") return <div className="loading-editor-shell" aria-hidden="true"><i className="skeleton-shimmer media" /><i className="skeleton-shimmer preview" /><i className="skeleton-shimmer chat" /><i className="skeleton-shimmer timeline" /></div>;
+  if (variant === "media") return <div className="loading-media-grid" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <i className="skeleton-shimmer" key={index} />)}</div>;
+  if (variant === "chat") return <div className="loading-chat-bubbles" aria-hidden="true"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>;
+  if (variant === "timeline") return <div className="loading-timeline-tracks" aria-hidden="true"><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></div>;
+  return <div className="loading-state-lines" aria-hidden="true">{Array.from({ length: lines }, (_, index) => <i className="skeleton-shimmer" key={index} />)}</div>;
+}
+
+export function LoadingState({ label = "טוען נתונים…", lines = 3, compact = false, variant = "lines" }: { label?: string; lines?: number; compact?: boolean; variant?: LoadingVariant }) {
+  return <div className={`loading-state variant-${variant}${compact ? " compact" : ""}`} role="status" aria-live="polite" aria-label={label}>
     <div className="loading-state-title"><Loader2 className="spin" size={16} /><span>{label}</span></div>
-    <div className="loading-state-lines" aria-hidden="true">
-      {Array.from({ length: lines }, (_, index) => <i className="skeleton-shimmer" key={index} />)}
-    </div>
+    <SkeletonLayout variant={variant} lines={lines} />
   </div>;
 }
 

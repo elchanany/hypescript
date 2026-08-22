@@ -4341,3 +4341,32 @@ html[data-locale="hi"] :is(.topbar,.dashboard-shell,.settings-page,.account-page
   .leftpanel { width: 196px; }
   .inspector2 { width: 216px; }
 }
+
+/* Context-shaped loading states: every surface previews its real content. */
+.loading-state.variant-projects,.loading-state.variant-editor{background:color-mix(in srgb,var(--panel) 92%,transparent)}
+.loading-project-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.loading-project-grid>i{min-height:154px;padding:10px;display:grid;grid-template-rows:88px 12px 9px;gap:9px;border:1px solid var(--border);border-radius:var(--r-lg);background-color:var(--panel-2)}
+.loading-project-grid b,.loading-project-grid span{display:block;border-radius:var(--r-sm);background:color-mix(in srgb,var(--text) 8%,transparent)}
+.loading-project-grid span:last-child{width:62%}
+.loading-editor-shell{height:min(420px,52vh);display:grid;grid-template-columns:18% minmax(0,1fr) 24%;grid-template-rows:minmax(0,1fr) 34%;grid-template-areas:"media preview chat" "media timeline chat";gap:8px}
+.loading-editor-shell>i{display:block;border:1px solid var(--border);border-radius:var(--r-lg);background-color:var(--panel-2)}
+.loading-editor-shell .media{grid-area:media}.loading-editor-shell .preview{grid-area:preview}.loading-editor-shell .chat{grid-area:chat}.loading-editor-shell .timeline{grid-area:timeline}
+.loading-media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.loading-media-grid i{display:block;aspect-ratio:1.35;border-radius:var(--r-md);background-color:var(--panel-2)}
+.loading-chat-bubbles{display:grid;gap:9px}.loading-chat-bubbles i{display:block;width:72%;height:48px;border-radius:16px 16px 5px 16px;background-color:var(--panel-2)}.loading-chat-bubbles i:nth-child(2){width:61%;justify-self:end;border-radius:16px 16px 16px 5px}.loading-chat-bubbles i:nth-child(3){width:54%}
+.loading-timeline-tracks{display:grid;gap:6px}.loading-timeline-tracks i{display:block;height:26px;border-radius:6px;background-color:var(--panel-2)}.loading-timeline-tracks i:nth-child(2){width:84%}.loading-timeline-tracks i:nth-child(3){width:65%}
+
+.editor-project-empty{position:fixed;z-index:calc(var(--z-modal) - 2);inset:calc(var(--topbar-h) + 18px) 18px 18px;display:grid;place-content:center;justify-items:center;gap:16px;padding:28px;text-align:center;border:1px solid var(--border);border-radius:var(--r-xl);background:radial-gradient(circle at 50% 35%,var(--accent-tint),transparent 20rem),color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px)}
+.editor-project-empty>span{width:62px;aspect-ratio:1;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:20px;color:var(--accent);background:var(--accent-tint);box-shadow:0 16px 44px color-mix(in srgb,var(--accent) 14%,transparent)}
+.editor-project-empty h2{margin:0;font-size:clamp(24px,3vw,38px)}.editor-project-empty p{max-width:480px;margin:8px 0 0;color:var(--text-2);line-height:1.7}.editor-project-empty .btn{margin-top:4px}
+
+.dropzone{min-height:220px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer}
+.dropzone-icon{width:48px;aspect-ratio:1;display:grid;place-items:center;margin-bottom:4px;border-radius:16px;color:var(--accent);background:var(--accent-tint)}
+.dropzone strong{color:var(--text);font-size:14px}.dropzone>span:not(.dropzone-icon){color:var(--text-2);font-size:11px}.dropzone small{color:var(--text-3);font-size:10px}.dropzone .btn{margin-top:5px;pointer-events:none}
+.pv-empty{max-width:360px;margin:auto;padding:20px;text-align:center}.pv-empty strong{color:var(--text);font-size:14px}.pv-empty span{max-width:310px;color:var(--text-3);font-size:12px;line-height:1.65}
+.tl-empty{display:flex;flex-direction:column;align-items:center;gap:6px}.tl-empty strong{color:var(--text-2);font-size:13px}.tl-empty span{max-width:520px}
+
+@media(max-width:720px){
+  .loading-project-grid{grid-template-columns:1fr 1fr}.loading-project-grid>i:nth-child(n+3){display:none}
+  .loading-editor-shell{height:58vh;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 27% 22%;grid-template-areas:"preview" "chat" "timeline"}.loading-editor-shell .media{display:none}
+  .editor-project-empty{inset:calc(var(--topbar-h) + 8px) 8px calc(var(--mobile-editor-nav-h,64px) + 8px);padding:20px;border-radius:var(--r-lg)}
+}
