@@ -18,6 +18,7 @@ import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
 import { cloudFailureReason, decideCloudRoute, renderRouteMessage, type CloudSkipReason, type RenderLocation } from "@/lib/render/renderRoute";
+import { buildAssFile } from "@/lib/render/assSubtitles";
 import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
 import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
 import type { GiphyAssetItem } from "@/lib/creative/giphy";
@@ -44,7 +45,7 @@ import VideoPreview, { PreviewHandle } from "@/components/VideoPreview";
 import Timeline from "@/components/Timeline";
 import ExportDialog, { ExportResult } from "@/components/ExportDialog";
 import { getProjectPolicy } from "@/lib/projects/policy";
-import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, listCloudProjects, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset } from "@/lib/cloud/client";
+import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, listCloudProjects, renameCloudProject, renderCloudProject, saveCloudProjectState, uploadCloudAsset, fetchRenderCapabilities } from "@/lib/cloud/client";
 import { createProjectWithPolicy, ensureCloudProjectId, syncCloudProjects } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
@@ -1312,6 +1313,10 @@ export default function EditorPage() {
       const audioClips = aid ? applyTrackMute(clipsOnTrack(clips, aid, primaryVideoTrackId(tracks)), tracks) : [];
       if (!edl.length && audioClips.length) edl = [{ id: uid("g"), sourceId: "__gap__", start: 0, end: totalDur(audioClips), trackId: primaryVideoTrackId(tracks) }];
       const policy = projectId ? await getProjectPolicy(projectId) : null;
+      // מה שרת הייצוא שפרוס *כרגע* יודע לעשות. עובד ישן לא מדווח על צריבת
+      // כתוביות, ואז הייצוא ממשיך בדפדפן בדיוק כמו קודם — במקום להחזיר וידאו
+      // "מוצלח" בלי כתוביות.
+      const workerCaps = await fetchRenderCapabilities();
       // ההחלטה ולמה — פונקציה טהורה (lib/render/renderRoute.ts) כדי שהסיבה
       // שמוצגת למשתמש תהיה בדיוק הסיבה שהכריעה, ולא ניחוש של ה-UI.
       const route = decideCloudRoute({
@@ -1326,9 +1331,7 @@ export default function EditorPage() {
         uploadInFlight: uploadingAssetsRef.current.size > 0,
         hasTextOverlay: overlays.some((overlay) => overlay.kind !== "image"),
         wantsBurnedCaptions: !!(burnCaptions && subs?.length),
-        // העובד הפרוס עדיין לא צורב כתוביות. כשזה ישתנה, הדגל הזה יגיע מ-
-        // /api/cloud/render/capabilities ולא יהיה קבוע כאן.
-        workerBurnsCaptions: false,
+        workerBurnsCaptions: workerCaps.subtitles,
       });
       renderLocationRef.current = route.eligible ? "cloud" : "device";
       setRenderLocation(renderLocationRef.current);
@@ -1355,6 +1358,9 @@ export default function EditorPage() {
               x: overlay.transform.x, y: overlay.transform.y, width: overlay.transform.w, height: overlay.transform.h,
               rotation: overlay.transform.rotation, opacity: overlay.transform.opacity, fadeIn: overlay.fadeIn, fadeOut: overlay.fadeOut,
             })),
+            ...(burnCaptions && subs?.length
+              ? { subtitlesAss: buildAssFile(subs, captionStyle, { width: canvas.width, height: canvas.height }) }
+              : {}),
             target: { width: canvas.width, height: canvas.height, fps: policy.fps },
           }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
         } catch (cloudErr) {

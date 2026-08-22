@@ -4,6 +4,7 @@ import { getRendererConfig, getR2Config } from "@/lib/cloud/config";
 import { renderObjectKey } from "@/lib/cloud/r2";
 import { cloudQuotaError } from "@/lib/cloud/quota";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
+import { getWorkerCapabilities } from "@/lib/cloud/workerCapabilities.server";
 
 interface ClipInput { assetId?: string; start: number; end: number; gap?: boolean }
 interface AudioInput { assetId: string; start: number; end: number; timelineStart: number; volume: number; fadeIn: number; fadeOut: number }
@@ -45,6 +46,20 @@ export async function POST(request: Request) {
   const audioClips = parseAudio(body.audioClips);
   const overlays = parseOverlays(body.overlays);
   if (!projectId || !clips || !audioClips || !overlays) return NextResponse.json({ error: "invalid_render_plan" }, { status: 400 });
+
+  // כתוביות צרובות: נשלחות כקובץ ASS מוכן, כדי שהעיצוב ייקבע במקום אחד
+  // (lib/render/assSubtitles.ts) ולא ישוכפל בעובד. נדחה מפורשות אם העובד
+  // הפרוס אינו תומך — עדיף שגיאה ברורה מאשר וידאו "מוצלח" בלי כתוביות.
+  const subtitlesAss = typeof body.subtitlesAss === "string" ? body.subtitlesAss : "";
+  if (subtitlesAss) {
+    if (Buffer.byteLength(subtitlesAss, "utf8") > 4 * 1024 * 1024 || !subtitlesAss.includes("[Events]")) {
+      return NextResponse.json({ error: "invalid_subtitles" }, { status: 400 });
+    }
+    const capabilities = await getWorkerCapabilities();
+    if (!capabilities.subtitles) {
+      return NextResponse.json({ error: "worker_cannot_burn_subtitles" }, { status: 409 });
+    }
+  }
   const project = await auth.supabase.from("cloud_projects").select("id").eq("id", projectId).single();
   if (project.error || !project.data) return NextResponse.json({ error: "project_not_found" }, { status: 404 });
 
@@ -75,6 +90,7 @@ export async function POST(request: Request) {
     clips,
     audioClips,
     overlays,
+    ...(subtitlesAss ? { subtitlesAss } : {}),
     target: {
       width: Math.max(320, Math.min(3840, Number(body.target?.width) || 1920)),
       height: Math.max(240, Math.min(2160, Number(body.target?.height) || 1080)),

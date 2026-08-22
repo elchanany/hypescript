@@ -1,6 +1,6 @@
 import express from "express";
 import { createWriteStream } from "node:fs";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -12,7 +12,20 @@ const missing = required.filter((name) => !process.env[name]);
 if (missing.length) throw new Error(`Missing environment variables: ${missing.join(", ")}`);
 
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+// גוף הבקשה כולל עכשיו גם קובץ ASS של הכתוביות. הרצאה ארוכה עם כתוביות
+// מצטברות מגיעה בקלות למאות KB, ולכן 2mb כבר לא מספיק.
+app.use(express.json({ limit: "12mb" }));
+
+// מה העובד *הזה* יודע לעשות. הצד של האתר קורא את זה מ-/health ומחליט לפיו,
+// כדי שהפעלת יכולת חדשה לא תדרוש פריסה מתואמת של שני הצדדים: עובד ישן פשוט
+// לא מדווח עליה, והאתר ממשיך לרנדר מקומית כמו קודם במקום לייצר פלט שגוי.
+const WORKER_CAPABILITIES = Object.freeze({
+  subtitles: true,      // צריבת כתוביות מקובץ ASS שנשלח בבקשה
+  imageOverlays: true,
+  textOverlays: false,  // עדיין לא — שכבת טקסט מרונדרת בדפדפן
+  audioMix: true,
+});
+const MAX_SUBTITLES_BYTES = 4 * 1024 * 1024;
 const active = new Map();
 const s3 = new S3Client({
   region: "auto",
@@ -25,9 +38,9 @@ function authorized(req, res, next) {
   next();
 }
 
-function run(command, args, signal, onProgress) {
+function run(command, args, signal, onProgress, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"], ...(cwd ? { cwd } : {}) });
     let stderr = "";
     let progressBuffer = "";
     child.stderr.on("data", (chunk) => {
@@ -81,6 +94,11 @@ function validJob(body) {
   const ids = new Set(body.inputs.map((input) => input.id));
   const audio = Array.isArray(body.audioClips) ? body.audioClips : [];
   const overlays = Array.isArray(body.overlays) ? body.overlays : [];
+  if (body.subtitlesAss != null) {
+    if (typeof body.subtitlesAss !== "string") return false;
+    if (Buffer.byteLength(body.subtitlesAss, "utf8") > MAX_SUBTITLES_BYTES) return false;
+    if (!body.subtitlesAss.includes("[Events]")) return false; // לא ASS — לא נכתוב קובץ אקראי לדיסק
+  }
   return body.inputs.every((input) => typeof input.id === "string" && typeof input.objectKey === "string")
     && body.clips.every((clip) => (clip.gap === true || ids.has(clip.assetId)) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && clip.start >= 0 && clip.end > clip.start)
     && audio.every((clip) => ids.has(clip.assetId) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && Number.isFinite(clip.timelineStart))
@@ -186,6 +204,15 @@ async function render(body, controller) {
       videoLabel = next;
     }
 
+    // צריבת כתוביות: אחרי כל השכבות, כדי שהכתוביות תמיד למעלה — כמו בתצוגה
+    // המקדימה. הקובץ נכתב לתיקיית העבודה והמסנן מקבל שם יחסי, כי cwd של
+    // התהליך מוגדר לאותה תיקייה — כך אין בעיית בריחה של נתיב בכלל.
+    if (typeof body.subtitlesAss === "string" && body.subtitlesAss.trim()) {
+      await writeFile(join(work, "subs.ass"), body.subtitlesAss, "utf8");
+      filters.push(`[${videoLabel}]ass=filename=subs.ass[vsub]`);
+      videoLabel = "vsub";
+    }
+
     const output = join(work, "output.mp4");
     args.push("-filter_complex", filters.join(";"), "-map", `[${videoLabel}]`, "-map", `[${audioLabel}]`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-threads", "0", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-t", totalDuration.toFixed(6), "-progress", "pipe:2", "-nostats", "-y", output);
     let lastProgressAt = 0;
@@ -195,7 +222,7 @@ async function render(body, controller) {
       lastProgressAt = now;
       const progress = 0.05 + 0.88 * Math.max(0, Math.min(1, encodedSeconds / Math.max(0.1, totalDuration)));
       void callback(body.callbackUrl, { jobId: body.jobId, status: "running", progress }).catch(() => {});
-    });
+    }, work);
     await callback(body.callbackUrl, { jobId: body.jobId, status: "running", progress: 0.95 });
     const bytes = await readFile(output);
     await s3.send(new PutObjectCommand({ Bucket: body.bucket, Key: body.outputKey, Body: bytes, ContentType: "video/mp4" }), { abortSignal: controller.signal });
@@ -218,7 +245,7 @@ async function render(body, controller) {
   }
 }
 
-app.get("/health", (_req, res) => res.json({ ok: true, activeJobs: active.size }));
+app.get("/health", (_req, res) => res.json({ ok: true, activeJobs: active.size, capabilities: WORKER_CAPABILITIES }));
 app.post("/jobs", authorized, (req, res) => {
   if (!validJob(req.body)) return res.status(400).json({ error: "invalid_job" });
   if (active.has(req.body.jobId)) return res.status(409).json({ error: "job_exists" });

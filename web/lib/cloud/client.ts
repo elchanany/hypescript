@@ -100,6 +100,8 @@ export async function renderCloudProject(input: {
   clips: Array<{ assetId?: string; start: number; end: number; gap?: boolean }>;
   audioClips?: Array<{ assetId: string; start: number; end: number; timelineStart: number; volume?: number; fadeIn?: number; fadeOut?: number }>;
   overlays?: Array<{ assetId: string; start: number; end: number; x: number; y: number; width: number; height: number; rotation?: number; opacity?: number; fadeIn?: number; fadeOut?: number }>;
+  /** קובץ ASS מוכן לצריבת כתוביות (ראו lib/render/assSubtitles.ts). */
+  subtitlesAss?: string;
   target?: { width: number; height: number; fps: number };
 }, onProgress?: (ratio: number) => void, signal?: AbortSignal): Promise<Blob> {
   const submitted = await json<{ jobId: string }>(await fetch("/api/cloud/render", {
@@ -123,5 +125,30 @@ export async function renderCloudProject(input: {
     }
   } finally {
     signal?.removeEventListener("abort", cancel);
+  }
+}
+
+/**
+ * יכולות שרת הייצוא שפרוס כרגע. נכשל בשקט אל "אין יכולות" — הצד הבטוח, שמשאיר
+ * את הייצוא בדפדפן במקום להסתמך על יכולת שאולי לא קיימת שם.
+ */
+export async function fetchRenderCapabilities(signal?: AbortSignal): Promise<{
+  subtitles: boolean; imageOverlays: boolean; textOverlays: boolean; audioMix: boolean;
+}> {
+  const safe = { subtitles: false, imageOverlays: true, textOverlays: false, audioMix: true };
+  try {
+    const response = await fetch("/api/cloud/render/capabilities", { signal, cache: "no-store" });
+    if (!response.ok) return safe;
+    const data = await response.json();
+    const caps = data?.capabilities;
+    if (!caps || typeof caps !== "object") return safe;
+    return {
+      subtitles: caps.subtitles === true,
+      imageOverlays: caps.imageOverlays !== false,
+      textOverlays: caps.textOverlays === true,
+      audioMix: caps.audioMix !== false,
+    };
+  } catch {
+    return safe;
   }
 }
