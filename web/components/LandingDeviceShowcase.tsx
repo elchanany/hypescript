@@ -7,9 +7,10 @@ import BrandLogo from "@/components/BrandLogo";
 export default function LandingDeviceShowcase() {
   const [prompt, setPrompt] = useState(0);
   const prompts = [
-    { ask: "תכין מזה סרטון אנכי של 35 שניות", done: "יצרתי גרסה קצרה עם כתוביות וקצב מתאים לרשתות." },
-    { ask: "הוסף כותרת, לוגו ומוזיקת רקע שקטה", done: "האלמנטים מוקמו, תוזמנו ונשמרו בתוך אזור בטוח." },
-    { ask: "שמור לי גם גרסה לרוחב וקובץ SRT", done: "שתי הגרסאות וקובץ הכתוביות מוכנים להורדה." },
+    { ask: "ערוך מזה TikTok של 35 שניות", done: "בחרתי את הרגעים החזקים והכנתי גרסה אנכית." },
+    { ask: "בנה מצגת וידאו מהתמונות והקריינות", done: "סידרתי שקופיות, מעברים וקול באורך מדויק." },
+    { ask: "צור סרטון מוצר קצר עם לוגו", done: "הוספתי מיתוג, מוזיקה וקריאה לפעולה." },
+    { ask: "מצא ארבעה קליפים בפרק הזה", done: "מצאתי ארבעה הוקים והכנתי גרסאות לפרסום." },
   ];
 
   return (
@@ -17,7 +18,7 @@ export default function LandingDeviceShowcase() {
       <div className="hsx-device-copy">
         <span>אותו פרויקט. כל מסך.</span>
         <h2>מדברים עם העורך.<br />ורואים אותו עובד.</h2>
-        <p>במחשב מקבלים שליטה מלאה; בטאבלט עורכים במגע; ובטלפון ממשיכים שיחה, מאשרים שינויים וצופים בתוצאה.</p>
+        <p>סרטון לרשת, מצגת וידאו, מודעת מוצר או קליפים מפרק ארוך — מבקשים בשיחה ורואים את העריכה מתרחשת.</p>
         <div className="hsx-prompt-switcher" role="tablist" aria-label="דוגמאות לבקשות עריכה">
           {prompts.map((item, index) => <button key={item.ask} type="button" role="tab" aria-selected={prompt === index} onClick={() => setPrompt(index)}>{index + 1}</button>)}
         </div>

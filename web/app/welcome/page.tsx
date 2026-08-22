@@ -31,9 +31,10 @@ const plans = [
 ];
 
 const useCases = [
-  { title: "יוצרים ופודקאסטים", text: "הופכים פרק ארוך לקליפים, כתוביות וגרסאות מוכנות לכל רשת." },
-  { title: "עסקים ומותגים", text: "מייצרים סרטוני מוצר, הדרכה ופרסום עם לוגו, צבעים וקריאה לפעולה." },
-  { title: "קורסים וארגונים", text: "עורכים הרצאות, מפגשים והדרכות בלי ללמוד תוכנת עריכה מורכבת." },
+  { title: "TikTok ו־Reels", text: "הופכים חומר ארוך לקליפ חד, אנכי ומוכן לפרסום." },
+  { title: "מצגות וידאו", text: "מחברים תמונות, טקסט וקריינות לסיפור עם תזמון ומעברים." },
+  { title: "מוצרים ונדל״ן", text: "יוצרים מודעה עם מיתוג, מוזיקה וקריאה ברורה לפעולה." },
+  { title: "פודקאסטים והדרכות", text: "מוצאים רגעי שיא ומכינים מהם כמה גרסאות לכל רשת." },
 ];
 
 export default function WelcomePage() {
@@ -81,7 +82,7 @@ export default function WelcomePage() {
         <LandingProductExperience />
       </section>
 
-      <div className="hsx-kinetic" aria-hidden="true"><div><span>מבקשים בשיחה</span><i>✦</i><span>חותכים ומסדרים</span><i>✦</i><span>מוסיפים כתוביות ועיצוב</span><i>✦</i><span>מפרסמים בכל פורמט</span><i>✦</i><span>מבקשים בשיחה</span><i>✦</i><span>מקבלים סרטון מוכן</span><i>✦</i></div></div>
+      <div className="hsx-kinetic" aria-hidden="true"><div><span>TikTok מתוך ראיון</span><i>✦</i><span>מצגת מתמונות וקול</span><i>✦</i><span>סרטון מוצר ממותג</span><i>✦</i><span>קליפים מפודקאסט</span><i>✦</i><span>מבקשים בשיחה</span><i>✦</i><span>מקבלים סרטון מוכן</span><i>✦</i></div></div>
 
       <section className="marketing-proof" aria-label="עקרונות המוצר">
         <article><BadgeCheck size={18} /><div><strong>דיוק לפני אוטומציה</strong><span>כל שינוי נשאר גלוי וניתן לביטול</span></div></article>
@@ -106,7 +107,7 @@ export default function WelcomePage() {
       <section className="hsx-scroll-story hsx-reveal" aria-label="תהליך עריכה חי">
         <div className="hsx-scroll-head"><span>בקשה. עריכה. תוצאה.</span><h2>כך המוצר עובד באמת.</h2></div>
         <div className="hsx-scroll-rail">
-          <article><b>01</b><div><ScanText size={22} /><h3>כותבים את התוצאה הרצויה</h3><p>“הכן סרטון קצר, הוסף כתוביות ולוגו” — בלי לחפש איפה נמצא כל כלי.</p></div><div className="hsx-text-sculpture"><span>קצר</span><span className="muted">+</span><span>כתוביות</span><span>9:16</span></div></article>
+          <article><b>01</b><div><ScanText size={22} /><h3>כותבים את התוצאה הרצויה</h3><p>“הכן TikTok”, “בנה מצגת וידאו” או “צור מודעת מוצר” — בלי לחפש איפה נמצא כל כלי.</p></div><div className="hsx-text-sculpture"><span>TikTok</span><span>מצגת</span><span>מודעה</span><span>פודקאסט</span></div></article>
           <article><b>02</b><div><Layers3 size={22} /><h3>הקנבס מגיב למגע</h3><p>לוגו, תמונה, כותרת וכתוביות נגררים למקום המדויק — בלי לנחש מספרים.</p></div><div className="hsx-layer-sculpture"><i /><i /><i /><BrandLogo variant="icon" size="sm" decorative /></div></article>
           <article><b>03</b><div><WandSparkles size={22} /><h3>העורך מבצע. אתם בשליטה.</h3><p>כל פעולה מגיעה עם תצוגה מקדימה, הסבר ואפשרות ביטול.</p></div><div className="hsx-decision"><span><Check size={14} />הגרסה מוכנה לבדיקה</span><button type="button">החל הכול</button></div></article>
         </div>

@@ -196,3 +196,144 @@
 @media(max-width:900px){.hsx-device-story,.hsx-outro{grid-template-columns:1fr}.hsx-device-story{padding-bottom:40px}.hsx-device-copy,.hsx-outro-head{text-align:center}.hsx-device-copy p,.hsx-outro-head p{margin-inline:auto}.hsx-prompt-switcher{justify-content:center}.hsx-device-scene{width:min(720px,100%);margin:auto}}
 @media(max-width:600px){.hsx-ai-title{padding-bottom:5px}.hsx-ai-title div,.hsx-ai-title>i,.hsx-chat-thread .from-user{display:none}.hsx-chat-thread{padding-block:5px}.hsx-chat-thread p{width:100%;padding:5px}.hsx-chat-thread .from-agent span,.hsx-chat-input{display:none}.hsx-device-story{width:calc(100% - 16px);min-height:760px;margin-block:6rem;padding:38px 16px 20px;border-radius:30px}.hsx-device-copy h2{font-size:3.1rem}.hsx-device-scene{min-height:470px}.hsx-tablet{width:118%;right:-9%;top:25px}.hsx-tablet-work{grid-template-columns:1fr 105px}.hsx-tablet-video strong{font-size:9px}.hsx-phone{width:160px;height:338px;left:-5px;bottom:0}.hsx-phone-preview{height:76px}.hsx-phone-chat{height:145px}.hsx-phone>footer{height:35px}.hsx-outro{width:calc(100% - 24px);min-height:770px;margin-block:6rem 4rem;gap:1rem}.hsx-outro-head h2{font-size:3.3rem}.hsx-output-orbit{min-height:480px}.hsx-output-core{width:250px}.hsx-output-core img{height:165px}.hsx-output-orbit article{min-width:145px;padding:9px}.output-video{right:-5%}.output-captions{left:-6%}.output-social{right:0}.hsx-final-stage{min-height:570px;border-radius:32px!important;padding-inline:20px!important}.hsx-final-stage h2{font-size:3.7rem!important}}
 @media(prefers-reduced-motion:reduce){.hsx-device-halo,.hsx-output-orbit article,.hsx-final-beam{animation:none}}
+
+/* Landing clarity pass: one calm surface system and a legible phone demo. */
+.marketing-page{
+  --hs-paper:#eaf1ee;
+  --hs-panel:#f3f8f5;
+  --hs-panel-strong:#e1eee8;
+  background:
+    radial-gradient(circle at 8% 7%,rgba(185,246,93,.22),transparent 24rem),
+    radial-gradient(circle at 92% 20%,rgba(34,211,166,.17),transparent 31rem),
+    linear-gradient(180deg,#f1f6f3 0,#e6efeb 48%,#eef4f1 100%);
+}
+.marketing-page .marketing-hero h1{color:var(--hs-ink);-webkit-text-fill-color:currentColor}
+.marketing-page .marketing-hero h1 span{
+  color:#0d8f76;
+  background:linear-gradient(105deg,#087862,#22b98f 58%,#173a43);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.marketing-page :is(.marketing-nav,.marketing-proof,.marketing-feature-grid article,.marketing-use-cases article,.marketing-pricing article,.marketing-faq details){
+  background:color-mix(in srgb,var(--hs-panel) 92%,transparent);
+  border-color:rgba(16,56,52,.09);
+}
+.marketing-page :is(.marketing-feature-grid article:nth-child(even),.marketing-use-cases article:nth-child(even),.marketing-pricing article:nth-child(odd)){
+  background:color-mix(in srgb,var(--hs-panel-strong) 76%,white);
+}
+.marketing-use-cases{grid-template-columns:repeat(4,1fr)}
+
+/* The demo uses explicit areas so the AI conversation always stays at right. */
+.hsx-workspace{
+  direction:ltr;
+  grid-template-columns:170px minmax(0,1fr) 190px;
+  grid-template-areas:"media canvas chat";
+}
+.hsx-media-panel{grid-area:media;direction:rtl}
+.hsx-canvas{grid-area:canvas;direction:rtl}
+.hsx-inspector{grid-area:chat;direction:rtl}
+.hsx-mode-tabs{grid-template-columns:1fr 1fr}
+.hsx-mode-tabs button{justify-content:center;text-align:center;border:1px solid transparent}
+.hsx-mode-tabs button[aria-selected="true"]{box-shadow:none;border-color:rgba(185,246,93,.38)}
+
+@media(max-width:900px){
+  .marketing-use-cases{grid-template-columns:1fr 1fr}
+  .hsx-workspace{grid-template-columns:92px minmax(0,1fr) 150px}
+  .hsx-mode-tabs button span{display:inline}
+}
+
+@media(max-width:600px){
+  .marketing-page{background:linear-gradient(180deg,#edf4f0,#e3ede8 48%,#eef4f1)}
+  .marketing-hero{width:calc(100% - 24px);padding:52px 0 30px}
+  .marketing-hero::before{inset:5rem -20% auto;height:25rem}
+  .marketing-hero h1{font-size:clamp(42px,13.5vw,58px);line-height:.95;letter-spacing:-.052em}
+  .marketing-hero>p{margin-top:20px;font-size:16px;line-height:1.58}
+  .marketing-kicker{margin-bottom:15px;padding:6px 10px;font-size:10px}
+  .marketing-hero-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:22px}
+  .marketing-cta{min-height:46px!important;padding-inline:10px!important;font-size:12px}
+  .marketing-trust{font-size:10px;line-height:1.4}
+  .hsx-product-stage{width:calc(100% - 8px);min-height:392px;margin-top:1.2rem}
+  .hsx-laptop{width:100%;transform:none}
+  .hsx-laptop-lid{padding:6px}
+  .hsx-laptop-base{width:102%;margin-inline-start:-1%;height:12px}
+  .hsx-app{height:350px;min-height:350px;grid-template-rows:30px minmax(0,1fr) 57px;font-size:8px}
+  .hsx-workspace{grid-template-columns:minmax(0,1fr) 122px;grid-template-areas:"canvas chat"}
+  .hsx-media-panel{display:none}
+  .hsx-inspector{padding:6px;background:#121d2b;border-inline-start:1px solid #29384b}
+  .hsx-ai-title{padding-bottom:6px}
+  .hsx-ai-title>span{width:22px;border-radius:7px}
+  .hsx-ai-title div{display:block}
+  .hsx-ai-title div small,.hsx-ai-title>i{display:none}
+  .hsx-chat-thread{gap:5px;padding:7px 0}
+  .hsx-chat-thread p{display:block!important;width:96%;padding:6px;font-size:7.5px;line-height:1.35}
+  .hsx-chat-thread .from-agent span{display:none}
+  .hsx-mode-tabs{grid-template-columns:1fr 1fr;gap:3px}
+  .hsx-mode-tabs button{min-height:25px;padding:3px;font-size:7px;line-height:1.15}
+  .hsx-agent-panel,.hsx-chat-input{display:none}
+  .hsx-video-frame{width:calc(100% - 12px);height:calc(100% - 38px);margin:6px auto 2px}
+  .hsx-video-frame>img{object-fit:cover}
+  .hsx-caption{inset:auto 5% 7%;font-size:9px;padding:0 3px}
+  .hsx-play{width:34px}
+  .hsx-transport{height:30px;padding:0 6px;gap:5px;font-size:7px}
+  .hsx-timeline{padding:5px 6px}
+  .hsx-timecodes,.hsx-caption-track,.hsx-track>b{display:none}
+  .hsx-track{height:20px;display:block;margin-top:3px}
+  .hsx-video-track{display:grid;grid-template-columns:repeat(6,1fr)}
+  .hsx-video-track img{height:20px}
+  .hsx-audio-track>div{height:20px}
+  .hsx-playhead{top:4px;bottom:3px}
+  .hsx-live-note,.hsx-orbit{display:none}
+  .hsx-kinetic{display:none}
+  .marketing-proof{width:calc(100% - 24px);margin:12px auto 24px;padding:8px;grid-template-columns:1fr 1fr}
+  .marketing-proof article{padding:9px;border:0}
+  .marketing-proof article:last-child{display:none}
+  .marketing-proof strong{font-size:11px}.marketing-proof span{font-size:9px}
+  .marketing-section{width:calc(100% - 24px);padding:52px 0}
+  .marketing-section-head{margin-bottom:24px}
+  .marketing-section-head h2{font-size:31px;line-height:1.05}
+  .marketing-feature-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .marketing-feature-grid article{min-height:178px;padding:16px}
+  .marketing-feature-grid article>small{top:14px;left:14px;font-size:20px}
+  .marketing-feature-grid h3{margin:22px 0 6px;font-size:14px}
+  .marketing-feature-grid p{font-size:11px;line-height:1.55}
+  .marketing-before-after{display:none}
+  .marketing-use-cases{grid-template-columns:1fr 1fr;gap:8px}
+  .marketing-use-cases article{min-height:175px;padding:16px}
+  .marketing-use-cases article>b{font-size:38px}
+  .marketing-use-cases h3{margin:42px 0 7px;font-size:15px}
+  .marketing-use-cases p{font-size:11px;line-height:1.55}
+  .hsx-scroll-story{margin-block:4rem;padding-inline:12px}
+  .hsx-scroll-head{margin-bottom:1.5rem}
+  .hsx-scroll-rail article{min-height:310px;padding:20px}
+  .hsx-text-sculpture{padding:18px;font-size:22px}
+  .hsx-device-story{width:calc(100% - 16px);min-height:680px;margin-block:4rem;padding:34px 16px 18px;border-radius:30px}
+  .hsx-device-copy h2{font-size:2.65rem}
+  .hsx-device-copy p{font-size:13px;line-height:1.6}
+  .hsx-prompt-switcher{margin-top:18px}
+  .hsx-device-scene{min-height:440px}
+  .hsx-tablet{display:none}
+  .hsx-phone{width:210px;height:430px;left:50%;bottom:0;transform:translateX(-50%)}
+  .hsx-phone-preview{height:108px}
+  .hsx-phone-chat{height:193px;font-size:8.5px}
+  .hsx-phone-chat .user{justify-self:end;margin:0;text-align:right}
+  .hsx-phone-chat .agent{justify-self:start;margin:0;text-align:right}
+  .hsx-phone>footer{height:42px}
+  .hsx-outro{margin-block:4rem 3rem;min-height:690px}
+  .hsx-outro-head h2{font-size:2.85rem}
+  .hsx-output-orbit{min-height:430px}
+  .hsx-final-stage{margin-block:3rem!important}
+  .marketing-footer{width:calc(100% - 24px);flex-wrap:wrap;justify-content:center;text-align:center}
+  .marketing-footer nav{width:100%;justify-content:center;margin:0}
+}
+
+@media(max-width:390px){
+  .marketing-nav .brand-logo-horizontal{width:92px}
+  .marketing-nav .marketing-actions .btn.ghost{display:none}
+  .marketing-hero-actions{grid-template-columns:1fr}
+  .marketing-feature-grid,.marketing-use-cases{grid-template-columns:1fr}
+  .marketing-feature-grid article,.marketing-use-cases article{min-height:145px}
+  .hsx-app{height:338px;min-height:338px}
+  .hsx-workspace{grid-template-columns:minmax(0,1fr) 112px}
+  .hsx-device-copy h2{font-size:2.35rem}
+}

@@ -73,8 +73,10 @@ export async function middleware(req: NextRequest) {
   );
   if (hasSession) return response;
 
-  // Explicit local/QA escape hatch or direct project link
-  if (allowGuest || req.nextUrl.searchParams.has("project")) return response;
+  // Direct project links remain usable. Anonymous guest mode is a local/QA
+  // escape hatch; production visitors should always see the welcome page first.
+  if (req.nextUrl.searchParams.has("project")) return response;
+  if (allowGuest && process.env.NODE_ENV !== "production") return response;
 
   const welcome = req.nextUrl.clone();
   welcome.pathname = "/welcome";

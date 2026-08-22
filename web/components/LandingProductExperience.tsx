@@ -1,19 +1,48 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { Captions, Check, MessageSquareText, MousePointer2, Play, ScanText, Send, Sparkles, WandSparkles } from "@/components/icons";
+import { Check, MousePointer2, Play, Send, Sparkles, WandSparkles } from "@/components/icons";
 import BrandLogo from "@/components/BrandLogo";
 
-const modes = [
-  { id: "transcript", label: "עריכה בטקסט", icon: ScanText, note: "הטקסט והווידאו מסונכרנים" },
-  { id: "captions", label: "כתוביות", icon: Captions, note: "עברית, עיצוב ותזמון במקום אחד" },
-  { id: "agent", label: "עוזר עריכה", icon: MessageSquareText, note: "בקשה אחת הפכה לתוכנית עריכה" },
+const scenarios = [
+  {
+    id: "tiktok",
+    label: "TikTok",
+    ask: "הפוך את הראיון לסרטון TikTok של 35 שניות.",
+    done: "חתכתי את הרגעים החזקים והתאמתי ל־9:16.",
+    steps: ["קצב מהיר", "כותרת וכתוביות", "גרסה אנכית"],
+    caption: "הרעיון החשוב — בלי שנייה מיותרת.",
+  },
+  {
+    id: "presentation",
+    label: "מצגת וידאו",
+    ask: "בנה מצגת וידאו מהתמונות והקריינות שהעליתי.",
+    done: "סידרתי שקופיות, מעברים וקריינות באורך מדויק.",
+    steps: ["תמונות לפי הסיפור", "מעברים עדינים", "קריינות מסונכרנת"],
+    caption: "רעיון, תמונה וקול — בסיפור אחד.",
+  },
+  {
+    id: "product",
+    label: "סרטון מוצר",
+    ask: "צור מודעה קצרה למוצר עם לוגו וקריאה לפעולה.",
+    done: "הכנתי גרסת מודעה נקייה ומוכנה לפרסום.",
+    steps: ["מיתוג עקבי", "מוזיקת רקע", "קריאה לפעולה"],
+    caption: "המוצר שלך. ברור כבר מהשנייה הראשונה.",
+  },
+  {
+    id: "podcast",
+    label: "פודקאסט",
+    ask: "מצא בפרק ארבעה רגעים ששווה לפרסם.",
+    done: "בחרתי הוקים חזקים והכנתי ארבעה קליפים.",
+    steps: ["זיהוי רגעי שיא", "חיתוך נקי", "4 גרסאות מוכנות"],
+    caption: "הרגע שעוצר את הגלילה.",
+  },
 ] as const;
 
-type Mode = (typeof modes)[number]["id"];
+type Scenario = (typeof scenarios)[number]["id"];
 
 export default function LandingProductExperience() {
-  const [mode, setMode] = useState<Mode>("agent");
+  const [scenario, setScenario] = useState<Scenario>("tiktok");
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(38);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -51,14 +80,13 @@ export default function LandingProductExperience() {
     shellRef.current?.style.setProperty("--tilt-y", "0deg");
   }
 
-  const active = modes.find((item) => item.id === mode) ?? modes[0];
-  const ActiveIcon = active.icon;
+  const active = scenarios.find((item) => item.id === scenario) ?? scenarios[0];
 
   return (
     <section className="hsx-product-stage" aria-label="הדגמה אינטראקטיבית של Hypescript">
-      <div className="hsx-orbit hsx-orbit-one"><Sparkles size={14} />כתוביות RTL</div>
-      <div className="hsx-orbit hsx-orbit-two"><MousePointer2 size={14} />עריכה ישירה</div>
-      <div className="hsx-orbit hsx-orbit-three"><Check size={14} />ללא חפיפות</div>
+      <div className="hsx-orbit hsx-orbit-one"><Sparkles size={14} />בקשה אחת</div>
+      <div className="hsx-orbit hsx-orbit-two"><MousePointer2 size={14} />עריכה אמיתית</div>
+      <div className="hsx-orbit hsx-orbit-three"><Check size={14} />תוצאה מוכנה</div>
 
       <div
         className="hsx-laptop"
@@ -87,7 +115,7 @@ export default function LandingProductExperience() {
                 <div className="hsx-video-frame">
                   <img src="/brand/landing-creator-frame.webp" alt="יוצרת תוכן באולפן, בתוך תצוגת עורך Hypescript" />
                   <span className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></span>
-                  <div className={`hsx-caption ${mode === "captions" ? "is-active" : ""}`}>סיפור טוב מתחיל במשפט אחד מדויק.</div>
+                  <div className="hsx-caption">{active.caption}</div>
                   <button type="button" className="hsx-play" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "עצירת ההדגמה" : "הפעלת ההדגמה"}>
                     {playing ? <span className="hsx-pause" /> : <Play size={18} fill="currentColor" />}
                   </button>
@@ -98,17 +126,15 @@ export default function LandingProductExperience() {
               <aside className="hsx-inspector">
                 <div className="hsx-ai-title"><span><Sparkles size={13} /></span><div><b>Hype AI</b><small>עורך יחד איתך</small></div><i>פעיל</i></div>
                 <div className="hsx-chat-thread">
-                  <p className="from-user">הפוך את הראיון לקליפ קצר לרשתות. הוסף כתוביות, כותרת ולוגו.</p>
-                  <p className="from-agent"><b>הכנתי גרסה מלאה לבדיקה.</b><span>החיתוכים, העיצוב והפורמט כבר מסומנים על הטיימליין.</span></p>
+                  <p className="from-user">{active.ask}</p>
+                  <p className="from-agent"><b>{active.done}</b><span>כל שינוי גלוי וניתן לעריכה.</span></p>
                 </div>
-                <div className="hsx-mode-tabs" role="tablist" aria-label="מצבי הדגמה">
-                  {modes.map(({ id, label, icon: Icon }) => (
-                    <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => setMode(id)}><Icon size={14} /><span>{label}</span></button>
+                <div className="hsx-mode-tabs" role="tablist" aria-label="דוגמאות למה שאפשר ליצור">
+                  {scenarios.map(({ id, label }) => (
+                    <button key={id} type="button" role="tab" aria-selected={scenario === id} onClick={() => setScenario(id)}><span>{label}</span></button>
                   ))}
                 </div>
-                {mode === "transcript" && <div className="hsx-transcript"><small>תמלול חי</small><p>כשמתחילים עם <mark>אה...</mark> רעיון ברור, העריכה כבר מרגישה אחרת.</p><em>לחיצה על מילה עורכת את הווידאו</em></div>}
-                {mode === "captions" && <div className="hsx-style-panel"><small>סגנון כתוביות</small><div className="hsx-style-preview">עברית. בדיוק במקום.</div><label>גודל <i><b /></i></label><label>רקע <span /><span /><span /></label></div>}
-                {mode === "agent" && <div className="hsx-agent-panel"><small>תוכנית עריכה</small><div><WandSparkles size={14} /> התצוגה המקדימה מוכנה</div><ul><li><Check size={12} /> גרסה קצרה + כתוביות</li><li><Check size={12} /> כותרת, לוגו ו־9:16</li></ul></div>}
+                <div className="hsx-agent-panel"><small>בוצע בפרויקט</small><div><WandSparkles size={14} /> התצוגה המקדימה מוכנה</div><ul>{active.steps.map((step) => <li key={step}><Check size={12} />{step}</li>)}</ul></div>
                 <div className="hsx-chat-input"><span>בקש שינוי נוסף…</span><button type="button" aria-label="שליחת בקשה"><Send size={12} /></button></div>
               </aside>
             </div>
@@ -125,7 +151,7 @@ export default function LandingProductExperience() {
         <div className="hsx-laptop-base"><i /></div>
       </div>
 
-      <div className="hsx-live-note" aria-live="polite"><span><ActiveIcon size={15} /></span><div><b>{active.label}</b><small>{active.note}</small></div></div>
+      <div className="hsx-live-note" aria-live="polite"><span><WandSparkles size={15} /></span><div><b>{active.label}</b><small>הבקשה הפכה לעריכה על הפרויקט</small></div></div>
     </section>
   );
 }
