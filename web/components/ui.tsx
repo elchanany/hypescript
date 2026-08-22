@@ -1,8 +1,8 @@
 "use client";
 
 // Shared UI primitives for the editor. One consistent set — no per-component variants.
-import { ChevronDown, type AppIcon } from "@/components/icons";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, type AppIcon } from "@/components/icons";
+import { ReactNode, useEffect, useId, useRef, useState } from "react";
 
 export const ICON = 16;
 export const STROKE = 1.75;
@@ -54,6 +54,98 @@ export function Toggle({ checked, onChange, tip }: { checked: boolean; onChange:
       <span className="knob" />
     </label>
   );
+}
+
+export type SelectFieldOption = {
+  value: string;
+  label: ReactNode;
+  disabled?: boolean;
+  description?: ReactNode;
+};
+
+export function SelectField({
+  value,
+  options,
+  onValueChange,
+  ariaLabel,
+  className = "",
+  prefix,
+}: {
+  value: string;
+  options: readonly SelectFieldOption[];
+  onValueChange: (value: string) => void;
+  ariaLabel: string;
+  className?: string;
+  prefix?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, options.findIndex((option) => option.value === value)));
+  const listId = useId();
+  const rootRef = useOutside<HTMLDivElement>(() => setOpen(false));
+  const selected = options.find((option) => option.value === value) || options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveIndex(Math.max(0, options.findIndex((option) => option.value === value)));
+  }, [open, options, value]);
+
+  function move(delta: number) {
+    if (!options.length) return;
+    let next = activeIndex;
+    do next = (next + delta + options.length) % options.length;
+    while (options[next]?.disabled && next !== activeIndex);
+    setActiveIndex(next);
+  }
+
+  function choose(index: number) {
+    const option = options[index];
+    if (!option || option.disabled) return;
+    onValueChange(option.value);
+    setOpen(false);
+  }
+
+  return <div ref={rootRef} className={`select-field ${open ? "is-open" : ""} ${className}`.trim()}>
+    <button
+      type="button"
+      className="select-field-trigger"
+      aria-label={ariaLabel}
+      aria-haspopup="listbox"
+      aria-controls={listId}
+      aria-expanded={open}
+      onClick={() => setOpen((current) => !current)}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          if (!open) setOpen(true);
+          else move(event.key === "ArrowDown" ? 1 : -1);
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          if (open) choose(activeIndex); else setOpen(true);
+        } else if (event.key === "Escape") {
+          setOpen(false);
+        }
+      }}
+    >
+      {prefix && <span className="select-field-prefix" aria-hidden="true">{prefix}</span>}
+      <span className="select-field-value">{selected?.label}</span>
+      <ChevronDown size={14} aria-hidden="true" />
+    </button>
+    {open && <div id={listId} className="select-field-menu" role="listbox" aria-label={ariaLabel}>
+      {options.map((option, index) => <button
+        type="button"
+        key={option.value}
+        role="option"
+        aria-selected={option.value === value}
+        disabled={option.disabled}
+        className={`${index === activeIndex ? "is-active" : ""} ${option.value === value ? "is-selected" : ""}`.trim()}
+        onMouseEnter={() => setActiveIndex(index)}
+        onClick={() => choose(index)}
+      >
+        <span><b>{option.label}</b>{option.description && <small>{option.description}</small>}</span>
+        {option.value === value && <Check size={14} aria-hidden="true" />}
+      </button>)}
+    </div>}
+  </div>;
 }
 
 export function Section({ title, children, defaultOpen = true, right }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode }) {

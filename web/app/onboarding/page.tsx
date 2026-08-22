@@ -9,6 +9,7 @@ import { getSupabaseBrowser } from "@/lib/auth/supabase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { type AddressForm } from "@/lib/i18n/config";
+import { SelectField } from "@/components/ui";
 
 type Step = 1 | 2 | 3;
 
@@ -94,22 +95,18 @@ export default function OnboardingPage() {
             <LanguageSwitcher />
             <label className="dlg-field">
               {t("address.label")}
-              <select value={addressForm} onChange={(e) => setAddressForm(e.target.value as AddressForm)}>
-                <option value="male">{t("address.male")}</option>
-                <option value="female">{t("address.female")}</option>
-                <option value="plural">{t("address.plural")}</option>
-                <option value="unspecified">{t("address.unspecified")}</option>
-              </select>
+              <SelectField value={addressForm} ariaLabel={t("address.label")} options={[
+                { value: "male", label: t("address.male") }, { value: "female", label: t("address.female") },
+                { value: "plural", label: t("address.plural") }, { value: "unspecified", label: t("address.unspecified") },
+              ]} onValueChange={(value) => setAddressForm(value as AddressForm)} />
               <small>{t("address.help")}</small>
             </label>
             <label className="dlg-field">
               {t("onboarding.usage")}
-              <select value={usageType} onChange={(e) => setUsageType(e.target.value)}>
-                <option value="personal">{t("usage.personal")}</option>
-                <option value="nonprofit">{t("usage.nonprofit")}</option>
-                <option value="business">{t("usage.business")}</option>
-                <option value="team">{t("usage.team")}</option>
-              </select>
+              <SelectField value={usageType} ariaLabel={t("onboarding.usage")} options={[
+                { value: "personal", label: t("usage.personal") }, { value: "nonprofit", label: t("usage.nonprofit") },
+                { value: "business", label: t("usage.business") }, { value: "team", label: t("usage.team") },
+              ]} onValueChange={setUsageType} />
             </label>
             <button className="btn primary tall" disabled={!displayName.trim()} onClick={() => setStep(2)}>{t("common.continue")}</button>
           </div>
@@ -119,11 +116,9 @@ export default function OnboardingPage() {
           <div className="onb-step">
             <label className="dlg-field">
               {t("onboarding.appearance")}
-              <select value={mode} onChange={(e) => setMode(e.target.value as ThemeMode)}>
-                <option value="system">{t("theme.system")}</option>
-                <option value="dark">{t("theme.dark")}</option>
-                <option value="light">{t("theme.light")}</option>
-              </select>
+              <SelectField value={mode} ariaLabel={t("onboarding.appearance")} options={[
+                { value: "system", label: t("theme.system") }, { value: "dark", label: t("theme.dark") }, { value: "light", label: t("theme.light") },
+              ]} onValueChange={(value) => setMode(value as ThemeMode)} />
             </label>
             <div className="onb-managed-note"><strong>{t("onboarding.ready")}</strong><span>{t("onboarding.managed")}</span></div>
             <div className="onb-actions">

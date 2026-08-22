@@ -4,6 +4,7 @@ import { Check, Play, Send, Sparkles, WandSparkles } from "@/components/icons";
 import { useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { LANDING_DEMO_IMAGES } from "@/components/LandingProductExperience";
 
 const showcaseCopy = {
   he:{label:"Hypescript בכל מסך",eyebrow:"אותו פרויקט. כל מסך.",title:<>מדברים עם העורך.<br />ורואים אותו עובד.</>,body:"סרטון לרשת, מצגת וידאו, מודעת מוצר או קליפים מפרק ארוך — מבקשים בשיחה ורואים את העריכה מתרחשת.",tabs:"דוגמאות לבקשות עריכה",version:"גרסת Reels",export:"ייצוא",play:"הפעלת תצוגה",caption:"בקשה אחת. סרטון מוכן.",connected:"מחובר לפרויקט",ready:"הסרטון שלך מוכן",change:"בקש שינוי…",send:"שליחת בקשה",prompts:[['ערוך מזה TikTok של 35 שניות','בחרתי את הרגעים החזקים והכנתי גרסה אנכית.'],['בנה מצגת וידאו מהתמונות והקריינות','סידרתי שקופיות, מעברים וקול באורך מדויק.'],['צור סרטון מוצר קצר עם לוגו','הוספתי מיתוג, מוזיקה וקריאה לפעולה.'],['מצא ארבעה קליפים בפרק הזה','מצאתי ארבעה הוקים והכנתי גרסאות לפרסום.']]},
@@ -16,6 +17,7 @@ const showcaseCopy = {
 export default function LandingDeviceShowcase() {
   const { locale } = useI18n();
   const copy = showcaseCopy[locale];
+  const demoImage = LANDING_DEMO_IMAGES[locale];
   const [prompt, setPrompt] = useState(0);
   const prompts = copy.prompts;
 
@@ -34,7 +36,7 @@ export default function LandingDeviceShowcase() {
           <div className="hsx-tablet-ui">
             <header><div className="hsx-tablet-brand"><BrandLogo variant="icon" size="xs" decorative /><b>Hypescript</b></div><span>{copy.version}</span><button type="button">{copy.export}</button></header>
             <div className="hsx-tablet-work">
-              <div className="hsx-tablet-video"><img src="/brand/landing-creator-male.webp" alt="" /><span className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></span><button type="button" aria-label={copy.play}><Play size={18} fill="currentColor" /></button><strong>{copy.caption}</strong></div>
+              <div className="hsx-tablet-video"><img src={demoImage} alt="" /><span className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></span><button type="button" aria-label={copy.play}><Play size={18} fill="currentColor" /></button><strong>{copy.caption}</strong></div>
               <aside><span><Sparkles size={12} />Hype AI</span><p>{prompts[prompt][0]}</p><div><Check size={12} />{prompts[prompt][1]}</div></aside>
             </div>
             <div className="hsx-tablet-timeline"><i /><i /><i /><i /><i /><b /></div>
@@ -44,7 +46,7 @@ export default function LandingDeviceShowcase() {
         <div className="hsx-phone">
           <div className="hsx-phone-notch" />
           <header><span><BrandLogo variant="icon" size="xs" decorative /></span><div><b>Hype AI</b><small>{copy.connected}</small></div><i /></header>
-          <div className="hsx-phone-preview"><img src="/brand/landing-creator-male.webp" alt="" /><i className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></i><span>00:35</span></div>
+          <div className="hsx-phone-preview"><img src={demoImage} alt="" /><i className="hsx-preview-brand"><BrandLogo variant="icon" size="xs" decorative /></i><span>00:35</span></div>
           <div className="hsx-phone-chat">
             <p className="user">{prompts[prompt][0]}</p><p className="agent"><WandSparkles size={12} />{prompts[prompt][1]}</p><div><Check size={12} />{copy.ready}</div>
           </div>

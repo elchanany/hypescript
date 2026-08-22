@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { LANDING_DEMO_COPY, LANDING_DEMO_IMAGES } from "./LandingProductExperience";
 
-const source = readFileSync(new URL("./LandingProductExperience.tsx", import.meta.url), "utf8");
-
-describe("landing product demo copy", () => {
-  it("contains the full demo flow in every supported locale", () => {
-    for (const locale of ["he", "en", "ar", "ru", "hi"]) expect(source).toContain(`${locale}: { label:`);
-    expect(source.match(/steps:\[/g)).toHaveLength(5);
-    expect(source).toContain("hsx-chat-operation");
-    expect(source).toContain("hsx-chat-result");
+describe("localized landing demo", () => {
+  it("uses a distinct project image for every supported locale", () => {
+    const images = Object.values(LANDING_DEMO_IMAGES);
+    expect(images).toHaveLength(5);
+    expect(new Set(images).size).toBe(images.length);
+    expect(images.every((image) => image.startsWith("/brand/landing-demo-") && image.endsWith(".png"))).toBe(true);
   });
 
-  it("keeps explicit copy blocks for every LTR locale", () => {
-    for (const locale of ["en", "ru", "hi"]) expect(source).toMatch(new RegExp(`${locale}: \\{ label:`));
+  it("shows a different editing scenario in every locale", () => {
+    const projects = Object.values(LANDING_DEMO_COPY).map((copy) => copy.project);
+    const requests = Object.values(LANDING_DEMO_COPY).map((copy) => copy.ask);
+    expect(new Set(projects).size).toBe(projects.length);
+    expect(new Set(requests).size).toBe(requests.length);
   });
 });

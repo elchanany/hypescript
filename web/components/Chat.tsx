@@ -17,6 +17,7 @@ import { CaptionStyle } from "@/lib/editor/captionStyle";
 import { Sub } from "@/lib/editor/subtitlesEdl";
 import { kvGet, kvSet, pk } from "@/lib/storage";
 import { getProjectPolicy } from "@/lib/projects/policy";
+import { SelectField } from "@/components/ui";
 import { getCloudProject, saveCloudProjectState } from "@/lib/cloud/client";
 import { ChatMessage } from "@/lib/agent/types";
 import { collapseConsecutiveTools, toolGroupSummary, toolGroupTitle } from "@/lib/agent/collapseTools";
@@ -876,12 +877,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
         </div>
         <div className="actions" style={{ gap: 3 }}>
           {!entitlementsLoaded && <span className="chat-header-skeleton skeleton-shimmer" aria-label="טוען הרשאות" />}
-          {providerMode === "byok" && canChooseProvider && <label className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><select value={provider} onChange={(e) => changeProvider(e.target.value as Provider)} aria-label="ספק BYOK לשיחה">
-            {LLM_PROVIDERS.map((p) => {
+          {providerMode === "byok" && canChooseProvider && <div className="chat-model-picker" data-tip="ספק BYOK פעיל" data-tippos="down"><Sparkles size={13} /><span>BYOK</span><SelectField className="chat-provider-select" value={provider} onValueChange={(value) => changeProvider(value as Provider)} ariaLabel="ספק BYOK לשיחה" options={LLM_PROVIDERS.map((p) => {
               const disabled = !byokProviders.includes(p.id);
-              return <option key={p.id} value={p.id} disabled={disabled}>{p.labelHe}{disabled ? " · חסר מפתח" : ""}</option>;
-            })}
-          </select><ChevronDown size={12} /></label>}
+              return { value: p.id, label: p.labelHe, disabled, description: disabled ? "חסר מפתח" : undefined };
+            })} /></div>}
           {providerMode === "byok" && usage.totalTokens > 0 && <span className="mono" title={`קלט ${usage.inputTokens.toLocaleString()} · פלט ${usage.outputTokens.toLocaleString()}`} style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{usage.totalTokens.toLocaleString()} tok</span>}
           <button className="iconbtn new-chat-btn" data-tip="שיחה חדשה" data-tippos="down" onClick={() => startNewChat()} aria-label="פתח שיחה חדשה"><MessageSquarePlus size={16} strokeWidth={1.8} /></button>
           <button className="iconbtn chat-history-trigger" data-tip="כל השיחות" data-tippos="down" onClick={() => setThreadsOpen(true)} aria-expanded={threadsOpen} aria-controls="chat-history-drawer" aria-label="פתח את כל השיחות"><List size={18} strokeWidth={1.8} /></button>

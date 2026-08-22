@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Cloud, HardDrive, Sparkles } from "@/components/icons";
 import BrandLogo from "@/components/BrandLogo";
 import { quotaMessage } from "@/lib/billing/quotaMessaging";
+import { SelectField } from "@/components/ui";
 import {
   DEFAULT_POLICY,
   type AspectRatio,
@@ -89,28 +90,22 @@ export default function NewProjectWizard({ open, initialName = "פרויקט ח�
           <div className="wiz-quick-grid">
             <label className="dlg-field">
               יחס מסך
-              <select value={policy.aspectRatio} onChange={(event) => patch({ aspectRatio: event.target.value as AspectRatio })}>
-                <option value="16:9">16:9 · YouTube</option>
-                <option value="9:16">9:16 · Reels / TikTok</option>
-                <option value="1:1">1:1 · ריבוע</option>
-                <option value="4:5">4:5 · פיד</option>
-              </select>
+              <SelectField value={policy.aspectRatio} ariaLabel="יחס מסך" options={[
+                { value: "16:9", label: "16:9 · YouTube" }, { value: "9:16", label: "9:16 · Reels / TikTok" },
+                { value: "1:1", label: "1:1 · ריבוע" }, { value: "4:5", label: "4:5 · פיד" },
+              ]} onValueChange={(value) => patch({ aspectRatio: value as AspectRatio })} />
             </label>
             <label className="dlg-field">
               איכות
-              <select value={policy.resolution} onChange={(event) => patch({ resolution: event.target.value as ProjectResolution })}>
-                <option value="1080p">1080p · מומלץ</option>
-                <option value="720p">720p · חסכוני</option>
-                <option value="4k">4K · איכות מרבית</option>
-              </select>
+              <SelectField value={policy.resolution} ariaLabel="איכות" options={[
+                { value: "1080p", label: "1080p · מומלץ" }, { value: "720p", label: "720p · חסכוני" }, { value: "4k", label: "4K · איכות מרבית" },
+              ]} onValueChange={(value) => patch({ resolution: value as ProjectResolution })} />
             </label>
             <label className="dlg-field">
               FPS
-              <select value={policy.fps} onChange={(event) => patch({ fps: Number(event.target.value) as ProjectFps })}>
-                <option value={30}>30</option>
-                <option value={25}>25</option>
-                <option value={24}>24</option>
-              </select>
+              <SelectField value={String(policy.fps)} ariaLabel="FPS" options={[
+                { value: "30", label: "30" }, { value: "25", label: "25" }, { value: "24", label: "24" },
+              ]} onValueChange={(value) => patch({ fps: Number(value) as ProjectFps })} />
             </label>
           </div>
 

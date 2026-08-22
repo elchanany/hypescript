@@ -71,5 +71,6 @@ graphify-out/.needs_update
 # ארטיפקטים של QA ידני (וידאו בדיקה, פלטי scratch)
 web/public/hs-qa.mp4
 .tmp/
+supabase/.temp/
 all_headings.txt
 scratch_headings.py

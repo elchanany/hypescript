@@ -12,7 +12,7 @@ import { CanvasSize } from "@/lib/editor/canvasCoords";
 import { CaptionBg, CaptionPosition, CaptionStyle, DEFAULT_CAPTION_STYLE } from "@/lib/editor/captionStyle";
 import { formatTimecode } from "@/lib/editor/time";
 import { SlidersHorizontal } from "@/components/icons";
-import { Section, Toggle } from "@/components/ui";
+import { Section, SelectField, Toggle } from "@/components/ui";
 import { CLIP_COLOR_PRESETS, matchingColorPreset } from "@/lib/editor/colorPresets";
 import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 
@@ -150,18 +150,13 @@ function SubInspector({ sub, onUpdate, captionStyle, onCaptionStyle }: {
             <input type="color" value={st.color} onChange={(e) => onCaptionStyle({ color: e.target.value })}
               style={{ flex: 1, height: 28, padding: 0 }} /></div>
           <div className="prop-input"><span className="k">מיקום</span>
-            <select value={st.position} onChange={(e) => onCaptionStyle({ position: e.target.value as CaptionPosition })}
-              style={{ flex: 1 }}>
-              <option value="bottom">למטה</option>
-              <option value="center">מרכז</option>
-              <option value="top">למעלה</option>
-            </select></div>
+            <SelectField value={st.position} ariaLabel="מיקום כתוביות" options={[
+              { value: "bottom", label: "למטה" }, { value: "center", label: "מרכז" }, { value: "top", label: "למעלה" },
+            ]} onValueChange={(value) => onCaptionStyle({ position: value as CaptionPosition })} /></div>
           <div className="prop-input"><span className="k">רקע</span>
-            <select value={st.bg} onChange={(e) => onCaptionStyle({ bg: e.target.value as CaptionBg })} style={{ flex: 1 }}>
-              <option value="soft">רך</option>
-              <option value="box">קופסה</option>
-              <option value="none">ללא</option>
-            </select></div>
+            <SelectField value={st.bg} ariaLabel="רקע כתוביות" options={[
+              { value: "soft", label: "רך" }, { value: "box", label: "קופסה" }, { value: "none", label: "ללא" },
+            ]} onValueChange={(value) => onCaptionStyle({ bg: value as CaptionBg })} /></div>
           <div className="prop">
             <span className="k">מודגש</span>
             <span className="v" style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -361,14 +356,12 @@ function ClipInspector(p: Props & { clip: Clip; focus: InspectorFocus }) {
         onChange={(e) => p.onUpdate({ opacity: Math.max(0, Math.min(1, +e.target.value)) })}
         style={{ width: "100%", marginTop: 4 }} />
       <div className="prop-input"><label className="k" htmlFor={`color-preset-${clip.id}`}>Preset</label>
-        <select id={`color-preset-${clip.id}`} value={matchingColorPreset(clipContrast(clip), clipSaturation(clip))}
-          onChange={(e) => {
-            const preset = CLIP_COLOR_PRESETS.find((item) => item.id === e.target.value);
+        <SelectField value={matchingColorPreset(clipContrast(clip), clipSaturation(clip))} ariaLabel="Preset צבע"
+          options={[{ value: "custom", label: "מותאם אישית", disabled: true }, ...CLIP_COLOR_PRESETS.map((preset) => ({ value: preset.id, label: preset.labelHe }))]}
+          onValueChange={(value) => {
+            const preset = CLIP_COLOR_PRESETS.find((item) => item.id === value);
             if (preset) p.onUpdate({ contrast: preset.contrast, saturation: preset.saturation });
-          }} style={{ flex: 1 }}>
-          <option value="custom" disabled>מותאם אישית</option>
-          {CLIP_COLOR_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.labelHe}</option>)}
-        </select>
+          }} />
       </div>
       <div className="prop"><span className="k">ניגודיות</span><span className="v mono">{Math.round(clipContrast(clip) * 100)}%</span></div>
       <input type="range" min={0.5} max={2} step={0.05} value={clipContrast(clip)}

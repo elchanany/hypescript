@@ -4,6 +4,8 @@ import { ArrowLeft, AudioWaveform, BadgeCheck, Captions, Check, Cloud, Command, 
 import BrandLogo from "@/components/BrandLogo";
 import LandingProductExperience from "@/components/LandingProductExperience";
 import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
+import LandingUseCaseGallery from "@/components/LandingUseCaseGallery";
+import LandingCreativeStack from "@/components/LandingCreativeStack";
 import LandingThemeToggle from "@/components/LandingThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import T from "@/components/LandingText";
@@ -83,6 +85,9 @@ export default function WelcomePage() {
 
         <LandingProductExperience />
       </section>
+
+      <LandingUseCaseGallery />
+      <LandingCreativeStack />
 
       <LandingLocalizedBody />
       <LandingHebrewOnly>

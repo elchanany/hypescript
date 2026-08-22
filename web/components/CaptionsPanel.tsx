@@ -6,7 +6,7 @@ import { Sub } from "@/lib/editor/subtitlesEdl";
 import { CaptionBg, CaptionPosition, CaptionStyle } from "@/lib/editor/captionStyle";
 import { HEBREW_FONTS } from "@/lib/captions/styles";
 import { CAPTION_PRESETS, CaptionPreset } from "@/lib/creative/captionStyles";
-import { Button, IconButton, Section, Toggle } from "@/components/ui";
+import { Button, IconButton, Section, SelectField, Toggle } from "@/components/ui";
 import { loadGoogleFont } from "@/lib/creative/fonts";
 
 export default function CaptionsPanel({
@@ -114,28 +114,21 @@ export default function CaptionsPanel({
           <div className="cap-body cap-style" style={{ padding: 0 }}>
             <label className="cap-field">
               <span>גופן עברי</span>
-              <select
+              <SelectField
                 value={captionStyle.fontFamily || "Heebo"}
-                onChange={(e) => {
-                  loadGoogleFont(e.target.value);
-                  onCaptionStyle({ fontFamily: e.target.value });
+                ariaLabel="גופן עברי"
+                options={[
+                  ...HEBREW_FONTS.map((font) => ({ value: font.id, label: font.labelHe, description: "גופן מוביל בעברית" })),
+                  { value: "Secular One", label: "Secular One — כותרות עבות" }, { value: "Suez One", label: "Suez One — מודגש מלא" },
+                  { value: "Varela Round", label: "Varela Round — עגול וחם" }, { value: "Karantina", label: "Karantina — קומפקטי וצר" },
+                  { value: "Frank Ruhl Libre", label: "Frank Ruhl Libre — סריפי קלאסי" }, { value: "David Libre", label: "David Libre — תורני מסורתי" },
+                  { value: "Amiri", label: "Amiri — אוריינטלי" },
+                ]}
+                onValueChange={(value) => {
+                  loadGoogleFont(value);
+                  onCaptionStyle({ fontFamily: value });
                 }}
-              >
-                <optgroup label="גופנים מובילים בעברית">
-                  {HEBREW_FONTS.map((font) => (
-                    <option key={font.id} value={font.id}>{font.labelHe}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="גופני כותרות ועיצוב נוספים">
-                  <option value="Secular One">Secular One — כותרות עבות</option>
-                  <option value="Suez One">Suez One — מודגש מלא</option>
-                  <option value="Varela Round">Varela Round — עגול וחם</option>
-                  <option value="Karantina">Karantina — קומפקטי וצר</option>
-                  <option value="Frank Ruhl Libre">Frank Ruhl Libre — סריפי קלאסי</option>
-                  <option value="David Libre">David Libre — תורני מסורתי</option>
-                  <option value="Amiri">Amiri — אוריינטלי</option>
-                </optgroup>
-              </select>
+              />
             </label>
             <label className="cap-field">
               <span>גודל</span>
@@ -177,25 +170,15 @@ export default function CaptionsPanel({
             </label>
             <label className="cap-field">
               <span>מיקום</span>
-              <select
-                value={captionStyle.position}
-                onChange={(e) => onCaptionStyle({ position: e.target.value as CaptionPosition })}
-              >
-                <option value="bottom">למטה</option>
-                <option value="center">מרכז</option>
-                <option value="top">למעלה</option>
-              </select>
+              <SelectField value={captionStyle.position} ariaLabel="מיקום כתוביות" options={[
+                { value: "bottom", label: "למטה" }, { value: "center", label: "מרכז" }, { value: "top", label: "למעלה" },
+              ]} onValueChange={(value) => onCaptionStyle({ position: value as CaptionPosition })} />
             </label>
             <label className="cap-field">
               <span>רקע</span>
-              <select
-                value={captionStyle.bg}
-                onChange={(e) => onCaptionStyle({ bg: e.target.value as CaptionBg })}
-              >
-                <option value="soft">רך</option>
-                <option value="box">קופסה</option>
-                <option value="none">ללא (שקוף)</option>
-              </select>
+              <SelectField value={captionStyle.bg} ariaLabel="רקע כתוביות" options={[
+                { value: "soft", label: "רך" }, { value: "box", label: "קופסה" }, { value: "none", label: "ללא (שקוף)" },
+              ]} onValueChange={(value) => onCaptionStyle({ bg: value as CaptionBg })} />
             </label>
             <div className="cap-field">
               <span>מודגש (Bold)</span>
