@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
-import HypescriptBrainPlayVector from "@/components/HypescriptBrainPlayVector";
+import { useRef, useState, type PointerEvent } from "react";
+import Hypescript3DIconAnimation from "@/components/Hypescript3DIconAnimation";
 
 export type SpinnerSize = "xs" | "sm" | "md" | "lg" | "xl" | "hero" | "giant";
 
@@ -47,8 +47,8 @@ export default function HypescriptBrandSpinner({
     const xRatio = (e.clientX - rect.left) / rect.width - 0.5;
     const yRatio = (e.clientY - rect.top) / rect.height - 0.5;
     setTiltStyle({
-      tiltX: -yRatio * 14,
-      tiltY: xRatio * 18,
+      tiltX: -yRatio * 12,
+      tiltY: xRatio * 16,
     });
   }
 
@@ -78,22 +78,13 @@ export default function HypescriptBrandSpinner({
           {/* Card Inner Specular Highlight / Bevel Glint */}
           <div className="hsx-card-specular" aria-hidden="true" />
 
-          {/* Animated Brain+Play Vector Core */}
+          {/* Animated 3D Brain+Play Elements Core */}
           <div className="hsx-hero-icon-wrapper">
-            <HypescriptBrainPlayVector
+            <Hypescript3DIconAnimation
               size={iconSize}
-              speed="normal"
-              interactive
-              glow
+              mode="hero"
+              interactive={interactiveTilt}
             />
-          </div>
-
-          {/* Floating Synaptic Particle Chips */}
-          <div className="hsx-floating-particles" aria-hidden="true">
-            <span className="particle-dot p1" />
-            <span className="particle-dot p2" />
-            <span className="particle-dot p3" />
-            <span className="particle-dot p4" />
           </div>
         </div>
 
@@ -111,11 +102,10 @@ export default function HypescriptBrandSpinner({
       aria-label={label || "Hypescript טוען…"}
     >
       <div className="hsx-spinner-stage" style={{ width: iconSize, height: iconSize }}>
-        <HypescriptBrainPlayVector
+        <Hypescript3DIconAnimation
           size={iconSize}
-          speed="fast"
+          mode="loading"
           interactive={false}
-          glow={false}
         />
       </div>
 
@@ -123,3 +113,4 @@ export default function HypescriptBrandSpinner({
     </div>
   );
 }
+
