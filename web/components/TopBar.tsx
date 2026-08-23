@@ -2,7 +2,31 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command, HelpCircle } from "@/components/icons";
+import {
+  ChevronDown,
+  Undo2,
+  Redo2,
+  MessageCircle,
+  Settings,
+  Download,
+  Film,
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
+  FolderOpen,
+  LayoutGrid,
+  LogIn,
+  Moon,
+  Sun,
+  MessagesSquare,
+  UserRound,
+  LogOut,
+  CreditCard,
+  ShieldCheck,
+  Command,
+  HelpCircle,
+} from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
 import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
@@ -12,28 +36,62 @@ import { useTheme } from "@/lib/theme/ThemeProvider";
 import KeyboardShortcutsModal from "@/components/KeyboardShortcutsModal";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-
-import { AspectRatioPicker } from "@/components/AspectRatioPicker";
 import { CanvasSize } from "@/lib/editor/canvasCoords";
 
 export default function TopBar({
-  projectName, projects, projectId, saving,
-  onSwitch, onNew, onRename, onDelete,
-  canUndo, canRedo, onUndo, onRedo,
-  chatOpen, onToggleChat, focusMode, onToggleFocusMode,
-  canExport, rendering, renderProgress = 0, onExport,
-  canvas, onChangeCanvas, onOpenTour,
+  projectName,
+  projects,
+  projectId,
+  saving,
+  onSwitch,
+  onNew,
+  onRename,
+  onDelete,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  chatOpen,
+  onToggleChat,
+  focusMode,
+  onToggleFocusMode,
+  canExport,
+  rendering,
+  renderProgress = 0,
+  onExport,
+  onExportLocal,
+  canvas,
+  onChangeCanvas,
+  onOpenTour,
 }: {
-  projectName: string; projects: ProjectMeta[]; projectId: string | null; saving: boolean;
-  onSwitch: (id: string) => void; onNew: () => void; onRename: () => void; onDelete: () => void;
-  canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void;
-  chatOpen: boolean; onToggleChat: () => void; focusMode: boolean; onToggleFocusMode: () => void;
-  canExport: boolean; rendering: boolean; renderProgress?: number; onExport: () => void;
-  canvas?: CanvasSize; onChangeCanvas?: (canvas: CanvasSize) => void;
+  projectName: string;
+  projects: ProjectMeta[];
+  projectId: string | null;
+  saving: boolean;
+  onSwitch: (id: string) => void;
+  onNew: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  chatOpen: boolean;
+  onToggleChat: () => void;
+  focusMode: boolean;
+  onToggleFocusMode: () => void;
+  canExport: boolean;
+  rendering: boolean;
+  renderProgress?: number;
+  onExport: () => void;
+  onExportLocal?: () => void;
+  canvas?: CanvasSize;
+  onChangeCanvas?: (canvas: CanvasSize) => void;
   onOpenTour?: () => void;
 }) {
   const { t } = useI18n();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null);
   const [kbdOpen, setKbdOpen] = useState(false);
   const { configured: authOn, user, signOut } = useAuth();
   const { resolved, setMode } = useTheme();
@@ -42,10 +100,16 @@ export default function TopBar({
   const userRef = useOutside<HTMLDivElement>(() => setUserOpen(false));
   const avatar = (user?.user_metadata?.avatar_url || user?.user_metadata?.picture) as string | undefined;
   const userName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || t("nav.account")) as string;
-  
+
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
-    fetch("/api/admin/access").then((r) => r.json()).then((body) => setIsAdmin(body.admin === true)).catch(() => setIsAdmin(false));
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    fetch("/api/admin/access")
+      .then((r) => r.json())
+      .then((body) => setIsAdmin(body.admin === true))
+      .catch(() => setIsAdmin(false));
   }, [user?.id]);
 
   useEffect(() => {
@@ -67,6 +131,11 @@ export default function TopBar({
     { label: t("project.delete"), icon: Trash2, danger: true, onClick: onDelete },
   ];
 
+  const exportItems: CtxItem[] = [
+    { label: "ייצוא (ענן מהיר)", icon: Download, onClick: onExport },
+    { label: "ייצוא מקומי במכשיר (WASM)", icon: Film, onClick: onExportLocal || onExport },
+  ];
+
   return (
     <div className="topbar2">
       <KeyboardShortcutsModal open={kbdOpen} onClose={() => setKbdOpen(false)} />
@@ -78,26 +147,67 @@ export default function TopBar({
         <LayoutGrid size={16} strokeWidth={1.75} />
       </Link>
       <div className="tb-group tb-primary-slot" aria-label={`${t("nav.project")} · ${t("nav.account")}`}>
-        {authOn && user && <div className={`tb-account-wrap${userOpen ? " is-open" : ""}`} ref={userRef}>
-          <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu" data-tip={`${t("account.profilePrivacy")} · ${t("nav.account")}`}>
-            {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" /> : <UserRound size={16} />}
-            <span>{userName.split(" ")[0]}</span><ChevronDown size={13} />
-          </button>
-          {userOpen && <div className="tb-account-menu" role="menu">
-            <div className="tb-account-meta"><strong>{userName}</strong><span>{user.email}</span></div>
-            <Link href="/account" role="menuitem"><CreditCard size={15} />{t("nav.account")}</Link>
-            <Link href="/settings" role="menuitem"><Settings size={15} />{t("nav.settings")}</Link>
-            {isAdmin && <Link href="/admin" role="menuitem"><ShieldCheck size={15} />{t("nav.admin")}</Link>}
-            <button role="menuitem" onClick={async () => { await signOut(); window.location.href = "/welcome"; }}><LogOut size={15} />{t("nav.signOut")}</button>
-          </div>}
-        </div>}
-        {authOn && !user && <Link href="/login" className="iconbtn tb-login" data-tip={t("nav.signIn")} aria-label={t("nav.signIn")}><LogIn size={16} strokeWidth={1.75} /></Link>}
-        <button className="tb-project" onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left, y: r.bottom + 4 }); }}>
+        {authOn && user && (
+          <div className={`tb-account-wrap${userOpen ? " is-open" : ""}`} ref={userRef}>
+            <button className="tb-account" type="button" onClick={() => setUserOpen((value) => !value)} aria-expanded={userOpen} aria-haspopup="menu" data-tip={`${t("account.profilePrivacy")} · ${t("nav.account")}`}>
+              {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" /> : <UserRound size={16} />}
+              <span>{userName.split(" ")[0]}</span>
+              <ChevronDown size={13} />
+            </button>
+            {userOpen && (
+              <div className="tb-account-menu" role="menu">
+                <div className="tb-account-meta">
+                  <strong>{userName}</strong>
+                  <span>{user.email}</span>
+                </div>
+                <Link href="/account" role="menuitem">
+                  <CreditCard size={15} />
+                  {t("nav.account")}
+                </Link>
+                <Link href="/settings" role="menuitem">
+                  <Settings size={15} />
+                  {t("nav.settings")}
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" role="menuitem">
+                    <ShieldCheck size={15} />
+                    {t("nav.admin")}
+                  </Link>
+                )}
+                <button
+                  role="menuitem"
+                  onClick={async () => {
+                    await signOut();
+                    window.location.href = "/welcome";
+                  }}
+                >
+                  <LogOut size={15} />
+                  {t("nav.signOut")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {authOn && !user && (
+          <Link href="/login" className="iconbtn tb-login" data-tip={t("nav.signIn")} aria-label={t("nav.signIn")}>
+            <LogIn size={16} strokeWidth={1.75} />
+          </Link>
+        )}
+        <button
+          className="tb-project"
+          onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            setMenu({ x: r.left, y: r.bottom + 4 });
+          }}
+        >
           <FolderOpen size={15} strokeWidth={1.75} />
           <span className="pname">{projectName || t("nav.project")}</span>
           <ChevronDown size={15} strokeWidth={1.75} />
         </button>
-        <span className={`tb-save ${saving ? "saving" : ""}`}><span className="dot" />{saving ? t("status.saving") : t("status.saved")}</span>
+        <span className={`tb-save ${saving ? "saving" : ""}`}>
+          <span className="dot" />
+          {saving ? t("status.saving") : t("status.saved")}
+        </span>
       </div>
 
       <div className="tb-spacer" />
@@ -110,7 +220,9 @@ export default function TopBar({
       <div className="tb-group tb-utility-slot">
         <IconButton icon={Command} tip={`${t("editor.shortcuts")} (Ctrl+K)`} onClick={() => setKbdOpen(true)} />
         {onOpenTour && <IconButton icon={HelpCircle} tip="הדרכה על המערכת" onClick={onOpenTour} />}
-        <Link href="/dashboard" className="iconbtn" data-tip={t("nav.dashboard")} aria-label={t("nav.dashboard")}><LayoutGrid size={16} strokeWidth={1.75} /></Link>
+        <Link href="/dashboard" className="iconbtn" data-tip={t("nav.dashboard")} aria-label={t("nav.dashboard")}>
+          <LayoutGrid size={16} strokeWidth={1.75} />
+        </Link>
         <IconButton icon={MessageCircle} tip={t("editor.openChat")} active={chatOpen && !focusMode} onClick={onToggleChat} />
         <button className={`tb-focus ${focusMode ? "on" : ""}`} onClick={onToggleFocusMode} data-tip={t("editor.chatMode")} data-tour="focus-mode">
           <MessagesSquare size={16} strokeWidth={1.75} />
@@ -121,14 +233,32 @@ export default function TopBar({
           tip={resolved === "dark" ? t("editor.light") : t("editor.dark")}
           onClick={() => setMode(resolved === "dark" ? "light" : "dark")}
         />
-        <Link href="/settings" className="iconbtn" data-tip={t("nav.settings")} aria-label={t("nav.settings")}><Settings size={16} strokeWidth={1.75} /></Link>
-        <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={t("editor.export")}>
-          {rendering ? <HypescriptBrandSpinner size="xs" /> : <Download size={16} strokeWidth={2} />}
-          <span>{rendering ? `${Math.round(renderProgress * 100)}%` : t("editor.export")}</span>
-        </button>
+        <Link href="/settings" className="iconbtn" data-tip={t("nav.settings")} aria-label={t("nav.settings")}>
+          <Settings size={16} strokeWidth={1.75} />
+        </Link>
+        <div className="tb-export-split" style={{ display: "inline-flex", alignItems: "center" }}>
+          <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={t("editor.export")}>
+            {rendering ? <HypescriptBrandSpinner size="xs" /> : <Download size={16} strokeWidth={2} />}
+            <span>{rendering ? `${Math.round(renderProgress * 100)}%` : t("editor.export")}</span>
+          </button>
+          <button
+            type="button"
+            className="btn primary tall tb-export-arrow"
+            disabled={!canExport || rendering}
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setExportMenu({ x: r.left, y: r.bottom + 4 });
+            }}
+            title="אפשרויות ייצוא"
+            style={{ padding: "0 6px", marginInlineStart: 2, minWidth: 26 }}
+          >
+            <ChevronDown size={14} />
+          </button>
+        </div>
       </div>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
+      {exportMenu && <ContextMenu x={exportMenu.x} y={exportMenu.y} items={exportItems} onClose={() => setExportMenu(null)} />}
     </div>
   );
 }

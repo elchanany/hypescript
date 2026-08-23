@@ -25,6 +25,7 @@ interface Props {
   onClose: () => void;
   onCancel: () => void;
   onRetry: () => void;
+  onRetryLocal?: () => void;
 }
 
 function formatTime(s: number): string {
@@ -139,7 +140,7 @@ function ExportVideoPlayer({ src }: { src: string }) {
   );
 }
 
-export default function ExportDialog({ open, rendering, route, progress, elapsedSeconds, phase, error, result, onClose, onCancel, onRetry }: Props) {
+export default function ExportDialog({ open, rendering, route, progress, elapsedSeconds, phase, error, result, onClose, onCancel, onRetry, onRetryLocal }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -201,8 +202,15 @@ export default function ExportDialog({ open, rendering, route, progress, elapsed
         )}
 
         {error && !rendering && (
-          <div className="export-error-actions">
-            <button type="button" className="btn primary tall" onClick={onRetry}><RotateCcw size={15} />נסה שוב</button>
+          <div className="export-error-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" className="btn primary tall" onClick={onRetry}>
+              <RotateCcw size={15} />נסה שוב
+            </button>
+            {onRetryLocal && (
+              <button type="button" className="btn secondary tall" onClick={onRetryLocal} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Film size={15} />נסה ייצוא מקומי במכשיר (WASM)
+              </button>
+            )}
             <button type="button" className="btn ghost tall" onClick={onClose}>סגור</button>
           </div>
         )}

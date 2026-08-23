@@ -1,13 +1,15 @@
 # ACTIVE_WORK.md
 
-## 2026-08-23 — Clean, Apple-grade 3D icon motion system & live Vercel production deployment
-- **Clean 3D Slice Motion System (`Hypescript3DIconAnimation.tsx`)**:
-  - Maintained 100% fidelity to the authentic master 3D clay render (`/brand/icons/icon-512.png`) without artificial distortions.
-  - Divided the 3D mark cleanly into three DOM slice layers: Left Brain Hemisphere (`slice-left`), Central Play Button (`slice-center`), and Right Brain Hemisphere (`slice-right`).
-  - **Entrance Motion (`mode-hero` / `mode-idle`)**: Left hemisphere glides in with spring physics from the left, right from the right, and the central play button pops smoothly with spring overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`).
-  - **Loading Mode (`mode-loading`)**: Harmonic rhythmic wave (Left → Center → Right) creating a delightful, calm loading motion across all spinners in the app.
-  - **Specular Sheen**: Subtle, luxurious light shimmer sweeping across the 3D surface every 4.8s.
-- **Verification**: 101 Vitest test suites (1,023 tests) passing 100% green. Vercel deployment `https://hypescript-842co07yk-elchanan-ys-projects.vercel.app` is **● Ready** on Production.
+## 2026-08-24 — Export Pipeline Fix & Local WASM Export Option (Pro & Fallback)
+- **Resolved Export Pipeline Failure**:
+  - **Asset Source Resolution**: In `web/lib/ffmpeg.ts` (`renderEDL`), added automatic resolution for cloud media (`cloudAssetId`) to fetch signed download URLs when local `File` blobs are empty (e.g. hydrated cloud projects on another device).
+  - **FFmpeg WASM Memory & Overlay Loops**: In `web/lib/render/overlayBurn.ts`, bounded overlay looping to active clip duration `Math.min(totalDuration, o.end + 0.5)` instead of looping entire video length, preventing WASM memory exhaustion during filter_complex execution.
+  - **Subtitles Progressive Collapse**: In `web/lib/editor/subtitlesEdl.ts` and `captionBurn.ts`, ensured caption burns collapse progressive cues safely for local WASM execution without exceeding browser memory limits.
+- **Added Explicit Local Export (WASM) for Pro & All Users**:
+  - **TopBar Dropdown (`TopBar.tsx`)**: Added split dropdown menu on the Export button enabling users to choose between **"ייצוא (ענן מהיר)"** and **"ייצוא מקומי במכשיר (WASM)"**.
+  - **Export Dialog Fallback (`ExportDialog.tsx`)**: Added **"נסה ייצוא מקומי במכשיר (WASM)"** button in the error state, enabling immediate one-click fallback if cloud render fails.
+  - **Deterministic Routing (`page.tsx`, `renderRoute.ts`)**: Added `user_requested_local` reason and `forceLocal` parameter to bypass cloud dispatch and render directly via `getRenderBackend().renderProject(...)`.
+- **Verification**: 104 Vitest test suites (1,076 tests) passing 100% green; isolated Next.js multi-agent build (`node scripts/agent-build.mjs --name=export-fix`) compiled with 53/53 static routes (exit code 0).
 - **סימפטומים א+ב** (breaths not cut, speech-containing segments cut): Noise floor contamination in `web/lib/audio/calibration.ts` and `web/lib/audio/nonSpeech.ts`. Resting noise was sampled from the same intervals searched for breaths, so breath itself inflated `noiseDb.p90`, making `silenceMargin` 18–32 dB. Breath was then classified as silence and never removed—inverted logic: stronger breath = higher confidence nothing needed removal. Fixed with rolling room floor (`computeEnvelope`, window 3s, percentile 0.12) → `roomFloorDb`. Invariant: when breath amplified 6dB, `roomFloorDb` moved 0.4 dB while `noiseDb.p90` moved 19.5 dB (ratio ~49x).
 - **סימפטום ג** (TikTok-granular cuts missing, margins >1s): Two separate issues: (1) `ctx.brief.pacing` ignored by cut tools—always fell back to `natural`—now explicit fallback aware in `web/lib/agent/tools.ts`. (2) Pacing loop incomplete: changed only `maxInternalPauseSec`, leaving preset's `preRollSec`/`postRollSec` and `minRemovalSec` calibrated for longer pauses. `broadcast` pads 0.19s, requires 0.12s removal → any gap <0.31s survived when user explicitly requested 0.15s. Fixed in `web/lib/cut/scriptPlan.ts` with `withMinSilence(preset, seconds)` tightening all three together; `boundaryOpts` now uses `pacing.boundary` not `preset.boundary` so tight padding takes effect.
 - **Deliberate non-changes:** (1) `GOALS.lecture_cut` remains `pacing: broadcast` (0.85s) despite promise "without breaths and silence"—acoustic fix removes breaths regardless of pacing; changing goal recipe changes all users' behavior. (2) `min_silence` <0.05s clamped silently to 0.05 via `Math.max` in `withMinSilence`.

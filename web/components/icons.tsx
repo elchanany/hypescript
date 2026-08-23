@@ -41,6 +41,7 @@ import {
   FileArrowUpIcon,
   FilmSlateIcon,
   FilmStripIcon,
+  FlameIcon,
   FloppyDiskIcon,
   FolderOpenIcon,
   GaugeIcon,
@@ -104,6 +105,7 @@ import {
   TextTIcon,
   TrashIcon,
   UploadSimpleIcon,
+  UserCheckIcon,
   UserCircleIcon,
   UsersIcon,
   VideoCameraIcon,
@@ -175,6 +177,7 @@ export const Eye = defineIcon(EyeIcon, "Eye");
 export const FileDown = defineIcon(FileArrowDownIcon, "FileDown");
 export const FileUp = defineIcon(FileArrowUpIcon, "FileUp");
 export const Film = defineIcon(FilmStripIcon, "Film");
+export const Flame = defineIcon(FlameIcon, "Flame");
 export const FolderOpen = defineIcon(FolderOpenIcon, "FolderOpen");
 export const Gauge = defineIcon(GaugeIcon, "Gauge");
 export const HardDrive = defineIcon(HardDriveIcon, "HardDrive");
@@ -249,6 +252,7 @@ export const Undo2 = defineIcon(ArrowCounterClockwiseIcon, "Undo2");
 export const Unlink2 = defineIcon(LinkBreakIcon, "Unlink2");
 export const Unlock = defineIcon(LockOpenIcon, "Unlock");
 export const Upload = defineIcon(UploadSimpleIcon, "Upload");
+export const UserCheck = defineIcon(UserCheckIcon, "UserCheck");
 export const UserRound = defineIcon(UserCircleIcon, "UserRound");
 export const Users = defineIcon(UsersIcon, "Users");
 export const Video = defineIcon(VideoCameraIcon, "Video");

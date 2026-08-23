@@ -15,6 +15,15 @@ Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemo
 - Verification: 94 Vitest files / 814 tests, TypeScript, isolated production build (54/54 pages), desktop/mobile browser screenshots, Graphify update.
 
 # Current State
+- 2026-08-24: **Export Pipeline Fix & Local WASM Export Option for Pro & All Users**
+  1. **Root Causes Resolved**:
+     - Remote/Cloud Media Local Render: In `web/lib/ffmpeg.ts`, added automatic cloud asset download resolution (`getCloudAssetDownloadUrl`) when local `File` objects are empty.
+     - WASM Filter Complex Bounds: In `web/lib/render/overlayBurn.ts`, clamped still input durations `-t` to the cue's active window instead of looping for the entire multi-minute video, eliminating WASM memory exhaustion during burns.
+  2. **Direct Local WASM Export Controls**:
+     - Added an export dropdown in `TopBar.tsx` enabling one-click choice between "ייצוא (ענן מהיר)" and "ייצוא מקומי במכשיר (WASM)".
+     - Added a direct fallback button in `ExportDialog.tsx` error state: "נסה ייצוא מקומי במכשיר (WASM)" with seamless retry.
+     - Added `user_requested_local` deterministic route and message handling in `renderRoute.ts` and `page.tsx`.
+  3. **Verification**: 104 Vitest test suites (1,076 tests) 100% green; isolated Next.js build compiled with 53/53 static routes (exit code 0).
 - 2026-08-23: **Clean, Apple-grade 3D Icon Motion System & Vercel Production Deployment (Commit `f53d685`)**
   1. Preserved 100% fidelity to the authentic 3D clay master render (`/brand/icons/icon-512.png`), eliminating all artificial vector lines, rings, and noise.
   2. Implemented clean 3D slice layer architecture (`Hypescript3DIconAnimation.tsx`) separating Left Brain Hemisphere, Center Play Button, and Right Brain Hemisphere.

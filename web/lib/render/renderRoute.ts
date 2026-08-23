@@ -14,6 +14,7 @@ export type RenderLocation = "cloud" | "device";
 
 export type CloudSkipReason =
   | "project_is_local"
+  | "user_requested_local"
   | "media_still_uploading"
   | "media_not_in_cloud"
   | "text_overlay_unsupported"
@@ -58,6 +59,7 @@ export function decideCloudRoute(input: CloudRouteInput): CloudRouteDecision {
 
 const REASON_HE: Record<CloudSkipReason, string> = {
   project_is_local: "הפרויקט מוגדר לעבודה מקומית, ולכן הייצוא רץ על המכשיר.",
+  user_requested_local: "נבחר ייצוא מקומי על המכשיר (WASM).",
   media_still_uploading: "יש קובץ שעדיין עולה לענן. אפשר להמתין לסיום ההעלאה ולייצא שוב — זה יהיה הרבה יותר מהיר.",
   media_not_in_cloud: "חלק מהמדיה עדיין לא נמצאת בענן, ולכן הייצוא רץ על המכשיר.",
   text_overlay_unsupported: "יש שכבת טקסט, ושרת הייצוא המהיר עדיין לא יודע לצרוב טקסט — לכן הייצוא רץ על המכשיר.",

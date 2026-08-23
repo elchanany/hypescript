@@ -52,7 +52,7 @@ describe("renderRouteMessage", () => {
 
   it("never claims the cloud while the work runs on the device", () => {
     const reasons = [
-      "project_is_local", "media_still_uploading", "media_not_in_cloud",
+      "project_is_local", "user_requested_local", "media_still_uploading", "media_not_in_cloud",
       "text_overlay_unsupported", "captions_unsupported", "cloud_failed", "cloud_quota",
     ] as const;
     for (const reason of reasons) {

@@ -337,7 +337,15 @@ export async function renderEDL(
         const assetId = mat?.assetId || wsr.assetId;
         const asset = mediaById(media, assetId);
         if (!asset) throw new Error(`חסר מקור לרינדור: ${assetId}`);
-        const source = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
+        let source: any = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
+        if ((!source || (source instanceof Blob && source.size === 0)) && asset.cloudAssetId) {
+          try {
+            const { getCloudAssetDownloadUrl } = await import("@/lib/cloud/client");
+            source = await getCloudAssetDownloadUrl(asset.cloudAssetId);
+          } catch (err) {
+            console.warn("Could not fetch cloud asset download url for local render:", err);
+          }
+        }
         await ff.writeFile(wsr.filename, await fetchFile(source));
       }
     }

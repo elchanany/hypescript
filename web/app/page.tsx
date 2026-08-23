@@ -29,7 +29,7 @@ import type { MotionAsset } from "@/lib/creative/motionAssets";
 import { loadGoogleFont } from "@/lib/creative/fonts";
 import { deleteProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen, Loader2 } from "@/components/icons";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen, Loader2, Unlink2 } from "@/components/icons";
 import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
@@ -60,7 +60,7 @@ import { renamedMediaName } from "@/lib/media/naming";
 
 ensureBuiltinCommands();
 
-const COMMAND_ICONS = { copy: Copy, scissors: Scissors, eye: Eye, "square-dashed": SquareDashed, trash: Trash2, type: Type, layers: Layers, lock: Lock, volume: Volume2, height: ChevronsUpDown } as const;
+const COMMAND_ICONS = { copy: Copy, scissors: Scissors, eye: Eye, "square-dashed": SquareDashed, trash: Trash2, type: Type, layers: Layers, lock: Lock, volume: Volume2, height: ChevronsUpDown, unlink: Unlink2 } as const;
 
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -1311,7 +1311,7 @@ export default function EditorPage() {
     finally { setBusy(false); setProgress(0); }
   };
 
-  const render = async () => {
+  const render = async (forceLocal = false) => {
     if (!media.length || !clips?.length) return;
     if (rendering) { setExportOpen(true); return; }
     if (exportResult?.url) URL.revokeObjectURL(exportResult.url);
@@ -1336,7 +1336,7 @@ export default function EditorPage() {
       // ההחלטה ולמה — פונקציה טהורה (lib/render/renderRoute.ts) כדי שהסיבה
       // שמוצגת למשתמש תהיה בדיוק הסיבה שהכריעה, ולא ניחוש של ה-UI.
       const route = decideCloudRoute({
-        policyAllowsCloud: policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId,
+        policyAllowsCloud: !forceLocal && policy?.capabilities.render?.execution === "cloud" && !!policy.cloudProjectId,
         allMediaInCloud:
           edl.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
           && audioClips.every((clip) => isGapClip(clip) || !!mediaById(media, clip.sourceId)?.cloudAssetId)
@@ -1349,11 +1349,11 @@ export default function EditorPage() {
         wantsBurnedCaptions: !!(burnCaptions && subs?.length),
         workerBurnsCaptions: workerCaps.subtitles,
       });
-      renderLocationRef.current = route.eligible ? "cloud" : "device";
+      renderLocationRef.current = (!forceLocal && route.eligible) ? "cloud" : "device";
       setRenderLocation(renderLocationRef.current);
-      setRenderSkipReason(route.reason);
+      setRenderSkipReason(forceLocal ? "user_requested_local" : route.reason);
       let blob: Blob | null = null;
-      if (route.eligible && policy?.cloudProjectId) {
+      if (!forceLocal && route.eligible && policy?.cloudProjectId) {
         try {
           setPhase("מכין את הסרטון בשרת המהיר…");
           blob = await renderCloudProject({
@@ -1827,7 +1827,9 @@ export default function EditorPage() {
         canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo}
         chatOpen={chatOpen} onToggleChat={toggleChat}
         focusMode={focusMode} onToggleFocusMode={toggleFocusMode}
-        canExport={!!clips?.length} rendering={rendering} renderProgress={progress} onExport={() => rendering ? setExportOpen(true) : void render()}
+        canExport={!!clips?.length} rendering={rendering} renderProgress={progress}
+        onExport={() => rendering ? setExportOpen(true) : void render(false)}
+        onExportLocal={() => rendering ? setExportOpen(true) : void render(true)}
         onOpenTour={() => setTourOpen(true)}
       />
 
@@ -1875,7 +1877,8 @@ export default function EditorPage() {
         result={exportResult}
         onClose={() => setExportOpen(false)}
         onCancel={() => renderAbortRef.current?.abort()}
-        onRetry={() => void render()}
+        onRetry={() => void render(false)}
+        onRetryLocal={() => void render(true)}
       />
 
       {/* ChatGPT-Style Centered Conversation Mode */}
