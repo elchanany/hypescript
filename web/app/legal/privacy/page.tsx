@@ -50,7 +50,7 @@ export default function PrivacyPage() {
             R2, בנפרד לכל משתמש ולכל פרויקט, עם קישורי גישה חתומים ומוגבלים בזמן.
           </li>
           <li>
-            <strong>מפתחות API (BYOK)</strong> — אם בחרת להשתמש במפתחות ה-AI שלך (DeepSeek / OpenAI /
+            <strong>מפתחות API (BYOK)</strong> — אם בחרת להשתמש במפתחות ה-AI שלך (OpenAI /
             Anthropic / Gemini), הם מוצפנים בצד השרת (AES-256-GCM) לפני השמירה, ולעולם לא נשלחים לדפדפן לאחר
             שנשמרו — רק השרת שלנו קורא אותם כדי לבצע קריאה לספק ה-AI בשמך.
           </li>
@@ -100,9 +100,9 @@ export default function PrivacyPage() {
           <li><strong>Lemon Squeezy</strong> — סליקת תשלומים, חשבוניות ומע״מ, כ-Merchant of Record של המנוי.</li>
           <li>
             <strong>ספקי AI</strong> — כשאתה מבקש פעולה שדורשת בינה מלאכותית (למשל תמלול, כתיבת כתוביות או
-            יצירת תמונה), הבקשה נשלחת לספק הרלוונטי: OpenAI, Anthropic, Google (Gemini), DeepSeek, Groq
+            יצירת תמונה), הבקשה נשלחת לספק הרלוונטי: OpenAI, Anthropic, Google (Gemini)
             ו-ElevenLabs. במצב מנוהל (ברירת המחדל) המפתח שלנו משמש לקריאה; במצב BYOK נעשה שימוש במפתח שלך
-            בלבד, בהתאם לספקים הנתמכים לכך (DeepSeek / OpenAI / Anthropic / Gemini).
+            בלבד, בהתאם לספקים הנתמכים לכך (OpenAI / Anthropic / Gemini).
           </li>
         </ul>
         <p>

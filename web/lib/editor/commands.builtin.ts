@@ -9,6 +9,7 @@ import { audioTrack, createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta
 import { clipTrackId, clipsOnTrack, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, replaceTrackClips } from "./tracks";
 import { registerCommand } from "./commands";
 import { effectById } from "@/lib/creative/effects";
+import { filterById } from "@/lib/creative/filters";
 
 let registered = false;
 
@@ -567,11 +568,15 @@ export function ensureBuiltinCommands() {
       const clip = api.getClips()?.find((item) => item.id === id);
       if (!clip || isGapClip(clip)) throw new Error("קטע לא נמצא");
       const requested = args?.effectId == null ? "" : String(args.effectId).trim();
-      // מזהה שאינו בקטלוג נדחה במקום להישמר בשקט ולהיעלם בייצוא
+      // מזהה שאינו בקטלוג נדחה במקום להישמר בשקט ולהיעלם בייצוא.
+      // clipLook פותר אפקטים וגם פילטרים מאותו שדה effectId, ולכן שני הקטלוגים
+      // כשרים כאן — העדפה לאפקט במקרה של התנגשות, בדיוק כמו ב-clipLook.
       const effect = requested ? effectById(requested) : undefined;
-      if (requested && !effect) throw new Error(`לוק לא מוכר: ${requested}`);
+      const filter = !effect && requested ? filterById(requested) : undefined;
+      const lookId = effect?.id ?? filter?.id;
+      if (requested && lookId == null) throw new Error(`לוק לא מוכר: ${requested}`);
       const patch: Partial<Clip> = {
-        effectId: !effect || effect.id === "none" ? undefined : effect.id,
+        effectId: lookId == null || lookId === "none" ? undefined : lookId,
       };
       if (args?.amount != null) {
         const value = Number(args.amount);

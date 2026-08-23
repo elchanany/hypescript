@@ -9,6 +9,7 @@ import type { Clip, MediaAsset } from "@/lib/editor/model";
 import type { TrackMeta } from "@/lib/editor/project";
 import type { Sub } from "@/lib/editor/subtitlesEdl";
 import type { Word } from "@/lib/models";
+import type { ProjectBrief } from "@/lib/intent/questions";
 import { TOOL_BY_NAME, type AgentContext } from "./tools";
 
 beforeAll(() => ensureBuiltinCommands());
@@ -26,7 +27,7 @@ const SPOKEN_SCRIPT =
  *  - מהססים ("אה", "אממ")
  *  - דיבור שלא ביקשו לשמור (המשפט על ההנצחה)
  */
-function buildTranscript(): Word[] {
+function buildTranscript(gapSec = 0.07): Word[] {
   const spoken = [
     "אה", "שלום", "וברכה", "השיעור", "הזה", "נמסר", "בכולל", "הקדיש", "והחסד",
     "ההנצחה", "היום", "תהיה", "לעילוי", "נשמת", "משה", "בן", "רחל",
@@ -37,12 +38,12 @@ function buildTranscript(): Word[] {
   let t = 0.5;
   return spoken.map((text) => {
     const word: Word = { text, start: t, end: t + 0.32, type: "word" };
-    t += 0.32 + 0.07;
+    t += 0.32 + gapSec;
     return word;
   });
 }
 
-function harness(words: Word[]) {
+function harness(words: Word[], brief?: ProjectBrief) {
   const asset: MediaAsset = {
     id: "media-1", name: "שיעור.mp4", kind: "video",
     file: null as unknown as File, duration: 30, url: "blob:lesson",
@@ -74,6 +75,7 @@ function harness(words: Word[]) {
     clips: [], subs: [], overlays: [], tracks,
     canvas: { width: 1280, height: 720 }, lastRender: null, editorApi: api,
     askUser: async () => "",
+    brief: brief ?? null,
   };
   return { ctx, clips: () => clips, subs: () => subs };
 }
@@ -220,6 +222,74 @@ describe("זרימת עריכה מלאה על בריף אמיתי", () => {
         { script: SPOKEN_SCRIPT, measure_audio: false }, h.ctx, silent,
       ));
       expect(report).not.toContain("חסרות");
+    }
+  });
+});
+
+// המשתמש ביקש חיתוך בסגנון טיקטוק — מרווחים של פחות משנייה — וקיבל פאוזות של
+// 0.42 שניות. הסיבה לא הייתה באלגוריתם: discover_intent כבר גזר staccato מהמילה
+// "טיקטוק" וכתב אותו לבריף, אבל keep_by_script קרא resolvePacing(a.pacing) בלי
+// ברירת מחדל מהבריף, ולכן כל חיתוך רץ ב-natural. הבדיקות כאן שומרות על החוליה
+// הזאת: הבריף מגיע לתכנון, וגם יש חוגה מספרית ישירה כשהמשתמש נוקב במספר.
+function briefWith(pacing: ProjectBrief["pacing"]): ProjectBrief {
+  return {
+    goal: "lecture_cut", goalLabelHe: "שיעור", outcomeHe: "",
+    aspect: "landscape", targetSec: null, pacing,
+    captions: "lecture", transitions: [], music: "none", narration: false,
+    steps: [], derivedHe: [], answered: {},
+  };
+}
+
+const totalKept = (clips: Clip[]) => clips.reduce((sum, c) => sum + (c.end - c.start), 0);
+
+/**
+ * מרווחים של 0.45 שניות — בדיוק ה"פחות משנייה" שהמשתמש התלונן ששורד.
+ * גדול דיו מריפוד הגבולות (0.19 שניות לכל היותר) כדי שהחיתוך לא יתאחה בחזרה,
+ * וקטן דיו ש-37 המילים עדיין נכנסות ב-30 שניות המקור (37×0.77 ≈ 28.5).
+ */
+const SUB_SECOND_GAPS = () => buildTranscript(0.45);
+
+describe("הקצב שנקבע בבריף מגיע בפועל לחיתוך", () => {
+  it("בלי pacing מפורש — הבריף קובע, ולא natural קבוע", async () => {
+    const staccato = harness(SUB_SECOND_GAPS(), briefWith("staccato"));
+    const broadcast = harness(SUB_SECOND_GAPS(), briefWith("broadcast"));
+    await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT }, staccato.ctx, silent);
+    await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT }, broadcast.ctx, silent);
+    // staccato (0.04) חותך מרווח של 0.45 שניות; broadcast (0.85) משאיר אותו שלם.
+    expect(totalKept(staccato.clips())).toBeLessThan(totalKept(broadcast.clips()));
+    expect(staccato.clips().length).toBeGreaterThan(broadcast.clips().length);
+  });
+
+  it("pacing מפורש בקריאה גובר על הבריף", async () => {
+    const explicit = harness(SUB_SECOND_GAPS(), briefWith("staccato"));
+    const briefOnly = harness(SUB_SECOND_GAPS(), briefWith("staccato"));
+    await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT, pacing: "broadcast" }, explicit.ctx, silent);
+    await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT }, briefOnly.ctx, silent);
+    expect(totalKept(explicit.clips())).toBeGreaterThan(totalKept(briefOnly.clips()));
+  });
+
+  it("min_silence הוא חוגה מספרית שעוקפת גם pacing מפורש", async () => {
+    const dial = harness(SUB_SECOND_GAPS());
+    const preset = harness(SUB_SECOND_GAPS());
+    await TOOL_BY_NAME.keep_by_script.run(
+      { script: SPOKEN_SCRIPT, pacing: "broadcast", min_silence: 0.15 }, dial.ctx, silent,
+    );
+    await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT, pacing: "broadcast" }, preset.ctx, silent);
+    expect(totalKept(dial.clips())).toBeLessThan(totalKept(preset.clips()));
+  });
+
+  it("הידוק אגרסיבי אינו מוריד את כיסוי הטקסט", async () => {
+    for (const args of [
+      { script: SPOKEN_SCRIPT, min_silence: 0.15 },
+      { script: SPOKEN_SCRIPT, pacing: "staccato" },
+    ]) {
+      const h = harness(SUB_SECOND_GAPS(), briefWith("staccato"));
+      const result = String(await TOOL_BY_NAME.keep_by_script.run(args, h.ctx, silent));
+      expect(result, JSON.stringify(args)).toContain("כיסוי הטקסט: 100%");
+      const report = String(await TOOL_BY_NAME.audit_edit.run(
+        { script: SPOKEN_SCRIPT, measure_audio: false }, h.ctx, silent,
+      ));
+      expect(report, JSON.stringify(args)).not.toContain("חסרות");
     }
   });
 });

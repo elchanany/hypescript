@@ -84,6 +84,14 @@ export const CLASSIFY_DEFAULTS: Required<Omit<ClassifyOptions, "calibration">> =
 const ATTACK_SOFT = 0.20;
 const ATTACK_SHARP = 0.45;
 
+/**
+ * התחום שבו סף השקט המכויל מותר לנוע, ב-dB מעל הרצפה המקומית. הרצפה היא
+ * אחוזון 12, כך שרעש חדר רגיל מרפרף כ-4–8dB מעליה; נשימה נשמעת יושבת
+ * הרבה מעל. הגבול העליון קיים כדי שסף לא יוכל שוב לבלוע נשימות שלמות.
+ */
+const SILENCE_MARGIN_MIN_DB = 5;
+const SILENCE_MARGIN_MAX_DB = 12;
+
 /** מדרון עולה 0..1 בין lo ל-hi. */
 function ramp(value: number, lo: number, hi: number): number {
   if (hi === lo) return value >= hi ? 1 : 0;
@@ -156,9 +164,17 @@ export function classifyGap(
   const calibration = options.calibration ?? null;
   const calibrated = !!calibration?.reliable;
 
-  // סף השקט: עם כיול הוא נגזר מרעש הרקע האמיתי של ההקלטה, לא ממספר קבוע
+  // סף השקט נמדד מול *אותה* רצפה שמולה נמדד peakAboveFloorDb — הרצפה
+  // המקומית המתגלגלת — ולכן הוא חייב להיות מספר קטן, בסדר גודל של 5–12dB.
+  //
+  // הנוסחה הקודמת גזרה אותו מהמרחק שבין סף הדיבור לחציון הפערים. שתי
+  // המידות האלה נמדדות ממקורות שונים, וכשבפערים יש נשימות החציון מטפס
+  // והמרחק תופח ל-20–35dB. אז כל נשימה — גם כזו שיושבת 30dB מעל הרצפה
+  // ונשמעת היטב — נצבעה "שקט", ו"שקט" אינו ב-NOISE_LABELS ולכן אינו מוסר
+  // אלא אם הפער ארוך מ-maxInternalPauseSec. זו הסיבה שנשימות לא נחתכו.
   const silenceMargin = calibrated
-    ? Math.max(3, calibration!.speechThresholdDb - calibration!.noiseDb.p50)
+    ? Math.min(SILENCE_MARGIN_MAX_DB, Math.max(SILENCE_MARGIN_MIN_DB,
+      (calibration!.speechThresholdDb - calibration!.roomFloorDb) * 0.5))
     : opts.silenceMarginDb;
   if (peakAboveFloorDb < silenceMargin) {
     return { ...base, label: "silence", confidence: 1 - ramp(peakAboveFloorDb, 0, silenceMargin) * 0.35 };
@@ -175,11 +191,11 @@ export function classifyGap(
   const rank = (value: number, key: keyof NonNullable<typeof speechSpectral>) =>
     speechSpectral ? percentileRank(value, speechSpectral[key]) : 0.5;
 
-  // אנרגיה: 0 = ברעש הרקע, 1 = בעוצמת דיבור מלאה
+  // אנרגיה: 0 = ברצפת החדר, 1 = בעוצמת דיבור מלאה. המכנה הוא הטווח הדינמי
+  // האמיתי של ההקלטה, ולא מרחק שנמדד מול פערים שהנשימות עצמן מזהמות.
   const loudness = calibrated
     ? Math.max(0, Math.min(1,
-      (peakAboveFloorDb + calibration!.noiseDb.p50 - calibration!.noiseDb.p90)
-      / Math.max(3, calibration!.speechDb.p50 - calibration!.noiseDb.p90)))
+      peakAboveFloorDb / Math.max(6, calibration!.speechDb.p50 - calibration!.roomFloorDb)))
     : ramp(peakAboveFloorDb, 4, 26);
 
   // ההתקפה כבר מנורמלת (יחס עלייה לשיא) ואינה תלויה במיקרופון או בחדר,
@@ -193,19 +209,21 @@ export function classifyGap(
   const centroidHigh = relative ? rank(spectral.centroid, "centroid") : ramp(spectral.centroid, 320, 2600);
 
   const scores: Array<[NonSpeechLabel, number]> = [
-    // דיבור שהתמלול פספס: תואם את פרופיל הדיבור של ההקלטה עצמה — לא אוושתי
-    // כמו נשימה, מרוכז בפס הדיבור, וחזק. חייב להיבדק ראשון: אם זה דיבור,
-    // כל שאר הפרופילים אינם רלוונטיים והקטע לא יוסר.
-    ...(relative ? [[
-      "speech_like",
-      profileScore([
-        ramp(durationSec, 0.08, 0.18),
-        ramp(loudness, 0.35, 0.7),
-        1 - ramp(flatnessHigh, 0.55, 0.85),
-        1 - ramp(highHigh, 0.6, 0.9),
-        band(midHigh, 0.1, 0.25, 0.9, 1.0),
-      ]),
-    ]] as Array<[NonSpeechLabel, number]> : []),
+    // דיבור שהתמלול פספס: לא אוושתי כמו נשימה, מרוכז בפס הדיבור, וחזק.
+    // חייב להיבדק ראשון: אם זה דיבור, כל שאר הפרופילים אינם רלוונטיים
+    // והקטע לא יוסר.
+    //
+    // המועמד הזה נבדק *תמיד*, גם בלי כיול. קודם הוא הופיע רק כשהכיול הצליח,
+    // ולכן דווקא בהקלטה הגרועה — שבה הכיול נופל — נעלמה השמירה היחידה מפני
+    // מחיקת מילה שהתמלול פספס. כל הכניסות שלו ממילא יודעות ליפול לסולם
+    // מוחלט, ונשימה מקבלת 0 בשני האיברים הספקטרליים בשני המצבים.
+    ["speech_like", profileScore([
+      ramp(durationSec, 0.08, 0.18),
+      ramp(loudness, 0.35, 0.7),
+      1 - ramp(flatnessHigh, 0.55, 0.85),
+      1 - ramp(highHigh, 0.6, 0.9),
+      band(midHigh, 0.1, 0.25, 0.9, 1.0),
+    ])],
     // נשימה: חלשה מדיבור, אוושתית יותר מדיבור, מוטית לגבוהים, התקפה רכה
     ["breath", profileScore([
       band(durationSec, 0.08, 0.14, 0.6, 1.0),

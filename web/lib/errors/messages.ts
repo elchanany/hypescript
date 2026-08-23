@@ -610,6 +610,27 @@ const LIB_CODES: Record<string, Entry> = {
     audience: "user",
     retryable: true,
   },
+  stock_bad_request: {
+    title: "בקשת המדיה אינה תקינה",
+    detail: "הבקשה לחיפוש או להורדת מדיה הוזנה בצורה שאינה נתמכת, או שהכתובת נדחתה מסיבות אבטחה.",
+    action: "רעננו את העמוד ונסו שוב.",
+    audience: "user",
+    retryable: false,
+  },
+  stock_not_configured: {
+    title: "חיפוש המדיה אינו מחובר",
+    detail: "חסר מפתח API של ספק המדיה המבוקש, ולכן החיפוש בו אינו פעיל.",
+    action: "ניתן להגדיר את המפתח ב-web/.env.local. עד אז אפשר להעלות קבצים מהמחשב.",
+    audience: "owner",
+    retryable: false,
+  },
+  stock_search_failed: {
+    title: "החיפוש בספקי המדיה נכשל",
+    detail: "ספק המדיה החזיר שגיאה זמנית בזמן החיפוש או ההורדה.",
+    action: "אפשר לנסות שוב בעוד רגע.",
+    audience: "owner",
+    retryable: true,
+  },
   thumbnail: {
     title: "יצירת תמונה ממוזערת נכשלה",
     detail: "טעינת הווידאו ליצירת תצוגה מקדימה נכשלה, כנראה בגלל בעיה בקובץ עצמו.",

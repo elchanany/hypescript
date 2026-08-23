@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Undo2, Redo2, MessageCircle, Settings, Download, Loader2, Plus, Pencil, Trash2, Check, FolderOpen, LayoutGrid, LogIn, Moon, Sun, MessagesSquare, UserRound, LogOut, CreditCard, ShieldCheck, Command, HelpCircle } from "@/components/icons";
 import { IconButton, ContextMenu, CtxItem, useOutside } from "@/components/ui";
 import BrandLogo from "@/components/BrandLogo";
+import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import { ProjectMeta } from "@/lib/storage";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useTheme } from "@/lib/theme/ThemeProvider";
@@ -122,8 +123,8 @@ export default function TopBar({
         />
         <Link href="/settings" className="iconbtn" data-tip={t("nav.settings")} aria-label={t("nav.settings")}><Settings size={16} strokeWidth={1.75} /></Link>
         <button className="btn primary tall" onClick={onExport} disabled={!canExport} data-tip={t("editor.export")}>
-          {rendering ? <Loader2 size={16} strokeWidth={2} className="spin" /> : <Download size={16} strokeWidth={2} />}
-          {rendering ? `${t("editor.rendering")} ${Math.max(0, Math.min(100, Math.round(renderProgress * 100)))}%` : t("editor.export")}
+          {rendering ? <HypescriptBrandSpinner size="xs" /> : <Download size={16} strokeWidth={2} />}
+          <span>{rendering ? `${Math.round(renderProgress * 100)}%` : t("editor.export")}</span>
         </button>
       </div>
 

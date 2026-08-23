@@ -102,17 +102,9 @@ export default function CreativePanel({
           <TransitionsBrowser
             clip={clip}
             onApplyFade={(visualFadeIn, visualFadeOut) => onApply?.({ visualFadeIn, visualFadeOut })}
-            onApplyTransition={(tId) => {
-              // Connect transition preset
-              if (clip) onApply?.({ effectId: `tr_${tId}` });
-            }}
           />
         ) : activeKind === "animations" ? (
-          <AnimationsBrowser
-            onApplyAnimation={(anim) => {
-              if (clip) onApply?.({ effectId: `anim_${anim.id}` });
-            }}
-          />
+          <AnimationsBrowser />
         ) : activeKind === "stickers" ? (
           <StickersBrowser
             onAddStickerOverlay={(sticker) => onAddSticker?.(sticker)}

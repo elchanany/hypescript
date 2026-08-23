@@ -8,8 +8,11 @@ import { searchTransitions, TRANSITION_CATEGORIES, Transition } from "@/lib/crea
 interface Props {
   clip: Clip | null;
   onApplyFade: (fadeIn: number, fadeOut: number) => void;
-  onApplyTransition?: (transitionId: string) => void;
 }
+
+// חוק הכנות: מעברי xfade עדיין אינם ממומשים בתצוגה ובייצוא (אין xfade בגרף
+// הרינדור), ולכן הכפתורים מנוטרלים במפורש במקום להחיל משהו שלא יעבוד.
+const TRANSITIONS_SOON_HE = "החלת מעברים בין קליפים תתווסף בקרוב — הייצוא עדיין לא תומך";
 
 const FADE_PRESETS = [
   { id: "none", name: "ללא עמעום", note: "חיתוך ישיר", seconds: 0 },
@@ -20,7 +23,7 @@ const FADE_PRESETS = [
   { id: "epic", name: "אפוס ממושך", note: "2.5s", seconds: 2.5 },
 ] as const;
 
-export default function TransitionsBrowser({ clip, onApplyFade, onApplyTransition }: Props) {
+export default function TransitionsBrowser({ clip, onApplyFade }: Props) {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -101,15 +104,16 @@ export default function TransitionsBrowser({ clip, onApplyFade, onApplyTransitio
             <Sparkles size={15} />
             <span>מעברי סצנות (Scene Transitions)</span>
           </div>
+          <p className="creative-soon-note">{TRANSITIONS_SOON_HE}</p>
           <div className="transitions-grid-dense">
             {filteredTransitions.map((item) => (
               <button
                 key={item.id}
                 className="transition-card-interactive"
+                disabled
                 onMouseEnter={() => setPreviewingId(item.id)}
                 onMouseLeave={() => setPreviewingId(null)}
-                onClick={() => onApplyTransition?.(item.id)}
-                title={`${item.labelHe} (${item.defaultDuration.toFixed(2)}s)`}
+                title={`${item.labelHe} (${item.defaultDuration.toFixed(2)}s) · ${TRANSITIONS_SOON_HE}`}
               >
                 <div className={`transition-motion-preview ${item.category} ${previewingId === item.id ? "is-hovering" : ""}`}>
                   <span className="sample-slide-a" />

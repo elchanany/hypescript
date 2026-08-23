@@ -42,7 +42,9 @@
     ".next-agent-billing/types/**/*.ts",
     ".next-agent-renderroute/types/**/*.ts",
     ".next-agent-cloudsubs/types/**/*.ts",
-    ".next-agent-brandkit/types/**/*.ts"
+    ".next-agent-brandkit/types/**/*.ts",
+    ".next-agent-landing-layers-polish/types/**/*.ts",
+    ".next-agent-hero-brand-card/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

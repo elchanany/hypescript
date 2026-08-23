@@ -86,5 +86,8 @@ lemon_store_missing
 limit_reached
 offline
 r2_not_configured
+stock_bad_request
+stock_not_configured
+stock_search_failed
 thumbnail
 unsupported_provider

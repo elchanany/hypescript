@@ -31,6 +31,7 @@ import { requestConversationTitle, shouldGenerateTitle } from "@/lib/agent/title
 import { refreshMemorySummary, requestMemorySummary } from "@/lib/agent/memorySummary";
 import { clampComposeDrag, clampComposeHeight, COMPOSE_H_DEFAULT } from "@/lib/ui/composeBox";
 import { formatQuoteTime, quotePlaceText } from "@/lib/editor/time";
+import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import {
   MessageCircle, X, Send, Square, Paperclip, Copy, Check, AlertTriangle, Loader2, Film as FilmIcon, Music, Image as ImageIcon,
   Scissors, Trash2, Plus, Move, Search, Type, Layers, AudioLines, Camera, Captions, Pencil, Clock, FileDown, FileUp,
@@ -194,7 +195,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   const [input, setInput] = useState("");
   const [composerReferences, setComposerReferences] = useState<ComposerReference[]>([]);
   const [running, setRunning] = useState(false);
-  const [provider, setProvider] = useState<Provider>("deepseek");
+  const [provider, setProvider] = useState<Provider>("openai");
   const [usage, setUsage] = useState<AgentUsage>({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
   const [canChooseProvider, setCanChooseProvider] = useState(false);
   const [providerMode, setProviderMode] = useState<"managed" | "byok">("managed");
@@ -464,7 +465,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
   useEffect(() => { ctxRef.current.memorySummary = store.memorySummary?.text || null; }, [store.memorySummary]);
 
   useEffect(() => {
-    setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "deepseek"));
+    setProvider(((localStorage.getItem(PROVIDER_PREF) as Provider) || "openai"));
     fetch("/api/providers/byok")
       .then((r) => r.ok ? r.json() : null)
       .then((access) => {
@@ -945,7 +946,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       <div className="chat-body2" ref={scrollRef}>
         {!restoredChat && <div className="msg2 assistant chat-restoring" role="status" aria-live="polite">
           <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Bot size={13} weight="bold" /></span><strong>hypescript AI</strong></div>
-          <div className="b skeleton-shimmer"><Loader2 className="spin" size={14} /><span>טוענים את השיחה…</span></div>
+          <div className="b skeleton-shimmer"><HypescriptBrandSpinner size="xs" label="טוענים את השיחה…" /></div>
         </div>}
         {restoredChat && items.length === 0 && (
           inFocusMode ? (
@@ -1005,7 +1006,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
                   <div className="st">{it.providerLabel ? `דרך ${it.providerLabel} · ${statusText}` : statusText}</div>
                 </div>
                 <span className="stt tool-actions">
-                  {it.state === "running" && <Loader2 size={15} className="spin" style={{ color: "var(--accent)" }} />}
+                  {it.state === "running" && <HypescriptBrandSpinner size="xs" />}
                   {it.state === "ok" && <Check size={15} className="stt ok" />}
                   {it.state === "error" && <AlertTriangle size={15} className="stt err" />}
                   {/* חסימת-מצב: נסיון חוזר יחסם שוב באותו מצב — כפתורי מעבר מצב במקום "נסה שוב" */}

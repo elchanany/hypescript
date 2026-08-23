@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/lib/auth/useAuth";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import BrandLogo from "@/components/BrandLogo";
+import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import NewProjectWizard from "@/components/NewProjectWizard";
 import { toast } from "@/lib/ui/toast";
 import { explainError, looksLikeErrorCode } from "@/lib/errors/messages";
@@ -535,7 +536,7 @@ export default function DashboardPage() {
         )}
 
         {loading || projectsLoading ? <section className="dash-project-loading" aria-busy="true" aria-label="טוען ומסנכרן את הפרויקטים">
-          <div className="dash-loading-status" role="status" aria-live="polite"><Loader2 className="spin" size={16} /><span>טוענים ומסנכרנים את הפרויקטים…</span></div>
+          <div className="dash-loading-status" role="status" aria-live="polite"><HypescriptBrandSpinner size="xs" label="טוענים ומסנכרנים את הפרויקטים…" /></div>
           <div className="dash-grid">{[0, 1, 2, 3].map((item) => <ProjectCardSkeleton key={item} />)}</div>
         </section> : projects.length === 0 ? (
           <div className="dash-empty">

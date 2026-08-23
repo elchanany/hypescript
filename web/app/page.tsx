@@ -14,6 +14,7 @@ import { Sub, edlToSubs, edlToSubsWithScript, parseSrt, subsToSrt } from "@/lib/
 import { defaultCanvasFor } from "@/lib/editor/canvasCoords";
 import { closeGap, isGapClip, trimGap } from "@/lib/editor/timelineOps";
 import { EditorApi, runCommand } from "@/lib/editor/commands";
+import { inspectorPatchToCommands } from "@/lib/editor/inspectorPatch";
 import { ensureBuiltinCommands } from "@/lib/editor/commands.builtin";
 import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
@@ -29,6 +30,7 @@ import { loadGoogleFont } from "@/lib/creative/fonts";
 import { deleteProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
 import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen, Loader2 } from "@/components/icons";
+import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -1253,21 +1255,7 @@ export default function EditorPage() {
   const updateClipFromInspector = (id: string, patch: Partial<Clip>) => {
     const api = editorApiRef.current;
     if (!api) return;
-    const commands: Array<{ id: "clip.trim" | "clip.setEnabled" | "clip.setVolume" | "clip.setAudioFades" | "clip.setOpacity" | "clip.setColorAdjustments" | "clip.setVisualFades" | "clip.setFlip"; args: Record<string, unknown> }> = [];
-    if (patch.start != null || patch.end != null) commands.push({ id: "clip.trim", args: { id, ...patch } });
-    if (patch.enabled != null) commands.push({ id: "clip.setEnabled", args: { id, enabled: patch.enabled } });
-    if (patch.volume != null) commands.push({ id: "clip.setVolume", args: { id, volume: patch.volume } });
-    if (patch.fadeIn != null || patch.fadeOut != null) commands.push({ id: "clip.setAudioFades", args: { id, fadeIn: patch.fadeIn, fadeOut: patch.fadeOut } });
-    if (patch.opacity != null) commands.push({ id: "clip.setOpacity", args: { id, opacity: patch.opacity } });
-    if (patch.contrast != null || patch.saturation != null) {
-      commands.push({
-        id: "clip.setColorAdjustments",
-        args: { id, contrast: patch.contrast, saturation: patch.saturation },
-      });
-    }
-    if (patch.visualFadeIn != null || patch.visualFadeOut != null) commands.push({ id: "clip.setVisualFades", args: { id, fadeIn: patch.visualFadeIn, fadeOut: patch.visualFadeOut } });
-    if (patch.flipX != null || patch.flipY != null) commands.push({ id: "clip.setFlip", args: { id, flipX: patch.flipX, flipY: patch.flipY } });
-    for (const command of commands) {
+    for (const command of inspectorPatchToCommands(id, patch)) {
       const result = runCommand(command.id, api, command.args);
       if (!result.ok) { setError(result.error); return; }
     }
@@ -1842,8 +1830,7 @@ export default function EditorPage() {
       />
 
       {!restored && <div className="editor-hydration-status" role="status" aria-live="polite">
-        <Loader2 className="spin" size={17} />
-        <span>{projectId ? "טוענים את הפרויקט…" : "טוענים את סביבת הפרויקט…"}</span>
+        <HypescriptBrandSpinner size="xs" label={projectId ? "טוענים את הפרויקט…" : "טוענים את סביבת הפרויקט…"} />
       </div>}
 
       {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}

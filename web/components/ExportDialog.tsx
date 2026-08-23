@@ -3,6 +3,7 @@ import type { RenderRouteMessage } from "@/lib/render/renderRoute";
 
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, ExternalLink, Film, Loader2, Maximize, Pause, Play, RotateCcw, Square, Volume2, VolumeX, X } from "@/components/icons";
+import HypescriptBrandSpinner from "@/components/HypescriptBrandSpinner";
 import { estimateRemainingSeconds, exportPercent, formatBytes, formatDurationHe } from "@/lib/render/exportProgress";
 
 export interface ExportResult {
@@ -157,7 +158,7 @@ export default function ExportDialog({ open, rendering, route, progress, elapsed
       <section className="export-card" role="dialog" aria-modal="true" aria-labelledby="export-title" dir="rtl">
         <header className="export-head">
           <div className={`export-mark ${result ? "done" : error ? "failed" : ""}`}>
-            {rendering ? <Loader2 className="spin" size={21} /> : result ? <CheckCircle2 size={21} /> : <Film size={21} />}
+            {rendering ? <HypescriptBrandSpinner size="xs" /> : result ? <CheckCircle2 size={21} /> : <Film size={21} />}
           </div>
           <div>
             <h2 id="export-title">{result ? "הסרטון מוכן להורדה" : error ? "הייצוא נעצר" : route.titleHe}</h2>

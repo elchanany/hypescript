@@ -38,7 +38,7 @@ export function normalizeToolResult(result: ToolRunResult): { text: string; arti
 
 const MAX_ITERS = 40;
 const CALL_TIMEOUT_MS = 120000;
-const MUTATING_TOOLS = new Set([
+export const MUTATING_TOOLS = new Set([
   "keep_by_script", "remove_segments", "add_clip", "split_clip", "trim_clip", "move_clip",
   "delete_clip", "delete_clips", "clear_clips", "keep_source_range", "remove_silence",
   "set_clip_enabled", "set_clip_volume", "set_clip_opacity", "set_clip_color", "add_video_track", "remove_video_track",
@@ -46,7 +46,11 @@ const MUTATING_TOOLS = new Set([
   "move_clip_to_track", "generate_subtitles", "edit_subtitle", "delete_subtitle",
   "clear_subtitles", "retime_subtitle", "import_srt", "add_text_overlay", "update_overlay",
 "add_image_overlay", "delete_overlay", "generate_narration", "use_brand_asset", "generate_image",
+"set_clip_flip", "set_clip_audio_fades", "set_clip_visual_fades", "apply_look",
+"set_caption_style", "set_aspect_ratio", "add_track", "rename_media", "generate_background_music",
 ]);
+
+export const SERIALIZED_TOOLS: ReadonlySet<string> = new Set([...MUTATING_TOOLS, "render_video"]);
 
 /** כלים שאסור להריץ בלולאה — אחרי N קריאות בחלון האחרון נחסמים עם רמז לכלי המוני. */
 export const LOOP_GUARDS: Record<string, { limit: number; hint: string }> = {
@@ -248,20 +252,19 @@ export class AgentRunner {
       this.events.onModeBlocked?.(tc, this.mode);
       return { tool_call_id: tc.id, name: tc.name, content };
     }
-    if (MUTATING_TOOLS.has(tc.name)) {
-      const snapshot = this.ctx.editorApi?.getSnapshot?.();
-      if (snapshot) this.events.onCheckpoint?.(tc, {
-        clips: snapshot.clips?.map((c) => ({ ...c })) || snapshot.clips,
-        subs: snapshot.subs?.map((s) => ({ ...s })) || snapshot.subs,
-        tracks: snapshot.tracks.map((t) => ({ ...t })),
-        overlays: snapshot.overlays.map((o) => ({ ...o, transform: { ...o.transform } })),
-      });
-    }
     const blocked = enforceLoopGuard ? this.guardLoop(tc.name) : null;
     if (blocked) {
       this.noteTool(tc.name);
       this.events.onToolEnd(tc.id, false, blocked);
       return { tool_call_id: tc.id, name: tc.name, content: blocked };
+    }
+    if (MUTATING_TOOLS.has(tc.name)) {
+      const snapshot = this.ctx.editorApi?.getSnapshot?.();
+      if (snapshot) {
+        let safe: EditorSnapshot;
+        try { safe = structuredClone(snapshot); } catch { safe = snapshot; }
+        this.events.onCheckpoint?.(tc, safe);
+      }
     }
     this.noteTool(tc.name);
     try {
@@ -308,8 +311,9 @@ export class AgentRunner {
     this.stopped = false;
     this.running = true;
     this.recentTools = [];
+    let iter = 0;
     try {
-      for (let iter = 0; iter < MAX_ITERS; iter++) {
+      for (; iter < MAX_ITERS; iter++) {
         if (this.stopped) {
           this.events.onAssistant("⏹ נעצר על ידי המשתמש.", this.mode);
           break;
@@ -406,7 +410,7 @@ export class AgentRunner {
 
         // כלים שמשנים state — בסדר סידרתי (מונע race על clips/tracks).
         // כלים לקריאה בלבד יכולים לרוץ במקביל.
-        const results = toolCalls.some((tc) => MUTATING_TOOLS.has(tc.name))
+        const results = toolCalls.some((tc) => SERIALIZED_TOOLS.has(tc.name))
           ? await (async () => {
               const out = [];
               for (const tc of toolCalls) out.push(await this.executeTool(tc));
@@ -429,6 +433,11 @@ export class AgentRunner {
           imgs.length = 0;
           this.dropStaleImages();
         }
+      }
+      if (iter >= MAX_ITERS) {
+        const exhausted = "⚠ עצרתי אחרי 40 צעדי כלים — מגבלת ביטחון של הלולאה. שאל אותי להמשיך ואסכם מה בוצע.";
+        this.history.push({ role: "assistant", content: exhausted });
+        this.events.onAssistant(exhausted, this.mode);
       }
     } finally {
       this.running = false;

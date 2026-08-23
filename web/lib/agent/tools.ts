@@ -321,8 +321,8 @@ const MAX_SOURCE_ANALYSES = 2;
 const analysisBySource = new Map<string, AudioAnalysis>();
 
 /**
- * מביא מעטפת + דגימות למקור. נכשל בשקט (מחזיר null) — חיתוך בלי גל-קול עדיין
- * עובד, פשוט פחות מדויק, וזה מדווח למשתמש במפורש.
+ * מביא מעטפת + דגימות למקור. כשל אינו עוצר את החיתוך (מחזיר null) אבל כן
+ * מדווח — חיתוך בלי גל-קול עובד, פשוט לפי חותמות התמלול ולכן פחות מדויק.
  */
 async function analysisFor(
   asset: MediaAsset | undefined,
@@ -340,7 +340,14 @@ async function analysisFor(
       analysisBySource.delete(oldest);
     }
     return analysis;
-  } catch {
+  } catch (err) {
+    // הכשל הזה הוא ההבדל בין חיתוך מדוד לחיתוך לפי חותמות התמלול בלבד, וזו
+    // בדיוק התלונה "הוא חותך באמצע דיבור". קודם הוא נבלע לגמרי; עכשיו הוא
+    // נאמר בקול, ועדיין אינו עוצר את החיתוך.
+    const why = err instanceof Error ? err.message : String(err);
+    report?.(`⚠️ חילוץ גל-הקול מ-"${asset.name}" נכשל (${why}) — החיתוך ייעשה לפי חותמות התמלול בלבד, ולכן פחות מדויק.`);
+    // eslint-disable-next-line no-console
+    console.warn("[analysisFor] audio analysis failed", asset.name, err);
     return null;
   }
 }
@@ -1084,7 +1091,7 @@ export const TOOLS: ToolMeta[] = [
       if (!asset || asset.kind !== "video") return "אין סרטון.";
       const dur = asset.duration;
       const words = transcriptOf(ctx, asset);
-      const pacing = resolvePacing(a.pacing, "natural");
+      const pacing = resolvePacing(a.pacing, ctx.brief?.pacing ?? "natural");
       const minSilence = a.min_silence != null ? +a.min_silence : null;
       const padding = a.padding != null ? +a.padding : null;
       let speech: Clip[];
@@ -1231,6 +1238,7 @@ export const TOOLS: ToolMeta[] = [
             enum: ["staccato", "tight", "natural", "broadcast"],
             description: "staccato=חיתוך בין כל מילה למילה (0.04s, הכי אגרסיבי); tight=פרסומת/רשתות (0.16s); natural=ברירת מחדל לשיעור (0.42s); broadcast=דרשה, שומר פאוזה רטורית (0.85s)",
           },
+          min_silence: { type: "number", description: "בשניות — כל מרווח ארוך מזה נחתך. עוקף את ה-pacing. לחיתוך בסגנון טיקטוק: 0.12–0.2" },
           remove_fillers: { type: "boolean", description: "הסרת אה/אמ/יעני (ברירת מחדל true)" },
           keep_laughter: { type: "boolean", description: "השאר צחוק קהל (ברירת מחדל true)" },
           append: { type: "boolean", description: "להוסיף לרצף הקיים במקום להחליף (הרכבה מכמה סרטונים)" },
@@ -1249,15 +1257,21 @@ export const TOOLS: ToolMeta[] = [
 
       const analysis = await analysisFor(asset, report);
       report(`מיישר את הטקסט ל-"${asset.name}" וממקם חיתוכים…`);
+      // בהיעדר בחירה מפורשת — הקצב שנקבע בבריף, ולא "natural" קבוע. הבריף כבר
+      // גוזר staccato מ"טיקטוק" ו-tight מ"רשתות", אבל הערך הזה מעולם לא נקרא
+      // כאן: כל חיתוך רץ ב-0.42 שניות. לכן מרווחים של חצי שנייה שרדו בדיוק
+      // בבקשות שבהן המשתמש ביקש קצב קופצני.
+      const minSilence = a.min_silence != null ? +a.min_silence : null;
       const plan = planScriptCut(words, scriptText, {
         sourceId: asset.id,
         duration: asset.duration,
-        pacing: resolvePacing(a.pacing),
+        pacing: resolvePacing(a.pacing, ctx.brief?.pacing ?? "natural"),
         envelope: analysis?.envelope ?? null,
         samples: analysis?.samples ?? null,
         sampleRate: analysis?.sampleRate,
         removeFillers: a.remove_fillers !== false,
         keepLaughter: a.keep_laughter !== false,
+        ...(minSilence != null && Number.isFinite(minSilence) ? { maxInternalPauseOverride: minSilence } : {}),
       });
       if (!plan.clips.length) {
         return `לא נמצאה אף התאמה בין הטקסט ל-"${asset.name}". ודא שזה הסרטון הנכון, או שהתמלול הצליח.`;
@@ -3075,6 +3089,8 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 1. transcribe_video — ElevenLabs Scribe עדיף לעברית (חותמות מילה, אירועי שמע, דוברים). keyterms לשמות ומונחים תורניים.
 2. keep_by_script(script=הטקסט המדובר בלבד, pacing=...) — **פעולה אחת** שמיישרת, מסירה מה שלא בטקסט, מהדקת פאוזות וממקמת כל קאט בעמק השקט. אל תריץ remove_silence אחריה; זה כבר נעשה.
    pacing: broadcast=שיעור/דרשה (שומר פאוזה רטורית) · natural=ברירת מחדל · tight=פרסומת/רשתות ("בלי שנייה מיותרת") · staccato=חיתוך בין כל מילה למילה (הכי אגרסיבי, קופצני בכוונה).
+   ביקשו מרווחים תת-שנייתיים ("בלי אוויר", "כמו טיקטוק", "שיהיה קופצני", "חצי שנייה זה המון") ⇒ min_silence=0.12–0.2 (שניות). זה עוקף את ה-pacing ישירות; pacing לבדו לא מספיק כשמבקשים מספר מפורש.
+   נשימות, כחכוחים ורעשי רהיטים מוסרים אקוסטית בכל pacing — אל תעלה את האגרסיביות רק כדי להיפטר מהם, זה חותך לתוך דיבור.
 3. אם keep_by_script דיווח על מילים חסרות — **עצור וטפל**. בדוק אם נאמרו (find_in_transcript); אם לא נאמרו, אמור זאת למשתמש. אל תמשיך כאילו הכל תקין.
 4. transcribe_timeline(remap) — לרענון הזמנים על הציר הערוך.
 5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. הסגנון לפי הבריף: list_caption_styles ואז set_caption_style. karaoke (הדגשת המילה הנאמרת) לטיקטוק; lecture (משפט שלם) לשיעור. אל תשים karaoke על הרצאה.
@@ -3112,7 +3128,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 - discover_intent / set_project_brief / get_project_brief — מה המשתמש רוצה, ומה נגזר מזה.
 - list_caption_styles — סגנונות וגופנים עבריים; הסגנון קובע גם מראה וגם חלוקה.
 - list_looks / apply_look / list_transitions / list_text_templates — הקטלוג היצירתי.
-- keep_by_script(script, pacing, remove_fillers, keep_laughter, append) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. pacing: staccato (בין כל מילה) · tight · natural · broadcast. append לריבוי מקורות.
+- keep_by_script(script, pacing, min_silence, remove_fillers, keep_laughter, append) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. pacing: staccato (בין כל מילה) · tight · natural · broadcast; min_silence בשניות עוקף אותו. append לריבוי מקורות.
 - remove_silence — רק כשאין טקסט מוגדר, או להידוק נוסף. after keep_by_script: within_existing.
 - audit_edit(script) — שער הקבלה. חובה לפני render.
 - inspect_timeline_evidence(classify_sounds) / analyze_audio / find_in_transcript / get_transcript(timeline=true) / transcribe_timeline.

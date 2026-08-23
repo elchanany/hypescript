@@ -116,10 +116,15 @@ describe("כיול עצמי לכל הקלטה", () => {
     expect(Math.max(...thresholds) - Math.min(...thresholds)).toBeGreaterThan(10);
   });
 
-  it("הסף תמיד יושב בין רעש הרקע לדיבור של אותה הקלטה", () => {
+  it("הסף תמיד יושב בין רצפת החדר לדיבור של אותה הקלטה", () => {
+    // לא נגד noiseDb.p90: אוכלוסיית ה"רעש" נדגמת מאמצע הפערים בין מילים —
+    // בדיוק המקום שבו יושבת נשימה — ולכן היא מזוהמת בכוונה (ראה calibration.ts).
+    // בארבעת התנאים כאן אין נשימות בפערים, אז noiseDb.p90 יצא נמוך במקרה;
+    // ההשוואה נגדו הייתה עוברת בטעות ולא בודקת את מה שהקוד באמת מבטיח.
+    // roomFloorDb הוא ההשוואה הנכונה — הוא מה שהסף אכן מעוגן אליו בקוד.
     for (const { condition, calibration } of analyzed) {
-      expect(calibration.speechThresholdDb, `${condition.name}: מתחת לרעש`)
-        .toBeGreaterThan(calibration.noiseDb.p90);
+      expect(calibration.speechThresholdDb, `${condition.name}: מתחת לרצפת החדר`)
+        .toBeGreaterThan(calibration.roomFloorDb);
       expect(calibration.speechThresholdDb, `${condition.name}: מעל הדיבור`)
         .toBeLessThan(calibration.speechDb.p50);
     }

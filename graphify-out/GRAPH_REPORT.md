@@ -1,43 +1,43 @@
-# Graph Report - hipescript  (2026-08-21)
+# Graph Report - hipescript  (2026-08-23)
 
 ## Corpus Check
-- 2515 files · ~3,272,233 words
+- 524 files · ~1,356,724 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 20856 nodes · 53092 edges · 1148 communities (806 shown, 342 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 4080 edges (avg confidence: 0.57)
+- 21185 nodes · 53865 edges · 1153 communities (820 shown, 333 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 4079 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c9d41977`
+- Built from commit: `85464ae9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js
 - kit.ts
-- Chat.tsx
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
 - setup-cloud.ps1
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-touchpoint-module.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
 - devDependencies
 - HypescriptGUI
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js
 - transcription.py
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
+- $
 - editing.py
 - media.py
 - 20260804170000_pkg_a_foundation.sql
-- T
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js
 - run
 - test_align_captions.py
-- $
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js
 - What You Must Do When Invoked
 - subtitles.py
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js
 - app/page.tsx
-- h
-- time.ts
+- S
+- $
 - dropdown-menu (Radix `DropdownMenu` → Base UI `Menu`)
 - transcribe/route.ts
 - lemon.ts
@@ -46,7 +46,7 @@
 - next.config.js
 - What You Must Do When Invoked
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js
+- b
 - AGENTS.md — נקודת הכניסה לכל סוכן
 - HANDOFF.md
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js
@@ -77,11 +77,11 @@
 - handoff.md
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js
 - Word
-- $
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js
 - מדריך התחברות (Supabase) — צעד־אחר־צעד
 - tests/__init__.py
 - AGENTS.md
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/popup.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js
 - REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר
 - 20260810120000_enforce_cloud_quotas.sql
 - KeepInterval
@@ -95,7 +95,7 @@
 - hypescript web
 - ARCHITECTURE.md — מבנה המערכת
 - graphify reference: query, path, explain
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js
+- e
 - SECURITY_MODEL
 - PRODUCT_VISION.md — חזון המוצר
 - hypescript
@@ -112,45 +112,45 @@
 - .codex/skills/graphify/references/extraction-spec.md
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js
 - images.ts
-- d
+- h
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js
 - icons.tsx
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js
 - Hypescript — Brand Guidelines
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/gdrive-convert-attachment-card.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js
 - toolbar
-- @ffmpeg/core
+- _
 - select
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
-- GeminiConvertToPdfFte
+- sendErrorLog
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/options.js
 - catalog.test.ts
 - Per-component notes
-- .ra
+- requireCloudUser
 - components.json
 - prepare-ffmpeg.mjs
 - public.cloud_runtime_settings
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js
 - 20260810050000_cloud_saas.sql
 - cloud-render-worker/package.json
 - server.mjs
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js
+- sendAnalytics
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js
 - חיבור הענן — בדיוק מה להשיג ואיפה לשים
 - public.cloud_subscriptions
-- S
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
+- $
+- d
 - generate-brand-assets.py
 - dependencies
-- thumbnails.ts
+- fonts.ts
 - lemon-discover.mjs
 - BRAND-KIT.md
-- getSupabaseServiceClient
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js
 - Creative library architecture
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/content-util.js
 - Commands
-- BrandLogo.tsx
-- x
+- model.ts
+- d
 - shadcn/SKILL.md
 - public.credit_ledger
 - public.analytics_events
@@ -159,18 +159,18 @@
 - agent-build.mjs
 - chrome-he-locale-2/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js
 - Customization & Theming
-- d
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js
 - כל הפרמטרים וכוונון
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js
 - Component Composition
 - Styling & Customization
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/signInUtils.js
+- Clip
 - alert-dialog
 - Tools
 - t
 - chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js
 - toast
-- b
+- qh
 - popover
 - shadcn/ui
 - tooltip
@@ -194,149 +194,149 @@
 - Progress.Indicator → Progress.Indicator
 - Hypescript Design Constitution
 - Separator.Root → Separator
-- vf
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js
 - (new) Fieldset.Root and Fieldset.Legend
 - designSystem.test.ts
 - overlays.md
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js
+- qh
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js
-- runtime.ts
-- react-dom
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/direct-verb-utils.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js
 - b
-- @supabase/supabase-js
-- sendErrorLog
+- c
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js
 - tw-animate-css
 - public.user_provider_secrets
 - chrome-he-locale-2/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js
 - chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js
 - chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js
-- @ffmpeg/util
+- b
 - shadcn
 - chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-touchpoint-module.js
 - chrome-he-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js
 - b
 - b
-- $
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/express.js
+- Se
+- features.ts
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js
-- I
-- h
-- I
-- sendAnalytics
+- .h
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js
 - .ea
-- e
+- .then
+- c
 - b
-- I18nProvider.tsx
-- I
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js
+- runtime.ts
 - chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js
 - chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js
 - l
-- f
-- J
+- createFteTooltip
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/temporaryURLBufferIndexDB.js
 - l
 - l
 - chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js
-- wg
-- sendErrorLog
-- requireCloudUser
-- WhatsappImagePreview
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js
-- _
-- scriptPlan.ts
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js
+- chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
+- render/route.ts
+- c
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js
+- c
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
 - .then
 - ExpressHoverCTA
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
+- x
+- d
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js
 - T
 - T
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js
+- .initialize
 - T
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js
+- I
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/image-gmail-touchpoint-service.js
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/image-gmail-touchpoint-service.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js
+- b
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
-- p
+- stock/providers.ts
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/image-gmail-touchpoint-service.js
-- .then
+- x
 - .T
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js
 - t
-- K
+- J
 - .T
-- ExpressContextualFTE
+- .fa
 - .T
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js
 - t
 - מפתחות API — מה שמים, איפה, ובאיזה סדר
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
+- A
 - f
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/offscreen/offscreen.js
-- fi
+- c
+- f
 - de
 - sendAnalytics
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js
 - SummaryBarManager
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/offscreen/offscreen.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js
 - SummaryBarManager
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js
+- agent/providers.ts
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js
 - SummaryBarManager
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/popup.js
-- ImageGdriveTouchpointService
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js
 - chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/manifest.json
 - chrome-he-locale-2/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/manifest.json
 - chrome-he-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/manifest.json
 - c
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js
+- f
 - c
 - c
-- tools.ts
+- canvasCoords.ts
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js
-- qh
+- n
 - GenAIWebpageEligibilityService
 - qh
 - .then
-- providers.ts
+- geist
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js
 - .then
 - .then
-- auth/config.ts
+- settings/page.tsx
 - Cloud / SaaS Audit — Hypescript
-- A
-- J
-- x
+- K
+- y
+- globalAlign.ts
 - SummaryBarEligibility
 - SummaryBarInjector
 - f
 - SummaryBarEligibility
 - SummaryBarInjector
-- qh
+- tailwind-merge
 - SummaryBarEligibility
 - SummaryBarInjector
-- J
+- K
 - chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/manifest.json
 - chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/manifest.json
 - chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/manifest.json
-- x
+- f
 - .then
-- .initialize
-- .toString
+- editAudit.ts
 - z
-- GeminiExpressTouchpointService
 - .toString
-- ya
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/toast-service.js
+- .toString
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js
 - FABManager
 - chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/manifest.json
 - FABManager
@@ -348,113 +348,113 @@
 - ExpressOutlookTouchpointService
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js
 - probe.server.ts
-- y
-- .initialize
+- b
+- scriptPlan.ts
 - chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
 - chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_window.js
 - .then
-- chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
 - chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_window.js
-- y
+- vf
+- x
 - .then
 - chrome-he-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
 - chrome-he-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_window.js
 - .toString
-- x
+- FacebookExpressIntegration
 - .toString
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
+- .then
 - .toString
 - T
 - ExpressUtils
 - .toString
 - .toString
 - .toString
-- y
+- subtitlesEdl.ts
 - b
 - FacebookExpressIntegration
 - b
-- FacebookExpressIntegration
+- GenAIWebpageEligibilityService
 - b
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js
 - ChatGPTExpressIntegration
 - MagicScanCore
 - r
-- sendErrorLog
+- check-cloud-schema.mjs
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js
 - ChatGPTExpressIntegration
 - MagicScanCore
-- y
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js
 - ChatGPTExpressIntegration
 - MagicScanCore
 - ExpressHoverCTA
+- .ea
+- .handler
+- I
 - ExpressOutlookTouchpointService
 - .handler
-- GeminiExpressTouchpointService
-- ExpressOutlookTouchpointService
-- We
 - b
 - ExpressHoverCTA
 - .handler
+- .h
+- c
 - b
-- wg
-- b
-- .handler
-- .then
+- y
+- time.ts
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/ch-content-script.js
 - We
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/ch-content-script.js
-- b
+- a11y/prefs.ts
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/ch-content-script.js
 - We
 - GoogleChatExpressIntegration
 - SummaryBarAnchorDetector
-- compilerOptions
+- include
 - y
-- memorySummary.ts
+- b
 - GoogleChatExpressIntegration
 - SummaryBarAnchorDetector
-- _
+- thumbnails.ts
 - GoogleChatExpressIntegration
 - SummaryBarAnchorDetector
 - GoogleAiModeExpressIntegration
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/readability.js
-- T
+- y
 - r
 - GoogleAiModeExpressIntegration
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/readability.js
-- ImageGdriveTouchpointService
+- We
 - r
 - GoogleAiModeExpressIntegration
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/readability.js
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-response-service.js
+- scriptPlan.test.ts
 - r
 - PinterestContentScript
 - h
 - PinterestContentScript
 - PinterestContentScript
 - ExpressUtils
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
 - g
-- c
-- GenAIWebpageEligibilityService
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/linkedin/linkedin-response-service.js
 - h
 - g
-- c
+- wg
 - ExpressUtils
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js
 - h
 - g
-- c
-- WhatsappImageOnHover
+- ah
+- GeminiExpressTouchpointService
 - t
 - GeminiExpressFte
 - GoogleImagePreviewExpressIntegration
 - PinterestExpressFte
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js
+- e
 - t
 - GeminiExpressFte
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js
+- n
 - GoogleImagePreviewExpressIntegration
 - PinterestExpressFte
 - 12–18. מוזיקה — כאן נמצא הסיכון המשפטי
@@ -462,102 +462,103 @@
 - GeminiExpressFte
 - GoogleImagePreviewExpressIntegration
 - PinterestExpressFte
-- sendAnalytics
-- Ga
-- ChatGPTExpressFte
 - nl
-- WhatsappImageOnHover
+- n
+- ChatGPTExpressFte
+- tools.ts
+- y
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json
 - permissions
 - ChatGPTExpressFte
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
+- BrandLogo.tsx
+- ExpressOutlookTouchpointService
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json
 - permissions
 - chunking.ts
 - r
-- x
+- J
 - ChatGPTExpressFte
-- WhatsappImageOnHover
+- ChatGPTModeration
 - FacebookExpressIntegration
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json
 - permissions
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js
-- GeminiExpressTouchpointService
+- ExpressContextualFTE
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/direct-verb-utils.js
 - r
 - ExpressFte
-- PopoverService
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js
 - GoogleAiModeExpressFte
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js
+- nl
 - ExpressFte
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js
+- graph.integration.test.ts
 - GoogleAiModeExpressFte
+- x
+- .initialize
+- ExpressFte
 - ImageGdriveTouchpointService
-- .h
-- ExpressFte
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js
 - GoogleAiModeExpressFte
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/session-store.js
+- GeminiExpressTouchpointService
 - GmailExpressFte
 - AttributionManager
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js
-- f
+- WhatsappImageOnHover
 - GmailExpressFte
 - AttributionManager
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js
-- f
+- getSupabaseServiceClient
 - GmailExpressFte
 - AttributionManager
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js
+- x
+- BrowserImageViewerContentScript
+- BrowserImageViewerExpressFte
 - f
-- BrowserImageViewerContentScript
-- BrowserImageViewerExpressFte
-- nl
 - OutlookExpressFte
 - GoogleDocsFte
 - OutlookFte
-- n
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
 - BrowserImageViewerContentScript
 - BrowserImageViewerExpressFte
 - OutlookExpressFte
 - GoogleDocsFte
 - OutlookFte
-- n
+- LandingLocalizedBody.test.ts
 - BrowserImageViewerContentScript
 - BrowserImageViewerExpressFte
 - OutlookExpressFte
 - GoogleDocsFte
 - OutlookFte
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js
 - ChatGPTDeepResearchConvertToPdf
-- ChatGPTModeration
-- subtitlesEdl.ts
+- Chat.tsx
+- GeminiExpressTouchpointService
 - GoogleImagePreviewExpressFte
 - ActionableCoachmark
 - SummaryBarArticleGate
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js
-- n
-- b
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js
+- Hb
+- WhatsappImageOnHover
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-response-service.js
 - ChatGPTDeepResearchConvertToPdf
-- ExpressContextualFTE
+- ChatMediaCard.test.ts
 - GoogleImagePreviewExpressFte
 - ActionableCoachmark
 - SummaryBarArticleGate
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js
-- b
+- .l
 - admin-purge-all.mjs
-- Sf
+- c
 - ChatGPTDeepResearchConvertToPdf
-- vf
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/addWebpage/addWebpage.js
+- Hb
+- sendAnalytics
 - GoogleImagePreviewExpressFte
 - ActionableCoachmark
 - SummaryBarArticleGate
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js
-- b
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js
 - ChatGPTConvertToPdfFte
-- nl
+- WhatsappImageOnHover
 - GdriveImageToolsDropdownFte
 - GmailImageToolsDropdownFte
 - NotebookLMSite
@@ -566,7 +567,7 @@
 - O
 - e
 - ChatGPTConvertToPdfFte
-- ChatGPTModeration
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js
 - GdriveImageToolsDropdownFte
 - User-Reported Blockers
 - GmailImageToolsDropdownFte
@@ -575,87 +576,94 @@
 - l
 - e
 - ChatGPTConvertToPdfFte
-- ExpressCTATooltip
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/outlook/outlook-error-toast-service.js
 - GdriveImageToolsDropdownFte
 - GmailImageToolsDropdownFte
 - NotebookLMSite
 - WorkdayHRSite
-- ChatGPTConvertToPdf
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js
 - l
 - e
 - 4–11. נכסים חינמיים (התחל כאן)
+- h
 - LinkedInFte
 - ClearTaxSite
 - MagicScanDropHook
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js
 - LinkedInFte
 - ClearTaxSite
 - MagicScanDropHook
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js
+- PopoverService
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/addWebpage/addWebpage.js
 - LinkedInFte
 - ClearTaxSite
 - MagicScanDropHook
 - EmbeddedPDFTouchPointCoachMark
+- ExpressContextualFTE
 - GdriveExpressFte
 - GoogleChatExpressFte
 - WorkdayJobsSite
+- public.user_brand_kits
+- b
 - EmbeddedPDFTouchPointCoachMark
-- v
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js
 - GdriveExpressFte
 - GoogleChatExpressFte
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js
+- i
 - WorkdayJobsSite
 - admin-purge.mjs
-- .h
-- e
+- ExpressCTATooltip
 - EmbeddedPDFTouchPointCoachMark
-- ffmpeg.ts
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js
 - GdriveExpressFte
 - GoogleChatExpressFte
-- de
+- I
 - WorkdayJobsSite
-- Sf
+- מעבר לחיוב אמיתי — Lemon Squeezy
 - ConcurSite
 - AnimateCannedQuestions
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/outlook/outlook-error-toast-service.js
-- l
 - ExpressCTATooltip
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js
+- e
+- l
+- wb
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js
 - ConcurSite
 - AnimateCannedQuestions
-- model.ts
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js
-- i
+- wb
+- source.ts
+- ExpressCTATooltip
 - ConcurSite
 - AnimateCannedQuestions
-- c
+- ספריית היצירה — דוח מדוד
+- ChatGPTModeration
 - KWEligibilityService
 - GmailConvertToPdfFte
 - GmailEmailPdfFte
 - GmailCompressPDFMessageViewFte
-- Hb
+- cj
+- qt
 - KWEligibilityService
 - GmailConvertToPdfFte
 - GmailEmailPdfFte
 - GmailCompressPDFMessageViewFte
-- History
-- Hb
+- Ca
+- ChatGPTModeration
 - KWEligibilityService
 - GmailConvertToPdfFte
 - GmailEmailPdfFte
 - GmailCompressPDFMessageViewFte
-- Hb
+- qt
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-theme-utils.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/express-content-script.js
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js
+- Hb
 - GmailCompressPDFFte
-- a
+- J
 - WikipediaConvertToPdfFte
 - qt
 - externally_connectable
 - n
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-theme-utils.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/express-content-script.js
-- wb
 - GmailCompressPDFFte
 - WikipediaConvertToPdfFte
 - O
@@ -664,7 +672,7 @@
 - ExpressContextualFTE
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-theme-utils.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/express-content-script.js
-- ExpressPrecaching
+- LoadingGeometry.test.ts
 - algorithm-engineer.md
 - GmailCompressPDFFte
 - browser-qa.md
@@ -696,7 +704,7 @@
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/scan/ui/styles-inline.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarEligibility.spec.js
 - Viewport
-- wb
+- @ffmpeg/ffmpeg
 - ConfigLoader
 - WhatsappExpressIntegration
 - GdriveConvertAttachmentCardFte
@@ -708,7 +716,7 @@
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/scan/ui/styles-inline.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarEligibility.spec.js
 - Viewport
-- a
+- GeminiConvertToPdfFte
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-content-language-utils.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdocs/SheetsSettingModal/styles-inline.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/styles-inline.js
@@ -716,7 +724,7 @@
 - application/pdf
 - icons
 - a
-- et
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js
 - n
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-content-language-utils.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdocs/SheetsSettingModal/styles-inline.js
@@ -724,18 +732,16 @@
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarManager.spec.js
 - application/pdf
 - icons
-- a
-- e
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js
+- ah
+- @supabase/ssr
+- cj
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-content-language-utils.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdocs/SheetsSettingModal/styles-inline.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/styles-inline.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarManager.spec.js
 - application/pdf
 - icons
-- .initialize
 - continuity-keeper.md
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/embeddedpdfs/embedded-pdf-touch-point-event-listener.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/hooks/useFABCustomization.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/GenAIWebpageBlocklist.js
@@ -743,18 +749,17 @@
 - action
 - background
 - optional_permissions
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js
+- @aws-sdk/s3-request-presigner
 - Ca
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/embeddedpdfs/embedded-pdf-touch-point-event-listener.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/hooks/useFABCustomization.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/GenAIWebpageBlocklist.js
 - chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageContentScorer.js
-- ExpressPrecaching
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js
 - action
 - background
 - optional_permissions
-- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js
-- Ca
+- memorySummary.ts
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/embeddedpdfs/embedded-pdf-touch-point-event-listener.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/hooks/useFABCustomization.js
 - chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/GenAIWebpageBlocklist.js
@@ -763,8 +768,8 @@
 - action
 - background
 - optional_permissions
-- i
-- Ca
+- n
+- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-util.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/CompressPDFMessageView/styles-inline.js
 - chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/PdfToolsDropdown/styles-inline.js
@@ -788,39 +793,39 @@
 - host_permissions
 - סוכני הפרויקט — מי עושה מה
 - public.profiles
-- n
-- ChatGPTModeration
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js
+- e
+- a
 - research-scout.md
 - test-author.md
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js
+- ייצוא מהיר עם כתוביות — מה נבנה ומה נשאר לעשות
 - verifier.md
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js
-- a
-- clsx
-- et
-- .setupIframeEvents
-- EditorPage
-- ExpressCTATooltip
-- .setupIframeEvents
-- x
-- chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js
-- wb
-- cj
-- c
-- ExpressPrecaching
-- qt
-- WhatsappImagePreview
-- ya
 - Sf
-- st
-- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js
-- react
-- web/package.json
-- e
+- wb
 - et
+- .h
+- ExpressPrecaching
+- History
+- Ca
+- clsx
+- c
+- Sf
+- WhatsappImagePreview
+- chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js
+- ExpressPrecaching
+- Sf
+- web/package.json
+- n
+- chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js
+- מלאי קודי שגיאה — נאסף אוטומטית מהקוד, לא נכתב ביד.
+- LandingMotionSystem.test.ts
+- et
+- ExpressPrecaching
+- HypescriptBrandSpinner.test.ts
 - cj
 - @aws-sdk/client-s3
+- a
+- e
+- et
 
 ## God Nodes (most connected - your core abstractions)
 1. `e` - 124 edges
@@ -841,54 +846,54 @@
   .tmp/chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js → web/components/icons.tsx
 - `xa()` --references--> `X`  [EXTRACTED]
   .tmp/chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js → web/components/icons.tsx
-- `n()` --indirect_call--> `t()`  [INFERRED]
-  .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/conversion-error.js → .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/session-expired-error.js
-- `i()` --indirect_call--> `t()`  [INFERRED]
-  .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/conversion-error.js → .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/session-expired-error.js
+- `cc()` --indirect_call--> `xb()`  [INFERRED]
+  .tmp/chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js → .tmp/chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
+- `bc()` --indirect_call--> `yb()`  [INFERRED]
+  .tmp/chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js → .tmp/chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js
 
 ## Import Cycles
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-context-menu.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/study-space-context-menu.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js`
-- 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/private-api.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analyticsThrottlingService.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/dc-web-analytics-logger.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js`
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js`
 - 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js`
+- 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/dc-web-analytics-logger.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
+- 3-file cycle: `.tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/private-api.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 - 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-context-menu.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/study-space-context-menu.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js`
 - 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analyticsThrottlingService.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/private-api.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/dc-web-analytics-logger.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js`
-- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js`
 - 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js`
+- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js`
+- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js`
+- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/private-api.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
+- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
+- 3-file cycle: `.tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/dc-web-analytics-logger.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 - 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-context-menu.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/study-space-context-menu.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js`
-- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/splunkAllowedEvents.js`
-- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/dc-web-analytics-logger.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
-- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/loggingApi.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
+- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/private-api.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
+- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/viewer-module-utils.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js`
+- 3-file cycle: `.tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analyticsThrottlingService.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/floodgate.js -> .tmp/chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/analytics.js`
 
-## Communities (1148 total, 342 thin omitted)
+## Communities (1153 total, 333 thin omitted)
 
 ### Community 0 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js"
 Cohesion: 0.03
-Nodes (174): USER_TAGS_ANALYTICS_PROP, USER_TAGS_STORAGE_KEY, n, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService, OFFSCREEN_DOCUMENT_PATH, e() (+166 more)
+Nodes (149): USER_TAGS_ANALYTICS_PROP, USER_TAGS_STORAGE_KEY, n, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService, OFFSCREEN_DOCUMENT_PATH, e() (+141 more)
 
 ### Community 1 - "kit.ts"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (40): BrandSettingsPage(), inputStyle, probeImage(), uid(), BRAND_ACTIVE_KEY, BRAND_KIT_VERSION, BRAND_KITS_KEY, BrandAssetMeta (+32 more)
 
-### Community 2 - "Chat.tsx"
+### Community 2 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
 Cohesion: 0.04
-Nodes (78): Chat(), fmtTc(), Item, KIND_ICON, MODES, now(), SLASH, SlashCmd (+70 more)
+Nodes (122): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement() (+114 more)
 
 ### Community 3 - "setup-cloud.ps1"
 Cohesion: 0.36
 Nodes (4): Get-DotEnv(), Read-PlainSecret(), Require-Value(), Set-DotEnv()
 
-### Community 4 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-touchpoint-module.js"
-Cohesion: 0.11
-Nodes (27): STUDY_SPACE_CONTEXT_MENU_FLAG, STUDY_SPACE_DEFAULT_LOCALES, getFloodgateAllowedLocales(), getStudySpaceContextMenuAllowedLocales(), getStudySpaceContextMenuFeatureConfig(), isStudySpaceAllowedLocale(), n(), r() (+19 more)
+### Community 4 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
+Cohesion: 0.05
+Nodes (103): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement() (+95 more)
 
 ### Community 5 - "devDependencies"
 Cohesion: 0.13
@@ -900,15 +905,15 @@ Nodes (7): Frame, build_command(), HypescriptGUI, main(), ממשק משתמש ג
 
 ### Community 7 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js"
 Cohesion: 0.03
-Nodes (158): USER_TAGS_ANALYTICS_PROP, USER_TAGS_STORAGE_KEY, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService, CACHE_STORAGE_DUMMY_BASE_URL, OFFSCREEN_DOCUMENT_PATH, e() (+150 more)
+Nodes (158): S, OFFSCREEN_DOCUMENT_PATH, e(), o(), r(), s(), l, fetchDefaultViewershipConfig() (+150 more)
 
 ### Community 8 - "transcription.py"
 Cohesion: 0.14
 Nodes (25): קטע דיבור (משפט/שורה) כפי שהחזיר מנוע התמלול, מכיל את המילים שלו., Segment, Transcript, _cloud_payload_to_transcript(), _elevenlabs_payload_to_transcript(), _load_dotenv(), _post_elevenlabs_stt(), _post_transcription() (+17 more)
 
-### Community 9 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
-Cohesion: 0.04
-Nodes (119): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement() (+111 more)
+### Community 9 - "$"
+Cohesion: 0.05
+Nodes (70): X(), CSP_WEBREQUEST_FALLBACK_STORAGE_KEY, MIME_HANDLER_STORAGE_KEY, isChromeViewerOpened(), safeJsonParse(), L, N(), registerPdfViewerTab() (+62 more)
 
 ### Community 10 - "editing.py"
 Cohesion: 0.23
@@ -922,6 +927,10 @@ Nodes (27): analyze_audio_energy(), check_ffmpeg(), _concat_copy(), _concat_reen
 Cohesion: 0.14
 Nodes (20): public.handle_new_user, public.protect_system_owner, public.protect_system_owner_role, on_auth_user_created, public.audit_logs, public.credit_accounts, public.has_permission(), public.is_system_owner() (+12 more)
 
+### Community 13 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js"
+Cohesion: 0.03
+Nodes (93): B(), F, G(), H(), j(), K(), N, q() (+85 more)
+
 ### Community 14 - "run"
 Cohesion: 0.14
 Nodes (23): ArgumentParser, build_parser(), Config, config_from_args(), _fmt(), main(), _print_summary(), KeepInterval (+15 more)
@@ -930,9 +939,9 @@ Nodes (23): ArgumentParser, build_parser(), Config, config_from_args(), _fmt(), 
 Cohesion: 0.06
 Nodes (54): HebrewToken, _align_banded(), _align_block(), align_tokens(), AlignmentReport, AlignOptions, AlignPair, find_unique_anchors() (+46 more)
 
-### Community 16 - "$"
-Cohesion: 0.08
-Nodes (51): N(), registerPdfViewerTab(), downloadManager, f(), I(), CHALLENGER_FG_FLAG, CONTROL_FG_FLAG, f (+43 more)
+### Community 16 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js"
+Cohesion: 0.05
+Nodes (73): fetchGmailEmailHtml(), buildSafeFilename(), buildSafeFilenameWithExt(), HTML_FILE_EXTENSION, addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint() (+65 more)
 
 ### Community 17 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -943,20 +952,20 @@ Cohesion: 0.15
 Nodes (23): CaptionMode, build_cues(), _ends_phrase(), _ends_sentence(), _format_cue_text(), format_timestamp(), map_to_edited(), _phrase_blocks() (+15 more)
 
 ### Community 19 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js"
-Cohesion: 0.03
-Nodes (126): Fe(), Le(), Me(), xe(), r(), s(), d(), getAcrobatPromotionSource() (+118 more)
+Cohesion: 0.04
+Nodes (97): Fe(), Le(), Me(), xe(), r(), s(), i(), n() (+89 more)
 
 ### Community 20 - "app/page.tsx"
+Cohesion: 0.03
+Nodes (140): DashboardPage(), DialogState, fmtDate(), fmtRelativeHe(), ProjectCard(), toastFromError(), userAvatarUrl(), userLabel() (+132 more)
+
+### Community 21 - "S"
+Cohesion: 0.03
+Nodes (77): H(), J(), K(), q(), W(), X(), Y(), z() (+69 more)
+
+### Community 22 - "$"
 Cohesion: 0.05
-Nodes (87): DashboardPage(), DialogState, fmtDate(), fmtRelativeHe(), ProjectCard(), userAvatarUrl(), userLabel(), COMMAND_ICONS (+79 more)
-
-### Community 21 - "h"
-Cohesion: 0.04
-Nodes (23): Ae, be, De(), _e, Ie, Oe, Pe, Re() (+15 more)
-
-### Community 22 - "time.ts"
-Cohesion: 0.13
-Nodes (27): clampTime(), formatQuoteTime(), MagneticSnapResult, MagneticTarget, MS, msToSec(), pixelsToTime(), quotePlaceText() (+19 more)
+Nodes (69): X(), D(), isChromeViewerOpened(), k, safeJsonParse(), applyAddWebpageContextMenusForWebTab(), isStudySpaceContextMenuEnabled(), L (+61 more)
 
 ### Community 23 - "dropdown-menu (Radix `DropdownMenu` → Base UI `Menu`)"
 Cohesion: 0.04
@@ -964,11 +973,11 @@ Nodes (48): Arrow / Item / Group / Label / CheckboxItem / RadioGroup / RadioItem
 
 ### Community 24 - "transcribe/route.ts"
 Cohesion: 0.11
-Nodes (27): GET(), runtime, maxDuration, POST(), runtime, maxDuration, POST(), runtime (+19 more)
+Nodes (29): GET(), runtime, maxDuration, POST(), runtime, maxDuration, POST(), runtime (+21 more)
 
 ### Community 25 - "lemon.ts"
-Cohesion: 0.15
-Nodes (24): GET(), POST(), POST(), runtime, validSignature(), POST(), apiKey(), createCheckout() (+16 more)
+Cohesion: 0.14
+Nodes (30): GET(), POST(), POST(), runtime, validSignature(), POST(), apiKey(), createCheckout() (+22 more)
 
 ### Community 30 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -976,23 +985,23 @@ Nodes (24): For /graphify add and --watch, For /graphify query, For the commit h
 
 ### Community 31 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js"
 Cohesion: 0.03
-Nodes (124): Fe(), Le(), Me(), xe(), r(), s(), d(), getAcrobatPromotionSource() (+116 more)
+Nodes (100): Fe(), Le(), Me(), xe(), e, r(), s(), i() (+92 more)
 
-### Community 32 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js"
-Cohesion: 0.04
-Nodes (74): getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), clearCachedImsUserState(), getCachedImsUserId(), getCachedImsUserState(), getCachedImsUserStatePingFields() (+66 more)
+### Community 32 - "b"
+Cohesion: 0.07
+Nodes (34): ag(), al(), b(), Bg(), bl(), c(), cl(), dg() (+26 more)
 
 ### Community 33 - "AGENTS.md — נקודת הכניסה לכל סוכן"
 Cohesion: 0.20
 Nodes (10): AGENTS.md — נקודת הכניסה לכל סוכן, Continuity (חובה לפני עבודה מהותית), graphify, השלב הנוכחי, כמה סוכנים בו-זמנית (חובה — נשרף פעמיים), לפני שנוגעים בקוד, מבנה הפרויקט (שתי אפליקציות), מה בטווח עכשיו / מה לא (+2 more)
 
 ### Community 34 - "HANDOFF.md"
-Cohesion: 0.18
-Nodes (10): 2026-08-11 — complete AI video editor rebrand, 2026-08-11 — persistent workspace + creative catalog foundation, Active Files, Changes Made, Current State, Exact Next Steps, Failed Attempts, Goal (+2 more)
+Cohesion: 0.14
+Nodes (13): 2026-08-11 — complete AI video editor rebrand, 2026-08-11 — persistent workspace + creative catalog foundation, 2026-08-22 — clear live demo, responsive chat media, and landing locale coverage, 2026-08-23 — motion-rich landing and provider story, 2026-08-23 — widget-accurate Skeleton Loading, Active Files, Changes Made, Current State (+5 more)
 
 ### Community 35 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js"
-Cohesion: 0.04
-Nodes (62): STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain(), decodeStudentSiteTouchpointEntries() (+54 more)
+Cohesion: 0.03
+Nodes (70): T(), STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain() (+62 more)
 
 ### Community 36 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -1015,8 +1024,8 @@ Cohesion: 0.25
 Nodes (7): Git בטוח, Graphify, WORKFLOW.md — זרימת עבודה משותפת לכל סוכן, אחרי שינויים רלוונטיים, בזמן מימוש, לפני עבודה מהותית, שיחות קריאה בלבד
 
 ### Community 41 - "ACTIVE_WORK.md"
-Cohesion: 0.09
-Nodes (21): 2026-08-08 — explicit logo workflow + designed cards, 2026-08-08 — mixed media + direct canvas UI package, 2026-08-09 — composited timeline frame capture (export-parity, opt-in), 2026-08-09 — stable overlay identity, alpha preview and safe logo geometry, 2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261), 2026-08-10 — exported video in chat with custom player (main f233969), 2026-08-10 — gapless tight-cut pipeline, 2026-08-10 — local organization/brand kit (main 7ab67e7) (+13 more)
+Cohesion: 0.07
+Nodes (25): 2026-08-08 — explicit logo workflow + designed cards, 2026-08-08 — mixed media + direct canvas UI package, 2026-08-09 — composited timeline frame capture (export-parity, opt-in), 2026-08-09 — stable overlay identity, alpha preview and safe logo geometry, 2026-08-10 — CTA asset pipeline: persisted narration + GPT images (main f72d88a + f368261), 2026-08-10 — exported video in chat with custom player (main f233969), 2026-08-10 — gapless tight-cut pipeline, 2026-08-10 — local organization/brand kit (main 7ab67e7) (+17 more)
 
 ### Community 42 - "PROJECT_STATE.md — מצב יציב של hypescript"
 Cohesion: 0.29
@@ -1064,23 +1073,23 @@ Nodes (15): 1. השג מפתח (Groq, חינם), 2. הרצה — התרחיש ה
 
 ### Community 61 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js"
 Cohesion: 0.04
-Nodes (66): STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain(), decodeStudentSiteTouchpointEntries() (+58 more)
+Nodes (62): STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain(), decodeStudentSiteTouchpointEntries() (+54 more)
 
 ### Community 62 - "Word"
 Cohesion: 0.13
 Nodes (20): build_keep_intervals(), בונה קטעים לשמירה מתוך המילים. שני מקורות לחיתוך, מטופלים באופן אחיד: *…, is_speech_word(), מבני נתונים משותפים לכל שלבי ה-pipeline. חשוב: שני מנועי התמלול (מקומי וענן)…, מילה בודדת עם חותמות זמן (בשניות, על ציר הזמן המקורי של הווידאו)., מילת דיבור בלבד — ללא רווחים/אירועי שמע., כל המילים מכל הקטעים, ממוינות לפי זמן התחלה., speech_words() (+12 more)
 
-### Community 63 - "$"
-Cohesion: 0.04
-Nodes (109): K(), X(), D(), T(), ADD_WEBPAGE_TO_EXISTING_PDF_SPACE_CONTEXT_MENU, ADOBE_ACROBAT_PARENT_CONTEXT_MENU_ID, CSP_WEBREQUEST_FALLBACK_STORAGE_KEY, MIME_HANDLER_STORAGE_KEY (+101 more)
+### Community 63 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js"
+Cohesion: 0.05
+Nodes (82): D(), I(), ADD_WEBPAGE_TO_EXISTING_PDF_SPACE_CONTEXT_MENU, ADD_WEBPAGE_TO_NEW_PDF_SPACE_CONTEXT_MENU, ADD_WEBPAGE_TO_PROJECT_CONTEXT_MENU_TP_CTX, ADOBE_ACROBAT_PARENT_CONTEXT_MENU_ID, NEW_RCM_LABEL_FLAG, PAYLOAD_NO_TABID_FLAG (+74 more)
 
 ### Community 64 - "מדריך התחברות (Supabase) — צעד־אחר־צעד"
 Cohesion: 0.12
 Nodes (15): 4א — Google Cloud Console, 4ב — Redirect אחרי התחברות (ב־Supabase), Migration, `No API key found in request` / כתובת עם `/rest/v1/auth/...`, Package A — משתני שרת נוספים, הרצה מקומית (אופציונלי), מדריך התחברות (Supabase) — צעד־אחר־צעד, מה קורה במוצר אחרי זה (+7 more)
 
-### Community 67 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/popup.js"
-Cohesion: 0.05
-Nodes (74): util, m(), J(), A(), B(), C(), F(), k() (+66 more)
+### Community 67 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js"
+Cohesion: 0.14
+Nodes (36): addTouchPointInNativeViewer(), CONVERT_TO_PDF_PROMOTION_SOURCE, createNativeViewerTouchpoint(), createNativeViewTouchpointTextElement(), handleCommonClickAction(), handleTouchPointClick(), isNativeViewerPasswordProtected(), passwordProtectedUrls (+28 more)
 
 ### Community 68 - "REFERENCE_UI_MAP — מיפוי ממשק ייחוס → מצב במוצר"
 Cohesion: 0.18
@@ -1134,9 +1143,9 @@ Nodes (8): ARCHITECTURE.md — מבנה המערכת, החלטת מפתח: חי�
 Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
-### Community 81 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js"
-Cohesion: 0.03
-Nodes (160): S, USER_TAGS_ANALYTICS_PROP, USER_TAGS_STORAGE_KEY, n, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService, OFFSCREEN_DOCUMENT_PATH (+152 more)
+### Community 81 - "e"
+Cohesion: 0.04
+Nodes (134): I(), S, USER_TAGS_ANALYTICS_PROP, USER_TAGS_STORAGE_KEY, n, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService (+126 more)
 
 ### Community 82 - "SECURITY_MODEL"
 Cohesion: 0.33
@@ -1183,64 +1192,72 @@ Cohesion: 0.50
 Nodes (4): local/, STACK.md — טכנולוגיות, web/ (המסלול המרכזי), עתידי / אפשרי (טרם הוחלט)
 
 ### Community 96 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js"
-Cohesion: 0.04
-Nodes (124): buildSafeFilenameWithExt(), initController(), initController(), isDefaultViewer(), isDefaultViewershipFeatureForGmailEnabled(), isGmailImplicitDefaultViewershipFeatureForGmailEnabled(), openPdfInNewTab(), resetDefaultViewership() (+116 more)
+Cohesion: 0.05
+Nodes (81): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+73 more)
 
 ### Community 97 - "images.ts"
 Cohesion: 0.14
 Nodes (21): maxDuration, POST(), runtime, buildImagePayload(), decodeFirstImage(), DEFAULT_OPENAI_IMAGE_BACKGROUND, DEFAULT_OPENAI_IMAGE_MODEL, DEFAULT_OPENAI_IMAGE_QUALITY (+13 more)
 
-### Community 98 - "d"
-Cohesion: 0.07
-Nodes (26): d(), e(), fl(), hi(), hl(), id(), il(), Jj() (+18 more)
+### Community 98 - "h"
+Cohesion: 0.12
+Nodes (20): De(), Re(), Se, h, _, b(), D(), g() (+12 more)
 
 ### Community 99 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-detection/StudentStateManager.js"
-Cohesion: 0.03
-Nodes (71): STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain(), decodeStudentSiteTouchpointEntries() (+63 more)
+Cohesion: 0.04
+Nodes (69): STUDY_SPACE_ADD_WEBPAGE_ELIGIBLE_KEY, a(), c(), CONTENT_SIGNAL_RULES_ENCODING, decodeContentSignalEntryValue(), decodeContentSignalRulesEntries(), decodeDomain(), decodeStudentSiteTouchpointEntries() (+61 more)
 
 ### Community 100 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/index.js"
-Cohesion: 0.03
-Nodes (126): Fe(), Le(), Me(), xe(), r(), s(), i(), n() (+118 more)
+Cohesion: 0.05
+Nodes (86): Fe(), Le(), Me(), xe(), s(), d(), getAcrobatPromotionSource(), handlePostPDFConversionInDirectFlow() (+78 more)
 
 ### Community 101 - "icons.tsx"
 Cohesion: 0.02
-Nodes (174): AccountPage(), BillingStatus, gb(), AdminData, PriceMap, PROVIDER_NAMES, UserDetail, UserSummary (+166 more)
+Nodes (228): xa(), xa(), xa(), AccountPage(), BillingStatus, gb(), AdminData, PriceMap (+220 more)
 
-### Community 102 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js"
-Cohesion: 0.03
-Nodes (106): util, m(), A(), B(), C(), F(), k(), M() (+98 more)
+### Community 102 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js"
+Cohesion: 0.06
+Nodes (74): initController(), initController(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement(), fteShown, getAllAttachmentIcons(), getAttachmentDetails() (+66 more)
 
 ### Community 103 - "Hypescript — Brand Guidelines"
 Cohesion: 0.29
 Nodes (6): Accessibility and metadata, Canonical assets, Core idea, Hypescript — Brand Guidelines, Palette, Usage
 
-### Community 104 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/gdrive-convert-attachment-card.js"
-Cohesion: 0.08
-Nodes (63): addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement(), fteShown, getFileDetails(), getFteInstance(), getMatchingController(), getUnprocessedFileElements() (+55 more)
+### Community 104 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js"
+Cohesion: 0.06
+Nodes (73): clearTabPopupOverride(), configureActionOnTabContext(), getTabPopupContext(), l(), logHomeOpenedProtocol(), openTabPopupOverride(), registerSidePanelClickHandler(), u() (+65 more)
 
 ### Community 105 - "toolbar"
 Cohesion: 0.04
 Nodes (46): accordion, Accordion.Content → Accordion.Panel, Accordion.Header → Accordion.Header, Accordion.Item → Accordion.Item, Accordion.Root → Accordion.Root, Accordion.Trigger → Accordion.Trigger, Base UI only props worth knowing, Base UI only props worth knowing (+38 more)
 
+### Community 106 - "_"
+Cohesion: 0.33
+Nodes (15): _, b(), D(), g(), handleGdriveResumableUploadChunk(), I(), T(), uploadFileToGoogleDrive() (+7 more)
+
 ### Community 107 - "select"
 Cohesion: 0.04
 Nodes (44): Base UI only props worth knowing (checkbox), Base UI only props worth knowing (radio-group), Base UI only props worth knowing (select), Base UI only props worth knowing (slider), Base UI only props worth knowing (switch), checkbox, Checkbox.Indicator → Checkbox.Indicator, Checkbox.Root → Checkbox.Root (+36 more)
 
-### Community 108 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
+### Community 108 - "sendErrorLog"
 Cohesion: 0.06
-Nodes (72): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addSearchTableBodyEventListener(), areFileDetailsValid(), checkForSearchResultsTable() (+64 more)
+Nodes (75): attachFteListeners(), getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), getFteInstance(), renderConvertFte(), tryShowConvertFte(), renderEditPdfFte() (+67 more)
+
+### Community 109 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/options.js"
+Cohesion: 0.03
+Nodes (73): m(), H(), J(), K(), q(), W(), X(), Y() (+65 more)
 
 ### Community 110 - "catalog.test.ts"
-Cohesion: 0.02
-Nodes (173): fetchOfficialGoogleFonts(), GET(), GoogleWebfontItem, GET(), starterFallback(), GET(), CaptionsPanel(), AnimationsBrowser() (+165 more)
+Cohesion: 0.03
+Nodes (120): GET(), starterFallback(), GET(), AnimationsBrowser(), EffectsBrowser(), Props, TabMode, ElementsBrowser() (+112 more)
 
 ### Community 112 - "Per-component notes"
 Cohesion: 0.08
 Nodes (24): accordion, asChild -> render, breadcrumb / marker (Slot users), Coverage matrix, CSS custom properties, Data attributes / class hooks, dialog / alert-dialog / sheet, Doc-validation TODOs (before specs are final) (+16 more)
 
-### Community 113 - ".ra"
-Cohesion: 0.17
-Nodes (12): fd(), fl(), kj(), lj(), ok(), qa(), Qk(), rk() (+4 more)
+### Community 113 - "requireCloudUser"
+Cohesion: 0.11
+Nodes (28): GET(), GET(), context(), GET(), PUT(), PATCH(), PATCH(), GET() (+20 more)
 
 ### Community 114 - "components.json"
 Cohesion: 0.09
@@ -1250,9 +1267,9 @@ Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent 
 Cohesion: 0.50
 Nodes (3): root, source, target
 
-### Community 118 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
-Cohesion: 0.14
-Nodes (19): getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), addFTE(), addFTETooltipEventListeners(), documentListenerOptions, handleFteButtonClick(), handleFteClickOutside() (+11 more)
+### Community 118 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js"
+Cohesion: 0.60
+Nodes (4): b64DecodeUnicode(), base64UrlDecode(), InvalidTokenError, jwtDecode()
 
 ### Community 120 - "20260810050000_cloud_saas.sql"
 Cohesion: 0.33
@@ -1263,28 +1280,28 @@ Cohesion: 0.17
 Nodes (11): dependencies, @aws-sdk/client-s3, express, @aws-sdk/client-s3, name, private, scripts, start (+3 more)
 
 ### Community 122 - "server.mjs"
-Cohesion: 0.21
-Nodes (9): active, app, callback(), hasAudio(), missing, render(), required, run() (+1 more)
+Cohesion: 0.19
+Nodes (10): active, app, callback(), hasAudio(), missing, render(), required, run() (+2 more)
 
-### Community 123 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js"
+### Community 123 - "sendAnalytics"
 Cohesion: 0.09
-Nodes (52): addTouchPointInNativeViewerViaListView(), addTouchpointToNativeViewerViaListView(), getAttachmentURLAgainstName(), getDataForThreadId(), getListViewAttachmentsWithThreadElement(), isDataPresentForThreadId(), mergeAttachments(), processForAllThreads() (+44 more)
+Nodes (55): isDefaultViewer(), isDefaultViewershipFeatureForGmailEnabled(), isGmailImplicitDefaultViewershipFeatureForGmailEnabled(), openPdfInNewTab(), resetDefaultViewership(), takeDefaultViewerShip(), addDummyTargetTestTouchpoint(), set (+47 more)
 
-### Community 124 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js"
-Cohesion: 0.10
-Nodes (48): addTouchPointInNativeViewer(), CONVERT_TO_PDF_PROMOTION_SOURCE, createNativeViewerTouchpoint(), createNativeViewTouchpointTextElement(), handleCommonClickAction(), handleTouchPointClick(), isNativeViewerPasswordProtected(), passwordProtectedUrls (+40 more)
+### Community 124 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-verb-native-viewer.js"
+Cohesion: 0.12
+Nodes (42): addTouchPointInNativeViewer(), CONVERT_TO_PDF_PROMOTION_SOURCE, createNativeViewerTouchpoint(), createNativeViewTouchpointTextElement(), handleCommonClickAction(), handleTouchPointClick(), isNativeViewerPasswordProtected(), passwordProtectedUrls (+34 more)
 
 ### Community 125 - "חיבור הענן — בדיוק מה להשיג ואיפה לשים"
 Cohesion: 0.11
 Nodes (17): 1. Supabase — שלושה ערכים, 2. Cloudflare R2 — ארבעה ערכים, 3. Google Cloud — בחירה אחת, 4. Vercel — איפה נשמרים 11 הערכים, CORS שחייבים להוסיף, בדיקה סופית, הדרך הקצרה ביותר, חיבור הענן — בדיוק מה להשיג ואיפה לשים (+9 more)
 
-### Community 127 - "S"
-Cohesion: 0.04
-Nodes (20): Ae, be, De(), _e, Ie, Oe, Pe, Re() (+12 more)
+### Community 127 - "$"
+Cohesion: 0.05
+Nodes (67): configureActionOnTabContext(), getTabPopupContext(), CSP_WEBREQUEST_FALLBACK_STORAGE_KEY, MIME_HANDLER_STORAGE_KEY, L, registerPdfViewerTab(), downloadManager, f() (+59 more)
 
-### Community 128 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
-Cohesion: 0.04
-Nodes (119): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement() (+111 more)
+### Community 128 - "d"
+Cohesion: 0.05
+Nodes (42): ak(), bk(), ca(), ck(), d(), e(), fl(), hi() (+34 more)
 
 ### Community 129 - "generate-brand-assets.py"
 Cohesion: 0.36
@@ -1292,35 +1309,35 @@ Nodes (11): Path, approved_master(), font(), main(), mark(), product_art(), Gene
 
 ### Community 130 - "dependencies"
 Cohesion: 0.11
-Nodes (19): @aws-sdk/s3-request-presigner, @base-ui/react, class-variance-authority, @ffmpeg/ffmpeg, geist, next, @phosphor-icons/react, @supabase/ssr (+11 more)
+Nodes (19): @base-ui/react, class-variance-authority, @ffmpeg/core, @ffmpeg/util, next, @phosphor-icons/react, react, react-dom (+11 more)
 
-### Community 131 - "thumbnails.ts"
-Cohesion: 0.16
-Nodes (19): Filmstrip(), Waveform(), cache, filmstripCount(), fp(), getSource(), getThumbnail(), seek() (+11 more)
-
-### Community 137 - "getSupabaseServiceClient"
+### Community 131 - "fonts.ts"
 Cohesion: 0.09
-Nodes (44): POST(), runtime, GET(), DELETE(), DELETE(), GET(), GET(), POST() (+36 more)
+Nodes (31): fetchOfficialGoogleFonts(), GET(), GoogleWebfontItem, CaptionsPanel(), CATEGORY_OPTIONS, FontBrowser(), FontSubset, Props (+23 more)
+
+### Community 137 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js"
+Cohesion: 0.08
+Nodes (35): Mutex, b, k(), R, s(), U(), v(), getActiveTasks() (+27 more)
 
 ### Community 138 - "Creative library architecture"
 Cohesion: 0.33
 Nodes (5): Creative library architecture, Delivery order, Product contract, Shipped catalog (2026-08-13), Sources and licensing
 
-### Community 139 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js"
-Cohesion: 0.06
-Nodes (51): buildBrowserStudentStateBridgeErrorPayload(), buildBrowserStudentStateBridgePayload(), SIDE_PANEL_HASH_ROUTES, SIDE_PANEL_RELOAD_FLAG_PREFIX, getHostPageType(), getHostPageTypeForTab(), HOST_PAGE_TYPE, r (+43 more)
+### Community 139 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/content-util.js"
+Cohesion: 0.05
+Nodes (50): util, m(), e, r(), i(), n(), applyFileSchemeAccessToRecents(), i (+42 more)
 
 ### Community 140 - "Commands"
 Cohesion: 0.12
 Nodes (17): `add` — Add components, `apply` — Apply a preset to an existing project, `build` — Build a custom registry, Commands, Contents, `diff` — Check for updates, `docs` — Get component documentation URLs, Dry-Run Mode (+9 more)
 
-### Community 141 - "BrandLogo.tsx"
+### Community 141 - "model.ts"
 Cohesion: 0.04
-Nodes (78): ContinueInner(), metadata, viewport, LoginInner(), LoginPage(), Tab, OnboardingPage(), Step (+70 more)
+Nodes (124): Volume2, VolumeX, ClipInspector(), SOURCE_COLORS, Timeline(), TYPE_ICON, visualWidth(), IconButton() (+116 more)
 
-### Community 142 - "x"
-Cohesion: 0.13
-Nodes (25): ak(), bk(), ca(), ck(), dc(), ec(), fc(), hc() (+17 more)
+### Community 142 - "d"
+Cohesion: 0.07
+Nodes (26): d(), e(), fl(), hi(), hl(), id(), il(), Jj() (+18 more)
 
 ### Community 143 - "shadcn/SKILL.md"
 Cohesion: 0.21
@@ -1328,7 +1345,7 @@ Nodes (4): Icons, Icons in Button use data-icon attribute, No sizing classes on 
 
 ### Community 147 - "chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js"
 Cohesion: 0.03
-Nodes (59): aa(), aj(), bb(), bj(), cj(), eg(), ej(), em() (+51 more)
+Nodes (69): aa(), aj(), bb(), bf(), bj(), eg(), ej(), em() (+61 more)
 
 ### Community 148 - "agent-build.mjs"
 Cohesion: 0.06
@@ -1336,15 +1353,15 @@ Nodes (37): args, ENVIRONMENTS, existingKeys(), flag(), flagValue(), have, missi
 
 ### Community 149 - "chrome-he-locale-2/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js"
 Cohesion: 0.03
-Nodes (61): aa(), aj(), bb(), bj(), eg(), ej(), em(), fk() (+53 more)
+Nodes (62): aa(), aj(), bb(), bj(), bm(), ej(), em(), fk() (+54 more)
 
 ### Community 150 - "Customization & Theming"
 Cohesion: 0.14
 Nodes (14): 1. Built-in variants, 2. Tailwind classes via `className`, 3. Add a new variant, 4. Wrapper components, Adding Custom Colors, Border Radius, Changing the Theme, Checking for Updates (+6 more)
 
-### Community 151 - "d"
-Cohesion: 0.07
-Nodes (26): d(), e(), fl(), hi(), hl(), id(), il(), Jj() (+18 more)
+### Community 151 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js"
+Cohesion: 0.09
+Nodes (53): addTouchPointInNativeViewerViaListView(), addTouchpointToNativeViewerViaListView(), getAttachmentURLAgainstName(), getDataForThreadId(), getListViewAttachmentsWithThreadElement(), isDataPresentForThreadId(), mergeAttachments(), processForAllThreads() (+45 more)
 
 ### Community 152 - "כל הפרמטרים וכוונון"
 Cohesion: 0.29
@@ -1352,7 +1369,7 @@ Nodes (7): אינטרו/אאוטרו וכללי, כל הפרמטרים וכוו�
 
 ### Community 153 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js"
 Cohesion: 0.04
-Nodes (101): C(), f(), g(), u(), f(), p(), clearTabPopupOverride(), configureActionOnTabContext() (+93 more)
+Nodes (99): downloadBannerExcludeList, LOCAL_FTE_WINDOW, checkForImsSidCookie(), cleanupOldPdfRenderingTrackingStorage(), POST_PURCHASE_ACK_SW_FALLBACK_MS, POST_PURCHASE_ACK_TIMEOUT_MS, isMigrationCleanupCompleted(), isMigrationCompleted() (+91 more)
 
 ### Community 154 - "Component Composition"
 Cohesion: 0.15
@@ -1362,9 +1379,9 @@ Nodes (13): Avatar always needs AvatarFallback, Button has no isPending or isLoa
 Cohesion: 0.15
 Nodes (13): Built-in variants first, className for layout only, Contents, No manual dark: color overrides, No manual z-index on overlay components, No raw color values for status/state indicators, No space-x-* / space-y-*, Prefer size-* over w-* h-* when equal (+5 more)
 
-### Community 156 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/viewer/signInUtils.js"
-Cohesion: 0.12
-Nodes (13): e, r, BUFFER_CLEAN_UP_INTERVAL, TEMP_BUFFER_CLEAN_UP_ALARM_NAME, errForLog(), getOsForLog(), logIdbError(), e (+5 more)
+### Community 156 - "Clip"
+Cohesion: 0.03
+Nodes (117): ChatProps, CaptionsBrowser(), Props, CreativePanel(), CreativePanelKind, Captions, InspectorFocus, InspectorPanel() (+109 more)
 
 ### Community 157 - "alert-dialog"
 Cohesion: 0.17
@@ -1375,20 +1392,20 @@ Cohesion: 0.17
 Nodes (11): Configuring Registries, Setup, `shadcn:get_add_command_for_items`, `shadcn:get_audit_checklist`, `shadcn:get_item_examples_from_registries`, `shadcn:get_project_registries`, `shadcn:list_items_in_registries`, shadcn MCP Server (+3 more)
 
 ### Community 159 - "t"
-Cohesion: 0.08
-Nodes (3): StateManager, handleTabTitleForInactiveDirectVerb(), t
+Cohesion: 0.06
+Nodes (12): StateManager, handleTabTitleForInactiveDirectVerb(), n(), getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), a() (+4 more)
 
 ### Community 160 - "chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js"
 Cohesion: 0.03
-Nodes (53): Cc(), ad(), af(), ai(), ba(), cc(), cd(), ce() (+45 more)
+Nodes (47): M(), ad(), af(), ba(), cd(), cf(), Df(), Ea() (+39 more)
 
 ### Community 161 - "toast"
 Cohesion: 0.18
 Nodes (11): Base UI only props worth knowing, CSS variables, Data attributes, toast, Toast.Action → Toast.Action, Toast.Close → Toast.Close, Toast.Description → Toast.Description, Toast.Provider → Toast.Provider (+3 more)
 
-### Community 162 - "b"
-Cohesion: 0.07
-Nodes (34): ag(), al(), b(), Bg(), bl(), c(), cl(), dg() (+26 more)
+### Community 162 - "qh"
+Cohesion: 0.10
+Nodes (28): bf(), df(), dh(), ef(), Fa(), ff(), Ga(), jf() (+20 more)
 
 ### Community 163 - "popover"
 Cohesion: 0.18
@@ -1404,7 +1421,7 @@ Nodes (10): Arrow → Arrow, Base UI only props worth knowing (tooltip), Content
 
 ### Community 166 - "chrome-he-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/offscreendocument_main.js"
 Cohesion: 0.03
-Nodes (67): aa(), aj(), al(), bb(), bf(), bj(), bl(), bm() (+59 more)
+Nodes (61): aa(), aj(), bb(), bj(), eg(), ej(), em(), fk() (+53 more)
 
 ### Community 167 - "dialog"
 Cohesion: 0.20
@@ -1435,8 +1452,8 @@ Cohesion: 0.22
 Nodes (9): Attachments use Attachment, Chat & Messaging, Contents, Escape hatch: the scroller hooks, Message rows use Message, Message surfaces use Bubble, Scrollable threads use MessageScroller, Streaming, anchoring, and jump-to-latest are built in (+1 more)
 
 ### Community 174 - "scripts"
-Cohesion: 0.22
-Nodes (9): scripts, build, dev, lint, prebuild, predev, prepare:ffmpeg, start (+1 more)
+Cohesion: 0.20
+Nodes (10): scripts, build, check:schema, dev, lint, prebuild, predev, prepare:ffmpeg (+2 more)
 
 ### Community 175 - "form"
 Cohesion: 0.25
@@ -1482,57 +1499,69 @@ Nodes (6): Canonical components, Foundation, Hypescript Design Constitution, Lan
 Cohesion: 0.40
 Nodes (5): Base UI only props worth knowing, CSS variables, Data attributes, separator, Separator.Root → Separator
 
-### Community 186 - "vf"
-Cohesion: 0.09
-Nodes (20): M(), w(), Ef(), Ff(), Gf(), Hf(), ii(), md() (+12 more)
+### Community 186 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js"
+Cohesion: 0.04
+Nodes (117): isDefaultViewer(), isDefaultViewershipFeatureForGdriveEnabled(), isGdriveImplicitDefaultViewershipFeatureEnabled(), openPdfInNewTabForDV(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers, createTouchpointElement() (+109 more)
 
 ### Community 187 - "(new) Fieldset.Root and Fieldset.Legend"
 Cohesion: 0.50
 Nodes (4): Base UI only props worth knowing (form-wide), CSS variables, Data attributes, (new) Fieldset.Root and Fieldset.Legend
 
 ### Community 190 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js"
-Cohesion: 0.03
-Nodes (111): C(), f(), g(), u(), f(), p(), clearTabPopupOverride(), configureActionOnTabContext() (+103 more)
-
-### Community 191 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js"
 Cohesion: 0.04
-Nodes (100): H(), J(), K(), q(), W(), X(), Y(), z() (+92 more)
+Nodes (100): C(), f(), g(), u(), f(), p(), logHomeOpenedProtocol(), openTabPopupOverride() (+92 more)
+
+### Community 191 - "qh"
+Cohesion: 0.09
+Nodes (26): df(), dh(), ef(), ff(), hi(), ii(), Ke(), le() (+18 more)
 
 ### Community 192 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js"
 Cohesion: 0.07
-Nodes (78): attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages(), handleLongChatConversion() (+70 more)
+Nodes (75): addHoverTooltipScrollResizeListeners(), addListenerToComposeBox(), addTouchPointInComposeBoxPDFAttachment(), addTouchPointToComposeBoxPDFAttachment(), addTouchPointToMessageWithPDFAttachment(), adjustExistingFTETouchpointPosition(), alignHoverTooltipToButton(), attachOnHoverTooltipToTouchPoint() (+67 more)
 
-### Community 193 - "runtime.ts"
+### Community 193 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/direct-verb-utils.js"
 Cohesion: 0.09
-Nodes (24): AgentEvents, agentLoopGuard(), AgentRunner, DROPPED_IMAGES_NOTE, formatLlmError(), formatModeBlock(), formatToolError(), isChunkLoadError() (+16 more)
+Nodes (32): r, cleanupOldPdfRenderingTrackingStorage(), d(), f(), getSessionKey(), pdfRenderingTabCloseListener(), pdfRenderingTabNavigatedAwayListener(), registerPDFRenderingSession() (+24 more)
+
+### Community 194 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js"
+Cohesion: 0.11
+Nodes (26): attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages(), handleLongChatConversion() (+18 more)
 
 ### Community 195 - "b"
-Cohesion: 0.05
-Nodes (48): b(), bc(), be(), bf(), c(), d(), da(), dc() (+40 more)
+Cohesion: 0.06
+Nodes (23): $a(), ab(), Ae(), b(), bb(), cb(), cg(), da() (+15 more)
 
-### Community 197 - "sendErrorLog"
-Cohesion: 0.08
-Nodes (59): addDeepResearchFte(), addFte(), attachFteListeners(), onFteShown(), renderConvertFte(), renderEditPdfFte(), tryShowEditPdfFte(), addChatFte() (+51 more)
+### Community 196 - "c"
+Cohesion: 0.07
+Nodes (45): Cc(), w(), c(), cc(), d(), dc(), e(), ec() (+37 more)
+
+### Community 197 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js"
+Cohesion: 0.07
+Nodes (53): addDeepResearchFte(), addFte(), addWindowEventListeners(), alignFtePosition(), attachFteListeners(), CHATGPT_CANVAS_FTE_STORAGE_KEY, CHATGPT_CHAT_FTE_STORAGE_KEY, CHATGPT_GLOBAL_FTE_STORAGE_KEY (+45 more)
 
 ### Community 202 - "chrome-he-locale-2/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js"
 Cohesion: 0.03
-Nodes (58): ab(), ag(), aj(), Ba(), bj(), cb(), db(), ej() (+50 more)
+Nodes (56): A(), ab(), Ba(), bb(), bh(), cb(), db(), ej() (+48 more)
 
 ### Community 203 - "chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js"
 Cohesion: 0.03
-Nodes (53): Cc(), ad(), af(), ai(), ba(), cc(), cd(), ce() (+45 more)
+Nodes (57): ad(), af(), ba(), cc(), cd(), cf(), dg(), Ea() (+49 more)
 
 ### Community 204 - "chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen_compiled.js"
-Cohesion: 0.04
-Nodes (53): ad(), af(), ba(), cc(), cd(), cf(), Ea(), Ef() (+45 more)
+Cohesion: 0.03
+Nodes (47): M(), ad(), af(), ba(), cd(), cf(), Df(), Ea() (+39 more)
+
+### Community 205 - "b"
+Cohesion: 0.06
+Nodes (23): $a(), ab(), Ae(), b(), bb(), cb(), cg(), da() (+15 more)
 
 ### Community 207 - "chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js"
 Cohesion: 0.03
-Nodes (56): A(), ab(), Ba(), bb(), bh(), cb(), db(), ej() (+48 more)
+Nodes (58): A(), ab(), Ba(), bb(), bh(), cb(), db(), ej() (+50 more)
 
-### Community 208 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js"
-Cohesion: 0.04
-Nodes (81): buildSafeFilename(), buildSafeFilenameWithExt(), HTML_FILE_EXTENSION, addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint(), makeUnprocessedSelector() (+73 more)
+### Community 208 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/student-tools-touchpoints/student-tools-touchpoint-module.js"
+Cohesion: 0.06
+Nodes (57): T(), e(), o(), r(), s(), getFloodgateAllowedLocales(), getStudySpaceContextMenuAllowedLocales(), getStudySpaceContextMenuFeatureConfig() (+49 more)
 
 ### Community 209 - "chrome-he-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/service_worker_bin_prod.js"
 Cohesion: 0.03
@@ -1546,161 +1575,173 @@ Nodes (39): af(), ag(), b(), bg(), c(), Cg(), d(), Da() (+31 more)
 Cohesion: 0.08
 Nodes (39): af(), ag(), b(), bg(), c(), Cg(), d(), Da() (+31 more)
 
-### Community 212 - "$"
-Cohesion: 0.06
-Nodes (61): X(), isChromeViewerOpened(), safeJsonParse(), L, registerPdfViewerTab(), downloadManager, f(), I() (+53 more)
+### Community 212 - "Se"
+Cohesion: 0.04
+Nodes (13): Ae, be, De(), _e, Ie, Oe, Pe, Re() (+5 more)
 
-### Community 213 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/express.js"
-Cohesion: 0.12
-Nodes (28): H(), q(), W(), X(), Y(), z(), sendCoiEnabledEvent(), sendPingEventHandler() (+20 more)
+### Community 213 - "features.ts"
+Cohesion: 0.09
+Nodes (34): REALISTIC_GAINS, AudioCalibration, CalibrationOptions, DEFAULTS, Distribution, EMPTY, percentileRank(), SpectralDistribution (+26 more)
 
 ### Community 214 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js"
-Cohesion: 0.10
-Nodes (51): addHoverTooltipScrollResizeListeners(), addListenerToComposeBox(), addTouchPointInComposeBoxPDFAttachment(), addTouchPointToComposeBoxPDFAttachment(), addTouchPointToMessageWithPDFAttachment(), adjustExistingFTETouchpointPosition(), alignHoverTooltipToButton(), attachOnHoverTooltipToTouchPoint() (+43 more)
+Cohesion: 0.07
+Nodes (76): addHoverTooltipScrollResizeListeners(), addListenerToComposeBox(), addTouchPointInComposeBoxPDFAttachment(), addTouchPointToComposeBoxPDFAttachment(), addTouchPointToMessageWithPDFAttachment(), adjustExistingFTETouchpointPosition(), alignHoverTooltipToButton(), attachOnHoverTooltipToTouchPoint() (+68 more)
 
-### Community 215 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js"
-Cohesion: 0.05
-Nodes (110): initController(), initController(), isDefaultViewer(), isDefaultViewershipFeatureForGmailEnabled(), isGmailImplicitDefaultViewershipFeatureForGmailEnabled(), openPdfInNewTab(), resetDefaultViewership(), takeDefaultViewerShip() (+102 more)
+### Community 215 - ".h"
+Cohesion: 0.21
+Nodes (10): Je(), ld(), le(), qa(), qe(), ra(), va(), wa() (+2 more)
 
-### Community 216 - "I"
-Cohesion: 0.10
-Nodes (19): fe(), gd(), gj(), hd(), hj(), I(), ij(), jd() (+11 more)
+### Community 216 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js"
+Cohesion: 0.12
+Nodes (19): useFABDrag(), FAB_HOME_TOOLTIP_FTE_SHOWN_KEY, useFABHomeTooltipFTE(), useFABPositioning(), PILLS_CONFIG, handleHideFabForDomain(), handleHideForNow(), handleNeverDisplayFab() (+11 more)
 
-### Community 217 - "h"
-Cohesion: 0.05
-Nodes (63): buildBrowserStudentStateBridgeErrorPayload(), buildBrowserStudentStateBridgePayload(), SIDE_PANEL_HASH_ROUTES, SIDE_PANEL_RELOAD_FLAG_PREFIX, getHostPageType(), getHostPageTypeForTab(), HOST_PAGE_TYPE, r (+55 more)
+### Community 217 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js"
+Cohesion: 0.06
+Nodes (54): fetchGmailEmailHtml(), buildSafeFilename(), buildSafeFilenameWithExt(), addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint(), makeUnprocessedSelector() (+46 more)
 
-### Community 218 - "I"
-Cohesion: 0.10
-Nodes (19): fe(), gd(), gj(), hd(), hj(), I(), ij(), jd() (+11 more)
+### Community 218 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js"
+Cohesion: 0.12
+Nodes (29): addLoaderToTouchPoint(), resetTouchPointToDefaultState(), showTouchPointLoadingState(), TOUCH_POINT_CLASSES, updateTouchPointProgress(), dismissWikipediaFteOnTouchpoint(), FTE_ACTIVE_CLASS, markWikipediaConvertToPdfFteConsumed() (+21 more)
 
-### Community 219 - "sendAnalytics"
-Cohesion: 0.08
-Nodes (55): addDeepResearchFte(), addFte(), addWindowEventListeners(), alignFtePosition(), attachFteListeners(), CHATGPT_CANVAS_FTE_STORAGE_KEY, CHATGPT_CHAT_FTE_STORAGE_KEY, CHATGPT_GLOBAL_FTE_STORAGE_KEY (+47 more)
+### Community 219 - ".ea"
+Cohesion: 0.18
+Nodes (17): ac(), bc(), cc(), dc(), ec(), Mc(), nc(), nj() (+9 more)
 
-### Community 220 - ".ea"
-Cohesion: 0.13
-Nodes (24): ac(), bc(), cc(), dc(), ec(), hd(), hj(), ij() (+16 more)
+### Community 220 - ".then"
+Cohesion: 0.11
+Nodes (17): eg(), Fc(), gl(), ig(), Kg(), kl(), km(), lg() (+9 more)
+
+### Community 221 - "c"
+Cohesion: 0.07
+Nodes (45): Cc(), w(), c(), cc(), d(), dc(), e(), ec() (+37 more)
 
 ### Community 222 - "b"
-Cohesion: 0.08
-Nodes (39): af(), ag(), b(), bg(), c(), Cg(), d(), Da() (+31 more)
-
-### Community 223 - "I18nProvider.tsx"
 Cohesion: 0.07
-Nodes (41): DELETE(), GET(), PATCH(), GET(), PATCH(), LandingText(), ADDRESS_STORAGE_KEY, AddressForm (+33 more)
+Nodes (48): af(), ag(), b(), bg(), c(), Cg(), d(), Da() (+40 more)
 
-### Community 224 - "I"
-Cohesion: 0.05
-Nodes (60): Ac(), ad(), Bc(), bd(), cd(), ce(), dd(), de() (+52 more)
+### Community 223 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js"
+Cohesion: 0.04
+Nodes (76): clearCachedImsUserState(), getCachedImsUserId(), getCachedImsUserState(), getCachedImsUserStatePingFields(), persistCachedImsUserState(), s(), touchCachedImsUserStateLastSyncAt(), ACROBAT_USER_STATE (+68 more)
+
+### Community 224 - "runtime.ts"
+Cohesion: 0.06
+Nodes (42): CANCELLED_RESULT, isToolHistoryValid(), repairToolMessages(), fitHistoryToBudget(), historyBytes(), messageBytes(), REQUEST_BODY_BUDGET_BYTES, REQUEST_BODY_LIMIT_BYTES (+34 more)
 
 ### Community 225 - "chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js"
 Cohesion: 0.07
-Nodes (30): A(), b(), c(), D(), da(), e(), ea(), fa() (+22 more)
+Nodes (29): A(), b(), c(), D(), da(), e(), ea(), fa() (+21 more)
 
 ### Community 226 - "chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js"
-Cohesion: 0.06
-Nodes (32): A(), b(), c(), D(), da(), e(), ea(), fa() (+24 more)
+Cohesion: 0.07
+Nodes (30): A(), b(), c(), D(), da(), e(), ea(), fa() (+22 more)
 
-### Community 228 - "f"
-Cohesion: 0.09
-Nodes (34): Cc(), da(), dc(), ec(), ei(), f(), fc(), fh() (+26 more)
+### Community 228 - "createFteTooltip"
+Cohesion: 0.08
+Nodes (57): getFteInstance(), renderConvertFte(), showFteTooltipForConvert(), tryShowConvertFte(), renderEditPdfFte(), showFteTooltipForEditPdf(), tryShowEditPdfFte(), shouldShowFTE() (+49 more)
 
-### Community 229 - "J"
-Cohesion: 0.10
-Nodes (21): ce(), fd(), fl(), ge(), gj(), J(), kj(), L() (+13 more)
+### Community 229 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/temporaryURLBufferIndexDB.js"
+Cohesion: 0.13
+Nodes (12): e, BUFFER_CLEAN_UP_INTERVAL, TEMP_BUFFER_CLEAN_UP_ALARM_NAME, errForLog(), getOsForLog(), logIdbError(), e, {errForLog:r,logIdbError:o} (+4 more)
 
 ### Community 232 - "chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js"
 Cohesion: 0.07
 Nodes (30): A(), b(), c(), D(), da(), e(), ea(), fa() (+22 more)
 
 ### Community 233 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-compose-attachment-touch-point-service.js"
-Cohesion: 0.06
-Nodes (77): addHoverTooltipScrollResizeListeners(), addListenerToComposeBox(), addTouchPointInComposeBoxPDFAttachment(), addTouchPointToComposeBoxPDFAttachment(), addTouchPointToMessageWithPDFAttachment(), adjustExistingFTETouchpointPosition(), alignHoverTooltipToButton(), attachOnHoverTooltipToTouchPoint() (+69 more)
-
-### Community 234 - "wg"
-Cohesion: 0.09
-Nodes (12): gg(), mf(), rg(), sg(), td(), tg(), ug(), vd() (+4 more)
-
-### Community 235 - "sendErrorLog"
 Cohesion: 0.08
-Nodes (51): addDeepResearchFte(), addFte(), addWindowEventListeners(), alignFtePosition(), attachFteListeners(), CHATGPT_CHAT_FTE_STORAGE_KEY, CHATGPT_GLOBAL_FTE_STORAGE_KEY, FTE_HIDE_MARGIN_BOTTOM_PX (+43 more)
+Nodes (65): addSearchTableBodyEventListener(), areFileDetailsValid(), checkForSearchResultsTable(), getPdfRowsFromSearchTable(), handleSearchTableClick(), isPdfIndexValid(), isValidPdfFile(), processDVSearchClick() (+57 more)
 
-### Community 236 - "requireCloudUser"
+### Community 234 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js"
+Cohesion: 0.09
+Nodes (53): addTouchPointInNativeViewerViaListView(), addTouchpointToNativeViewerViaListView(), getAttachmentURLAgainstName(), getDataForThreadId(), getListViewAttachmentsWithThreadElement(), isDataPresentForThreadId(), mergeAttachments(), processForAllThreads() (+45 more)
+
+### Community 235 - "chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js"
+Cohesion: 0.08
+Nodes (10): Aa(), Ab(), Ba(), Bb(), Ea(), Pa(), xb(), ya() (+2 more)
+
+### Community 236 - "render/route.ts"
+Cohesion: 0.08
+Nodes (40): GET(), DELETE(), GET(), POST(), POST(), secretMatches(), GET(), runtime (+32 more)
+
+### Community 237 - "c"
+Cohesion: 0.09
+Nodes (31): H(), K(), q(), W(), X(), Y(), z(), C() (+23 more)
+
+### Community 238 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js"
+Cohesion: 0.04
+Nodes (106): D(), T(), ADD_WEBPAGE_TO_EXISTING_PDF_SPACE_CONTEXT_MENU, ADOBE_ACROBAT_PARENT_CONTEXT_MENU_ID, NEW_RCM_LABEL_FLAG, PAYLOAD_NO_TABID_FLAG, STUDY_SPACE_CONTEXT_MENU_FLAG, STUDY_SPACE_DEFAULT_LOCALES (+98 more)
+
+### Community 239 - "c"
 Cohesion: 0.12
-Nodes (25): GET(), GET(), context(), GET(), PUT(), PATCH(), PATCH(), GET() (+17 more)
+Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
 
-### Community 238 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js"
-Cohesion: 0.11
-Nodes (33): addLoaderToTouchPoint(), resetTouchPointToDefaultState(), showTouchPointLoadingState(), TOUCH_POINT_CLASSES, updateTouchPointProgress(), attachFteListeners(), dismissWikipediaFteOnTouchpoint(), FTE_ACTIVE_CLASS (+25 more)
-
-### Community 239 - "_"
-Cohesion: 0.33
-Nodes (15): _, b(), D(), g(), handleGdriveResumableUploadChunk(), I(), T(), uploadFileToGoogleDrive() (+7 more)
-
-### Community 240 - "scriptPlan.ts"
-Cohesion: 0.02
-Nodes (181): analysisFor(), absorbedBy(), alignBanded(), alignBlock(), AlignmentReport, AlignOptions, AlignPair, alignTokens() (+173 more)
+### Community 240 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
+Cohesion: 0.08
+Nodes (43): getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), addSearchTableBodyEventListener(), areFileDetailsValid(), checkForSearchResultsTable(), getPdfRowsFromSearchTable(), handleSearchTableClick() (+35 more)
 
 ### Community 241 - ".then"
-Cohesion: 0.10
-Nodes (20): eg(), Fc(), gl(), ig(), Kg(), kl(), km(), L() (+12 more)
+Cohesion: 0.11
+Nodes (16): bm(), Fc(), fm(), gl(), gm(), hm(), im(), jm() (+8 more)
 
-### Community 243 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js"
-Cohesion: 0.08
-Nodes (38): attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages(), handleLongChatConversion() (+30 more)
+### Community 243 - "x"
+Cohesion: 0.13
+Nodes (25): ak(), bk(), ca(), ck(), dc(), ec(), fc(), hc() (+17 more)
 
-### Community 244 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
-Cohesion: 0.14
-Nodes (19): getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), addFTE(), addFTETooltipEventListeners(), documentListenerOptions, handleFteButtonClick(), handleFteClickOutside() (+11 more)
+### Community 244 - "d"
+Cohesion: 0.07
+Nodes (28): d(), e(), hi(), hl(), id(), il(), Jj(), kg() (+20 more)
 
 ### Community 245 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/ch-context-menu.js"
-Cohesion: 0.04
-Nodes (102): C(), f(), g(), u(), f(), p(), clearTabPopupOverride(), configureActionOnTabContext() (+94 more)
+Cohesion: 0.05
+Nodes (80): logHomeOpenedProtocol(), checkForImsSidCookie(), e(), openPreferences(), cleanupOldPdfRenderingTrackingStorage(), clearOptionPageSource(), ve, userDetailsAcrobat (+72 more)
 
 ### Community 246 - "T"
 Cohesion: 0.07
 Nodes (46): Qe(), af(), Ah(), bf(), cf(), Ch(), dh(), ff() (+38 more)
 
 ### Community 247 - "T"
-Cohesion: 0.06
-Nodes (57): Qe(), af(), Ah(), bb(), bf(), bh(), cf(), Ch() (+49 more)
-
-### Community 248 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js"
-Cohesion: 0.26
-Nodes (15): addConvertEmailPdfTouchpoint(), attachTooltip(), createConvertEmailPdfButton(), events, findFirst(), findThreadToolbar(), findThreadView(), getGmailPrintUrl() (+7 more)
-
-### Community 249 - "T"
 Cohesion: 0.07
 Nodes (46): Qe(), af(), Ah(), bf(), cf(), Ch(), dh(), ff() (+38 more)
 
-### Community 250 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js"
-Cohesion: 0.09
-Nodes (50): addTouchPointInNativeViewerViaListView(), addTouchpointToNativeViewerViaListView(), getAttachmentURLAgainstName(), getDataForThreadId(), mergeAttachments(), processForAllThreads(), processForAttachment(), processForThread() (+42 more)
+### Community 248 - ".initialize"
+Cohesion: 0.17
+Nodes (12): Tl(), gl(), K(), qa(), sa(), va(), wa(), Wi() (+4 more)
+
+### Community 249 - "T"
+Cohesion: 0.08
+Nodes (45): Qe(), af(), Ah(), bf(), cf(), Ch(), dh(), ff() (+37 more)
+
+### Community 250 - "I"
+Cohesion: 0.05
+Nodes (60): Ac(), ad(), Bc(), bd(), cd(), ce(), dd(), de() (+52 more)
 
 ### Community 251 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/image-gmail-touchpoint-service.js"
-Cohesion: 0.06
-Nodes (29): CONVERT_TO_PDF_UNSUPPORTED, addExpressNativeViewerTouchpoint(), _addTouchpoint(), _clickCallback(), convertToPDFUnsupported, _getImageSrc(), _getVisibleViewer(), _isImagePreviewed() (+21 more)
-
-### Community 252 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/add-webpage-to-project.js"
 Cohesion: 0.05
-Nodes (94): H(), J(), K(), q(), W(), X(), Y(), z() (+86 more)
+Nodes (21): WhatsappImagePreview, CONVERT_TO_PDF_UNSUPPORTED, ImageGdriveTouchpointService, addExpressNativeViewerTouchpoint(), _addTouchpoint(), _clickCallback(), convertToPDFUnsupported, _getImageSrc() (+13 more)
+
+### Community 252 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js"
+Cohesion: 0.05
+Nodes (53): applyFileSchemeAccessToRecents(), i, buildBrowserStudentStateBridgeErrorPayload(), buildBrowserStudentStateBridgePayload(), SIDE_PANEL_HASH_ROUTES, SIDE_PANEL_RELOAD_FLAG_PREFIX, getHostPageType(), getHostPageTypeForTab() (+45 more)
 
 ### Community 253 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/image-gmail-touchpoint-service.js"
-Cohesion: 0.07
-Nodes (20): WhatsappImagePreview, CONVERT_TO_PDF_UNSUPPORTED, addExpressNativeViewerTouchpoint(), _addTouchpoint(), _clickCallback(), convertToPDFUnsupported, _getImageSrc(), _getVisibleViewer() (+12 more)
+Cohesion: 0.06
+Nodes (20): WhatsappImagePreview, CONVERT_TO_PDF_UNSUPPORTED, ImageGdriveTouchpointService, addExpressNativeViewerTouchpoint(), _addTouchpoint(), _clickCallback(), convertToPDFUnsupported, _getImageSrc() (+12 more)
 
-### Community 254 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/wikipedia/wikipedia-touchpoint-service.js"
-Cohesion: 0.12
-Nodes (30): resetTouchPointToDefaultState(), updateTouchPointProgress(), attachFteListeners(), dismissWikipediaFteOnTouchpoint(), FTE_ACTIVE_CLASS, FTE_ANALYTICS_PARAMS, markWikipediaConvertToPdfFteConsumed(), tryShowFte() (+22 more)
+### Community 254 - "b"
+Cohesion: 0.07
+Nodes (34): ag(), al(), b(), Bg(), bl(), c(), cl(), dg() (+26 more)
 
 ### Community 255 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js"
 Cohesion: 0.05
 Nodes (19): evaluateCondition(), evaluateSingleCondition(), evaluateDefaultValue(), checkAutoOpenConvertedPDFPreference(), g(), getConnectedApp(), h(), isOpenPdfsInAcrobatEnabled() (+11 more)
 
-### Community 256 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
-Cohesion: 0.04
-Nodes (92): buildSafeFilename(), buildSafeFilenameWithExt(), HTML_FILE_EXTENSION, addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint(), makeUnprocessedSelector() (+84 more)
+### Community 256 - "stock/providers.ts"
+Cohesion: 0.08
+Nodes (41): errorResponse(), fallbackMime(), POST(), REDIRECT_STATUSES, runtime, STATUS_BY_CODE, errorResponse(), GET() (+33 more)
+
+### Community 257 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js"
+Cohesion: 0.07
+Nodes (38): n(), getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), clearCachedImsUserState(), getCachedImsUserId(), getCachedImsUserState() (+30 more)
 
 ### Community 258 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js"
 Cohesion: 0.05
@@ -1710,9 +1751,9 @@ Nodes (20): evaluateCondition(), evaluateSingleCondition(), evaluateDefaultValue
 Cohesion: 0.07
 Nodes (28): CONVERT_TO_PDF_UNSUPPORTED, addExpressNativeViewerTouchpoint(), _addTouchpoint(), _clickCallback(), convertToPDFUnsupported, _getImageSrc(), _getVisibleViewer(), _isImagePreviewed() (+20 more)
 
-### Community 260 - ".then"
-Cohesion: 0.08
-Nodes (30): ak(), am(), be(), bm(), cm(), dm(), ek(), Fc() (+22 more)
+### Community 260 - "x"
+Cohesion: 0.11
+Nodes (29): ac(), ba(), bc(), bk(), cc(), ck(), dc(), dk() (+21 more)
 
 ### Community 261 - ".T"
 Cohesion: 0.08
@@ -1720,19 +1761,23 @@ Nodes (37): Ah(), bh(), Ch(), fh(), fj(), gh(), He(), hh() (+29 more)
 
 ### Community 262 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/preferences/preference-utils.js"
 Cohesion: 0.05
-Nodes (19): evaluateCondition(), evaluateSingleCondition(), evaluateDefaultValue(), checkAutoOpenConvertedPDFPreference(), g(), getConnectedApp(), h(), isOpenPdfsInAcrobatEnabled() (+11 more)
+Nodes (22): evaluateCondition(), evaluateSingleCondition(), evaluateDefaultValue(), checkAutoOpenConvertedPDFPreference(), g(), getConnectedApp(), h(), isOpenPdfsInAcrobatEnabled() (+14 more)
 
 ### Community 263 - "t"
-Cohesion: 0.08
-Nodes (3): StateManager, handleTabTitleForInactiveDirectVerb(), t
-
-### Community 264 - "K"
 Cohesion: 0.07
-Nodes (40): ad(), ae(), ak(), am(), bd(), be(), cd(), cm() (+32 more)
+Nodes (8): StateManager, handleTabTitleForInactiveDirectVerb(), getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), a(), t
+
+### Community 264 - "J"
+Cohesion: 0.06
+Nodes (56): ad(), ae(), ak(), am(), bd(), be(), cd(), ce() (+48 more)
 
 ### Community 265 - ".T"
 Cohesion: 0.08
 Nodes (37): Ah(), bh(), Ch(), fh(), fj(), gh(), He(), hh() (+29 more)
+
+### Community 266 - ".fa"
+Cohesion: 0.31
+Nodes (13): dc(), ec(), fc(), hc(), ic(), jc(), sc(), ub() (+5 more)
 
 ### Community 267 - ".T"
 Cohesion: 0.08
@@ -1740,55 +1785,55 @@ Nodes (37): Ah(), bh(), Ch(), fh(), fj(), gh(), He(), hh() (+29 more)
 
 ### Community 268 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js"
 Cohesion: 0.12
-Nodes (19): useFABDrag(), FAB_HOME_TOOLTIP_FTE_SHOWN_KEY, useFABHomeTooltipFTE(), useFABPositioning(), PILLS_CONFIG, handleHideFabForDomain(), handleHideForNow(), handleNeverDisplayFab() (+11 more)
+Nodes (20): HTML_FILE_EXTENSION, useFABDrag(), FAB_HOME_TOOLTIP_FTE_SHOWN_KEY, useFABHomeTooltipFTE(), useFABPositioning(), PILLS_CONFIG, handleHideFabForDomain(), handleHideForNow() (+12 more)
 
 ### Community 269 - "t"
-Cohesion: 0.06
-Nodes (18): StateManager, handleTabTitleForInactiveDirectVerb(), getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), a(), t (+10 more)
+Cohesion: 0.07
+Nodes (4): StateManager, handleTabTitleForInactiveDirectVerb(), getAnalyticsInfo(), t
 
 ### Community 270 - "מפתחות API — מה שמים, איפה, ובאיזה סדר"
 Cohesion: 0.18
 Nodes (10): אחר כך — מרחיבים את מה שהסוכן יכול, איפה המפתחות יושבים, בתשלום — רק אם צריך את היכולת, הוספה ידנית, בלי האשף, כבר מוגדרים, מה להוסיף, לפי סדר עדיפות, מפתחות API — מה שמים, איפה, ובאיזה סדר, ספריית יצירה ועיצוב (Creative Library) (+2 more)
 
-### Community 271 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
-Cohesion: 0.20
-Nodes (14): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+6 more)
+### Community 271 - "A"
+Cohesion: 0.16
+Nodes (12): A(), cl(), fd(), fl(), kj(), qa(), ua(), um() (+4 more)
 
 ### Community 272 - "f"
-Cohesion: 0.15
-Nodes (27): Aa(), ah(), bg(), bi(), cg(), ci(), di(), ei() (+19 more)
+Cohesion: 0.14
+Nodes (28): Aa(), ah(), ai(), bg(), bi(), cg(), ci(), da() (+20 more)
 
-### Community 273 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/offscreen/offscreen.js"
+### Community 273 - "c"
+Cohesion: 0.12
+Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
+
+### Community 274 - "f"
 Cohesion: 0.11
-Nodes (19): Mutex, b, k(), R, s(), U(), v(), getActiveTasks() (+11 more)
-
-### Community 274 - "fi"
-Cohesion: 0.09
-Nodes (35): Aa(), ah(), ai(), bg(), bi(), cg(), ci(), dg() (+27 more)
+Nodes (31): Aa(), ai(), bg(), bi(), ci(), dg(), di(), f() (+23 more)
 
 ### Community 275 - "de"
 Cohesion: 0.09
 Nodes (37): Ac(), ad(), Bc(), bd(), cd(), ce(), dd(), de() (+29 more)
 
 ### Community 276 - "sendAnalytics"
-Cohesion: 0.08
-Nodes (45): a(), c(), fetchResourceFromBackground(), i(), l(), n(), s(), t() (+37 more)
+Cohesion: 0.09
+Nodes (39): a(), addDummyTargetTestTouchpoint(), set, acrobatMailDataHandler(), addMailDataEventListener(), FILE_EXTENSION_TO_MIME_TYPE_MAP, getAttachmentURL(), NON_PDF_MIME_TYPES (+31 more)
 
 ### Community 277 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js"
 Cohesion: 0.05
 Nodes (35): actionableCoachmark, browserImageViewerExpressFte, chatgptConvertToPdfFte, chatgptExpressFte, embeddedPDFTouchPointCoachMark, gdriveAcrobatFteCoachmark, gdriveConvertExcelPptAttachmentCardFte, gdriveConvertImageWordAttachmentCardFte (+27 more)
 
-### Community 279 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/offscreen/offscreen.js"
-Cohesion: 0.11
-Nodes (19): Mutex, b, k(), R, s(), U(), v(), getActiveTasks() (+11 more)
+### Community 279 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js"
+Cohesion: 0.08
+Nodes (36): Mutex, b, k(), R, s(), U(), v(), getActiveTasks() (+28 more)
 
 ### Community 280 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js"
 Cohesion: 0.05
 Nodes (35): actionableCoachmark, browserImageViewerExpressFte, chatgptConvertToPdfFte, chatgptExpressFte, embeddedPDFTouchPointCoachMark, gdriveAcrobatFteCoachmark, gdriveConvertExcelPptAttachmentCardFte, gdriveConvertImageWordAttachmentCardFte (+27 more)
 
-### Community 282 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/list-view-touch-point-service.js"
-Cohesion: 0.09
-Nodes (51): addTouchPointInNativeViewerViaListView(), addTouchpointToNativeViewerViaListView(), getAttachmentURLAgainstName(), getDataForThreadId(), getListViewAttachmentsWithThreadElement(), isDataPresentForThreadId(), mergeAttachments(), processForAllThreads() (+43 more)
+### Community 282 - "agent/providers.ts"
+Cohesion: 0.08
+Nodes (51): maxDuration, POST(), runtime, maxDuration, POST(), runtime, maxDuration, parseSources() (+43 more)
 
 ### Community 283 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/prompts/ShowOneChild.js"
 Cohesion: 0.05
@@ -1799,8 +1844,12 @@ Cohesion: 0.08
 Nodes (36): Mutex, b, k(), R, s(), U(), v(), getActiveTasks() (+28 more)
 
 ### Community 286 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/popup.js"
-Cohesion: 0.03
-Nodes (82): util, m(), A(), B(), C(), F(), k(), M() (+74 more)
+Cohesion: 0.06
+Nodes (73): util, m(), J(), A(), B(), C(), F(), k() (+65 more)
+
+### Community 287 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js"
+Cohesion: 0.26
+Nodes (15): addConvertEmailPdfTouchpoint(), attachTooltip(), createConvertEmailPdfButton(), events, findFirst(), findThreadToolbar(), findThreadView(), getGmailPrintUrl() (+7 more)
 
 ### Community 288 - "chrome-en-locale/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.109.1_0/manifest.json"
 Cohesion: 0.06
@@ -1818,45 +1867,41 @@ Nodes (44): author, email, background, service_worker, content_capabilities, mat
 Cohesion: 0.08
 Nodes (5): a, c, d, h, l
 
-### Community 292 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js"
-Cohesion: 0.13
-Nodes (13): addGeminiDataEventListener(), EMPTY_CHAT_TOKEN_RESULT, geminiDataHandler(), getChatTokenValue(), getParsedJSON(), getSanitizedAPIResponseData(), parseDataForChatFullyLoaded(), GeminiConvertToPdfFte (+5 more)
+### Community 292 - "f"
+Cohesion: 0.16
+Nodes (7): g(), Ka(), ma(), f(), ta(), ua(), z()
 
 ### Community 293 - "c"
-Cohesion: 0.14
-Nodes (3): c, h, l
+Cohesion: 0.08
+Nodes (5): a, c, d, h, l
 
 ### Community 294 - "c"
-Cohesion: 0.14
-Nodes (3): c, h, l
+Cohesion: 0.08
+Nodes (5): a, c, d, h, l
 
-### Community 295 - "tools.ts"
-Cohesion: 0.03
-Nodes (114): analysisBySource, blobToDataUrl(), blobToModelImage(), buildImageBrandBrief(), buildImagePrompt(), captureFrameMode, clipsSummary(), dispatch() (+106 more)
+### Community 295 - "canvasCoords.ts"
+Cohesion: 0.14
+Nodes (25): OverlayInspector(), CORNERS, DragState, Handle, PreviewOverlays(), defaultCanvasFor(), displayRect(), getViewportScale() (+17 more)
 
 ### Community 296 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js"
 Cohesion: 0.05
 Nodes (7): c(), m(), P(), Pi(), u(), Ut(), zt()
 
-### Community 297 - "qh"
+### Community 297 - "n"
+Cohesion: 0.22
+Nodes (8): ii(), ji(), n(), pj(), qj(), rj(), sj(), uj()
+
+### Community 299 - "qh"
 Cohesion: 0.08
 Nodes (32): bf(), df(), dh(), ef(), Fa(), ff(), Ga(), hi() (+24 more)
 
-### Community 299 - "qh"
-Cohesion: 0.06
-Nodes (29): A(), cl(), df(), dh(), ef(), ff(), hi(), ii() (+21 more)
-
 ### Community 300 - ".then"
-Cohesion: 0.10
-Nodes (34): am(), an(), bm(), bn(), cg(), cm(), cn(), dm() (+26 more)
-
-### Community 301 - "providers.ts"
-Cohesion: 0.08
-Nodes (58): maxDuration, POST(), runtime, maxDuration, POST(), runtime, maxDuration, parseSources() (+50 more)
+Cohesion: 0.09
+Nodes (35): am(), an(), bm(), bn(), cg(), cm(), cn(), dm() (+27 more)
 
 ### Community 302 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js"
 Cohesion: 0.05
-Nodes (11): de(), fe(), gt(), ie(), me(), Pi(), qt(), Ut() (+3 more)
+Nodes (7): c(), m(), P(), Pi(), u(), Ut(), zt()
 
 ### Community 303 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/lottie-light-esm.js"
 Cohesion: 0.05
@@ -1867,40 +1912,36 @@ Cohesion: 0.10
 Nodes (36): am(), an(), bm(), bn(), cg(), cm(), cn(), dm() (+28 more)
 
 ### Community 305 - ".then"
-Cohesion: 0.09
-Nodes (37): am(), an(), bm(), bn(), cg(), cm(), cn(), dm() (+29 more)
+Cohesion: 0.10
+Nodes (34): am(), an(), bm(), bn(), cg(), cm(), cn(), dm() (+26 more)
 
-### Community 306 - "auth/config.ts"
-Cohesion: 0.20
-Nodes (17): GET(), runtime, GET(), classifyPublicKey(), decodeJwtPayload(), getAuthDiagnostics(), getRawPublicKey(), getSupabasePublicConfig() (+9 more)
+### Community 306 - "settings/page.tsx"
+Cohesion: 0.10
+Nodes (30): CloudStatus, SettingsPage(), DEFAULT_DATA_MODE_PREF, GROQ_KEY, OPENAI_KEY, PROVIDER_PREF, TRANSCRIBE_MODEL_PREF, TRANSCRIBE_PREF (+22 more)
 
 ### Community 307 - "Cloud / SaaS Audit — Hypescript"
 Cohesion: 0.09
 Nodes (22): 0. Executive summary, A1. When a signed-in user creates a project, is it written to Supabase or only IndexedDB?, A2. Are project timeline edits synced to the cloud?, A3. Are chat conversations synced to the cloud?, A4. Is the Brand Kit cloud or local?, A5. On a second device after login, what exactly would be missing?, A. Cloud persistence, B1. What is `CLOUD_RENDER_URL`, and is cloud render wired to the export button? (+14 more)
 
-### Community 308 - "A"
-Cohesion: 0.16
-Nodes (12): A(), cl(), fd(), fl(), kj(), qa(), ua(), um() (+4 more)
+### Community 308 - "K"
+Cohesion: 0.07
+Nodes (44): ad(), ae(), ak(), am(), bd(), be(), cd(), cm() (+36 more)
 
-### Community 309 - "J"
-Cohesion: 0.05
-Nodes (61): ac(), ad(), ae(), bc(), bd(), cc(), cd(), ce() (+53 more)
+### Community 309 - "y"
+Cohesion: 0.06
+Nodes (16): Tl(), fl(), gl(), K(), ok(), qa(), sa(), va() (+8 more)
 
-### Community 310 - "x"
-Cohesion: 0.13
-Nodes (25): ak(), bk(), ca(), ck(), dc(), ec(), fc(), hc() (+17 more)
+### Community 310 - "globalAlign.ts"
+Cohesion: 0.12
+Nodes (33): absorbedBy(), alignBanded(), alignBlock(), AlignOptions, AlignPair, alignTokens(), Anchor, DEFAULTS (+25 more)
 
 ### Community 313 - "f"
-Cohesion: 0.15
-Nodes (27): Aa(), ah(), bg(), bi(), cg(), ci(), di(), ei() (+19 more)
+Cohesion: 0.11
+Nodes (31): Aa(), ai(), bg(), bi(), ci(), dg(), di(), f() (+23 more)
 
-### Community 316 - "qh"
-Cohesion: 0.08
-Nodes (32): bf(), df(), dh(), ef(), Fa(), ff(), Ga(), hi() (+24 more)
-
-### Community 319 - "J"
-Cohesion: 0.05
-Nodes (58): ad(), ae(), ak(), am(), bd(), be(), cd(), ce() (+50 more)
+### Community 319 - "K"
+Cohesion: 0.07
+Nodes (40): ad(), ae(), ak(), am(), bd(), be(), cd(), cm() (+32 more)
 
 ### Community 320 - "chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/manifest.json"
 Cohesion: 0.06
@@ -1914,33 +1955,37 @@ Nodes (35): action, default_icon, author, email, background, service_worker, con
 Cohesion: 0.06
 Nodes (35): action, default_icon, author, email, background, service_worker, content_security_policy, extension_pages (+27 more)
 
-### Community 323 - "x"
-Cohesion: 0.13
-Nodes (24): ac(), ba(), bc(), bk(), cc(), ck(), dc(), dk() (+16 more)
+### Community 323 - "f"
+Cohesion: 0.16
+Nodes (7): g(), Ka(), ma(), f(), ta(), ua(), z()
 
 ### Community 324 - ".then"
-Cohesion: 0.20
-Nodes (21): ag(), Bh(), eg(), fg(), hg(), hh(), ig(), J() (+13 more)
+Cohesion: 0.14
+Nodes (24): ag(), Bh(), eg(), fg(), hc(), hg(), hh(), ig() (+16 more)
 
-### Community 325 - ".initialize"
-Cohesion: 0.20
-Nodes (10): Tl(), gl(), K(), qa(), sa(), va(), wa(), Wl() (+2 more)
+### Community 325 - "editAudit.ts"
+Cohesion: 0.10
+Nodes (32): ScriptCaptionResult, auditCaptions(), BIND_NEXT, BREAK_BEFORE, breakScore(), buildCaptionCues(), BuildCuesOptions, CAPTION_POLICY (+24 more)
 
-### Community 326 - ".toString"
-Cohesion: 0.11
-Nodes (20): ac(), Df(), ie(), jb(), jd(), kd(), kh(), Mc() (+12 more)
-
-### Community 327 - "z"
+### Community 326 - "z"
 Cohesion: 0.10
 Nodes (22): ac(), bc(), gg(), ie(), jb(), jd(), kd(), kh() (+14 more)
 
-### Community 329 - ".toString"
-Cohesion: 0.11
-Nodes (20): ac(), Df(), ie(), jb(), jd(), kd(), kh(), Mc() (+12 more)
+### Community 327 - ".toString"
+Cohesion: 0.07
+Nodes (26): ac(), bc(), gg(), ie(), jb(), jd(), ji(), kd() (+18 more)
 
-### Community 330 - "ya"
-Cohesion: 0.71
-Nodes (6): qa(), ra(), va(), wa(), xa(), ya()
+### Community 328 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/toast-service.js"
+Cohesion: 0.13
+Nodes (16): ChatGPTConvertToPdf, applyRelativePosition(), applyToastStyles(), ERROR_PRESET, getEffectiveConfig(), INFO_PRESET, loadToastContainer(), removeErrorToast() (+8 more)
+
+### Community 329 - ".toString"
+Cohesion: 0.07
+Nodes (26): ac(), bc(), gg(), ie(), jb(), jd(), ji(), kd() (+18 more)
+
+### Community 330 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js"
+Cohesion: 0.11
+Nodes (26): attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages(), handleLongChatConversion() (+18 more)
 
 ### Community 332 - "chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/manifest.json"
 Cohesion: 0.06
@@ -1950,33 +1995,29 @@ Nodes (32): app, background, scripts, default_locale, description, display_in_la
 Cohesion: 0.06
 Nodes (32): app, background, scripts, default_locale, description, display_in_launcher, display_in_new_tab_page, icons (+24 more)
 
-### Community 336 - "GenAIWebpageEligibilityService"
-Cohesion: 0.15
-Nodes (6): GenAIWebpageEligibilityService, c(), i(), l(), o(), u()
-
 ### Community 337 - "chrome-he-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/manifest.json"
 Cohesion: 0.06
 Nodes (32): app, background, scripts, default_locale, description, display_in_launcher, display_in_new_tab_page, icons (+24 more)
 
 ### Community 338 - "y"
-Cohesion: 0.08
-Nodes (9): Eg(), ii(), ji(), n(), Oi(), rm(), sm(), w() (+1 more)
+Cohesion: 0.10
+Nodes (6): pa(), Uf(), v(), w(), Wf(), y()
 
 ### Community 340 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/FloatingActionButton/utils/fabUtils.js"
 Cohesion: 0.12
-Nodes (19): useFABDrag(), FAB_HOME_TOOLTIP_FTE_SHOWN_KEY, useFABHomeTooltipFTE(), useFABPositioning(), PILLS_CONFIG, handleHideFabForDomain(), handleHideForNow(), handleNeverDisplayFab() (+11 more)
+Nodes (20): HTML_FILE_EXTENSION, useFABDrag(), FAB_HOME_TOOLTIP_FTE_SHOWN_KEY, useFABHomeTooltipFTE(), useFABPositioning(), PILLS_CONFIG, handleHideFabForDomain(), handleHideForNow() (+12 more)
 
 ### Community 341 - "probe.server.ts"
 Cohesion: 0.26
 Nodes (11): elevenLabsProbe(), fingerprint(), httpDetailHe(), Probe, probeProvider(), ProbeResult, ProbeStatus, PROVIDER_PROBES (+3 more)
 
-### Community 342 - "y"
-Cohesion: 0.07
-Nodes (7): A(), al(), bl(), cl(), um(), Vf(), y()
-
-### Community 343 - ".initialize"
+### Community 342 - "b"
 Cohesion: 0.17
-Nodes (12): Tl(), gl(), K(), qa(), sa(), va(), wa(), Wi() (+4 more)
+Nodes (5): b(), ha(), Ib(), Kb(), La()
+
+### Community 343 - "scriptPlan.ts"
+Cohesion: 0.11
+Nodes (27): AlignmentReport, HebrewToken, calibrateFromTranscript(), fallbackCalibration(), analyze(), Condition, CONDITIONS, noiseSource() (+19 more)
 
 ### Community 344 - "chrome-en-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js"
 Cohesion: 0.08
@@ -1987,24 +2028,24 @@ Cohesion: 0.09
 Nodes (14): a(), aa(), c(), d(), Fa(), Ga(), ja(), ka() (+6 more)
 
 ### Community 346 - ".then"
-Cohesion: 0.20
-Nodes (21): ag(), Bh(), eg(), fg(), hg(), hh(), ig(), J() (+13 more)
+Cohesion: 0.16
+Nodes (24): ag(), be(), bf(), Bh(), ce(), eg(), fg(), hg() (+16 more)
 
-### Community 347 - "chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js"
-Cohesion: 0.08
-Nodes (10): Aa(), Ab(), Ba(), Bb(), Ea(), Pa(), xb(), ya() (+2 more)
-
-### Community 348 - "chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_window.js"
+### Community 347 - "chrome-he-locale-2/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_window.js"
 Cohesion: 0.09
 Nodes (14): a(), aa(), c(), d(), Fa(), Ga(), ja(), ka() (+6 more)
 
-### Community 349 - "y"
-Cohesion: 0.09
-Nodes (4): al(), bl(), w(), y()
+### Community 348 - "vf"
+Cohesion: 0.11
+Nodes (17): M(), Ef(), Ff(), Gf(), Hf(), ii(), md(), nd() (+9 more)
+
+### Community 349 - "x"
+Cohesion: 0.13
+Nodes (25): ak(), bk(), ca(), ck(), dc(), ec(), fc(), hc() (+17 more)
 
 ### Community 350 - ".then"
-Cohesion: 0.16
-Nodes (24): ag(), be(), bf(), Bh(), ce(), eg(), fg(), hg() (+16 more)
+Cohesion: 0.14
+Nodes (24): ag(), Bh(), eg(), fg(), hc(), hg(), hh(), ig() (+16 more)
 
 ### Community 351 - "chrome-he-locale/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/craw_background.js"
 Cohesion: 0.08
@@ -2018,77 +2059,97 @@ Nodes (14): a(), aa(), c(), d(), Fa(), Ga(), ja(), ka() (+6 more)
 Cohesion: 0.11
 Nodes (17): Ai(), bi(), cf(), Ci(), di(), ei(), fi(), gi() (+9 more)
 
-### Community 354 - "x"
-Cohesion: 0.13
-Nodes (25): ak(), bk(), ca(), ck(), dc(), ec(), fc(), hc() (+17 more)
-
 ### Community 355 - ".toString"
 Cohesion: 0.11
 Nodes (17): Ai(), bi(), cf(), Ci(), di(), ei(), fi(), gi() (+9 more)
 
-### Community 356 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
-Cohesion: 0.16
-Nodes (18): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+10 more)
+### Community 356 - ".then"
+Cohesion: 0.11
+Nodes (16): bm(), Fc(), fm(), gl(), gm(), hm(), im(), jm() (+8 more)
 
 ### Community 357 - ".toString"
-Cohesion: 0.10
-Nodes (18): Ai(), bi(), cf(), Ci(), di(), ei(), fi(), gi() (+10 more)
+Cohesion: 0.11
+Nodes (17): Ai(), bi(), cf(), Ci(), di(), ei(), fi(), gi() (+9 more)
 
 ### Community 360 - ".toString"
 Cohesion: 0.13
 Nodes (15): Ai(), bi(), Ci(), cj(), eh(), ei(), fi(), hk() (+7 more)
 
 ### Community 361 - ".toString"
-Cohesion: 0.09
-Nodes (24): A(), Ai(), bi(), Ci(), cj(), eh(), ei(), fi() (+16 more)
+Cohesion: 0.13
+Nodes (15): Ai(), bi(), Ci(), cj(), eh(), ei(), fi(), hk() (+7 more)
 
 ### Community 362 - ".toString"
 Cohesion: 0.13
 Nodes (15): Ai(), bi(), Ci(), cj(), eh(), ei(), fi(), hk() (+7 more)
 
-### Community 363 - "y"
-Cohesion: 0.10
-Nodes (6): pa(), Uf(), v(), w(), Wf(), y()
+### Community 363 - "subtitlesEdl.ts"
+Cohesion: 0.08
+Nodes (45): assembledWords(), CaptionBuildOpts, CaptionMode, edlToCues(), edlToCuesWithScript(), edlToSrt(), edlToSubs(), edlToSubsWithScript() (+37 more)
+
+### Community 367 - "GenAIWebpageEligibilityService"
+Cohesion: 0.15
+Nodes (6): GenAIWebpageEligibilityService, c(), i(), l(), o(), u()
 
 ### Community 369 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js"
 Cohesion: 0.11
 Nodes (16): detectURLChangeWhileScrolling(), fabManagerInstancePromise, getClickableOverlappingElement(), getDOMElementsAtPoint(), getOverlappingElement(), getSearchEngine(), getShadowDOMElements(), initDcLocalStorage() (+8 more)
 
-### Community 373 - "sendErrorLog"
-Cohesion: 0.16
-Nodes (24): getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), addSearchTableBodyEventListener(), areFileDetailsValid(), checkForSearchResultsTable(), getPdfRowsFromSearchTable(), handleSearchTableClick() (+16 more)
+### Community 373 - "check-cloud-schema.mjs"
+Cohesion: 0.17
+Nodes (10): env, headers, key, NOT_A_CLIENT, REPO_ROOT, REQUIRED_PUBLIC, REQUIRED_SECRET_LENGTHS, SRC_ROOTS (+2 more)
 
 ### Community 374 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js"
 Cohesion: 0.11
 Nodes (16): detectURLChangeWhileScrolling(), fabManagerInstancePromise, getClickableOverlappingElement(), getDOMElementsAtPoint(), getOverlappingElement(), getSearchEngine(), getShadowDOMElements(), initDcLocalStorage() (+8 more)
 
+### Community 377 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
+Cohesion: 0.14
+Nodes (19): getFileDetailsFromApiResponse(), handleGDriveInstalledAppResponse(), processSearchApiResponse(), addFTE(), addFTETooltipEventListeners(), documentListenerOptions, handleFteButtonClick(), handleFteClickOutside() (+11 more)
+
 ### Community 378 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/content-script-utils.js"
 Cohesion: 0.11
 Nodes (16): detectURLChangeWhileScrolling(), fabManagerInstancePromise, getClickableOverlappingElement(), getDOMElementsAtPoint(), getOverlappingElement(), getSearchEngine(), getShadowDOMElements(), initDcLocalStorage() (+8 more)
 
+### Community 382 - ".ea"
+Cohesion: 0.13
+Nodes (24): ac(), bc(), cc(), dc(), ec(), hd(), hj(), ij() (+16 more)
+
+### Community 383 - ".handler"
+Cohesion: 0.08
+Nodes (3): F, onPaywallLoadPerfUpdate(), w
+
+### Community 384 - "I"
+Cohesion: 0.10
+Nodes (19): fe(), gd(), gj(), hd(), hj(), I(), ij(), jd() (+11 more)
+
 ### Community 387 - "b"
-Cohesion: 0.05
-Nodes (48): b(), bc(), be(), bf(), c(), d(), da(), dc() (+40 more)
+Cohesion: 0.06
+Nodes (43): Cc(), b(), c(), d(), dc(), de(), Df(), e() (+35 more)
 
 ### Community 389 - ".handler"
 Cohesion: 0.08
 Nodes (3): F, onPaywallLoadPerfUpdate(), w
 
-### Community 390 - "b"
-Cohesion: 0.07
-Nodes (25): b(), c(), d(), de(), Df(), e(), ee(), La() (+17 more)
+### Community 390 - ".h"
+Cohesion: 0.21
+Nodes (10): Je(), ld(), le(), qa(), qe(), ra(), va(), wa() (+2 more)
 
-### Community 391 - "wg"
-Cohesion: 0.09
-Nodes (12): gg(), mf(), rg(), sg(), td(), tg(), ug(), vd() (+4 more)
+### Community 391 - "c"
+Cohesion: 0.12
+Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
 
 ### Community 392 - "b"
 Cohesion: 0.07
 Nodes (34): ag(), al(), b(), Bg(), bl(), c(), cl(), dg() (+26 more)
 
-### Community 394 - ".then"
-Cohesion: 0.11
-Nodes (16): bm(), Fc(), fm(), gl(), gm(), hm(), im(), jm() (+8 more)
+### Community 393 - "y"
+Cohesion: 0.07
+Nodes (7): A(), al(), bl(), cl(), um(), Vf(), y()
+
+### Community 394 - "time.ts"
+Cohesion: 0.12
+Nodes (29): TimelineToolbar(), clampTime(), clampZoom(), formatQuoteTime(), MagneticSnapResult, MagneticTarget, MS, msToSec() (+21 more)
 
 ### Community 395 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/ch-content-script.js"
 Cohesion: 0.16
@@ -2098,33 +2159,37 @@ Nodes (19): createAndInjectIframe(), downloadAuthenticatedPDF(), errorOpeningPDF
 Cohesion: 0.16
 Nodes (19): createAndInjectIframe(), downloadAuthenticatedPDF(), errorOpeningPDF(), EXPRESS_VERB_ACTIONS, GetChromeMenuDimensions(), GetEdgeMenuDimensions(), GetMenuDimensions(), handler() (+11 more)
 
-### Community 398 - "b"
-Cohesion: 0.05
-Nodes (47): al(), b(), Bg(), bl(), c(), cl(), d(), dg() (+39 more)
+### Community 398 - "a11y/prefs.ts"
+Cohesion: 0.22
+Nodes (19): AccessibilityWidget(), syncA11yFromAccount(), A11Y_STORAGE_KEY, applyA11yPrefsToDom(), readStoredA11yPrefs(), resetStoredA11yPrefs(), writeStoredA11yPrefs(), applyA11yPrefsToDom() (+11 more)
 
 ### Community 399 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/ch-content-script.js"
 Cohesion: 0.16
 Nodes (19): createAndInjectIframe(), downloadAuthenticatedPDF(), errorOpeningPDF(), EXPRESS_VERB_ACTIONS, GetChromeMenuDimensions(), GetEdgeMenuDimensions(), GetMenuDimensions(), handler() (+11 more)
 
-### Community 403 - "compilerOptions"
-Cohesion: 0.06
-Nodes (34): dom, dom.iterable, ES2020, .next-agent-cloud-upload-fix/types/**/*.ts, .next-agent-multi-drag-snap/types/**/*.ts, .next-agent-storage-persistence-fix/types/**/*.ts, .next-agent-timeline-improvements/types/**/*.ts, .next-agent-timeline-snapping-and-captions/types/**/*.ts (+26 more)
+### Community 403 - "include"
+Cohesion: 0.05
+Nodes (40): dom, dom.iterable, ES2020, .next-agent-billing/types/**/*.ts, .next-agent-brandkit/types/**/*.ts, .next-agent-cloud-upload-fix/types/**/*.ts, .next-agent-cloudsubs/types/**/*.ts, .next-agent-hero-brand-card/types/**/*.ts (+32 more)
 
 ### Community 404 - "y"
-Cohesion: 0.08
-Nodes (8): Eg(), pa(), rm(), Uf(), v(), w(), Wf(), y()
+Cohesion: 0.11
+Nodes (4): Eg(), rm(), w(), y()
 
-### Community 405 - "memorySummary.ts"
-Cohesion: 0.15
-Nodes (18): ChatItem, Conversation, MemorySummaryCache, buildMemorySummaryCache(), cleanMemorySummaryText(), firstUserText(), MemorySource, memorySourceFingerprint() (+10 more)
+### Community 405 - "b"
+Cohesion: 0.17
+Nodes (5): b(), ha(), Ib(), Kb(), La()
 
-### Community 408 - "_"
-Cohesion: 0.33
-Nodes (15): _, b(), D(), g(), handleGdriveResumableUploadChunk(), I(), T(), uploadFileToGoogleDrive() (+7 more)
+### Community 408 - "thumbnails.ts"
+Cohesion: 0.16
+Nodes (19): Filmstrip(), Waveform(), cache, filmstripCount(), fp(), getSource(), getThumbnail(), seek() (+11 more)
 
 ### Community 412 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/readability.js"
 Cohesion: 0.14
 Nodes (15): x(), _arrayLikeToArray(), _arrayWithoutHoles(), _createForOfIteratorHelper(), isNodeVisible(), isProbablyReaderable(), _iterableToArray(), _nonIterableSpread() (+7 more)
+
+### Community 413 - "y"
+Cohesion: 0.07
+Nodes (8): al(), bl(), hi(), ii(), n(), w(), y(), ye()
 
 ### Community 416 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/readability.js"
 Cohesion: 0.14
@@ -2134,65 +2199,73 @@ Nodes (15): x(), _arrayLikeToArray(), _arrayWithoutHoles(), _createForOfIterator
 Cohesion: 0.14
 Nodes (15): x(), _arrayLikeToArray(), _arrayWithoutHoles(), _createForOfIteratorHelper(), isNodeVisible(), isProbablyReaderable(), _iterableToArray(), _nonIterableSpread() (+7 more)
 
-### Community 421 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-response-service.js"
-Cohesion: 0.09
-Nodes (39): a(), acrobatMailDataHandler(), addMailDataEventListener(), FILE_EXTENSION_TO_MIME_TYPE_MAP, getAttachmentURL(), init(), injectResponseListenerScript(), NON_PDF_MIME_TYPES (+31 more)
+### Community 421 - "scriptPlan.test.ts"
+Cohesion: 0.18
+Nodes (18): dbAt(), chooseJoinPoint(), clampTime(), crossingTime(), findValley(), frameIndex(), JoinPoint, RefinedBoundary (+10 more)
 
 ### Community 424 - "h"
 Cohesion: 0.23
 Nodes (18): a(), ai(), D(), ee(), g(), h(), he(), jt() (+10 more)
 
-### Community 428 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js"
-Cohesion: 0.60
-Nodes (4): b64DecodeUnicode(), base64UrlDecode(), InvalidTokenError, jwtDecode()
+### Community 428 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
+Cohesion: 0.20
+Nodes (14): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+6 more)
 
-### Community 430 - "c"
-Cohesion: 0.12
-Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
+### Community 430 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js"
+Cohesion: 0.26
+Nodes (15): addConvertEmailPdfTouchpoint(), attachTooltip(), createConvertEmailPdfButton(), events, findFirst(), findThreadToolbar(), findThreadView(), getGmailPrintUrl() (+7 more)
+
+### Community 431 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/linkedin/linkedin-response-service.js"
+Cohesion: 0.19
+Nodes (10): addDeferredLinkedinEventListener(), addLinkedinDataEventListener(), handleLinkedinDataEvent(), parseLinkedinChatMessagesResponse(), parseLinkedinFeedPostResponse(), parseMessageAndUpdateState(), abortController, lruFeedPostData (+2 more)
 
 ### Community 432 - "h"
 Cohesion: 0.23
 Nodes (18): a(), ai(), D(), ee(), g(), h(), he(), jt() (+10 more)
 
-### Community 434 - "c"
-Cohesion: 0.12
-Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
+### Community 434 - "wg"
+Cohesion: 0.14
+Nodes (8): ji(), mf(), rg(), td(), ug(), vd(), wg(), xg()
 
-### Community 436 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js"
-Cohesion: 0.19
-Nodes (20): applyBodyBg(), applyThemeToBody(), clearLoaderFallbackTimeout(), constructor(), dismiss(), getAcrobatOnlineUrl(), handleClearError(), handleLoadFrictionless() (+12 more)
+### Community 436 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js"
+Cohesion: 0.35
+Nodes (9): a(), c(), i(), m(), n(), o(), r, s() (+1 more)
 
 ### Community 437 - "h"
-Cohesion: 0.25
-Nodes (17): a(), ai(), D(), ee(), g(), h(), he(), jt() (+9 more)
+Cohesion: 0.23
+Nodes (18): a(), ai(), D(), ee(), g(), h(), he(), jt() (+10 more)
 
-### Community 439 - "c"
-Cohesion: 0.12
-Nodes (6): a(), c(), Cb(), fa(), ra(), sa()
+### Community 439 - "ah"
+Cohesion: 0.11
+Nodes (16): ah(), be(), bf(), ce(), Ga(), hb(), lh(), oe() (+8 more)
 
-### Community 445 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/SidePanel/sidepanel.js"
-Cohesion: 0.05
-Nodes (50): applyFileSchemeAccessToRecents(), i, SIDE_PANEL_HASH_ROUTES, SIDE_PANEL_RELOAD_FLAG_PREFIX, getHostPageType(), getHostPageTypeForTab(), HOST_PAGE_TYPE, r (+42 more)
+### Community 445 - "e"
+Cohesion: 0.03
+Nodes (126): util, C(), f(), g(), u(), f(), p(), A (+118 more)
 
-### Community 448 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js"
-Cohesion: 0.36
-Nodes (10): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+2 more)
+### Community 448 - "n"
+Cohesion: 0.22
+Nodes (8): ii(), ji(), n(), pj(), qj(), rj(), sj(), uj()
 
 ### Community 451 - "12–18. מוזיקה — כאן נמצא הסיכון המשפטי"
 Cohesion: 0.11
 Nodes (18): 12–18. מוזיקה — כאן נמצא הסיכון המשפטי, 12. Epidemic Sound, 13. Artlist, 14. Lickd — שירים מוכרים באמת ⭐, 15. Suno — מוזיקה AI ⚠, 16–18. חינמיים, 19–20. תשתית (כבר בפרויקט), 19. Cloudflare R2 (+10 more)
 
-### Community 456 - "sendAnalytics"
-Cohesion: 0.11
-Nodes (37): a(), acrobatMailDataHandler(), addMailDataEventListener(), FILE_EXTENSION_TO_MIME_TYPE_MAP, getAttachmentURL(), NON_PDF_MIME_TYPES, parseA6JDVAttachments(), parseA6JDVDriveAttachments() (+29 more)
-
-### Community 457 - "Ga"
-Cohesion: 0.14
-Nodes (12): Ga(), hb(), ih(), mi(), oe(), oi(), sd(), te() (+4 more)
-
-### Community 459 - "nl"
+### Community 456 - "nl"
 Cohesion: 0.17
 Nodes (12): hf(), nb(), nh(), nl(), ob(), pl(), rl(), sd() (+4 more)
+
+### Community 457 - "n"
+Cohesion: 0.22
+Nodes (8): ii(), ji(), n(), pj(), qj(), rj(), sj(), uj()
+
+### Community 459 - "tools.ts"
+Cohesion: 0.02
+Nodes (145): analysisBySource, blobToDataUrl(), blobToModelImage(), buildImageBrandBrief(), buildImagePrompt(), captureFrameMode, clipsSummary(), dispatch() (+137 more)
+
+### Community 460 - "y"
+Cohesion: 0.07
+Nodes (7): A(), al(), bl(), cl(), um(), Vf(), y()
 
 ### Community 461 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json"
 Cohesion: 0.12
@@ -2202,13 +2275,9 @@ Nodes (15): content_scripts, default_locale, description, file_handlers, incogni
 Cohesion: 0.12
 Nodes (16): alarms, contextMenus, cookies, declarativeNetRequest, downloads, fileSystem, identity, nativeMessaging (+8 more)
 
-### Community 464 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js"
-Cohesion: 0.26
-Nodes (15): addConvertEmailPdfTouchpoint(), attachTooltip(), createConvertEmailPdfButton(), events, findFirst(), findThreadToolbar(), findThreadView(), getGmailPrintUrl() (+7 more)
-
-### Community 465 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
-Cohesion: 0.20
-Nodes (14): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+6 more)
+### Community 464 - "BrandLogo.tsx"
+Cohesion: 0.04
+Nodes (59): ContinueInner(), metadata, viewport, metadata, metadata, metadata, LoginInner(), LoginPage() (+51 more)
 
 ### Community 466 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json"
 Cohesion: 0.12
@@ -2222,13 +2291,9 @@ Nodes (16): alarms, contextMenus, cookies, declarativeNetRequest, downloads, fil
 Cohesion: 0.29
 Nodes (12): AUDIO_BYTES_PER_SEC, DEFAULT_CHUNK_SEC, MAX_CHUNK_SEC, MAX_UPLOAD_BYTES, mergeWordChunks(), planChunkOffsets(), shiftWords(), wordsFromProviderPayload() (+4 more)
 
-### Community 469 - "r"
-Cohesion: 0.12
-Nodes (4): r, n(), t(), c
-
-### Community 470 - "x"
-Cohesion: 0.20
-Nodes (12): ba(), bk(), ck(), dk(), dl(), jk(), kk(), ma() (+4 more)
+### Community 470 - "J"
+Cohesion: 0.09
+Nodes (22): ce(), fd(), fl(), ge(), gj(), J(), kj(), L() (+14 more)
 
 ### Community 474 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/manifest.json"
 Cohesion: 0.12
@@ -2238,65 +2303,61 @@ Nodes (15): content_scripts, default_locale, description, file_handlers, incogni
 Cohesion: 0.12
 Nodes (16): alarms, contextMenus, cookies, declarativeNetRequest, downloads, fileSystem, identity, nativeMessaging (+8 more)
 
-### Community 476 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js"
-Cohesion: 0.36
-Nodes (10): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+2 more)
+### Community 477 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/direct-verb-utils.js"
+Cohesion: 0.06
+Nodes (45): n, analyticsOverrideConfigManager, addLocalStorageARFFlagValue(), analyticsThrottlingService, a(), c(), i(), m() (+37 more)
 
-### Community 482 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/browser/js/searchWidget.js"
-Cohesion: 0.19
-Nodes (20): applyBodyBg(), applyThemeToBody(), clearLoaderFallbackTimeout(), constructor(), dismiss(), getAcrobatOnlineUrl(), handleClearError(), handleLoadFrictionless() (+12 more)
+### Community 480 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/utils/util.js"
+Cohesion: 0.04
+Nodes (83): saveGenAISidePanelRenderedHTML(), fetchGmailEmailHtml(), buildSafeFilename(), buildSafeFilenameWithExt(), addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint() (+75 more)
 
-### Community 484 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js"
-Cohesion: 0.36
-Nodes (10): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+2 more)
+### Community 482 - "nl"
+Cohesion: 0.17
+Nodes (12): hf(), nb(), nh(), nl(), ob(), pl(), rl(), sd() (+4 more)
 
-### Community 487 - ".h"
-Cohesion: 0.10
-Nodes (17): Ee(), $a(), ab(), Ae(), bb(), cb(), db(), eb() (+9 more)
+### Community 484 - "graph.integration.test.ts"
+Cohesion: 0.21
+Nodes (5): astream(), fmtDur(), probe(), vPackets(), vstream()
 
-### Community 489 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js"
-Cohesion: 0.35
-Nodes (9): a(), c(), i(), m(), n(), o(), r, s() (+1 more)
+### Community 486 - "x"
+Cohesion: 0.20
+Nodes (12): ba(), bk(), ck(), dk(), dl(), jk(), kk(), ma() (+4 more)
 
-### Community 491 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/session-store.js"
-Cohesion: 0.22
-Nodes (11): mintUpsellSession(), resolveUpsellTabId(), createSession(), createSessionFromMessage(), deleteSessionsForTab(), e, getSession(), getSessionFromMessage() (+3 more)
+### Community 487 - ".initialize"
+Cohesion: 0.20
+Nodes (10): Tl(), gl(), K(), qa(), sa(), va(), wa(), Wl() (+2 more)
 
 ### Community 494 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js"
 Cohesion: 0.27
 Nodes (13): bootstrap(), captureSelectionRange(), checkLongThreshold(), clearSelection(), config, DEFAULT_CONFIG, evaluateSelection(), getFab() (+5 more)
 
-### Community 495 - "f"
-Cohesion: 0.16
-Nodes (7): g(), Ka(), ma(), f(), ta(), ua(), z()
-
 ### Community 498 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js"
 Cohesion: 0.27
 Nodes (13): bootstrap(), captureSelectionRange(), checkLongThreshold(), clearSelection(), config, DEFAULT_CONFIG, evaluateSelection(), getFab() (+5 more)
 
-### Community 499 - "f"
-Cohesion: 0.16
-Nodes (7): g(), Ka(), ma(), f(), ta(), ua(), z()
+### Community 499 - "getSupabaseServiceClient"
+Cohesion: 0.12
+Nodes (30): DELETE(), GET(), PATCH(), POST(), runtime, POST(), GET(), runtime (+22 more)
 
 ### Community 502 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionManager.js"
 Cohesion: 0.27
 Nodes (13): bootstrap(), captureSelectionRange(), checkLongThreshold(), clearSelection(), config, DEFAULT_CONFIG, evaluateSelection(), getFab() (+5 more)
 
-### Community 503 - "f"
+### Community 503 - "x"
+Cohesion: 0.11
+Nodes (16): ba(), bk(), ck(), dk(), dl(), jk(), kk(), lj() (+8 more)
+
+### Community 506 - "f"
 Cohesion: 0.16
 Nodes (7): g(), Ka(), ma(), f(), ta(), ua(), z()
-
-### Community 506 - "nl"
-Cohesion: 0.17
-Nodes (12): hf(), nb(), nh(), nl(), ob(), pl(), rl(), sd() (+4 more)
 
 ### Community 509 - "OutlookFte"
 Cohesion: 0.23
 Nodes (5): OutlookFte, e(), n(), o(), t()
 
-### Community 510 - "n"
-Cohesion: 0.22
-Nodes (8): ii(), ji(), n(), pj(), qj(), rj(), sj(), uj()
+### Community 510 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
+Cohesion: 0.20
+Nodes (14): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+6 more)
 
 ### Community 515 - "OutlookFte"
 Cohesion: 0.23
@@ -2306,69 +2367,69 @@ Nodes (5): OutlookFte, e(), n(), o(), t()
 Cohesion: 0.23
 Nodes (5): OutlookFte, e(), n(), o(), t()
 
-### Community 522 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js"
-Cohesion: 0.31
-Nodes (6): c(), fetchResourceFromBackground(), i(), l(), n(), t()
+### Community 522 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js"
+Cohesion: 0.07
+Nodes (39): addGeminiDataEventListener(), EMPTY_CHAT_TOKEN_RESULT, geminiDataHandler(), getChatTokenValue(), getParsedJSON(), getSanitizedAPIResponseData(), parseDataForChatFullyLoaded(), addChatConvertToPDFTouchpoint() (+31 more)
 
-### Community 525 - "subtitlesEdl.ts"
-Cohesion: 0.10
-Nodes (34): findRanges(), FINALS, getOpcodes(), lcsMatches(), normalizeHebrew(), Op, scriptKeepMask(), buildKeepIntervals() (+26 more)
+### Community 524 - "Chat.tsx"
+Cohesion: 0.04
+Nodes (91): Chat(), fmtTc(), Item, KIND_ICON, MODES, now(), SLASH, SteeringNote (+83 more)
 
 ### Community 529 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js"
 Cohesion: 0.24
 Nodes (11): CHAR_COUNT_THRESHOLDS, getSelectionBucket(), SELECTION_ANALYTICS_DEFAULT_CONFIG, sendSelectionAnalytics(), WEBPAGE_SELECTION_EVENTS, WORD_COUNT_THRESHOLDS, wsaBootstrap(), wsaLastFired (+3 more)
 
-### Community 530 - "n"
-Cohesion: 0.22
-Nodes (8): ii(), ji(), n(), pj(), qj(), rj(), sj(), uj()
+### Community 530 - "Hb"
+Cohesion: 0.33
+Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
 
-### Community 531 - "b"
-Cohesion: 0.17
-Nodes (5): b(), ha(), Ib(), Kb(), La()
-
-### Community 532 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-email-pdf-touchpoint-service.js"
-Cohesion: 0.26
-Nodes (15): addConvertEmailPdfTouchpoint(), attachTooltip(), createConvertEmailPdfButton(), events, findFirst(), findThreadToolbar(), findThreadView(), getGmailPrintUrl() (+7 more)
+### Community 532 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/gmail-response-service.js"
+Cohesion: 0.10
+Nodes (37): a(), acrobatMailDataHandler(), addMailDataEventListener(), FILE_EXTENSION_TO_MIME_TYPE_MAP, getAttachmentURL(), init(), injectResponseListenerScript(), NON_PDF_MIME_TYPES (+29 more)
 
 ### Community 538 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js"
 Cohesion: 0.24
 Nodes (11): CHAR_COUNT_THRESHOLDS, getSelectionBucket(), SELECTION_ANALYTICS_DEFAULT_CONFIG, sendSelectionAnalytics(), WEBPAGE_SELECTION_EVENTS, WORD_COUNT_THRESHOLDS, wsaBootstrap(), wsaLastFired (+3 more)
 
-### Community 539 - "b"
-Cohesion: 0.17
-Nodes (5): b(), ha(), Ib(), Kb(), La()
+### Community 539 - ".l"
+Cohesion: 0.33
+Nodes (8): w(), qa(), ra(), va(), wa(), x(), xa(), ya()
 
 ### Community 540 - "admin-purge-all.mjs"
 Cohesion: 0.40
 Nodes (3): __dirname, __filename, supabase
 
-### Community 541 - "Sf"
-Cohesion: 0.40
-Nodes (3): Sf(), Li(), mi()
+### Community 541 - "c"
+Cohesion: 0.33
+Nodes (3): n(), t(), c
 
-### Community 543 - "vf"
-Cohesion: 0.09
-Nodes (20): M(), w(), Ef(), Ff(), Gf(), Hf(), ii(), md() (+12 more)
+### Community 543 - "Hb"
+Cohesion: 0.33
+Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
 
-### Community 544 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/addWebpage/addWebpage.js"
-Cohesion: 0.11
-Nodes (15): buildBrowserStudentStateBridgeErrorPayload(), buildBrowserStudentStateBridgePayload(), mintUpsellSession(), resolveUpsellTabId(), c(), g, h, createSession() (+7 more)
+### Community 544 - "sendAnalytics"
+Cohesion: 0.07
+Nodes (55): a(), c(), fetchResourceFromBackground(), i(), l(), n(), s(), t() (+47 more)
 
 ### Community 548 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/WebpageSelectionAnalytics.js"
 Cohesion: 0.24
 Nodes (11): CHAR_COUNT_THRESHOLDS, getSelectionBucket(), SELECTION_ANALYTICS_DEFAULT_CONFIG, sendSelectionAnalytics(), WEBPAGE_SELECTION_EVENTS, WORD_COUNT_THRESHOLDS, wsaBootstrap(), wsaLastFired (+3 more)
 
-### Community 549 - "b"
-Cohesion: 0.17
-Nodes (5): b(), ha(), Ib(), Kb(), La()
+### Community 549 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js"
+Cohesion: 0.05
+Nodes (109): initController(), initController(), isDefaultViewer(), isDefaultViewershipFeatureForGmailEnabled(), isGmailImplicitDefaultViewershipFeatureForGmailEnabled(), openPdfInNewTab(), resetDefaultViewership(), takeDefaultViewerShip() (+101 more)
 
-### Community 552 - "nl"
-Cohesion: 0.17
-Nodes (12): hf(), nb(), nh(), nl(), ob(), pl(), rl(), sd() (+4 more)
+### Community 550 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js"
+Cohesion: 0.35
+Nodes (9): a(), c(), i(), m(), n(), o(), r, s() (+1 more)
 
 ### Community 558 - "O"
 Cohesion: 0.33
 Nodes (6): b(), E(), O(), oi(), ui(), wi()
+
+### Community 561 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/hydrate.js"
+Cohesion: 0.11
+Nodes (21): g(), l(), u, y(), COMMON_KEY, COMMUNICATE_KEY, e(), FLOODGATE_KEY (+13 more)
 
 ### Community 563 - "User-Reported Blockers"
 Cohesion: 0.29
@@ -2378,6 +2439,14 @@ Nodes (6): Creative library — measured inventory, P0 — Editor core (product 
 Cohesion: 0.22
 Nodes (11): ae(), bt(), F(), gi(), I(), l(), ne(), oe() (+3 more)
 
+### Community 570 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/outlook/outlook-error-toast-service.js"
+Cohesion: 0.27
+Nodes (10): addErrorToast(), addErrorToastDismissListeners(), documentListenerOptions, handleOutsideClick(), removeErrorToast(), setErrorToastIcons(), setErrorToastText(), showErrorToast() (+2 more)
+
+### Community 575 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js"
+Cohesion: 0.06
+Nodes (51): addGeminiDataEventListener(), EMPTY_CHAT_TOKEN_RESULT, geminiDataHandler(), getChatTokenValue(), getParsedJSON(), getSanitizedAPIResponseData(), parseDataForChatFullyLoaded(), addChatConvertToPDFTouchpoint() (+43 more)
+
 ### Community 576 - "l"
 Cohesion: 0.22
 Nodes (11): ae(), bt(), F(), gi(), I(), l(), ne(), oe() (+3 more)
@@ -2386,81 +2455,73 @@ Nodes (11): ae(), bt(), F(), gi(), I(), l(), ne(), oe() (+3 more)
 Cohesion: 0.22
 Nodes (9): 10. OpenAI Images — יצירת ויזואלים, 11. Stability / Stable Audio — מוזיקה במשקלים פתוחים, 4–11. נכסים חינמיים (התחל כאן), 4. Pexels — וידאו ותמונות, 5. Pixabay — סטוק + מוזיקה + אפקטים, 6. Freesound — אפקטי קול, 7. Google Fonts — גופנים עבריים ⭐, 8. LottieFiles — אנימציות (+1 more)
 
-### Community 587 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js"
-Cohesion: 0.08
-Nodes (39): attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages(), handleLongChatConversion() (+31 more)
+### Community 583 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js"
+Cohesion: 0.36
+Nodes (10): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+2 more)
 
-### Community 601 - "v"
+### Community 588 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/resources/addWebpage/addWebpage.js"
 Cohesion: 0.11
-Nodes (14): $a(), ab(), Ae(), bb(), cb(), db(), eb(), Lf() (+6 more)
+Nodes (16): buildBrowserStudentStateBridgeErrorPayload(), buildBrowserStudentStateBridgePayload(), mintUpsellSession(), resolveUpsellTabId(), c(), g, h, createSession() (+8 more)
 
-### Community 604 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js"
-Cohesion: 0.35
-Nodes (9): a(), c(), i(), m(), n(), o(), r, s() (+1 more)
+### Community 599 - "b"
+Cohesion: 0.17
+Nodes (5): b(), ha(), Ib(), Kb(), La()
+
+### Community 601 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js"
+Cohesion: 0.31
+Nodes (6): c(), fetchResourceFromBackground(), i(), l(), n(), t()
 
 ### Community 606 - "admin-purge.mjs"
 Cohesion: 0.40
 Nodes (3): __dirname, __filename, supabase
 
-### Community 607 - ".h"
-Cohesion: 0.10
-Nodes (17): Ee(), $a(), ab(), Ae(), bb(), cb(), db(), eb() (+9 more)
+### Community 610 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js"
+Cohesion: 0.31
+Nodes (6): c(), fetchResourceFromBackground(), i(), l(), n(), t()
 
-### Community 610 - "ffmpeg.ts"
+### Community 613 - "I"
 Cohesion: 0.05
-Nodes (61): graphFor(), defaultCanvasFor(), displayRect(), getViewportScale(), hitTestRect(), Point, projectToViewport(), Rect (+53 more)
+Nodes (60): Ac(), ad(), Bc(), bd(), cd(), ce(), dd(), de() (+52 more)
 
-### Community 613 - "de"
-Cohesion: 0.09
-Nodes (38): Ac(), ad(), Bc(), bd(), cd(), ce(), dd(), de() (+30 more)
-
-### Community 617 - "Sf"
-Cohesion: 0.29
-Nodes (5): Sf(), aj(), bj(), Li(), mi()
-
-### Community 620 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/outlook/outlook-error-toast-service.js"
-Cohesion: 0.27
-Nodes (10): addErrorToast(), addErrorToastDismissListeners(), documentListenerOptions, handleOutsideClick(), removeErrorToast(), setErrorToastIcons(), setErrorToastText(), showErrorToast() (+2 more)
+### Community 617 - "מעבר לחיוב אמיתי — Lemon Squeezy"
+Cohesion: 0.22
+Nodes (8): אחרי המעבר — ניקוי שחייב להיעשות, מה בדיוק חסר, ומה הקוד דורש, מה לא נעשה כאן, מה עושה המתג, מעבר לחיוב אמיתי — Lemon Squeezy, מצב נמדד (נבדק מול הפרודקשן), סדר הפעולות למעבר, שתי פעולות בדשבורד שרק בעל החשבון יכול לעשות
 
 ### Community 622 - "l"
 Cohesion: 0.22
 Nodes (11): ae(), bt(), F(), gi(), I(), l(), ne(), oe() (+3 more)
 
-### Community 624 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gmail/message-view-touch-point-service.js"
-Cohesion: 0.06
-Nodes (71): isDefaultViewer(), isDefaultViewershipFeatureForGmailEnabled(), isGmailImplicitDefaultViewershipFeatureForGmailEnabled(), openPdfInNewTab(), resetDefaultViewership(), takeDefaultViewerShip(), addConvertTouchpointToAttachmentCards(), controllers (+63 more)
+### Community 624 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/express/gmail/express-gmail-message-view-touchpoint-service.js"
+Cohesion: 0.36
+Nodes (10): addExpressMessageViewTouchpoint(), _addHoverEventListeners(), _getClickCallback(), _getMessageView(), _getMessageViewImageElement(), _hideExpressButton(), _imageSizeValid(), removeAllExpressMessageViewTouchpoints() (+2 more)
 
-### Community 627 - "model.ts"
-Cohesion: 0.05
-Nodes (112): RotateCw, Volume2, VolumeX, ClipInspector(), InspectorFocus, InspectorPanel(), KIND, num() (+104 more)
+### Community 628 - "source.ts"
+Cohesion: 0.29
+Nodes (8): analysisFor(), EnvelopeProfile, AudioAnalysis, cache, cachedAnalysis(), fingerprint(), loadAudioAnalysis(), remember()
 
-### Community 628 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/util.js"
-Cohesion: 0.08
-Nodes (34): getUpsellPopupDimensions(), logPaywallOpening(), openUpsellPopupWindow(), s(), clearCachedImsUserState(), getCachedImsUserId(), getCachedImsUserState(), getCachedImsUserStatePingFields() (+26 more)
-
-### Community 634 - "c"
+### Community 632 - "ספריית היצירה — דוח מדוד"
 Cohesion: 0.33
-Nodes (3): n(), t(), c
+Nodes (5): החלטות שנבדקו ולא בוצעו, מה יש, לפי קטגוריה ומקור, מה נמדד חי מול השירותים, מה עדיין חסר, ספריית היצירה — דוח מדוד
 
-### Community 640 - "Hb"
-Cohesion: 0.33
-Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
+### Community 640 - "qt"
+Cohesion: 0.25
+Nodes (8): de(), fe(), gt(), ie(), me(), qt(), Wt(), Xt()
 
-### Community 646 - "Hb"
-Cohesion: 0.33
-Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
-
-### Community 652 - "Hb"
-Cohesion: 0.33
-Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
+### Community 652 - "qt"
+Cohesion: 0.25
+Nodes (8): de(), fe(), gt(), ie(), me(), qt(), Wt(), Xt()
 
 ### Community 653 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-theme-utils.js"
 Cohesion: 0.60
 Nodes (3): createPageThemeWatcher(), detectPageTheme(), e()
 
-### Community 655 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/get-html-enhanced.js"
-Cohesion: 0.31
-Nodes (6): c(), fetchResourceFromBackground(), i(), l(), n(), t()
+### Community 655 - "Hb"
+Cohesion: 0.33
+Nodes (5): ac(), Fb(), Gb(), Hb(), zb()
+
+### Community 657 - "J"
+Cohesion: 0.10
+Nodes (21): ce(), fd(), fl(), ge(), gj(), J(), kj(), L() (+13 more)
 
 ### Community 659 - "qt"
 Cohesion: 0.25
@@ -2485,6 +2546,10 @@ Nodes (6): externally_connectable, ids, matches, bngnhmnppadfcmpggglniifohlkmddf
 ### Community 671 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/page-theme-utils.js"
 Cohesion: 0.60
 Nodes (3): createPageThemeWatcher(), detectPageTheme(), e()
+
+### Community 673 - "LoadingGeometry.test.ts"
+Cohesion: 0.29
+Nodes (6): chat, css, dashboard, editor, loadingState, routeLoading
 
 ### Community 674 - "algorithm-engineer.md"
 Cohesion: 0.40
@@ -2550,9 +2615,9 @@ Nodes (4): can_embed, handler_url, mime_types_handler, application/pdf
 Cohesion: 0.50
 Nodes (4): icons, 128, 16, 48
 
-### Community 730 - "et"
-Cohesion: 0.67
-Nodes (3): dt(), ft(), et()
+### Community 730 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-longchat-conversion.js"
+Cohesion: 0.06
+Nodes (44): ChatGPTConvertToPdf, attachEscapeListener(), attachScrollInterruptListeners(), captureImages(), captureLoadedSections(), createConversionContext(), findScrollContainer(), getMissingMessages() (+36 more)
 
 ### Community 734 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdocs/SheetsSettingModal/styles-inline.js"
 Cohesion: 0.50
@@ -2570,9 +2635,9 @@ Nodes (4): can_embed, handler_url, mime_types_handler, application/pdf
 Cohesion: 0.50
 Nodes (4): icons, 128, 16, 48
 
-### Community 742 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/calendarUtils.js"
-Cohesion: 0.35
-Nodes (9): a(), c(), i(), m(), n(), o(), r, s() (+1 more)
+### Community 739 - "ah"
+Cohesion: 0.11
+Nodes (16): ah(), be(), bf(), ce(), Ga(), hb(), lh(), oe() (+8 more)
 
 ### Community 744 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdocs/SheetsSettingModal/styles-inline.js"
 Cohesion: 0.50
@@ -2590,17 +2655,9 @@ Nodes (4): can_embed, handler_url, mime_types_handler, application/pdf
 Cohesion: 0.50
 Nodes (4): icons, 128, 16, 48
 
-### Community 749 - ".initialize"
-Cohesion: 0.17
-Nodes (12): Tl(), gl(), K(), qa(), sa(), va(), wa(), Wi() (+4 more)
-
 ### Community 750 - "continuity-keeper.md"
 Cohesion: 0.40
 Nodes (4): Definition of done, Files you maintain, Rules, What an entry must contain
-
-### Community 751 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/chatgpt/chatgpt-convert-to-pdf-fte-service.js"
-Cohesion: 0.06
-Nodes (48): addTooltip(), createTouchpointContainer(), handleClick(), injectEditModeTouchpoint(), makeUnprocessedSelector(), tryInject(), withUnprocessedGuard(), ChatGPTConvertToPdf (+40 more)
 
 ### Community 760 - "action"
 Cohesion: 0.67
@@ -2614,9 +2671,9 @@ Nodes (3): background, service_worker, type
 Cohesion: 0.67
 Nodes (3): bookmarks, history, optional_permissions
 
-### Community 763 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/common/constant.js"
-Cohesion: 0.04
-Nodes (59): clearCachedImsUserState(), getCachedImsUserId(), getCachedImsUserState(), getCachedImsUserStatePingFields(), persistCachedImsUserState(), s(), touchCachedImsUserStateLastSyncAt(), ACROBAT_USER_STATE (+51 more)
+### Community 772 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js"
+Cohesion: 0.39
+Nodes (7): addGeminiDataEventListener(), EMPTY_CHAT_TOKEN_RESULT, geminiDataHandler(), getChatTokenValue(), getParsedJSON(), getSanitizedAPIResponseData(), parseDataForChatFullyLoaded()
 
 ### Community 773 - "action"
 Cohesion: 0.67
@@ -2630,9 +2687,9 @@ Nodes (3): background, service_worker, type
 Cohesion: 0.67
 Nodes (3): bookmarks, history, optional_permissions
 
-### Community 776 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js"
-Cohesion: 0.60
-Nodes (5): c(), i(), l(), o(), u()
+### Community 776 - "memorySummary.ts"
+Cohesion: 0.27
+Nodes (14): Conversation, MemorySummaryCache, buildMemorySummaryCache(), cleanMemorySummaryText(), firstUserText(), MemorySource, memorySourceFingerprint(), memorySummaryNeedsRefresh() (+6 more)
 
 ### Community 785 - "feature-builder.md"
 Cohesion: 0.40
@@ -2650,13 +2707,13 @@ Nodes (3): background, service_worker, type
 Cohesion: 0.67
 Nodes (3): bookmarks, history, optional_permissions
 
+### Community 790 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js"
+Cohesion: 0.60
+Nodes (5): c(), i(), l(), o(), u()
+
 ### Community 854 - "סוכני הפרויקט — מי עושה מה"
 Cohesion: 0.40
 Nodes (4): כללי עבודה במקביל, למה החלוקה הזו, סוכני הפרויקט — מי עושה מה, שרשרת אופיינית
-
-### Community 1117 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-api-response-service.js"
-Cohesion: 0.39
-Nodes (7): addGeminiDataEventListener(), EMPTY_CHAT_TOKEN_RESULT, geminiDataHandler(), getChatTokenValue(), getParsedJSON(), getSanitizedAPIResponseData(), parseDataForChatFullyLoaded()
 
 ### Community 1118 - "research-scout.md"
 Cohesion: 0.40
@@ -2666,85 +2723,89 @@ Nodes (4): Always answer these, Hard constraints, Method, Reporting
 Cohesion: 0.50
 Nodes (3): Definition of done, Existing patterns worth copying, What a good test looks like here
 
-### Community 1120 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gemini/gemini-chat-touchpoint-service.js"
-Cohesion: 0.04
-Nodes (59): fetchGmailEmailHtml(), buildSafeFilename(), HTML_FILE_EXTENSION, addChatConvertToPDFTouchpoint(), addConvertToPDFTouchpointInContainer(), attachResponsiveTouchpoint(), createConvertToPDFTouchpointElement(), getChatIdFromUrl() (+51 more)
+### Community 1120 - "ייצוא מהיר עם כתוביות — מה נבנה ומה נשאר לעשות"
+Cohesion: 0.22
+Nodes (8): אחרי הפריסה — איך לוודא, הבעיה שנמדדה, ייצוא מהיר עם כתוביות — מה נבנה ומה נשאר לעשות, מה נבדק בפועל, מה נבנה, מה עוד חוסם ייצוא בענן, מה עוד לא נבדק — ובכוונה עדיין מאחורי דגל, מצב: נפרס
 
 ### Community 1121 - "verifier.md"
 Cohesion: 0.50
 Nodes (3): Output, Rules, The gate, in order
 
-### Community 1122 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js"
-Cohesion: 0.60
-Nodes (5): c(), i(), l(), o(), u()
+### Community 1123 - "Sf"
+Cohesion: 0.29
+Nodes (5): Sf(), aj(), bj(), Li(), mi()
 
 ### Community 1125 - "et"
 Cohesion: 0.67
 Nodes (3): dt(), ft(), et()
 
-### Community 1127 - "EditorPage"
-Cohesion: 0.04
-Nodes (82): download(), EditorPage(), kindOf(), probeDuration(), ChatProps, Props, DragState, Props (+74 more)
+### Community 1126 - ".h"
+Cohesion: 0.09
+Nodes (17): Ee(), $a(), ab(), Ae(), bb(), cb(), db(), eb() (+9 more)
 
-### Community 1130 - "x"
-Cohesion: 0.11
-Nodes (16): ba(), bk(), ck(), dk(), dl(), jk(), kk(), lj() (+8 more)
-
-### Community 1131 - "chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js"
-Cohesion: 0.60
-Nodes (4): b64DecodeUnicode(), base64UrlDecode(), InvalidTokenError, jwtDecode()
-
-### Community 1134 - "c"
+### Community 1132 - "c"
 Cohesion: 0.33
 Nodes (3): n(), t(), c
 
-### Community 1136 - "qt"
-Cohesion: 0.25
-Nodes (8): de(), fe(), gt(), ie(), me(), qt(), Wt(), Xt()
-
-### Community 1138 - "ya"
-Cohesion: 0.71
-Nodes (6): qa(), ra(), va(), wa(), xa(), ya()
-
-### Community 1139 - "Sf"
+### Community 1133 - "Sf"
 Cohesion: 0.29
 Nodes (5): Sf(), aj(), bj(), Li(), mi()
 
-### Community 1140 - "st"
-Cohesion: 0.33
-Nodes (6): at(), c(), m(), P(), st(), u()
+### Community 1136 - "chrome-he-locale-2/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/SidePanel/SummaryBar/SummaryBarInsertionMeta.js"
+Cohesion: 0.60
+Nodes (5): c(), i(), l(), o(), u()
 
-### Community 1141 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js"
+### Community 1138 - "Sf"
+Cohesion: 0.29
+Nodes (5): Sf(), aj(), bj(), Li(), mi()
+
+### Community 1140 - "web/package.json"
+Cohesion: 0.40
+Nodes (4): description, name, private, version
+
+### Community 1142 - "chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/libs/jwt-decode.js"
 Cohesion: 0.60
 Nodes (4): b64DecodeUnicode(), base64UrlDecode(), InvalidTokenError, jwtDecode()
 
-### Community 1143 - "web/package.json"
+### Community 1143 - "מלאי קודי שגיאה — נאסף אוטומטית מהקוד, לא נכתב ביד."
+Cohesion: 0.50
+Nodes (3): מ-web/app/api (error: "..."), מ-web/lib (new Error("...")), מלאי קודי שגיאה — נאסף אוטומטית מהקוד, לא נכתב ביד.
+
+### Community 1144 - "LandingMotionSystem.test.ts"
 Cohesion: 0.40
-Nodes (4): description, name, private, version
+Nodes (4): creative, css, devices, gallery
 
 ### Community 1145 - "et"
 Cohesion: 0.67
 Nodes (3): dt(), ft(), et()
 
+### Community 1147 - "HypescriptBrandSpinner.test.ts"
+Cohesion: 0.50
+Nodes (3): css, heroSrc, spinnerSrc
+
+### Community 1156 - "et"
+Cohesion: 0.67
+Nodes (3): dt(), ft(), et()
+
 ## Knowledge Gaps
-- **2355 isolated node(s):** `track-edit.sh script`, `A`, `R`, `F`, `R` (+2350 more)
+- **2485 isolated node(s):** `track-edit.sh script`, `name`, `version`, `private`, `type` (+2480 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **342 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **333 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `X` connect `icons.tsx` to `chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js`, `chrome-he-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js`, `Chat.tsx`, `chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js`, `app/page.tsx`?**
-  _High betweenness centrality (0.402) - this node is a cross-community bridge._
-- **Why does `xa()` connect `chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js` to `icons.tsx`?**
-  _High betweenness centrality (0.243) - this node is a cross-community bridge._
-- **Why does `xa()` connect `chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js` to `icons.tsx`?**
-  _High betweenness centrality (0.227) - this node is a cross-community bridge._
-- **What connects `track-edit.sh script`, `A`, `R` to the rest of the system?**
-  _2355 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `X` connect `icons.tsx` to `BrandLogo.tsx`, `Chat.tsx`, `app/page.tsx`, `a11y/prefs.ts`?**
+  _High betweenness centrality (0.449) - this node is a cross-community bridge._
+- **Why does `xa()` connect `icons.tsx` to `chrome-en-locale/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js`?**
+  _High betweenness centrality (0.273) - this node is a cross-community bridge._
+- **Why does `xa()` connect `icons.tsx` to `chrome-he-locale-2/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/background_compiled.js`?**
+  _High betweenness centrality (0.237) - this node is a cross-community bridge._
+- **What connects `track-edit.sh script`, `name`, `version` to the rest of the system?**
+  _2485 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `chrome-he-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/sw_modules/communicate.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.031002310549559826 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0348850005502366 - nodes in this community are weakly interconnected._
 - **Should `kit.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10459183673469388 - nodes in this community are weakly interconnected._
-- **Should `Chat.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0418859649122807 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10530612244897959 - nodes in this community are weakly interconnected._
+- **Should `chrome-en-locale/Default/Extensions/efaidnbmnnnibpcajpcglclefindmkaj/26.8.1.7_0/content_scripts/gdrive/touchpoint-service.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.04226475279106858 - nodes in this community are weakly interconnected._

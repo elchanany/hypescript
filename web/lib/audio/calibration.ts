@@ -35,8 +35,21 @@ export interface SpectralDistribution {
 export interface AudioCalibration {
   /** עוצמת מסגרות שידוע שהן דיבור (מתוך חלונות המילים בתמלול). */
   speechDb: Distribution;
-  /** עוצמת מסגרות בפערים ארוכים — רעש הרקע האמיתי של ההקלטה הזו. */
+  /** עוצמת מסגרות בפערים ארוכים. **מזוהמת בכוונה** — ראה roomFloorDb. */
   noiseDb: Distribution;
+  /**
+   * רצפת החדר: כמה שקט באמת בהקלטה הזו כשאף אחד לא משמיע קול.
+   *
+   * זה *לא* `noiseDb.p90`. בפערים שבין המילים יושבים בדיוק הצלילים שאנחנו
+   * אמורים לזהות — נשימות, כחכוח, גרירת כיסא. אחוזון גבוה של הפערים הוא
+   * הנשימה עצמה, וכיול מולו אומר למערכת "נשימה = רקע", ואז היא מפסיקה
+   * לשמוע אותה. ככל שהנשימה רמה יותר (כלומר ככל שהמשתמש רוצה אותה מוסרת
+   * יותר) — כך המערכת בטוחה יותר שזה רקע. זה היה הבאג.
+   *
+   * לכן הרצפה נמדדת מהחלק השקט: המעטפת המתגלגלת (אחוזון 12 בחלון 3 שניות)
+   * מול חציון הפערים, והנמוך מביניהם.
+   */
+  roomFloorDb: number;
   /** סף ההפרדה שנגזר מההקלטה עצמה, לא מהנחה. */
   speechThresholdDb: number;
   /** אותו סף, מבוטא כמרחק מרצפת הרעש המקומית (מה ש-boundaries.ts מצפה לו). */
@@ -96,11 +109,16 @@ const DEFAULTS: Required<CalibrationOptions> = {
   minSeparationDb: 6,
 };
 
+/** התחום שבו speechMarginDb המכויל מותר לנוע — סביב ה-8–9dB שכוילו ביד. */
+const MARGIN_FLOOR_DB = 4;
+const MARGIN_CEILING_DB = 14;
+
 /** ברירות מחדל שמרניות כשאין תמלול או שהכיול נכשל. */
 export function fallbackCalibration(envelope: EnvelopeProfile, reason: string): AudioCalibration {
   return {
     speechDb: { ...EMPTY },
     noiseDb: { ...EMPTY },
+    roomFloorDb: envelope.globalFloorDb,
     speechThresholdDb: envelope.globalFloorDb + 9,
     speechMarginDb: 9,
     separationDb: Math.max(0, envelope.globalPeakDb - envelope.globalFloorDb),
@@ -191,7 +209,20 @@ export function calibrateFromTranscript(
 
   const speechDb = distribution(speechDbValues);
   const noiseDb = distribution(noiseDbValues);
-  const separationDb = speechDb.p50 - noiseDb.p90;
+
+  // רצפת החדר — ולא אחוזון גבוה של הפערים.
+  //
+  // `envelope.floor` הוא אחוזון 12 בחלון מתגלגל של 3 שניות. חלון כזה שורד
+  // נשימה: גם כשחצי שנייה מתוכו היא נשיפה רמה, האחוזון ה-12 עדיין נופל על
+  // השקט שסביבה. לעומת זאת `noiseDb.p90` נדגם מאמצע הפערים — בדיוק המקום
+  // שבו יושבות הנשימות — ולכן הוא *עולה* ככל שהנשימה רמה יותר, ומלמד את
+  // המערכת שהנשימה היא הרקע. הנמוך מבין השניים הוא ההערכה השמרנית הנכונה.
+  const rollingFloor = distribution(Array.from(envelope.floor));
+  const roomFloorDb = Math.min(rollingFloor.p50, noiseDb.p50);
+
+  // ההפרדה נמדדת מול רצפת החדר ולא מול הפערים, אחרת נשימה רמה מכווצת אותה
+  // עד שהכיול נופל ל-fallback — וב-fallback המסווג כבה לגמרי.
+  const separationDb = speechDb.p50 - roomFloorDb;
   const notes: string[] = [];
 
   if (separationDb < opts.minSeparationDb) {
@@ -199,20 +230,23 @@ export function calibrateFromTranscript(
       envelope,
       `הפרדה חלשה בין דיבור לרעש (${separationDb.toFixed(1)}dB) — ההקלטה רועשת; נעשה שימוש בברירות מחדל שמרניות.`,
     );
-    return { ...weak, speechDb, noiseDb, separationDb };
+    return { ...weak, speechDb, noiseDb, roomFloorDb, separationDb };
   }
 
-  // הסף יושב ברבע התחתון של המרווח בין רעש לדיבור: מספיק גבוה כדי לא
+  // הסף יושב ברבע התחתון של המרווח בין רצפת החדר לדיבור: מספיק גבוה כדי לא
   // לתפוס רעש רקע, מספיק נמוך כדי לא לפספס עיצור שוקק בתחילת מילה.
-  const speechThresholdDb = noiseDb.p90 + Math.max(2.5, (speechDb.p10 - noiseDb.p90) * 0.3);
-  const medianFloor = distribution(Array.from(envelope.floor)).p50;
+  const speechThresholdDb = roomFloorDb + Math.max(2.5, (speechDb.p10 - roomFloorDb) * 0.3);
 
   const canSpectral = !!samples && !!sampleRate;
   return {
     speechDb,
     noiseDb,
+    roomFloorDb,
     speechThresholdDb,
-    speechMarginDb: Math.max(3, speechThresholdDb - medianFloor),
+    // boundaries.ts קורא את זה כ-`floor[i] + margin`, והערכים שכוילו שם ביד
+    // הם 8–9dB. מרווח מכויל שחורג מהתחום הזה מוחק עיצורים שקטים בקצוות
+    // המילה, ולכן הוא נחתך לתחום — הכיול מדייק, לא מפקיע.
+    speechMarginDb: Math.min(MARGIN_CEILING_DB, Math.max(MARGIN_FLOOR_DB, speechThresholdDb - rollingFloor.p50)),
     separationDb,
     spectralSpeech: canSpectral ? spectralDistribution(samples!, sampleRate!, speechWindows, opts.spectralSamples) : null,
     spectralNoise: canSpectral ? spectralDistribution(samples!, sampleRate!, noiseWindows, opts.spectralSamples) : null,
@@ -228,7 +262,7 @@ export function describeCalibration(calibration: AudioCalibration): string {
   }
   return (
     `כיול מההקלטה עצמה: דיבור ${calibration.speechDb.p50.toFixed(0)}dB, `
-    + `רעש רקע ${calibration.noiseDb.p90.toFixed(0)}dB, `
+    + `רצפת חדר ${calibration.roomFloorDb.toFixed(0)}dB, `
     + `הפרדה ${calibration.separationDb.toFixed(0)}dB, `
     + `סף ${calibration.speechThresholdDb.toFixed(0)}dB`
     + (calibration.spectralSpeech ? " (כולל פרופיל ספקטרלי)" : "")

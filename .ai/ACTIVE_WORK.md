@@ -1,5 +1,15 @@
 # ACTIVE_WORK.md
 
+## 2026-08-23 — agent runtime safety fixes (MUTATING_TOOLS drift, checkpoints, iteration cap)
+- Completed the missing mutating tools in `web/lib/agent/runtime.ts`: `set_clip_flip`, `set_clip_audio_fades`, `set_clip_visual_fades`, `apply_look`, `set_caption_style`, `set_aspect_ratio`, `add_track`, `rename_media`, `generate_background_music` now create checkpoints and run serially (previously they raced in parallel batches and skipped undo snapshots).
+- Added exported `SERIALIZED_TOOLS` = MUTATING_TOOLS ∪ {render_video}; batch execution now serializes when any serialized tool is present, so render_video can no longer run concurrently with mutations.
+- Loop-guard check moved before checkpoint creation: a blocked call no longer produces an empty undo step.
+- Checkpoints now use `structuredClone` (with fallback) instead of one-level spreads, protecting nested clip/overlay fields from corrupting rollback snapshots.
+- MAX_ITERS exhaustion now reports a clear Hebrew message to user + history; normal stops/errors unaffected.
+- New `web/lib/agent/toolSets.test.ts` pins set consistency: every tool is exactly read-only or serialized; PLAN allow-list and LOOP_GUARDS reference only real tools; the 9 previously-missed tools are pinned.
+- Exported MUTATING_TOOLS for tests. Verification: 19 agent test files / 172 tests pass, `tsc --noEmit` clean.
+
+
 ## 2026-08-23 — landing motion and creator ecosystem polish
 - Added distinct motion stories across the landing page: cursor-led desktop editing, request/edit/result phases on tablet and phone, animated use-case tools, and staggered section micro-interactions with reduced-motion fallbacks.
 - Expanded the creative ecosystem map to six providers plus animated 9:16 output and branded TikTok, Instagram, YouTube and Facebook destinations.

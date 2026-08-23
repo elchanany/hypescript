@@ -14,7 +14,7 @@ describe("landing motion system", () => {
   });
 
   it("shows connected providers and social formats with their own marks", () => {
-    for (const name of ["ElevenLabs", "OpenAI", "Gemini", "Groq", "DeepSeek", "Anthropic"]) expect(creative).toContain(`name:"${name}"`);
+    for (const name of ["ElevenLabs", "OpenAI", "Gemini", "Anthropic"]) expect(creative).toContain(`name:"${name}"`);
     for (const name of ["TikTok", "Instagram", "YouTube", "Facebook"]) expect(creative).toContain(`"${name}"`);
     expect(css).toContain('.creative-social img{width:25px;height:25px;filter:none}');
   });
