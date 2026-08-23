@@ -11,8 +11,20 @@ import AccessibilityWidget from "@/components/AccessibilityWidget";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
+function getMetadataBase(): URL {
+  const raw = (process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+  if (raw && !raw.includes("[SENSITIVE]")) {
+    try {
+      return new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+    } catch {
+      // fallback
+    }
+  }
+  return new URL("http://localhost:3000");
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: getMetadataBase(),
   title: {
     default: `${BRAND_NAME} — ${BRAND_TAGLINE_HE}`,
     template: `%s · ${BRAND_NAME}`,

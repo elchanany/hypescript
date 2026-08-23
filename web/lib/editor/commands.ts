@@ -91,6 +91,11 @@ export interface EditorApi {
   setCaptionStyle?: (style: import("./captionStyle").CaptionStyle) => void;
   /** Source media duration for roll/slip clamping */
   getMediaDuration?: (sourceId: string) => number;
+  /**
+   * "בחירה מקושרת" (A/V link) — האם עריכה על קליפ מתפשטת לשותפים שלו
+   * ב-Clip.linkId. ברירת מחדל true כשלא סופק, כמו ה-Toggle בטיימליין (B-10).
+   */
+  getAvLinked?: () => boolean;
   getSnapshot?: () => EditorSnapshot;
   restoreSnapshot?: (snapshot: EditorSnapshot) => void;
 }

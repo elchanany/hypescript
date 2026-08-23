@@ -8,6 +8,7 @@ import { getAuthDiagnostics, isAuthConfigured } from "@/lib/auth/config";
 import { elevenLabsConfigured } from "@/lib/elevenlabs/client";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const diag = getAuthDiagnostics();

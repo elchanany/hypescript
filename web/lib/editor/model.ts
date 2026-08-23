@@ -25,6 +25,12 @@ export interface Clip {
   end: number; // out-point במקור
   /** רצועת וידאו (ברירת מחדל: הרצועה הראשית). אודיו מקושר לראשי. */
   trackId?: string;
+  /**
+   * קבוצת קישור A/V. קליפים עם אותו linkId נוצרו מאותו מקור (הפרדת אודיו)
+   * ופעולות פיצול/טרים/הזזה/מחיקה חלות על כולם — אך ורק כאשר "בחירה מקושרת"
+   * דלוקה. קישור אינו בחירה: הבחירה עצמה נשארת קליפ אחד. ראה lib/editor/avLink.ts.
+   */
+  linkId?: string;
   volume?: number; // 0..2 (ברירת מחדל 1) — משפיע על הרינדור
   fadeIn?: number; // seconds, linear audio fade from clip start
   fadeOut?: number; // seconds, linear audio fade to clip end

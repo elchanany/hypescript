@@ -31,6 +31,9 @@ import LandingDeviceShowcase from "@/components/LandingDeviceShowcase";
 import LandingUseCaseGallery from "@/components/LandingUseCaseGallery";
 import LandingCreativeStack from "@/components/LandingCreativeStack";
 import LandingStudioPlayground from "@/components/LandingStudioPlayground";
+import LandingSubtitlePlayground from "@/components/LandingSubtitlePlayground";
+import LandingAudioComparison from "@/components/LandingAudioComparison";
+import LandingEfficiencyCalculator from "@/components/LandingEfficiencyCalculator";
 import LandingThemeToggle from "@/components/LandingThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import T from "@/components/LandingText";
@@ -298,6 +301,9 @@ export default function WelcomePage() {
       {/* Interactive AI Studio Simulator */}
       <LandingStudioPlayground />
 
+      {/* Interactive Subtitle Styles Playground */}
+      <LandingSubtitlePlayground />
+
       <LandingLocalizedBody />
 
       <LandingHebrewOnly>
@@ -392,6 +398,9 @@ export default function WelcomePage() {
             </div>
           </div>
         </section>
+
+        {/* Acoustic Audio Waveform Comparison */}
+        <LandingAudioComparison />
 
         {/* Ultra-Rich Visual Bento Studio */}
         <section className="marketing-section marketing-lab hsx-reveal">
@@ -586,6 +595,9 @@ export default function WelcomePage() {
       <LandingDeviceShowcase />
 
       <LandingHebrewOnly>
+        {/* Interactive Efficiency & ROI Calculator */}
+        <LandingEfficiencyCalculator />
+
         {/* Pricing Section */}
         <section className="marketing-section hsx-reveal" id="pricing">
           <div className="marketing-section-head">

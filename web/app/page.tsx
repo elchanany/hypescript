@@ -192,6 +192,7 @@ export default function EditorPage() {
   const canvasRef = useRef(canvas); canvasRef.current = canvas;
   const captionStyleRef = useRef(captionStyle); captionStyleRef.current = captionStyle;
   const curRef = useRef(cur); curRef.current = cur;
+  const avLinkedRef = useRef(avLinked); avLinkedRef.current = avLinked;
   const editorApiRef = useRef<EditorApi | null>(null);
   if (!editorApiRef.current) {
     editorApiRef.current = {
@@ -265,6 +266,7 @@ export default function EditorPage() {
       getCaptionStyle: () => captionStyleRef.current,
       setCaptionStyle: (s) => setCaptionStyle(s),
       getMediaDuration: (sourceId) => mediaRef.current.find((m) => m.id === sourceId)?.duration ?? 0,
+      getAvLinked: () => avLinkedRef.current,
     };
   }
 
@@ -1919,7 +1921,7 @@ export default function EditorPage() {
 
         <div className="leftpanel" style={{ width: leftW }} data-tour="media">
           {leftTab === "media" ? (
-            <MediaPanel media={media} mainId={main?.id} uploadProgress={uploadProgress} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRename={(asset) => setNameDlg({ kind: "media", id: asset.id, name: asset.name })} onRemove={removeMedia} onRelink={relinkMedia}
+            <MediaPanel media={media} mainId={main?.id} onUpload={addFiles} onAddClip={addMediaClip} onAddOverlay={addImageOverlay} onMention={mentionMedia} onRename={(asset) => setNameDlg({ kind: "media", id: asset.id, name: asset.name })} onRemove={removeMedia} onRelink={relinkMedia}
               onAssetMenu={(id, x, y) => setAssetMenu({ id, x, y })} />
           ) : leftTab === "text" ? (
             <TextPanel

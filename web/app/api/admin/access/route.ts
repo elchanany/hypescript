@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireCloudUser } from "@/lib/cloud/auth";
 import { adminContext } from "@/lib/admin/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const auth = await requireCloudUser();
   if (auth.response) return NextResponse.json({ admin: false }, { status: 200 });

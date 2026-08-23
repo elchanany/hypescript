@@ -7,11 +7,15 @@ import { closeGap, isGapClip, removeClipLeaveGap, removeClipRipple, rollAtBounda
 import { normalizeCaptionStyle } from "./captionStyle";
 import { audioTrack, createVideoTrack, primaryVideoTrackId, removeVideoTrackMeta } from "./project";
 import { clipTrackId, clipsOnTrack, insertClipAtTimeline, moveClipAtTimeline, moveClipOnTrack, replaceTrackClips } from "./tracks";
-import { registerCommand } from "./commands";
+import { registerCommand, type EditorApi } from "./commands";
+import { affectedIds, linkClips, splitLinkedClips, trimLinkedClips } from "./avLink";
 import { effectById } from "@/lib/creative/effects";
 import { filterById } from "@/lib/creative/filters";
 
 let registered = false;
+
+/** "בחירה מקושרת" דלוקה כברירת מחדל — כמו ה-Toggle בטיימליין (B-10). */
+const avLinkOn = (api: EditorApi): boolean => api.getAvLinked?.() !== false;
 
 export function ensureBuiltinCommands() {
   if (registered) return;
@@ -27,7 +31,9 @@ export function ensureBuiltinCommands() {
       const id = String(args?.id || "");
       const clips = api.getClips();
       if (!clips || !id) throw new Error("אין קטע למחיקה");
-      api.setClips(removeClipRipple(clips, id));
+      let nextRipple = clips;
+      for (const target of affectedIds(clips, id, avLinkOn(api))) nextRipple = removeClipRipple(nextRipple, target);
+      api.setClips(nextRipple);
       api.selectClip(null);
     },
   });
@@ -42,7 +48,9 @@ export function ensureBuiltinCommands() {
       const id = String(args?.id || "");
       const clips = api.getClips();
       if (!clips || !id) throw new Error("אין קטע למחיקה");
-      api.setClips(removeClipLeaveGap(clips, id));
+      let nextGap = clips;
+      for (const target of affectedIds(clips, id, avLinkOn(api))) nextGap = removeClipLeaveGap(nextGap, target);
+      api.setClips(nextGap);
       api.selectClip(null);
     },
   });
@@ -77,7 +85,7 @@ export function ensureBuiltinCommands() {
       if (index < 0) return;
       const c = clips[index];
       if (isGapClip(c)) throw new Error("לא ניתן לפצל רווח — אפשר לחתוך את משכו");
-      api.setClips(splitClip(clips, c.id, source));
+      api.setClips(splitLinkedClips(clips, c.id, source, avLinkOn(api)));
     },
   });
 
@@ -191,7 +199,9 @@ export function ensureBuiltinCommands() {
       const audioClips = clipsOnTrack(clips, audioId, primary);
       const placedAudio = insertClipAtTimeline(audioClips, audioClip, timelineStart, audioId);
       const mutedVisual = clips.map((item) => item.id === id ? { ...item, volume: 0 } : item);
-      api.setClips(replaceTrackClips(mutedVisual, audioId, placedAudio, primary));
+      // הווידאו המושתק והאודיו שהופרד נשארים מקושרים (B-10): קישור, לא בחירה.
+      const detached = linkClips(replaceTrackClips(mutedVisual, audioId, placedAudio, primary), [id, audioClip.id]);
+      api.setClips(detached);
       api.selectClip(audioClip.id);
       api.seek(timelineStart);
     },
@@ -304,7 +314,7 @@ export function ensureBuiltinCommands() {
       const c = clips.find((x) => x.id === id);
       if (!c) throw new Error("קטע לא נמצא");
       if (isGapClip(c)) throw new Error("לא ניתן לפצל רווח");
-      api.setClips(splitClip(clips, id, at));
+      api.setClips(splitLinkedClips(clips, id, at, avLinkOn(api)));
     },
   });
 
@@ -321,7 +331,7 @@ export function ensureBuiltinCommands() {
       const start = args?.start != null && args.start !== "" ? Number(args.start) : c.start;
       const end = args?.end != null && args.end !== "" ? Number(args.end) : c.end;
       const max = api.getMediaDuration?.(c.sourceId) ?? c.end;
-      api.setClips(trimClip(clips, id, start, end, max));
+      api.setClips(trimLinkedClips(clips, id, start, end, max, avLinkOn(api), api.getMediaDuration));
     },
   });
 
@@ -473,7 +483,16 @@ export function ensureBuiltinCommands() {
       const expectedType = media?.kind === "audio" ? "audio" : "video";
       if (targetTrack.type !== expectedType) throw new Error("סוג רצועת היעד אינו מתאים לקליפ");
       const primary = primaryVideoTrackId(tracks);
-      api.setClips(moveClipAtTimeline(clips, id, targetTrackId, Math.max(0, timelineStart), primary));
+      const at = Math.max(0, timelineStart);
+      let moved = moveClipAtTimeline(clips, id, targetTrackId, at, primary);
+      // שותפים מקושרים נגררים לאותו זמן, אך נשארים ברצועה שלהם (B-10).
+      for (const pid of affectedIds(clips, id, avLinkOn(api))) {
+        if (pid === id) continue;
+        const partner = moved.find((item) => item.id === pid);
+        if (!partner) continue;
+        moved = moveClipAtTimeline(moved, pid, clipTrackId(partner, primary), at, primary);
+      }
+      api.setClips(moved);
       api.selectClip(id);
       api.seek(Math.max(0, timelineStart));
     },

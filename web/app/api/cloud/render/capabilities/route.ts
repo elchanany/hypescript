@@ -8,6 +8,7 @@ import { getWorkerCapabilities } from "@/lib/cloud/workerCapabilities.server";
 import { NO_CAPABILITIES } from "@/lib/cloud/workerCapabilities";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const auth = await requireCloudUser();
