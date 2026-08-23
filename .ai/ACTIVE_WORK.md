@@ -1,13 +1,13 @@
 # ACTIVE_WORK.md
 
-## 2026-08-23 — Vercel production deployment & interactive landing features live
-- **Vercel Build & Production Deployment**: Diagnosed previous Vercel build failure (`npm run build exited with 1`). Fixed `DollarSign`/`ChartBar` missing icon exports in `LandingEfficiencyCalculator.tsx`, added safe URL parsing fallback for `process.env.NEXT_PUBLIC_SITE_URL` in `app/layout.tsx`, and marked `/api/admin/access`, `/api/config`, and `/api/cloud/render/capabilities` as `force-dynamic`.
-- **Live Deployment Verified**: Commit `37a0e3e` built cleanly on Vercel remote; deployment `https://hypescript-hbfc1k4iu-elchanan-ys-projects.vercel.app` is **● Ready** (Production) and live across aliases `https://hypescript.vercel.app`.
-- **Interactive Landing Additions**:
-  - `LandingSubtitlePlayground.tsx`: Live karaoke subtitle style switcher (TikTok Yellow Glow, Cyber Mint, Torani Gold, Minimal Clean Box).
-  - `LandingAudioComparison.tsx`: Real-time acoustic clarity waveform visualizer showing raw noisy speech vs studio tight speech with silence indicators.
-  - `LandingEfficiencyCalculator.tsx`: Interactive ROI slider calculator calculating saved hours and NIS per month.
-- **Verification**: 101 Vitest test suites (1,023 tests) 100% passing. Isolated Next.js agent build passed (53/53 routes). Knowledge graph updated with `graphify update .`.
+## 2026-08-23 — Clean, Apple-grade 3D icon motion system & live Vercel production deployment
+- **Clean 3D Slice Motion System (`Hypescript3DIconAnimation.tsx`)**:
+  - Maintained 100% fidelity to the authentic master 3D clay render (`/brand/icons/icon-512.png`) without artificial distortions.
+  - Divided the 3D mark cleanly into three DOM slice layers: Left Brain Hemisphere (`slice-left`), Central Play Button (`slice-center`), and Right Brain Hemisphere (`slice-right`).
+  - **Entrance Motion (`mode-hero` / `mode-idle`)**: Left hemisphere glides in with spring physics from the left, right from the right, and the central play button pops smoothly with spring overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`).
+  - **Loading Mode (`mode-loading`)**: Harmonic rhythmic wave (Left → Center → Right) creating a delightful, calm loading motion across all spinners in the app.
+  - **Specular Sheen**: Subtle, luxurious light shimmer sweeping across the 3D surface every 4.8s.
+- **Verification**: 101 Vitest test suites (1,023 tests) passing 100% green. Vercel deployment `https://hypescript-842co07yk-elchanan-ys-projects.vercel.app` is **● Ready** on Production.
 - **סימפטומים א+ב** (breaths not cut, speech-containing segments cut): Noise floor contamination in `web/lib/audio/calibration.ts` and `web/lib/audio/nonSpeech.ts`. Resting noise was sampled from the same intervals searched for breaths, so breath itself inflated `noiseDb.p90`, making `silenceMargin` 18–32 dB. Breath was then classified as silence and never removed—inverted logic: stronger breath = higher confidence nothing needed removal. Fixed with rolling room floor (`computeEnvelope`, window 3s, percentile 0.12) → `roomFloorDb`. Invariant: when breath amplified 6dB, `roomFloorDb` moved 0.4 dB while `noiseDb.p90` moved 19.5 dB (ratio ~49x).
 - **סימפטום ג** (TikTok-granular cuts missing, margins >1s): Two separate issues: (1) `ctx.brief.pacing` ignored by cut tools—always fell back to `natural`—now explicit fallback aware in `web/lib/agent/tools.ts`. (2) Pacing loop incomplete: changed only `maxInternalPauseSec`, leaving preset's `preRollSec`/`postRollSec` and `minRemovalSec` calibrated for longer pauses. `broadcast` pads 0.19s, requires 0.12s removal → any gap <0.31s survived when user explicitly requested 0.15s. Fixed in `web/lib/cut/scriptPlan.ts` with `withMinSilence(preset, seconds)` tightening all three together; `boundaryOpts` now uses `pacing.boundary` not `preset.boundary` so tight padding takes effect.
 - **Deliberate non-changes:** (1) `GOALS.lecture_cut` remains `pacing: broadcast` (0.85s) despite promise "without breaths and silence"—acoustic fix removes breaths regardless of pacing; changing goal recipe changes all users' behavior. (2) `min_silence` <0.05s clamped silently to 0.05 via `Math.max` in `withMinSilence`.
