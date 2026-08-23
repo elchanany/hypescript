@@ -339,7 +339,7 @@ export default function LandingCreativeStack() {
           <span className="core-pulse-beacon" />
         </div>
 
-        {/* 6 AI Provider Cards */}
+        {/* 4 AI Provider Cards */}
         {PROVIDERS.map((provider, index) => {
           const isCurrent = activeProvider === index;
           return (
@@ -358,11 +358,7 @@ export default function LandingCreativeStack() {
               onMouseLeave={() => setIsManualHover(false)}
               key={provider.name}
             >
-              {"src" in provider ? (
-                <img src={provider.src} alt="" />
-              ) : (
-                <i aria-hidden="true">{provider.mark}</i>
-              )}
+              <img src={provider.src} alt="" />
               <div className="provider-info">
                 <b>{provider.name}</b>
                 <small>{copy.tools[index]}</small>
@@ -379,8 +375,6 @@ export default function LandingCreativeStack() {
                 )}
                 {provider.kind === "visual-pixel" && <span className="mini-lens">✦</span>}
                 {provider.kind === "stardust-spark" && <span className="mini-gemini">✧</span>}
-                {provider.kind === "lightning-speed" && <span className="mini-bolt">⚡</span>}
-                {provider.kind === "cyber-packet" && <span className="mini-cyber">01</span>}
                 {provider.kind === "synapse-gold" && <span className="mini-synapse">◎</span>}
               </div>
             </button>

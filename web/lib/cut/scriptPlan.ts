@@ -164,6 +164,26 @@ function spectralFor(
 }
 
 /**
+ * חוגה מספרית ("שלא ישרוד מרווח ארוך מ-X") אינה רק סף פאוזה. ריפוד
+ * הגבולות ו-minRemovalSec של הפריסט כוילו לפאוזה ארוכה בהרבה, ואם הם נשארים
+ * כמו שהם — הקאט מסומן ומיד מתאחה בחזרה, והחוגה נראית כאילו אינה עושה דבר.
+ * לדוגמה: broadcast מרפד 0.19 שניות ודורש הסרה של 0.12 — כל מרווח קצר מ-0.31
+ * שניות שורד גם כשמבקשים מפורשות 0.15. לכן שלושת המספרים מצטמצמים יחד.
+ */
+function withMinSilence(preset: PacingPolicy, seconds: number): PacingPolicy {
+  const target = Math.max(0.05, seconds);
+  const pre = Math.min(preset.boundary.preRollSec ?? BOUNDARY_DEFAULTS.preRollSec, target * 0.25);
+  const post = Math.min(preset.boundary.postRollSec ?? BOUNDARY_DEFAULTS.postRollSec, target * 0.4);
+  return {
+    maxInternalPauseSec: target,
+    // מחצית ממה שמרווח באורך target משאיר אחרי הריפוד — כך הוא עובר את הסף
+    // בביטחון, ועדיין לא נחתכים רווחים זעירי ערך שרק מרעידים את העריכה.
+    minRemovalSec: Math.min(preset.minRemovalSec, Math.max(0.015, (target - pre - post) * 0.5)),
+    boundary: { ...preset.boundary, preRollSec: pre, postRollSec: post },
+  };
+}
+
+/**
  * בונה תוכנית חיתוך מלאה. אינו זורק חריגה על התאמה חלקית — מדווח עליה,
  * כדי שהשלב הבא (או המשתמש) יחליט מה לעשות.
  */
@@ -174,7 +194,7 @@ export function planScriptCut(
 ): ScriptCutPlan {
   const preset = PACING[options.pacing ?? "natural"];
   const pacing: PacingPolicy = options.maxInternalPauseOverride != null
-    ? { ...preset, maxInternalPauseSec: Math.max(0.05, options.maxInternalPauseOverride) }
+    ? withMinSilence(preset, options.maxInternalPauseOverride)
     : preset;
   const minClipSec = options.minClipSec ?? 0.12;
   const classifyMinGap = Math.max(
@@ -191,7 +211,7 @@ export function planScriptCut(
     : null;
   const boundaryOpts: BoundaryOptions = {
     ...BOUNDARY_DEFAULTS,
-    ...preset.boundary,
+    ...pacing.boundary,
     ...(calibration?.reliable ? { speechMarginDb: calibration.speechMarginDb } : {}),
     ...options.boundary,
   };

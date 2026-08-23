@@ -243,11 +243,12 @@ function briefWith(pacing: ProjectBrief["pacing"]): ProjectBrief {
 const totalKept = (clips: Clip[]) => clips.reduce((sum, c) => sum + (c.end - c.start), 0);
 
 /**
- * מרווחים של 0.45 שניות — בדיוק ה"פחות משנייה" שהמשתמש התלונן ששורד.
- * גדול דיו מריפוד הגבולות (0.19 שניות לכל היותר) כדי שהחיתוך לא יתאחה בחזרה,
- * וקטן דיו ש-37 המילים עדיין נכנסות ב-30 שניות המקור (37×0.77 ≈ 28.5).
+ * מרווחים של 0.30 שניות — בדיוק ה"פחות משנייה" שהמשתמש התלונן ששורד:
+ * גדול מריפוד הגבולות (0.19 שניות לכל היותר), אחרת הקאט מתאחה בחזרה
+ * וההידוק לא ניתן למדידה; קטן מ-0.42 (natural) ומ-0.85 (broadcast), שהשאירו אותו שלם;
+ * וקצר דיו ש-47 המילים נכנסות ב-30 שניות המקור (0.5 + 47×0.62 ≈ 29.6).
  */
-const SUB_SECOND_GAPS = () => buildTranscript(0.45);
+const SUB_SECOND_GAPS = () => buildTranscript(0.30);
 
 describe("הקצב שנקבע בבריף מגיע בפועל לחיתוך", () => {
   it("בלי pacing מפורש — הבריף קובע, ולא natural קבוע", async () => {
@@ -255,7 +256,7 @@ describe("הקצב שנקבע בבריף מגיע בפועל לחיתוך", () =
     const broadcast = harness(SUB_SECOND_GAPS(), briefWith("broadcast"));
     await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT }, staccato.ctx, silent);
     await TOOL_BY_NAME.keep_by_script.run({ script: SPOKEN_SCRIPT }, broadcast.ctx, silent);
-    // staccato (0.04) חותך מרווח של 0.45 שניות; broadcast (0.85) משאיר אותו שלם.
+    // staccato (0.04) חותך מרווח של 0.30 שניות; broadcast (0.85) משאיר אותו שלם.
     expect(totalKept(staccato.clips())).toBeLessThan(totalKept(broadcast.clips()));
     expect(staccato.clips().length).toBeGreaterThan(broadcast.clips().length);
   });
