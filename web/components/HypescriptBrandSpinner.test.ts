@@ -2,13 +2,18 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const spinnerSrc = readFileSync(new URL("./HypescriptBrandSpinner.tsx", import.meta.url), "utf8");
+const vectorSrc = readFileSync(new URL("./HypescriptBrainPlayVector.tsx", import.meta.url), "utf8");
 const heroSrc = readFileSync(new URL("../app/welcome/page.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
-describe("HypescriptBrandSpinner & Hero 3D Card", () => {
-  it("defines size mappings and authentic brain-play mark references", () => {
-    expect(spinnerSrc).toContain("/brand/icons/icon-512.png");
-    expect(spinnerSrc).toContain("/brand/icons/icon-256.png");
+describe("HypescriptBrandSpinner & Animated Vector Anatomy", () => {
+  it("defines vector anatomy with lobes, neural grooves, and central playhead", () => {
+    expect(vectorSrc).toContain("lobe-left");
+    expect(vectorSrc).toContain("lobe-right");
+    expect(vectorSrc).toContain("hsx-pulse-path");
+    expect(vectorSrc).toContain("hsx-play-triangle");
+    expect(vectorSrc).toContain("hsx-synapse-nodes");
+    expect(spinnerSrc).toContain("HypescriptBrainPlayVector");
     expect(spinnerSrc).toContain("hsx-hero-icon-card");
     expect(spinnerSrc).toContain("hsx-brand-spinner");
   });
@@ -19,11 +24,12 @@ describe("HypescriptBrandSpinner & Hero 3D Card", () => {
     expect(heroSrc).toContain("marketing-hero-visual");
   });
 
-  it("provides full CSS animations and styling in globals.css", () => {
-    expect(css).toContain(".hsx-brand-spinner");
+  it("provides full vector anatomical CSS animations and styling in globals.css", () => {
+    expect(css).toContain(".hsx-brain-vector");
     expect(css).toContain(".hsx-hero-icon-card");
-    expect(css).toContain("@keyframes hsx-halo-rotate");
-    expect(css).toContain("@keyframes hsx-brand-breathe");
-    expect(css).toContain("@keyframes hsx-hero-brain-float");
+    expect(css).toContain("@keyframes hsx-lobe-breathe-left");
+    expect(css).toContain("@keyframes hsx-lobe-breathe-right");
+    expect(css).toContain("@keyframes hsx-neural-laser");
+    expect(css).toContain("@keyframes hsx-play-core-beat");
   });
 });

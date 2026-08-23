@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import BrandLogo from "@/components/BrandLogo";
+import HypescriptBrainPlayVector from "@/components/HypescriptBrainPlayVector";
 
 export type SpinnerSize = "xs" | "sm" | "md" | "lg" | "xl" | "hero" | "giant";
 
@@ -15,13 +15,13 @@ interface Props {
 }
 
 const SIZE_MAP: Record<SpinnerSize, { iconSize: number; cardWidth: number }> = {
-  xs: { iconSize: 18, cardWidth: 28 },
-  sm: { iconSize: 26, cardWidth: 42 },
-  md: { iconSize: 44, cardWidth: 70 },
-  lg: { iconSize: 72, cardWidth: 110 },
-  xl: { iconSize: 110, cardWidth: 160 },
-  hero: { iconSize: 240, cardWidth: 380 },
-  giant: { iconSize: 320, cardWidth: 480 },
+  xs: { iconSize: 22, cardWidth: 32 },
+  sm: { iconSize: 32, cardWidth: 48 },
+  md: { iconSize: 52, cardWidth: 80 },
+  lg: { iconSize: 84, cardWidth: 120 },
+  xl: { iconSize: 130, cardWidth: 180 },
+  hero: { iconSize: 280, cardWidth: 420 },
+  giant: { iconSize: 360, cardWidth: 520 },
 };
 
 export default function HypescriptBrandSpinner({
@@ -73,38 +73,22 @@ export default function HypescriptBrandSpinner({
         {/* Ambient Back Glow Aura */}
         <div className="hsx-hero-icon-aura" aria-hidden="true" />
 
-        {/* 3D-Perspective Tilted Squircle Card (Inspired by Spotify Studio style) */}
+        {/* 3D-Perspective Tilted Squircle Card */}
         <div className="hsx-hero-icon-card">
           {/* Card Inner Specular Highlight / Bevel Glint */}
           <div className="hsx-card-specular" aria-hidden="true" />
 
-          {/* Animated Brain+Play Icon Core */}
+          {/* Animated Brain+Play Vector Core */}
           <div className="hsx-hero-icon-wrapper">
-            {/* Pulsing Synaptic Energy Rings */}
-            <div className="hsx-pulse-ring ring-primary" aria-hidden="true" />
-            <div className="hsx-pulse-ring ring-secondary" aria-hidden="true" />
-            <div className="hsx-pulse-ring ring-tertiary" aria-hidden="true" />
-
-            {/* Neural Laser Sweep Beam */}
-            <div className="hsx-laser-sweep" aria-hidden="true" />
-
-            {/* The Authentic Master Hypescript Mark (Brain + Play) */}
-            <img
-              src="/brand/icons/icon-512.png"
-              alt="Hypescript AI"
-              width={iconSize}
-              height={iconSize}
-              className="hsx-hero-brain-img"
-              loading={priority ? "eager" : "lazy"}
-              decoding="async"
-              draggable={false}
+            <HypescriptBrainPlayVector
+              size={iconSize}
+              speed="normal"
+              interactive
+              glow
             />
-
-            {/* Dynamic Playhead Center Sparkle */}
-            <span className="hsx-playhead-beacon" aria-hidden="true" />
           </div>
 
-          {/* Floating Floating Particle Chips */}
+          {/* Floating Synaptic Particle Chips */}
           <div className="hsx-floating-particles" aria-hidden="true">
             <span className="particle-dot p1" />
             <span className="particle-dot p2" />
@@ -127,22 +111,11 @@ export default function HypescriptBrandSpinner({
       aria-label={label || "Hypescript טוען…"}
     >
       <div className="hsx-spinner-stage" style={{ width: iconSize, height: iconSize }}>
-        {/* Outer Rotating Conic Halo */}
-        <div className="hsx-spinner-halo" aria-hidden="true" />
-
-        {/* Breathing Synaptic Glow */}
-        <div className="hsx-spinner-glow" aria-hidden="true" />
-
-        {/* The Exact Hypescript Brain+Play Icon */}
-        <img
-          src="/brand/icons/icon-256.png"
-          alt=""
-          width={iconSize}
-          height={iconSize}
-          className="hsx-spinner-img"
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          draggable={false}
+        <HypescriptBrainPlayVector
+          size={iconSize}
+          speed="fast"
+          interactive={false}
+          glow={false}
         />
       </div>
 
