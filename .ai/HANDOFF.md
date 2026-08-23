@@ -15,12 +15,13 @@ Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemo
 - Verification: 94 Vitest files / 814 tests, TypeScript, isolated production build (54/54 pages), desktop/mobile browser screenshots, Graphify update.
 
 # Current State
+- 2026-08-23: **Vercel Production Deployment Live & Verified (Commit `37a0e3e`)**
+  1. Fixed Vercel build breakages: replaced unexported icons `DollarSign`/`ChartBar` with `Coins`/`BarChart3` in `LandingEfficiencyCalculator.tsx`, added safe URL fallback in `app/layout.tsx`, and marked `/api/admin/access`, `/api/config`, `/api/cloud/render/capabilities` as `force-dynamic`.
+  2. Deployment `https://hypescript-hbfc1k4iu-elchanan-ys-projects.vercel.app` is **● Ready** on Production (aliases `https://hypescript.vercel.app`, `https://hypescript-elchanan-ys-projects.vercel.app`).
+  3. Added new interactive landing modules: `LandingSubtitlePlayground.tsx`, `LandingAudioComparison.tsx`, `LandingEfficiencyCalculator.tsx`.
+  4. Brand and provider mentions updated: Groq/DeepSeek removed from marketing and settings, 4 premier providers highlighted (ElevenLabs, OpenAI, Anthropic, Gemini).
+  5. 101 Vitest test files / 1,023 tests passing (100% green). Isolated Next.js agent build (53/53 routes) passing.
 - 2026-08-23: **B-39 Cutting Behavior Fixed & Verified** — breath detection estimator contamination corrected, pacing loop completed, all three symptoms (breaths not cut, speech-containing segments cut, TikTok granularity missing) resolved. `npx tsc --noEmit` clean, 1023 tests passing. Non-change: `GOALS.lecture_cut` pacing remains `broadcast` pending product decision.
-- 2026-08-17: Vercel Production Cloud Build Fixed & Deployed (Live Ready)
-  1. Identified & resolved build failure: `TEXT_PRESETS` value import in `web/app/page.tsx` was missing (imported as type only).
-  2. Fixed `web/lib/creative/effects.ts` and `web/lib/creative/catalog.test.ts` to pass 100% of test suites.
-  3. Verified all 74 Vitest test files / 614 tests pass and Next.js isolated production build (49/49 static pages generated).
-  4. Deployed and verified on Vercel CLI: deployment `https://hypescript-2794odcua-elchanan-ys-projects.vercel.app` is **● Ready** (Production).
 - 2026-08-17: Cross-Device Cloud Sync, Chat Persistence & Complete Purge
   1. Full AI Chat Store Cloud Sync (`Chat.tsx`, `client.ts`): the conversation store is continuously synchronized to `cloud_projects.editor_state.chatStore` in Supabase upon every update, eliminating lost chat history across devices.
   2. Cloud-First Project Hydration (`page.tsx`, `create.ts`): removed stale local cache checks (`if (!raw)`). Cloud projects always fetch the latest state from Supabase, preventing stale local state from overriding remote edits.
