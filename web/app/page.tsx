@@ -28,7 +28,7 @@ import type { MotionAsset } from "@/lib/creative/motionAssets";
 import { loadGoogleFont } from "@/lib/creative/fonts";
 import { deleteProject, getCurrentProjectId, kvGet, kvSet, listProjects, pk, ProjectMeta, renameProject, setCurrentProject, touchProject } from "@/lib/storage";
 import { useEditor } from "@/hooks/useEditor";
-import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen } from "@/components/icons";
+import { Copy, Scissors, Eye, Trash2, SquareDashed, Type, Layers, Lock, Volume2, ChevronsUpDown, Plus, Pencil, FolderOpen, Loader2 } from "@/components/icons";
 import { ContextMenu, CtxItem } from "@/components/ui";
 import { ConfirmDialog, NameDialog } from "@/components/Modal";
 import { toast } from "@/lib/ui/toast";
@@ -50,7 +50,7 @@ import { deleteCloudProject, getCloudAssetDownloadUrl, getCloudProject, listClou
 import { createProjectWithPolicy, ensureCloudProjectId, syncCloudProjects } from "@/lib/projects/create";
 import { DEFAULT_POLICY } from "@/lib/projects/types";
 import EditorTour from "@/components/EditorTour";
-import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
+import { UploadProgressCard } from "@/components/LoadingState";
 import { clampRatio, type TransferProgress } from "@/lib/ui/progress";
 import MobileEditorNav, { type MobileEditorSurface } from "@/components/MobileEditorNav";
 import { PROJECT_QUERY_KEY, requestedProjectId } from "@/lib/projects/navigation";
@@ -1825,7 +1825,7 @@ export default function EditorPage() {
     : [];
 
   return (
-    <div className="editor-root" onContextMenu={(e) => {
+    <div className={`editor-root${!restored ? " is-hydrating" : ""}`} aria-busy={!restored} onContextMenu={(e) => {
       if (e.defaultPrevented) return;
       e.preventDefault();
       setCommandMenu({ x: e.clientX, y: e.clientY });
@@ -1841,7 +1841,10 @@ export default function EditorPage() {
         onOpenTour={() => setTourOpen(true)}
       />
 
-      {!restored && <div className="editor-hydration-loading"><LoadingState label="מכין את סביבת העריכה…" variant="editor" /></div>}
+      {!restored && <div className="editor-hydration-status" role="status" aria-live="polite">
+        <Loader2 className="spin" size={17} />
+        <span>{projectId ? "טוענים את הפרויקט…" : "טוענים את סביבת הפרויקט…"}</span>
+      </div>}
 
       {!groqOk && <div className="banner2">תמלול הגיבוי באיכות מופחתת אינו זמין כרגע. תמלול ElevenLabs הראשי ממשיך כרגיל.</div>}
 

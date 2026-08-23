@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Download, Save, Trash2 } from "@/components/icons";
 import { toast } from "@/lib/ui/toast";
 import { explainError } from "@/lib/errors/messages";
-import { LoadingState } from "@/components/LoadingState";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SUPPORTED_LOCALES, type AddressForm, type AppLocale } from "@/lib/i18n/config";
 import { readStoredA11yPrefs, writeStoredA11yPrefs } from "@/lib/a11y/apply";
@@ -65,7 +64,12 @@ export default function AccountPreferences() {
   }, []);
   if (unavailable)
     return <section className="account-preferences"><strong>{t("account.schemaPending")}</strong><p>{t("account.continues")}</p></section>;
-  if (!v) return <LoadingState label={t("account.loading")} lines={3} compact />;
+  if (!v) return <section className="account-preferences account-preferences-loading" aria-busy="true" role="status" aria-live="polite">
+    <div className="account-section-head"><div><span className="account-eyebrow">{t("account.profilePrivacy")}</span><h2>{t("account.loading")}</h2></div></div>
+    <div className="account-settings-grid account-settings-loading" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => <span className="account-setting-skeleton skeleton-shimmer" key={index} />)}
+    </div>
+  </section>;
   const save = async () => {
     setBusy(true);
     const r = await fetch("/api/account", {

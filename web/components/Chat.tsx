@@ -40,7 +40,7 @@ import {
 } from "@/components/icons";
 import ChatMarkdown from "@/components/ChatMarkdown";
 import ChatMediaCard from "@/components/ChatMediaCard";
-import { LoadingState, UploadProgressCard } from "@/components/LoadingState";
+import { UploadProgressCard } from "@/components/LoadingState";
 import type { TransferProgress } from "@/lib/ui/progress";
 import { type AppIcon } from "@/components/icons";
 import type { MutableRefObject } from "react";
@@ -943,7 +943,10 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
       </section>}
 
       <div className="chat-body2" ref={scrollRef}>
-        {!restoredChat && <LoadingState label="טוען את השיחה…" variant="chat" compact />}
+        {!restoredChat && <div className="msg2 assistant chat-restoring" role="status" aria-live="polite">
+          <div className="msg-speaker"><span className="msg-avatar agent" aria-hidden="true"><Bot size={13} weight="bold" /></span><strong>hypescript AI</strong></div>
+          <div className="b skeleton-shimmer"><Loader2 className="spin" size={14} /><span>טוענים את השיחה…</span></div>
+        </div>}
         {restoredChat && items.length === 0 && (
           inFocusMode ? (
             <div className="chat-gpt-hero">
@@ -1159,7 +1162,7 @@ export default function Chat({ media, onAddMedia, onClose, words, clips, subs, s
           <header><span><Sparkles size={13} />הצעות לפי השיחה</span><small>נוצרו מההקשר האחרון</small></header>
           <div className="chat-suggestion-list">
             {suggestionsLoading && suggestions.length === 0
-              ? <><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /><i className="skeleton-shimmer" /></>
+              ? <>{[0, 1, 2].map((item) => <button type="button" className="is-loading skeleton-shimmer" disabled tabIndex={-1} aria-hidden="true" key={item}><span /></button>)}</>
               : suggestions.map((suggestion, index) => <button type="button" key={`${suggestion}-${index}`} onClick={() => { setInput(suggestion); taRef.current?.focus(); }}><span>{index + 1}</span>{suggestion}</button>)}
           </div>
         </section>}

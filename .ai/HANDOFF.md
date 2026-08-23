@@ -81,3 +81,11 @@ Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemo
 - `BrandLogo` remains the single UI entry point. Canonical SVGs now feed editor, landing, auth, dashboard, account, onboarding, settings and legal surfaces.
 - Regenerated favicon PNG/ICO, Apple/PWA/maskable icons, raster lockups, Open Graph/Twitter cards and subscription product artwork. Landing metadata now names the product as a Hebrew AI video editor.
 - Raster derivatives are reproducible with `scripts/generate-brand-assets.py`; canonical SVG geometry stays sharp down to 16px.
+
+# 2026-08-23 — widget-accurate Skeleton Loading
+
+- Professional term: **Skeleton Loading**; the moving light pass is a **Shimmer Skeleton**.
+- `LoadingState` is now only an honest spinner/status primitive. It no longer invents miniature layouts that can drift from the destination UI.
+- `/dashboard` owns an exact `ProjectCardSkeleton`, and project navigation uses an overlay inside the selected real card. `/` hydrates the real editor panels via `.editor-root.is-hydrating`, with a compact project-loading status.
+- Chat, account usage/preferences, settings service cards and admin surfaces use their own real geometry while loading; the generic Next route fallback is intentionally only brand + spinner because the destination route is not yet known.
+- Focused test: `npm test -- LoadingGeometry.test.ts`. Isolated build: `node scripts/agent-build.mjs --name=loading-geometry`. Browser QA captured desktop/390px dashboard skeletons and editor hydration; no console errors.

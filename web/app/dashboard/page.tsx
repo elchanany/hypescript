@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   FolderOpen, Plus, LogIn, LogOut, Settings, Film,
   Pencil, Trash2, MoreHorizontal, Clapperboard, CreditCard,
-  Clock3, ShieldCheck,
+  Clock3, ShieldCheck, Loader2,
 } from "@/components/icons";
 import {
   deleteProject, listProjects, ProjectMeta,
@@ -24,7 +24,6 @@ import { createProjectWithPolicy, syncCloudProjects } from "@/lib/projects/creat
 import { deleteAllCloudProjects, deleteCloudProject, listCloudProjects, renameCloudProject } from "@/lib/cloud/client";
 import type { ProjectMetaV2 } from "@/lib/projects/types";
 import { useOutside } from "@/components/ui";
-import { LoadingState } from "@/components/LoadingState";
 import { editorProjectUrl } from "@/lib/projects/navigation";
 
 function fmtDate(ms: number) {
@@ -75,11 +74,12 @@ function userAvatarUrl(user: { user_metadata?: Record<string, unknown> } | null)
 }
 
 function ProjectCard({
-  project, ownerLabel, ownerAvatar, onOpen, onRename, onDelete,
+  project, ownerLabel, ownerAvatar, opening, onOpen, onRename, onDelete,
 }: {
   project: ProjectMeta;
   ownerLabel: string;
   ownerAvatar: string | null;
+  opening: boolean;
   onOpen: () => void;
   onRename: () => void;
   onDelete: () => void;
@@ -120,14 +120,14 @@ function ProjectCard({
   if (dur) stats.push(dur);
 
   return (
-    <article className={`dash-card ${menu ? "menu-open" : ""}`}>
+    <article className={`dash-card${menu ? " menu-open" : ""}${!info ? " is-preview-loading" : ""}${opening ? " is-opening" : ""}`} aria-busy={!info || opening}>
       <div className="dash-card-cover-wrap">
-        <button type="button" className="dash-card-cover" onClick={onOpen} aria-label={`פתח ${project.name}`}>
+        <button type="button" className="dash-card-cover" onClick={onOpen} disabled={opening} aria-label={`פתח ${project.name}`}>
           {info?.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={info.coverUrl} alt="" />
           ) : (
-            <span className="dash-card-ph"><FolderOpen size={28} strokeWidth={1.4} /></span>
+            <span className={`dash-card-ph${!info ? " skeleton-shimmer" : ""}`}><FolderOpen size={28} strokeWidth={1.4} /></span>
           )}
           <span className="dash-card-cover-shade" aria-hidden />
         </button>
@@ -160,7 +160,7 @@ function ProjectCard({
       </div>
 
       <div className="dash-card-body">
-        <button type="button" className="dash-card-title" onClick={onOpen}>{project.name}</button>
+        <button type="button" className="dash-card-title" onClick={onOpen} disabled={opening}>{project.name}</button>
 
         <div className="dash-card-badges">
           <span className={`dash-badge mode-${meta.dataMode || "cloud"}`}>
@@ -207,8 +207,21 @@ function ProjectCard({
           </div>
         )}
       </div>
+      {opening && <div className="dash-card-opening" role="status" aria-live="polite"><Loader2 className="spin" size={17} /><span>טוענים את הפרויקט…</span></div>}
     </article>
   );
+}
+
+function ProjectCardSkeleton() {
+  return <article className="dash-card dash-card-loading" aria-hidden="true">
+    <div className="dash-card-cover-wrap"><div className="dash-card-cover skeleton-shimmer" /></div>
+    <div className="dash-card-body">
+      <span className="dash-skeleton-line title skeleton-shimmer" />
+      <div className="dash-card-badges"><span className="dash-skeleton-chip skeleton-shimmer" /><span className="dash-skeleton-chip short skeleton-shimmer" /></div>
+      <div className="dash-card-meta-block"><span className="dash-skeleton-line skeleton-shimmer" /><span className="dash-skeleton-line short skeleton-shimmer" /></div>
+      <div className="dash-card-owner"><span className="dash-skeleton-avatar skeleton-shimmer" /><span className="dash-skeleton-line owner skeleton-shimmer" /></div>
+    </div>
+  </article>;
 }
 
 type DialogState =
@@ -222,6 +235,7 @@ export default function DashboardPage() {
   const { configured, loading, user, signOut, signInWithGoogle, error: authError } = useAuth();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dlg, setDlg] = useState<DialogState>({ kind: "none" });
   const [userOpen, setUserOpen] = useState(false);
@@ -289,8 +303,15 @@ export default function DashboardPage() {
   }, []);
 
   const openProject = async (id: string) => {
-    await setCurrentProject(id);
-    window.location.assign(editorProjectUrl(id));
+    if (openingProjectId) return;
+    setOpeningProjectId(id);
+    try {
+      await setCurrentProject(id);
+      window.location.assign(editorProjectUrl(id));
+    } catch (error) {
+      setOpeningProjectId(null);
+      toastFromError("פתיחת הפרויקט נכשלה", error);
+    }
   };
 
   const onCreateWizard = async (result: { name: string; policy: import("@/lib/projects/types").ProjectExecutionPolicy }) => {
@@ -513,7 +534,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {loading || projectsLoading ? <div className="dash-project-loading"><LoadingState label="טוען ומסנכרן את הפרויקטים…" variant="projects" /></div> : projects.length === 0 ? (
+        {loading || projectsLoading ? <section className="dash-project-loading" aria-busy="true" aria-label="טוען ומסנכרן את הפרויקטים">
+          <div className="dash-loading-status" role="status" aria-live="polite"><Loader2 className="spin" size={16} /><span>טוענים ומסנכרנים את הפרויקטים…</span></div>
+          <div className="dash-grid">{[0, 1, 2, 3].map((item) => <ProjectCardSkeleton key={item} />)}</div>
+        </section> : projects.length === 0 ? (
           <div className="dash-empty">
             <FolderOpen size={40} strokeWidth={1.25} />
             <p>אין פרויקטים עדיין.</p>
@@ -529,6 +553,7 @@ export default function DashboardPage() {
                 project={p}
                 ownerLabel={user ? label : ""}
                 ownerAvatar={user ? avatar : null}
+                opening={openingProjectId === p.id}
                 onOpen={() => openProject(p.id)}
                 onRename={() => setDlg({ kind: "rename", id: p.id, name: p.name })}
                 onDelete={() => setDlg({ kind: "delete", id: p.id, name: p.name })}

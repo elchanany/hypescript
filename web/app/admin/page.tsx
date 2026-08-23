@@ -27,6 +27,20 @@ interface UserSummary {
   } | null;
 }
 
+function AdminLoading() {
+  return <div className="admin-dashboard-loading" aria-busy="true">
+    <LoadingState label="טוען ומנתח את נתוני המערכת…" compact />
+    <div className="admin-metrics" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, index) => <article className="skeleton-shimmer" key={index}><span className="admin-metric-skeleton" /></article>)}
+    </div>
+    <div className="admin-grid" aria-hidden="true">
+      <section className="account-card admin-panel-skeleton skeleton-shimmer" />
+      <section className="account-card admin-panel-skeleton skeleton-shimmer" />
+    </div>
+    <section className="account-card admin-users admin-users-skeleton skeleton-shimmer" aria-hidden="true" />
+  </div>;
+}
+
 interface UserDetail extends UserSummary {
   roles: string[];
   isAdmin: boolean;
@@ -227,7 +241,7 @@ export default function AdminPage() {
         {error ? (
           <div className="auth-error">אין הרשאת מנהל. החשבון חייב לקבל תפקיד system_owner או system_admin בטבלת user_roles.</div>
         ) : !data ? (
-          <LoadingState label="טוען ומנתח את נתוני המערכת…" lines={5} />
+          <AdminLoading />
         ) : (
           <>
             <div className="admin-metrics">
@@ -376,7 +390,7 @@ export default function AdminPage() {
             </div>
 
             {loadingUser ? (
-              <div className="admin-modal-loading"><LoadingState label="טוען נתוני משתמש מלאים…" lines={4} /></div>
+              <div className="admin-modal-loading"><LoadingState label="טוען נתוני משתמש מלאים…" /></div>
             ) : userDetail ? (
               <div className="admin-modal-body">
                 {/* Metrics row */}

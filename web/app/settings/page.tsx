@@ -110,8 +110,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {servicesLoading && <LoadingState label="בודק שירותי ענן, אחסון וספקי AI…" lines={3} />}
-
       <div className="card" id="workspace-storage">
         <h2>שמירת פרויקטים</h2>
         <p style={{ color: "var(--text-2)", marginTop: 0 }}>
@@ -133,12 +131,14 @@ export default function SettingsPage() {
       </div>
       <nav className="settings-hub-nav" aria-label="קטגוריות הגדרות"><a href="#appearance">מראה ונגישות</a><a href="#workspace-storage">פרויקטים וענן</a><a href="#providers">AI וספקים</a><Link href="/settings/brand">ערכת מותג</Link><Link href="/account">חשבון, פרטיות וחיוב</Link></nav>
 
-      <div className="card" id="appearance">
+      <div className={`card service-status-card${servicesLoading ? " is-loading" : ""}`} id="appearance" aria-busy={servicesLoading}>
         <h2>ענן ורינדור</h2>
         <p style={{ color: "var(--text-2)" }}>
           פרויקטים ונכסים פרטיים ב־Supabase + Cloudflare R2, ורינדור FFmpeg ב־Google Cloud Run. המפתחות נשארים בצד השרת בלבד.
         </p>
-        {!cloud ? (
+        {servicesLoading ? (
+          <LoadingState label="בודק את שירותי הענן והרינדור…" compact />
+        ) : !cloud ? (
           <div className="hint">בדיקת הענן אינה זמינה כרגע.</div>
         ) : (
           <div className="controls">
@@ -174,14 +174,14 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card" id="providers">
+      <div className={`card service-status-card${servicesLoading ? " is-loading" : ""}`} id="providers" aria-busy={servicesLoading}>
         <h2>AI ותמלול מנוהלים</h2>
         <p style={{ color: "var(--text-2)", marginTop: 0 }}>למשתמש רגיל אין שום מפתח להגדיר ושום מודל לבחור. Hypescript משתמש במפתחות השרת ומחליף ספק אוטומטית במקרה תקלה.</p>
-        <div className="managed-provider-summary">
+        {servicesLoading ? <LoadingState label="בודק את שירותי ה־AI והתמלול…" compact /> : <div className="managed-provider-summary">
           <div><strong>תמלול ראשי</strong><span>ElevenLabs Scribe — חותמות מילה, דוברים ואירועי שמע.</span><Status status={statusById["elevenlabs-transcribe"]} /></div>
           <div><strong>גיבוי תמלול</strong><span>Groq Whisper — מופעל רק כש־ElevenLabs אינו זמין; תוצג אזהרת איכות מופחתת.</span><Status status={statusById["groq-transcribe"]} /></div>
           <div><strong>עריכה חכמה</strong><span>ספק מנוהל וזמין נבחר בשרת. שם הספק והמודל אינם חלק מחוויית המשתמש.</span></div>
-        </div>
+        </div>}
         <div className="hint" style={{ marginTop: 12 }}>מנויי Pro יכולים לעבור ל־BYOK ולהזין מפתחות מוצפנים מתוך הגדרות ה־AI הקטנות בצ׳אט. רק אז מוצגת בחירת ספק.</div>
       </div>
       </div>
