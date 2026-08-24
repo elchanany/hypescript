@@ -48,7 +48,8 @@
     ".next-agent-landing-suite/types/**/*.ts",
     ".next-agent-vector-icon/types/**/*.ts",
     ".next-agent-export-fix/types/**/*.ts",
-    ".next-agent-esm-ffmpeg-fix/types/**/*.ts"
+    ".next-agent-esm-ffmpeg-fix/types/**/*.ts",
+    ".next-agent-detached-buffer-fix/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

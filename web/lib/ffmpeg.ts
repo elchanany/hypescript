@@ -92,13 +92,37 @@ function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 
+/**
+ * כתיבה בטוחה ל-FFmpeg: מקצה תמיד ArrayBuffer חדש ומבודד.
+ * מונע שגיאת "An ArrayBuffer is detached and could not be cloned" שמתרחשת
+ * כאשר @ffmpeg/ffmpeg מבצע transfer של buffer שמועבר ביותר מקריאה אחת (כגון כתוביות משוכפלות).
+ */
+async function writeFsFile(ff: FFmpeg, name: string, data: any): Promise<void> {
+  if (typeof data === "string") {
+    await ff.writeFile(name, data);
+    return;
+  }
+  let raw: Uint8Array;
+  if (data instanceof Uint8Array) {
+    raw = data;
+  } else if (data instanceof Blob || data instanceof File) {
+    raw = new Uint8Array(await data.arrayBuffer());
+  } else {
+    const fetched = await fetchFile(data);
+    raw = fetched instanceof Uint8Array ? fetched : new Uint8Array(fetched);
+  }
+  const copy = new Uint8Array(raw.byteLength);
+  copy.set(raw);
+  await ff.writeFile(name, copy);
+}
+
 // מחלץ אודיו mono דחוס לתמלול. מחזיר Blob קטן.
 export async function extractAudio(file: File, onProgress?: (r: number) => void): Promise<Blob> {
   return runExclusive(async () => {
     const ff = await getFFmpeg();
     const input = `in_${uid()}.${extOf(file.name)}`;
     const out = `au_${uid()}.mp3`;
-    await ff.writeFile(input, await fetchFile(file));
+    await writeFsFile(ff, input, file);
     if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
     await ff.exec(["-i", input, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", out]);
     const data = (await ff.readFile(out)) as Uint8Array;
@@ -119,7 +143,7 @@ export async function extractAudioSegment(
     const ff = await getFFmpeg();
     const input = `in_${uid()}.${extOf(file.name)}`;
     const out = `au_${uid()}.mp3`;
-    await ff.writeFile(input, await fetchFile(file));
+    await writeFsFile(ff, input, file);
     if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
     const ss = Math.max(0, startSec);
     const t = Math.max(0.1, durationSec);
@@ -168,7 +192,7 @@ export async function extractAudioChunks(
   return runExclusive(async () => {
     const ff = await getFFmpeg();
     const inputAudio = `full_au_${uid()}.mp3`;
-    await ff.writeFile(inputAudio, new Uint8Array(await fullAudioBlob.arrayBuffer()));
+    await writeFsFile(ff, inputAudio, fullAudioBlob);
 
     const out: { blob: Blob; offset: number }[] = [];
     const step = offsets.length > 1 ? offsets[1] - offsets[0] : chunkSec;
@@ -230,7 +254,7 @@ export async function extractAssembledAudio(
       if (existing != null) return existing;
       const fn = `asm_${written.size}.${extOf(asset.file.name)}`;
       const source = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
-      await ff.writeFile(fn, await fetchFile(source));
+      await writeFsFile(ff, fn, source);
       const idx = nextInput++;
       inputArgs.push("-i", fn);
       written.set(asset.id, fn);
@@ -289,7 +313,7 @@ export async function extractFrame(file: File, atSeconds: number): Promise<Blob>
     const ff = await getFFmpeg();
     const input = `fi_${uid()}.${extOf(file.name)}`;
     const out = `fo_${uid()}.png`;
-    await ff.writeFile(input, await fetchFile(file));
+    await writeFsFile(ff, input, file);
     await ff.exec(["-ss", Math.max(0, atSeconds).toFixed(3), "-i", input, "-frames:v", "1", "-q:v", "3", out]);
     const data = (await ff.readFile(out)) as Uint8Array;
     await ff.deleteFile(out).catch(() => {});
@@ -345,7 +369,7 @@ export async function renderEDL(
     for (const wsr of graph.writes) {
       const mat = matByFile.get(wsr.filename);
       if (mat?.bytes) {
-        await ff.writeFile(wsr.filename, mat.bytes);
+        await writeFsFile(ff, wsr.filename, mat.bytes);
       } else {
         const assetId = mat?.assetId || wsr.assetId;
         const asset = mediaById(media, assetId);
@@ -359,7 +383,7 @@ export async function renderEDL(
             console.warn("Could not fetch cloud asset download url for local render:", err);
           }
         }
-        await ff.writeFile(wsr.filename, await fetchFile(source));
+        await writeFsFile(ff, wsr.filename, source);
       }
     }
 

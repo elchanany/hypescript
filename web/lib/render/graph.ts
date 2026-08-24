@@ -91,6 +91,8 @@ export function buildConcatGraph(
   let ic = 0;
 
   const writeOnce = (asset: MediaAsset) => {
+    const existing = writes.find((w) => w.assetId === asset.id);
+    if (existing) return existing.filename;
     const fn = `m${writes.length}.${ext(asset.file?.name)}`;
     writes.push({ assetId: asset.id, filename: fn });
     return fn;
@@ -147,8 +149,13 @@ export function buildConcatGraph(
     if (isGapClip(c)) { audioAt += duration; continue; }
     const asset = mediaById(media, c.sourceId);
     if (!asset || (asset.kind !== "audio" && asset.kind !== "video")) { audioAt += duration; continue; }
-    const fn = writeOnce(asset);
-    const idx = ic++; inputArgs.push("-i", fn);
+    let idx = videoInputIdx.get(asset.id);
+    if (idx === undefined) {
+      const fn = writeOnce(asset);
+      idx = ic++;
+      inputArgs.push("-i", fn);
+      videoInputIdx.set(asset.id, idx);
+    }
     const { fadeIn, fadeOut } = clipAudioFades(c);
     const delayMs = Math.max(0, Math.round(audioAt * 1000));
     const label = `ax${extraAudioLabels.length}`;
