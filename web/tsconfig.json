@@ -46,7 +46,9 @@
     ".next-agent-landing-layers-polish/types/**/*.ts",
     ".next-agent-hero-brand-card/types/**/*.ts",
     ".next-agent-landing-suite/types/**/*.ts",
-    ".next-agent-vector-icon/types/**/*.ts"
+    ".next-agent-vector-icon/types/**/*.ts",
+    ".next-agent-export-fix/types/**/*.ts",
+    ".next-agent-esm-ffmpeg-fix/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

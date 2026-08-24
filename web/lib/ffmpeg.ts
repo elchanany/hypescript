@@ -44,12 +44,25 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
+const ffLogBuffer: string[] = [];
+function pushLog(msg: string) {
+  if (ffLogBuffer.length > 50) ffLogBuffer.shift();
+  ffLogBuffer.push(msg);
+}
+
+export function recentFFmpegLogs(): string[] {
+  return [...ffLogBuffer];
+}
+
 export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
   if (ffmpeg && (ffmpeg as any).loaded) return ffmpeg;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     const inst = new FFmpeg();
-    if (onLog) inst.on("log", ({ message }) => onLog(message));
+    inst.on("log", ({ message }) => {
+      pushLog(message);
+      if (onLog) onLog(message);
+    });
     // ליבה חד-תהליכית — יציבה. עם timeout כדי שלא ייתקע לנצח אם הטעינה נכשלת.
     await withTimeout(
       inst.load({
@@ -356,7 +369,11 @@ export async function renderEDL(
     if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
 
     try {
-      await ff.exec(toExecArgs(graph, "out.mp4"));
+      const ret = await ff.exec(toExecArgs(graph, "out.mp4"));
+      if (ret !== 0) {
+        const tail = recentFFmpegLogs().slice(-8).join("\n");
+        throw new Error(`רינדור הווידאו המקומי נכשל (קוד ${ret})${tail ? `:\n${tail}` : "."}`);
+      }
       const data = (await ff.readFile("out.mp4")) as Uint8Array;
       await ff.deleteFile("out.mp4").catch(() => {});
       return new Blob([data as unknown as BlobPart], { type: "video/mp4" });

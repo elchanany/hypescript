@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const source = join(root, "node_modules", "@ffmpeg", "core", "dist", "umd");
+const source = join(root, "node_modules", "@ffmpeg", "core", "dist", "esm");
 const target = join(root, "public", "ffmpeg");
 
 await mkdir(target, { recursive: true });
