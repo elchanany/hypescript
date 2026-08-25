@@ -1,3 +1,5 @@
+import type { CloudClipRequest, CloudOverlayRequest } from "@/lib/render/cloudPlan";
+
 export interface CloudUploadResult {
   assetId: string;
   objectKey: string;
@@ -97,9 +99,9 @@ export async function uploadCloudAsset(projectId: string, file: File, onProgress
 
 export async function renderCloudProject(input: {
   projectId: string;
-  clips: Array<{ assetId?: string; start: number; end: number; gap?: boolean }>;
+  clips: CloudClipRequest[];
   audioClips?: Array<{ assetId: string; start: number; end: number; timelineStart: number; volume?: number; fadeIn?: number; fadeOut?: number }>;
-  overlays?: Array<{ assetId: string; start: number; end: number; x: number; y: number; width: number; height: number; rotation?: number; opacity?: number; fadeIn?: number; fadeOut?: number }>;
+  overlays?: CloudOverlayRequest[];
   /** קובץ ASS מוכן לצריבת כתוביות (ראו lib/render/assSubtitles.ts). */
   subtitlesAss?: string;
   target?: { width: number; height: number; fps: number };

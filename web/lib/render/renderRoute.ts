@@ -31,6 +31,8 @@ export interface CloudRouteInput {
   uploadInFlight: boolean;
   /** קיימת שכבת טקסט (העובד יודע לצרוב רק תמונות). */
   hasTextOverlay: boolean;
+  /** העובד הפרוס יודע לקבל שכבות שרוסטרו בדפדפן ל-PNG. */
+  workerRendersTextOverlays: boolean;
   /** המשתמש ביקש כתוביות צרובות ויש כתוביות בפועל. */
   wantsBurnedCaptions: boolean;
   /** העובד שפרוס כרגע מדווח שהוא יודע לצרוב כתוביות. */
@@ -50,7 +52,7 @@ export function decideCloudRoute(input: CloudRouteInput): CloudRouteDecision {
   if (!input.policyAllowsCloud) return { eligible: false, reason: "project_is_local" };
   if (input.uploadInFlight) return { eligible: false, reason: "media_still_uploading" };
   if (!input.allMediaInCloud) return { eligible: false, reason: "media_not_in_cloud" };
-  if (input.hasTextOverlay) return { eligible: false, reason: "text_overlay_unsupported" };
+  if (input.hasTextOverlay && !input.workerRendersTextOverlays) return { eligible: false, reason: "text_overlay_unsupported" };
   if (input.wantsBurnedCaptions && !input.workerBurnsCaptions) {
     return { eligible: false, reason: "captions_unsupported" };
   }

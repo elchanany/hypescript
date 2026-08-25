@@ -71,7 +71,13 @@ export function appendOverlayBurns(graph: RenderGraph, specs: OverlayBurnSpec[],
       writes.push({ assetId: `__ov_${i}`, filename: fn });
     }
     const idx = ic++;
-    inputArgs.push("-loop", "1", "-t", loopT.toFixed(3), "-i", fn);
+    // Keep only the overlay's active frames in WASM memory. The old code looped
+    // every still for the entire movie (N overlays × full duration), which
+    // exhausted browser memory on otherwise modest exports.
+    const activeStart = Math.max(0, o.start);
+    const activeEnd = Math.min(loopT, Math.max(activeStart + 0.1, o.end));
+    const activeDuration = Math.max(0.1, activeEnd - activeStart);
+    inputArgs.push("-loop", "1", "-t", activeDuration.toFixed(3), "-i", fn);
 
     const w = Math.max(2, Math.round(o.w));
     const h = Math.max(2, Math.round(o.h));
@@ -84,12 +90,13 @@ export function appendOverlayBurns(graph: RenderGraph, specs: OverlayBurnSpec[],
     let prep = `[${idx}:v]scale=${w}:${h}:flags=bicubic,format=rgba,colorchannelmixer=aa=${op}`;
     const fadeIn = Math.max(0, o.fadeIn || 0);
     const fadeOut = Math.max(0, o.fadeOut || 0);
-    if (fadeIn > 0) prep += `,fade=t=in:st=${s}:d=${fadeIn.toFixed(3)}:alpha=1`;
-    if (fadeOut > 0) prep += `,fade=t=out:st=${Math.max(o.start, o.end - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}:alpha=1`;
+    if (fadeIn > 0) prep += `,fade=t=in:st=0:d=${fadeIn.toFixed(3)}:alpha=1`;
+    if (fadeOut > 0) prep += `,fade=t=out:st=${Math.max(0, activeDuration - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}:alpha=1`;
     if (Math.abs(o.rotation) > 0.01) {
       const rad = (o.rotation * Math.PI) / 180;
       prep += `,rotate=${rad.toFixed(6)}:c=none:ow=rotw(iw):oh=roth(ih)`;
     }
+    prep += `,setpts=PTS-STARTPTS+${activeStart.toFixed(3)}/TB`;
     prep += `[ov${i}]`;
     parts.push(prep);
 

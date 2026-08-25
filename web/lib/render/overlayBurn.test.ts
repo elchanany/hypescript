@@ -37,11 +37,12 @@ describe("overlay burn-in (post-concat)", () => {
     const g = appendOverlayBurns(base, [{
       filename: "logo.png", start: 1, end: 3, x: 100, y: 200, w: 80, h: 40, rotation: 15, opacity: 0.5,
     }], 4);
-    expect(g.inputArgs.join(" ")).toContain("-loop 1 -t 4.000 -i logo.png");
+    expect(g.inputArgs.join(" ")).toContain("-loop 1 -t 2.000 -i logo.png");
     expect(g.filterComplex).toContain("enable='between(t\\,1.000\\,3.000)'");
     expect(g.filterComplex).toContain("x='100.00-w/2'");
     expect(g.filterComplex).toContain("y='200.00-h/2'");
     expect(g.filterComplex).toContain("colorchannelmixer=aa=0.500");
+    expect(g.filterComplex).toContain("setpts=PTS-STARTPTS+1.000/TB");
     expect(g.filterComplex).toContain("rotate=");
   });
 
@@ -50,8 +51,9 @@ describe("overlay burn-in (post-concat)", () => {
       filename: "card.png", start: 0.5, end: 3, x: 300, y: 200, w: 500, h: 180,
       rotation: 0, opacity: 1, fadeIn: 0.25, fadeOut: 0.4,
     }], 4);
-    expect(g.filterComplex).toContain("fade=t=in:st=0.500:d=0.250:alpha=1");
-    expect(g.filterComplex).toContain("fade=t=out:st=2.600:d=0.400:alpha=1");
+    expect(g.filterComplex).toContain("fade=t=in:st=0:d=0.250:alpha=1");
+    expect(g.filterComplex).toContain("fade=t=out:st=2.100:d=0.400:alpha=1");
+    expect(g.filterComplex).toContain("setpts=PTS-STARTPTS+0.500/TB");
   });
 
   it("projectOverlayToTarget scales canvas → target and skips hidden", () => {

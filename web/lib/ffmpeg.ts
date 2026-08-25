@@ -16,26 +16,15 @@ import { materializeCaptions } from "./render/captionBurn";
 import { Sub } from "./editor/subtitlesEdl";
 import { CaptionStyle } from "./editor/captionStyle";
 import { microSeekAt, type MicroEdl } from "./render/timelineFrame";
+import { materializeSource } from "./render/mediaSource";
+import { ffmpegRuntimeUrls } from "./render/ffmpegRuntime";
 
 export type { RenderTarget } from "./render/graph";
-
-const CORE_BASE = "/ffmpeg";
 
 let ffmpeg: FFmpeg | null = null;
 let loadPromise: Promise<FFmpeg> | null = null;
 
 export type LogFn = (msg: string) => void;
-
-async function localCoreBlobUrl(name: "ffmpeg-core.js" | "ffmpeg-core.wasm", type: string): Promise<string> {
-  const url = `${CORE_BASE}/${name}`;
-  let response: Response;
-  try { response = await fetch(url, { cache: "force-cache" }); }
-  catch (error: any) {
-    throw new Error(`מנוע הייצוא המקומי לא נטען (${name}): ${error?.message || "בקשת הקובץ נכשלה"}. הפעל מחדש את שרת האפליקציה.`);
-  }
-  if (!response.ok) throw new Error(`מנוע הייצוא המקומי חסר (${name}, HTTP ${response.status}). הרץ npm install והפעל מחדש את האפליקציה.`);
-  return URL.createObjectURL(new Blob([await response.arrayBuffer()], { type }));
-}
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -64,11 +53,9 @@ export async function getFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
       if (onLog) onLog(message);
     });
     // ליבה חד-תהליכית — יציבה. עם timeout כדי שלא ייתקע לנצח אם הטעינה נכשלת.
+    const runtime = ffmpegRuntimeUrls(window.location.origin);
     await withTimeout(
-      inst.load({
-        coreURL: await localCoreBlobUrl("ffmpeg-core.js", "text/javascript"),
-        wasmURL: await localCoreBlobUrl("ffmpeg-core.wasm", "application/wasm"),
-      }),
+      inst.load(runtime),
       90000,
       "טעינת מנוע העיבוד",
     ).catch((e) => { loadPromise = null; throw e; });
@@ -97,20 +84,8 @@ function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
  * מונע שגיאת "An ArrayBuffer is detached and could not be cloned" שמתרחשת
  * כאשר @ffmpeg/ffmpeg מבצע transfer של buffer שמועבר ביותר מקריאה אחת (כגון כתוביות משוכפלות).
  */
-async function writeFsFile(ff: FFmpeg, name: string, data: any): Promise<void> {
-  if (typeof data === "string") {
-    await ff.writeFile(name, data);
-    return;
-  }
-  let raw: Uint8Array;
-  if (data instanceof Uint8Array) {
-    raw = data;
-  } else if (data instanceof Blob || data instanceof File) {
-    raw = new Uint8Array(await data.arrayBuffer());
-  } else {
-    const fetched = await fetchFile(data);
-    raw = fetched instanceof Uint8Array ? fetched : new Uint8Array(fetched);
-  }
+async function writeFsFile(ff: FFmpeg, name: string, data: any, label?: string): Promise<void> {
+  const raw = await materializeSource(data, fetchFile, label || name);
   const copy = new Uint8Array(raw.byteLength);
   copy.set(raw);
   await ff.writeFile(name, copy);
@@ -253,8 +228,15 @@ export async function extractAssembledAudio(
       const existing = inputIndex.get(asset.id);
       if (existing != null) return existing;
       const fn = `asm_${written.size}.${extOf(asset.file.name)}`;
-      const source = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
-      await writeFsFile(ff, fn, source);
+      const { resolveMediaSource } = await import("@/lib/render/mediaSource");
+      const source = await resolveMediaSource({
+        asset,
+        resolveCloudUrl: async (cloudAssetId: string) => {
+          const { getCloudAssetDownloadUrl } = await import("@/lib/cloud/client");
+          return getCloudAssetDownloadUrl(cloudAssetId);
+        },
+      });
+      await writeFsFile(ff, fn, source, asset.name || asset.id);
       const idx = nextInput++;
       inputArgs.push("-i", fn);
       written.set(asset.id, fn);
@@ -366,6 +348,7 @@ export async function renderEDL(
     const matByFile = new Map(allMats.map((m) => [m.spec.filename, m]));
 
     // כותבים כל קובץ-מקור / שכבה בשימוש ל-FS של ffmpeg.
+    const writtenFiles: string[] = [];
     for (const wsr of graph.writes) {
       const mat = matByFile.get(wsr.filename);
       if (mat?.bytes) {
@@ -374,17 +357,17 @@ export async function renderEDL(
         const assetId = mat?.assetId || wsr.assetId;
         const asset = mediaById(media, assetId);
         if (!asset) throw new Error(`חסר מקור לרינדור: ${assetId}`);
-        let source: any = asset.file && asset.file.size > 0 ? asset.file : (asset.url || asset.file);
-        if ((!source || (source instanceof Blob && source.size === 0)) && asset.cloudAssetId) {
-          try {
+        const { resolveMediaSource } = await import("@/lib/render/mediaSource");
+        const source = await resolveMediaSource({
+          asset,
+          resolveCloudUrl: async (cloudAssetId: string) => {
             const { getCloudAssetDownloadUrl } = await import("@/lib/cloud/client");
-            source = await getCloudAssetDownloadUrl(asset.cloudAssetId);
-          } catch (err) {
-            console.warn("Could not fetch cloud asset download url for local render:", err);
-          }
-        }
-        await writeFsFile(ff, wsr.filename, source);
+            return getCloudAssetDownloadUrl(cloudAssetId);
+          },
+        });
+        await writeFsFile(ff, wsr.filename, source, asset.name || assetId);
       }
+      writtenFiles.push(wsr.filename);
     }
 
     // ביטול אמיתי: terminate מפיל את ה-exec הנוכחי -> ה-Promise נדחה.
@@ -406,6 +389,8 @@ export async function renderEDL(
       throw e;
     } finally {
       if (opts.signal && onAbort) opts.signal.removeEventListener("abort", onAbort);
+      // מוחקים את כל קבצי הקלט של הגרף — הצלחה / שגיאה / ביטול.
+      for (const fn of writtenFiles) await ff.deleteFile(fn).catch(() => {});
     }
   });
 }

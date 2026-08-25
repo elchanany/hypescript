@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { spawn } from "node:child_process";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { cloudAudioFilters, cloudVideoFilters, validWorkerLook } from "./render-filters.mjs";
 
 const required = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "CLOUD_RENDER_TOKEN", "CLOUD_RENDER_CALLBACK_SECRET"];
 const missing = required.filter((name) => !process.env[name]);
@@ -22,10 +23,11 @@ app.use(express.json({ limit: "12mb" }));
 const WORKER_CAPABILITIES = Object.freeze({
   subtitles: true,      // צריבת כתוביות מקובץ ASS שנשלח בבקשה
   imageOverlays: true,
-  textOverlays: false,  // עדיין לא — שכבת טקסט מרונדרת בדפדפן
+  textOverlays: true,   // הדפדפן מרסטר טקסט/מסגרת ל-PNG זהה לפני השליחה
   audioMix: true,
 });
 const MAX_SUBTITLES_BYTES = 4 * 1024 * 1024;
+const MAX_INLINE_OVERLAY_BYTES = 6 * 1024 * 1024;
 const active = new Map();
 const s3 = new S3Client({
   region: "auto",
@@ -99,10 +101,19 @@ function validJob(body) {
     if (Buffer.byteLength(body.subtitlesAss, "utf8") > MAX_SUBTITLES_BYTES) return false;
     if (!body.subtitlesAss.includes("[Events]")) return false; // לא ASS — לא נכתוב קובץ אקראי לדיסק
   }
+  let inlineOverlayBytes = 0;
+  for (const overlay of overlays) {
+    if (overlay.inlinePngBase64 == null) continue;
+    if (typeof overlay.inlinePngBase64 !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(overlay.inlinePngBase64)) return false;
+    const png = Buffer.from(overlay.inlinePngBase64, "base64");
+    if (png.length < 8 || png[0] !== 0x89 || png[1] !== 0x50 || png[2] !== 0x4e || png[3] !== 0x47) return false;
+    inlineOverlayBytes += png.length;
+    if (inlineOverlayBytes > MAX_INLINE_OVERLAY_BYTES) return false;
+  }
   return body.inputs.every((input) => typeof input.id === "string" && typeof input.objectKey === "string")
-    && body.clips.every((clip) => (clip.gap === true || ids.has(clip.assetId)) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && clip.start >= 0 && clip.end > clip.start)
+    && body.clips.every((clip) => (clip.gap === true || ids.has(clip.assetId)) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && clip.start >= 0 && clip.end > clip.start && validWorkerLook(clip.look))
     && audio.every((clip) => ids.has(clip.assetId) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && Number.isFinite(clip.timelineStart))
-    && overlays.every((overlay) => ids.has(overlay.assetId) && Number.isFinite(overlay.start) && Number.isFinite(overlay.end));
+    && overlays.every((overlay) => ((typeof overlay.assetId === "string" && ids.has(overlay.assetId)) !== (typeof overlay.inlinePngBase64 === "string")) && Number.isFinite(overlay.start) && Number.isFinite(overlay.end));
 }
 
 async function render(body, controller) {
@@ -112,7 +123,6 @@ async function render(body, controller) {
   try {
     await callback(body.callbackUrl, { jobId: body.jobId, status: "running", progress: 0.01 });
     const inputPaths = new Map();
-    const inputMeta = new Map(body.inputs.map((input) => [input.id, input]));
     for (const [index, input] of body.inputs.entries()) {
       const path = join(work, `input-${index}`);
       const object = await s3.send(new GetObjectCommand({ Bucket: body.bucket, Key: input.objectKey }), { abortSignal: controller.signal });
@@ -120,19 +130,37 @@ async function render(body, controller) {
       inputPaths.set(input.id, path);
       await callback(body.callbackUrl, { jobId: body.jobId, status: "running", progress: 0.01 + 0.03 * ((index + 1) / Math.max(1, body.inputs.length)) });
     }
+    const overlays = Array.isArray(body.overlays) ? body.overlays : [];
+    const inlineInputs = [];
+    const resolvedOverlays = [];
+    for (const [index, overlay] of overlays.entries()) {
+      if (overlay.inlinePngBase64) {
+        const id = `__inline_overlay_${index}`;
+        const path = join(work, `inline-overlay-${index}.png`);
+        await writeFile(path, Buffer.from(overlay.inlinePngBase64, "base64"));
+        const meta = { id, mimeType: "image/png" };
+        inlineInputs.push(meta);
+        inputPaths.set(id, path);
+        resolvedOverlays.push({ ...overlay, sourceId: id });
+      } else {
+        resolvedOverlays.push({ ...overlay, sourceId: overlay.assetId });
+      }
+    }
+    const allInputs = [...body.inputs, ...inlineInputs];
+    const inputMeta = new Map(allInputs.map((input) => [input.id, input]));
 
     const width = Math.max(320, Math.min(3840, Math.floor(body.target?.width || 1920)));
     const height = Math.max(240, Math.min(2160, Math.floor(body.target?.height || 1080)));
     const fps = Math.max(12, Math.min(60, Math.floor(body.target?.fps || 30)));
     const audioPresence = new Map();
-    await Promise.all(body.inputs.map(async (input) => {
+    await Promise.all(allInputs.map(async (input) => {
       if (String(input.mimeType || "").startsWith("image/")) { audioPresence.set(input.id, false); return; }
       audioPresence.set(input.id, await hasAudio(inputPaths.get(input.id), controller.signal));
     }));
 
     const args = ["-hide_banner", "-loglevel", "error"];
     const inputIndex = new Map();
-    for (const [index, input] of body.inputs.entries()) {
+    for (const [index, input] of allInputs.entries()) {
       inputIndex.set(input.id, index);
       if (String(input.mimeType || "").startsWith("image/")) args.push("-loop", "1");
       args.push("-i", inputPaths.get(input.id));
@@ -149,8 +177,8 @@ async function render(body, controller) {
         const source = inputIndex.get(clip.assetId);
         const image = String(inputMeta.get(clip.assetId)?.mimeType || "").startsWith("image/");
         const videoTrim = image ? `trim=duration=${duration.toFixed(6)}` : `trim=start=${clip.start.toFixed(6)}:end=${clip.end.toFixed(6)}`;
-        filters.push(`[${source}:v:0]${videoTrim},setpts=PTS-STARTPTS,fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=end_frame=${frames},setpts=PTS-STARTPTS[v${index}]`);
-        if (audioPresence.get(clip.assetId)) filters.push(`[${source}:a:0]atrim=start=${clip.start.toFixed(6)}:end=${clip.end.toFixed(6)},asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0,aformat=sample_rates=48000:channel_layouts=stereo[a${index}]`);
+        filters.push(`[${source}:v:0]${videoTrim},setpts=PTS-STARTPTS,fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,${cloudVideoFilters(clip, duration)},trim=end_frame=${frames},setpts=PTS-STARTPTS[v${index}]`);
+        if (audioPresence.get(clip.assetId)) filters.push(`[${source}:a:0]atrim=start=${clip.start.toFixed(6)}:end=${clip.end.toFixed(6)},asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0,aformat=sample_rates=48000:channel_layouts=stereo,${cloudAudioFilters(clip, duration)}[a${index}]`);
         else filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000,atrim=duration=${duration.toFixed(6)},asetpts=PTS-STARTPTS[a${index}]`);
       }
       concatLabels.push(`[v${index}][a${index}]`);
@@ -158,9 +186,8 @@ async function render(body, controller) {
     filters.push(`${concatLabels.join("")}concat=n=${body.clips.length}:v=1:a=1[basev][basea]`);
 
     const audioClips = Array.isArray(body.audioClips) ? body.audioClips : [];
-    const overlays = Array.isArray(body.overlays) ? body.overlays : [];
     const audioEnd = audioClips.reduce((max, clip) => Math.max(max, clip.timelineStart + clip.end - clip.start), 0);
-    const overlayEnd = overlays.reduce((max, overlay) => Math.max(max, overlay.end), 0);
+    const overlayEnd = resolvedOverlays.reduce((max, overlay) => Math.max(max, overlay.end), 0);
     const totalDuration = Math.max(renderedSeconds, audioEnd, overlayEnd);
     const extension = Math.max(0, totalDuration - renderedSeconds);
     let videoLabel = "basev";
@@ -188,8 +215,8 @@ async function render(body, controller) {
       audioLabel = "mixa";
     }
 
-    for (const [index, overlay] of overlays.entries()) {
-      const source = inputIndex.get(overlay.assetId);
+    for (const [index, overlay] of resolvedOverlays.entries()) {
+      const source = inputIndex.get(overlay.sourceId);
       const duration = overlay.end - overlay.start;
       const opacity = Math.max(0, Math.min(1, Number(overlay.opacity) || 1));
       const fadeIn = Math.min(duration / 2, Math.max(0, Number(overlay.fadeIn) || 0));

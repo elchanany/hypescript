@@ -9,6 +9,7 @@ const ok: CloudRouteInput = {
   allMediaInCloud: true,
   uploadInFlight: false,
   hasTextOverlay: false,
+  workerRendersTextOverlays: false,
   wantsBurnedCaptions: false,
   workerBurnsCaptions: false,
 };
@@ -23,6 +24,7 @@ describe("decideCloudRoute", () => {
     expect(decideCloudRoute({ ...ok, uploadInFlight: true }).reason).toBe("media_still_uploading");
     expect(decideCloudRoute({ ...ok, allMediaInCloud: false }).reason).toBe("media_not_in_cloud");
     expect(decideCloudRoute({ ...ok, hasTextOverlay: true }).reason).toBe("text_overlay_unsupported");
+    expect(decideCloudRoute({ ...ok, hasTextOverlay: true, workerRendersTextOverlays: true })).toEqual({ eligible: true });
   });
 
   it("puts the blocker the user can fix first", () => {

@@ -6,20 +6,12 @@ import { cloudQuotaError } from "@/lib/cloud/quota";
 import { getSupabaseServiceClient } from "@/lib/auth/server";
 import { getWorkerCapabilities } from "@/lib/cloud/workerCapabilities.server";
 import { reportOwnerError } from "@/lib/errors/report";
+import { parseCloudClips } from "@/lib/render/cloudPlan";
 
-interface ClipInput { assetId?: string; start: number; end: number; gap?: boolean }
 interface AudioInput { assetId: string; start: number; end: number; timelineStart: number; volume: number; fadeIn: number; fadeOut: number }
-interface OverlayInput { assetId: string; start: number; end: number; x: number; y: number; width: number; height: number; rotation: number; opacity: number; fadeIn: number; fadeOut: number }
+interface OverlayInput { assetId?: string; inlinePngBase64?: string; start: number; end: number; x: number; y: number; width: number; height: number; rotation: number; opacity: number; fadeIn: number; fadeOut: number }
 
-function parseClips(value: unknown): ClipInput[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 1000) return null;
-  const clips = value.map((item) => ({
-    assetId: typeof item?.assetId === "string" ? item.assetId : "",
-    start: Number(item?.start), end: Number(item?.end),
-    gap: item?.gap === true,
-  }));
-  return clips.every((clip) => (clip.gap || clip.assetId) && Number.isFinite(clip.start) && Number.isFinite(clip.end) && clip.start >= 0 && clip.end > clip.start) ? clips : null;
-}
+const MAX_INLINE_OVERLAY_BYTES = 6 * 1024 * 1024;
 
 function finite(value: unknown, fallback = 0) { const out = Number(value); return Number.isFinite(out) ? out : fallback; }
 function parseAudio(value: unknown): AudioInput[] | null {
@@ -31,8 +23,33 @@ function parseAudio(value: unknown): AudioInput[] | null {
 function parseOverlays(value: unknown): OverlayInput[] | null {
   if (value == null) return [];
   if (!Array.isArray(value) || value.length > 100) return null;
-  const items = value.map((item) => ({ assetId: typeof item?.assetId === "string" ? item.assetId : "", start: Math.max(0, finite(item?.start)), end: finite(item?.end), x: finite(item?.x), y: finite(item?.y), width: Math.max(8, finite(item?.width, 8)), height: Math.max(8, finite(item?.height, 8)), rotation: finite(item?.rotation), opacity: Math.max(0, Math.min(1, finite(item?.opacity, 1))), fadeIn: Math.max(0, finite(item?.fadeIn)), fadeOut: Math.max(0, finite(item?.fadeOut)) }));
-  return items.every((item) => item.assetId && item.end > item.start) ? items : null;
+  let inlineBytes = 0;
+  const items: OverlayInput[] = [];
+  for (const raw of value) {
+    const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : null;
+    if (!item) return null;
+    const assetId = typeof item.assetId === "string" && item.assetId ? item.assetId : undefined;
+    const inlinePngBase64 = typeof item.inlinePngBase64 === "string" && item.inlinePngBase64 ? item.inlinePngBase64 : undefined;
+    if (!!assetId === !!inlinePngBase64) return null;
+    if (inlinePngBase64) {
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(inlinePngBase64)) return null;
+      const png = Buffer.from(inlinePngBase64, "base64");
+      if (png.length < 8 || png[0] !== 0x89 || png[1] !== 0x50 || png[2] !== 0x4e || png[3] !== 0x47) return null;
+      inlineBytes += png.length;
+      if (inlineBytes > MAX_INLINE_OVERLAY_BYTES) return null;
+    }
+    const parsed: OverlayInput = {
+      ...(assetId ? { assetId } : { inlinePngBase64 }),
+      start: Math.max(0, finite(item.start)), end: finite(item.end),
+      x: finite(item.x), y: finite(item.y),
+      width: Math.max(8, finite(item.width, 8)), height: Math.max(8, finite(item.height, 8)),
+      rotation: finite(item.rotation), opacity: Math.max(0, Math.min(1, finite(item.opacity, 1))),
+      fadeIn: Math.max(0, finite(item.fadeIn)), fadeOut: Math.max(0, finite(item.fadeOut)),
+    };
+    if (parsed.end <= parsed.start) return null;
+    items.push(parsed);
+  }
+  return items;
 }
 
 export async function POST(request: Request) {
@@ -46,7 +63,7 @@ export async function POST(request: Request) {
   }
   const body = await request.json().catch(() => ({}));
   const projectId = typeof body.projectId === "string" ? body.projectId : "";
-  const clips = parseClips(body.clips);
+  const clips = parseCloudClips(body.clips);
   const audioClips = parseAudio(body.audioClips);
   const overlays = parseOverlays(body.overlays);
   if (!projectId || !clips || !audioClips || !overlays) return NextResponse.json({ error: "invalid_render_plan" }, { status: 400 });
@@ -67,7 +84,7 @@ export async function POST(request: Request) {
   const project = await auth.supabase.from("cloud_projects").select("id").eq("id", projectId).single();
   if (project.error || !project.data) return NextResponse.json({ error: "project_not_found" }, { status: 404 });
 
-  const assetIds = [...new Set([...clips.flatMap((clip) => clip.assetId ? [clip.assetId] : []), ...audioClips.map((clip) => clip.assetId), ...overlays.map((overlay) => overlay.assetId)])];
+  const assetIds = [...new Set([...clips.flatMap((clip) => clip.assetId ? [clip.assetId] : []), ...audioClips.map((clip) => clip.assetId), ...overlays.flatMap((overlay) => overlay.assetId ? [overlay.assetId] : [])])];
   const assets = await auth.supabase.from("cloud_assets").select("id, object_key, mime_type, original_name").in("id", assetIds).eq("state", "available");
   if (assets.error || !assets.data || assets.data.length !== assetIds.length) return NextResponse.json({ error: "render_asset_unavailable" }, { status: 409 });
   const assetMap = new Map(assets.data.map((asset) => [asset.id, asset]));

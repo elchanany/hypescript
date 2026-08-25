@@ -20,6 +20,8 @@ import { listRunnableCommands } from "@/lib/editor/commandSurface";
 import { applyTrackMute, clipTrackId, clipsOnTrack, flattenVideoTracks, projectDuration, replaceTrackClips } from "@/lib/editor/tracks";
 import { cloudFailureReason, decideCloudRoute, renderRouteMessage, type CloudSkipReason, type RenderLocation } from "@/lib/render/renderRoute";
 import { buildAssFile } from "@/lib/render/assSubtitles";
+import { cloudClipFromEditor, cloudOverlayFromMaterialized } from "@/lib/render/cloudPlan";
+import { materializeOverlays } from "@/lib/render/materializeOverlays";
 import { Overlay, TitlePopupPreset, nextZ } from "@/lib/editor/overlay";
 import { TEXT_PRESETS, type TextPreset } from "@/lib/creative/textPresets";
 import type { GiphyAssetItem } from "@/lib/creative/giphy";
@@ -320,6 +322,7 @@ export default function EditorPage() {
   // איפה הרינדור רץ בפועל, ולמה. חלון הייצוא קורא מכאן במקום להניח "ענן".
   const [renderLocation, setRenderLocation] = useState<RenderLocation>("cloud");
   const [renderSkipReason, setRenderSkipReason] = useState<CloudSkipReason | undefined>(undefined);
+  const [cloudFailed, setCloudFailed] = useState(false);
   // ref במקביל ל-state: ההודעה בסוף הייצוא נקראת בתוך אותה פונקציה שקבעה את
   // המיקום, לפני שה-state הספיק להתעדכן.
   const renderLocationRef = useRef<RenderLocation>("cloud");
@@ -1318,7 +1321,7 @@ export default function EditorPage() {
     const controller = new AbortController();
     renderAbortRef.current = controller;
     renderStartedAtRef.current = Date.now();
-    setExportResult(null); setExportError(""); setExportOpen(true); setRenderElapsed(0);
+    setExportResult(null); setExportError(""); setExportOpen(true); setRenderElapsed(0); setCloudFailed(false);
     setError(""); setRendering(true); setProgress(0);
     try {
       // ההשתקה היא תכונה של הרצועה ונפתרת לכל קליפ (applyTrackMute) — לא כמכפיל
@@ -1346,6 +1349,7 @@ export default function EditorPage() {
             .every((overlay) => !!mediaById(media, overlay.assetId || "")?.cloudAssetId),
         uploadInFlight: uploadingAssetsRef.current.size > 0,
         hasTextOverlay: overlays.some((overlay) => overlay.kind !== "image"),
+        workerRendersTextOverlays: workerCaps.textOverlays,
         wantsBurnedCaptions: !!(burnCaptions && subs?.length),
         workerBurnsCaptions: workerCaps.subtitles,
       });
@@ -1356,11 +1360,24 @@ export default function EditorPage() {
       if (!forceLocal && route.eligible && policy?.cloudProjectId) {
         try {
           setPhase("מכין את הסרטון בשרת המהיר…");
+          // טקסט ופינות מעוגלות מרוסטרים פעם אחת בדפדפן ל-PNG קטן. כך השרת
+          // המהיר מקבל בדיוק את אותה שכבה שה-WASM היה צורב, בלי לוותר על
+          // טקסט/מסגרות ובלי להעלות את הווידאו מחדש.
+          const cloudOverlayMats = overlays.length
+            ? await materializeOverlays(overlays, media, canvas, { w: canvas.width, h: canvas.height, fps: policy.fps })
+            : [];
+          const cloudOverlays = cloudOverlayMats.map((item) => cloudOverlayFromMaterialized(
+            item,
+            item.assetId ? mediaById(media, item.assetId)?.cloudAssetId : undefined,
+          ));
           blob = await renderCloudProject({
             projectId: policy.cloudProjectId,
-            clips: edl.map((clip) => isGapClip(clip)
-              ? ({ gap: true, start: 0, end: clip.end - clip.start })
-              : ({ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end })),
+            // שומרים במסלול המהיר את אותה תמונת קליפ שה-WASM מרנדר:
+            // לוק/פילטר, opacity, flip, fades, volume ותיקוני צבע.
+            clips: edl.map((clip) => cloudClipFromEditor(
+              clip,
+              isGapClip(clip) ? undefined : mediaById(media, clip.sourceId)!.cloudAssetId!,
+            )),
             audioClips: (() => { let timelineStart = 0; return audioClips.flatMap((clip) => {
               const duration = clip.end - clip.start;
               const startAt = timelineStart;
@@ -1369,11 +1386,7 @@ export default function EditorPage() {
               const fades = clipAudioFades(clip);
               return [{ assetId: mediaById(media, clip.sourceId)!.cloudAssetId!, start: clip.start, end: clip.end, timelineStart: startAt, volume: clipVolume(clip), ...fades }];
             }); })(),
-            overlays: [...overlays].sort((a, b) => a.zIndex - b.zIndex).map((overlay) => ({
-              assetId: mediaById(media, overlay.assetId || "")!.cloudAssetId!, start: overlay.start, end: overlay.end,
-              x: overlay.transform.x, y: overlay.transform.y, width: overlay.transform.w, height: overlay.transform.h,
-              rotation: overlay.transform.rotation, opacity: overlay.transform.opacity, fadeIn: overlay.fadeIn, fadeOut: overlay.fadeOut,
-            })),
+            overlays: cloudOverlays,
             ...(burnCaptions && subs?.length
               ? { subtitlesAss: buildAssFile(subs, captionStyle, { width: canvas.width, height: canvas.height }) }
               : {}),
@@ -1381,13 +1394,22 @@ export default function EditorPage() {
           }, (r) => { setPhase("מעבד את הסרטון…"); setProgress(r); }, controller.signal);
         } catch (cloudErr) {
           if (controller.signal.aborted) throw cloudErr;
-          // נפילה חזרה למכשיר מותרת — אבל אסור שהיא תישאר שקטה. המשתמש חייב
-          // לדעת שהמחשב שלו עובד עכשיו, ולמה.
-          console.warn("Cloud render unavailable, falling back to local render:", cloudErr);
+          // Cloud failed — mark it so the UI can offer retry-local
+          setCloudFailed(true);
+          const cloudMsg = cloudErr instanceof Error ? cloudErr.message : String(cloudErr);
+          let friendlyCloud: string;
+          if (looksLikeErrorCode(cloudMsg)) {
+            const ex = explainError(cloudMsg);
+            friendlyCloud = [ex.title, ex.detail].filter(Boolean).join(" — ");
+          } else {
+            friendlyCloud = cloudMsg || "החיבור לענן נכשל.";
+          }
+          setExportError(`הייצוא בענן נכשל: ${friendlyCloud}. ניתן לנסות רינדור מקומי.`);
           renderLocationRef.current = "device";
           setRenderLocation("device");
           setRenderSkipReason(cloudFailureReason(cloudErr));
-          blob = null;
+          // Return so local WASM does not run — user must explicitly retry-local
+          return;
         }
       }
 
@@ -1878,7 +1900,7 @@ export default function EditorPage() {
         onClose={() => setExportOpen(false)}
         onCancel={() => renderAbortRef.current?.abort()}
         onRetry={() => void render(false)}
-        onRetryLocal={() => void render(true)}
+        onRetryLocal={cloudFailed ? () => void render(true) : undefined}
       />
 
       {/* ChatGPT-Style Centered Conversation Mode */}
