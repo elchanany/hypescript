@@ -7,6 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY server.mjs ./
+COPY render-filters.mjs ./
 ENV NODE_ENV=production PORT=8080
 USER node
 CMD ["npm", "start"]
