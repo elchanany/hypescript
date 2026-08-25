@@ -61,7 +61,7 @@ gcloud run services update-traffic hypescript-render --region me-west1 --to-revi
 `/health` מחזיר בפועל:
 
 ```json
-{"ok":true,"activeJobs":0,"capabilities":{"subtitles":true,"imageOverlays":true,"textOverlays":false,"audioMix":true}}
+{"ok":true,"activeJobs":0,"capabilities":{"subtitles":true,"imageOverlays":true,"textOverlays":true,"audioMix":true}}
 ```
 
 **מה עדיין לא נבדק**: אותיות עבריות על ה-image הפרוס. הגופנים ב-Dockerfile
@@ -80,11 +80,18 @@ curl -s -H "Authorization: Bearer $CLOUD_RENDER_TOKEN" "$CLOUD_RENDER_URL/health
 
 ## מה עוד חוסם ייצוא בענן
 
-- **שכבת טקסט** — העובד יודע לצרוב תמונות בלבד. השלב הזול הבא הוא לרנדר שכבת
-  טקסט ל-PNG בדפדפן ולהעלות אותה כנכס, כי מסלול התמונות כבר עובד.
+- **שכבת טקסט** — revision `hypescript-render-00007-vfk` מקבל שכבת טקסט או
+  תמונה מעוגלת שרוסטרו בדפדפן ל-PNG מוגבל, ומדווח `textOverlays:true`.
 - **העלאה שרצה ברקע** — כבר לא מוריד בשקט לרינדור מקומי; ההודעה אומרת להמתין
   לסיום ההעלאה, שזו פעולה שהמשתמש יכול לעשות.
 - **קיבולת** — נמדד בשירות הפרוס, לא הונח: `containerConcurrency: 1` ביחד עם
-  `autoscaling.knative.dev/maxScale: '1'`. כלומר **רינדור אחד בו-זמנית בכל
-  המערכת**, לא שלושה. משתמש שני ממתין בתור עד שהראשון סיים. מספיק כל עוד יש
-  משתמש אחד, תקרה קשיחה ברגע שיש לקוחות משלמים.
+  `autoscaling.knative.dev/maxScale: '3'`. כל instance מרנדר עבודה אחת, ועד
+  שלושה instances יכולים לעלות במקביל.
+
+## 2026-08-26 — rollout מאומת
+
+- Cloud Run: `hypescript-render-00007-vfk`,‏ 100% traffic, כל ארבע היכולות true.
+- Vercel: `dpl_F4Qd9GHmDdu7oDXSrRE2QcNJhNqy`,‏ Ready, alias חי.
+- כל קובצי ה-worker/core/WASM מחזירים 200.
+- עורך אורח חי ייצא קליפ סינתטי של 2 שניות ל-MP4 תקין 1280×720 עם קישור הורדה וללא שגיאות console.
+- עדיין לא נבדקה התאמה חזותית של פרויקט משתמש חתום מול Preview.

@@ -1,6 +1,13 @@
 # Goal
 Ship the cloud SaaS path with an honest marketing landing page, card-backed Lemon Squeezy trial, hard server-side quotas and clear upgrade UX, while preserving the verified editor/render pipeline.
 
+## 2026-08-26 — export reliability release deployed
+- Focused release branch: `codex/export-reliability-release-20260826`; code commits `5d633f4` and `7245504`.
+- Cloud Run `hypescript-render-00007-vfk` is Ready at 100% traffic. Health reports subtitles, image overlays, text overlays and audio mix; concurrency is 1, max instances is 3, and unauthenticated jobs return 401.
+- Vercel `dpl_F4Qd9GHmDdu7oDXSrRE2QcNJhNqy` is Ready and aliased to `https://hypescript.vercel.app`. Worker/core/WASM files all return 200.
+- Live guest production smoke: a generated 2-second clip exported through WASM to a playable 1280×720 MP4 (`readyState=4`) with a download link and no console errors. The former `Cannot find module 'blob:…'` failure is fixed live.
+- The user's signed-in Chrome tab was unavailable to Codex. Hard-refresh and exact-project cloud visual parity remain the acceptance step. This branch is deployed but not merged to `main`.
+
 ## 2026-08-23 — motion-rich landing and provider story
 - Desktop, tablet and phone demos now visibly move through request, editing and completed-result phases instead of showing a static mockup.
 - The AI provider constellation cycles across ElevenLabs, OpenAI, Gemini, DeepSeek, Anthropic and Groq, then routes to a 9:16 deliverable and recognizable social destinations.

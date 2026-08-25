@@ -1,5 +1,12 @@
 # ACTIVE_WORK.md
 
+## 2026-08-26 — export reliability + fast cloud parity deployed
+- Same-origin ESM worker/core/WASM removes the bundled runtime `import(blobURL)` failure and avoids copying the 32MB core to a Blob.
+- Cloud structured clip filters, text/rounded-image PNG overlays, captions and audio mix are live on worker revision `hypescript-render-00007-vfk` at 100% traffic.
+- Vercel production `dpl_F4Qd9GHmDdu7oDXSrRE2QcNJhNqy` serves all five `/ffmpeg/*` assets with 200 responses.
+- Production guest E2E created a real 2.000s, 1280×720 MP4 with a download link and no console errors. Exact signed-in project parity remains unverified because the Chrome session was not connected to Codex.
+- Release branch commits: `5d633f4`, `7245504`; not merged to `main`.
+
 ## 2026-08-24 — Export Pipeline Fix & Local WASM Export Option (Pro & Fallback)
 - **Resolved Export Pipeline Failure**:
   - **Asset Source Resolution**: In `web/lib/ffmpeg.ts` (`renderEDL`), added automatic resolution for cloud media (`cloudAssetId`) to fetch signed download URLs when local `File` blobs are empty (e.g. hydrated cloud projects on another device).

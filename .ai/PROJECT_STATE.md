@@ -39,7 +39,7 @@
 - Auth/Dashboard/Supabase — תשתית הענן והמיגרציות פעילות; עדיין נדרש E2E חי של Google login, checkout ב-Test Mode ו-webhook חתום לפני טענת מוכנות מסחרית.
 - Provider policies / health-check / Zero-cost — חלקיים.
 - intro/outro + preview לפני הורדה ב-web — מתוכננים ל-v0.2.0.
-- רינדור ffmpeg.wasm איטי מקבצים כבדים (לכן קיים `local/`).
+- רינדור ffmpeg.wasm איטי מקבצים כבדים (לכן קיים `local/` והמסלול הענני); תיקון ה-worker הסטטי ופאריטי הענן נפרסו ב-2026-08-26, ו-MP4 אמיתי נוצר ב-production. E2E חזותי של פרויקט משתמש חתום עדיין פתוח.
 - הווידאו לא עוזב את המחשב; רק אודיו דחוס לתמלול.
 
 ## ארכיטקטורה יציבה
