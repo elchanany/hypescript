@@ -16,8 +16,10 @@ import Filmstrip from "@/components/Filmstrip";
 import Waveform from "@/components/Waveform";
 import StillStrip from "@/components/StillStrip";
 
-/** Magnet radius on screen. The spec calls for 6–10px; 10 keeps it findable without stickiness. */
-const SNAP_PIXELS = 10;
+/** Magnet radius on screen. CapCut-style: slightly generous so cross-track image/overlay edges are easy to catch. */
+const SNAP_PIXELS = 12;
+
+const nearTime = (a: number, b: number, eps = 0.02) => Math.abs(a - b) <= eps;
 
 /**
  * רוחב אלמנט בפיקסלים *ויזואליים* — אותה יחידה שבה מגיעים e.clientX ו-
@@ -155,6 +157,10 @@ export default function Timeline(p: Props) {
     targetTrackId: string;
     targetTrackName?: string;
     snapped: boolean;
+    /** Absolute time of the magnetic edge currently attracting the drag (CapCut-style). */
+    snapTime?: number | null;
+    snapLabel?: string;
+    snapKind?: MagneticTarget["kind"] | null;
     clip?: Clip | null;
     overlay?: Overlay | null;
     sub?: Sub | null;
@@ -323,9 +329,14 @@ export default function Timeline(p: Props) {
       }
     }
     for (const overlay of overlays) {
-      points.push({ time: overlay.start, label: "שכבה · התחלה", kind: "overlay", priority: 5 });
-      points.push({ time: (overlay.start + overlay.end) / 2, label: "שכבה · אמצע", kind: "overlay", priority: 3 });
-      points.push({ time: overlay.end, label: "שכבה · סוף", kind: "overlay", priority: 5 });
+      const asset = overlay.assetId ? mediaById(media, overlay.assetId) : undefined;
+      const overlayName = overlay.kind === "text"
+        ? (overlay.text?.trim() || "טקסט")
+        : ((asset?.name || "").replace(/\.[^.]+$/, "") || (overlay.kind === "image" ? "תמונה" : "שכבה"));
+      // Prefer image/layer edges over midpoints so narration can lock flush above a still (CapCut).
+      points.push({ time: overlay.start, label: `${overlayName} · התחלה`, kind: "overlay", priority: 8 });
+      points.push({ time: (overlay.start + overlay.end) / 2, label: `${overlayName} · אמצע`, kind: "overlay", priority: 3 });
+      points.push({ time: overlay.end, label: `${overlayName} · סוף`, kind: "overlay", priority: 8 });
     }
     for (const cue of (subs || [])) {
       points.push({ time: cue.start, label: "כתובית · התחלה", kind: "caption", priority: 4 });
@@ -333,7 +344,7 @@ export default function Timeline(p: Props) {
       points.push({ time: cue.end, label: "כתובית · סוף", kind: "caption", priority: 4 });
     }
     return points;
-  }, [clips, tracks, overlays, subs, total, currentAssembled]);
+  }, [clips, tracks, overlays, subs, total, currentAssembled, media]);
 
   const snapTol = () => {
     const laneW = visualWidth(laneRef.current) || visualWidth(overlayLaneRef.current) || portW || 800;
@@ -347,16 +358,23 @@ export default function Timeline(p: Props) {
     return snapToMagneticTarget(t, targets, snapTol());
   };
 
+  /** CapCut-style: yellow guide only when magnetically locked; hide otherwise so free drag stays clean. */
   const showSnapGuide = (t: number | null, hint = "", magnetic = true) => {
     const g = snapGuideRef.current;
     if (!g) return;
-    if (t == null) { g.style.display = "none"; return; }
+    if (t == null || !magnetic) { g.style.display = "none"; return; }
     g.style.display = "block";
-    g.classList.toggle("free", !magnetic);
+    g.classList.remove("free");
     const fraction = Math.max(0, Math.min(1, t / visibleTotal));
     g.classList.toggle("near-end", fraction > 0.78);
     g.style.left = `calc(${TIMELINE_GUTTER}px + (100% - ${TIMELINE_GUTTER}px) * ${fraction})`;
     if (snapLabelRef.current) snapLabelRef.current.textContent = hint || formatTimecode(t);
+  };
+
+  const isSnapAligned = (start: number, end?: number) => {
+    const t = activeDrag?.snapTime;
+    if (t == null || !activeDrag?.snapped) return false;
+    return nearTime(start, t) || (end != null && nearTime(end, t));
   };
 
   const ticks = useMemo(() => {
@@ -567,10 +585,10 @@ export default function Timeline(p: Props) {
         d.snapped = rangeHit.snapped;
 
         showSnapGuide(
-          rangeHit.snapped ? rangeHit.target : d.timelineStart,
+          rangeHit.snapped ? rangeHit.target : null,
           rangeHit.snapped && rangeHit.target != null
             ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הכתובית מיושר" : "תחילת הכתובית מיושרת"}`
-            : `${formatTimecode(d.timelineStart)} · Alt לביטול מגנט`,
+            : "",
           rangeHit.snapped,
         );
 
@@ -587,6 +605,9 @@ export default function Timeline(p: Props) {
           dur: d.dur,
           targetTrackId: "caption",
           snapped: rangeHit.snapped,
+          snapTime: rangeHit.snapped ? rangeHit.target : null,
+          snapLabel: rangeHit.match?.label,
+          snapKind: rangeHit.match?.kind ?? null,
           sub: (subs || []).find((s) => s.id === d.id) || null,
           multiCount: d.multiIds?.length,
         });
@@ -621,10 +642,10 @@ export default function Timeline(p: Props) {
         d.snapped = rangeHit.snapped;
 
         showSnapGuide(
-          rangeHit.snapped ? rangeHit.target : d.timelineStart,
+          rangeHit.snapped ? rangeHit.target : null,
           rangeHit.snapped && rangeHit.target != null
             ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"}`
-            : `${formatTimecode(d.timelineStart)} · Alt לביטול מגנט`,
+            : "",
           rangeHit.snapped,
         );
 
@@ -641,6 +662,9 @@ export default function Timeline(p: Props) {
           dur: d.dur,
           targetTrackId: d.targetTrackId,
           snapped: rangeHit.snapped,
+          snapTime: rangeHit.snapped ? rangeHit.target : null,
+          snapLabel: rangeHit.match?.label,
+          snapKind: rangeHit.match?.kind ?? null,
           overlay: overlays.find((o) => o.id === d.id) || null,
           multiCount: d.multiIds?.length,
         });
@@ -685,6 +709,8 @@ export default function Timeline(p: Props) {
       });
 
       if (d.trackType === "audio") {
+        // Audio stays on the audio lane (cannot become a video/overlay clip), but we still
+        // magnetically highlight any overlay/image lane whose edge we locked onto — CapCut style.
         d.targetTrackId = audioId;
         document.querySelector(`[data-track-lane="${audioId}"]`)?.classList.add("magnetic-target");
       } else if (targetLaneId === "__new_track__" || (!hoveredLane && e.clientY > (scrollRef.current?.getBoundingClientRect().bottom || 0) - 70)) {
@@ -707,16 +733,25 @@ export default function Timeline(p: Props) {
       d.timelineStart = Math.max(0, rangeHit.start);
       d.snapped = rangeHit.snapped;
 
+      // When narration/audio locks to an image/layer edge, light up that overlay row too.
+      if (rangeHit.snapped && rangeHit.match?.kind === "overlay" && rangeHit.target != null) {
+        for (const overlay of overlays) {
+          if (nearTime(overlay.start, rangeHit.target) || nearTime(overlay.end, rangeHit.target)) {
+            document.querySelector(`[data-track-lane="${overlay.id}"]`)?.classList.add("magnetic-target");
+          }
+        }
+      }
+
       showSnapGuide(
-        rangeHit.snapped ? rangeHit.target : d.timelineStart,
+        rangeHit.snapped ? rangeHit.target : null,
         rangeHit.snapped && rangeHit.target != null
           ? `${formatTimecode(rangeHit.target)} · ${rangeHit.match?.label || "קצה"} · ${rangeHit.edge === "end" ? "סוף הקטע מיושר" : "תחילת הקטע מיושרת"}`
-          : `${formatTimecode(d.timelineStart)} · Alt לביטול מגנט`,
+          : "",
         rangeHit.snapped,
       );
 
       const trackMeta = p.tracks.find((t) => t.id === d.targetTrackId);
-      const targetTrackName = d.targetTrackId === "__new_track__" ? "שכבה חדשה" : (trackMeta?.name || "וידאו");
+      const targetTrackName = d.targetTrackId === "__new_track__" ? "שכבה חדשה" : (trackMeta?.name || (d.trackType === "audio" ? "אודיו" : "וידאו"));
 
       setActiveDrag({
         kind: "clip",
@@ -732,6 +767,9 @@ export default function Timeline(p: Props) {
         targetTrackId: d.targetTrackId,
         targetTrackName,
         snapped: rangeHit.snapped,
+        snapTime: rangeHit.snapped ? rangeHit.target : null,
+        snapLabel: rangeHit.match?.label,
+        snapKind: rangeHit.match?.kind ?? null,
         clip: clips.find((c) => c.id === d.id) || null,
         multiCount: d.multiIds?.length,
       });
@@ -761,16 +799,16 @@ export default function Timeline(p: Props) {
   const showMediaDropAt = (clientX: number, lane: HTMLElement, bypass = false, mediaDur = 5) => {
     const raw = pointerTime(clientX, lane);
     if (bypass || !snap) {
-      showSnapGuide(raw, `${formatTimecode(raw)} · מיקום חופשי`, false);
+      showSnapGuide(null);
       return raw;
     }
     const hit = snapRangeStart(raw, mediaDur, snapTargets, snapTol());
     const time = hit.snapped ? hit.start : raw;
     showSnapGuide(
-      hit.snapped ? (hit.target ?? time) : time,
+      hit.snapped ? (hit.target ?? time) : null,
       hit.snapped
         ? `${formatTimecode(time)} · ${hit.match?.label || "קצה"} · ${hit.edge === "end" ? "סוף המדיה מיושר" : "תחילת המדיה מיושרת"}`
-        : `${formatTimecode(time)} · מיקום חופשי`,
+        : "",
       hit.snapped,
     );
     return time;
@@ -1105,9 +1143,13 @@ export default function Timeline(p: Props) {
             const asset = mediaById(media, clip.sourceId);
             return isGapClip(clip) || asset?.kind === "video";
           });
+          // Keep leading/internal gaps so free-placed narration stays where it was dropped
+          // (filtering gaps packed every audio clip back to t=0 — the "snap back" bug).
           const realDedicated = dedicatedAudio.filter((c) => !isGapClip(c));
           const audioLayers = track.type === "audio"
-            ? (realDedicated.length ? [{ clips: realDedicated, linked: false }] : (!avLinked && linkedAudio.length ? [{ clips: linkedAudio, linked: true }] : []))
+            ? (realDedicated.length
+              ? [{ clips: dedicatedAudio, linked: false }]
+              : (!avLinked && linkedAudio.length ? [{ clips: linkedAudio, linked: true }] : []))
             : [];
           const tLocked = !!track.locked;
 
@@ -1179,14 +1221,17 @@ export default function Timeline(p: Props) {
                   {tClips.map((c, i) => {
                     const gap = isGapClip(c);
                     const isDraggingThis = activeDrag?.id === c.id;
+                    const clipStart = assembledStart(tClips, i);
+                    const clipEnd = clipStart + clipDur(c);
+                    const aligned = isSnapAligned(clipStart, clipEnd);
                     if (gap) {
                       return (
                         <div
                           key={c.id}
                           data-clip-id={c.id}
-                          className={`clip-gap ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${tLocked ? "locked" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                          className={`clip-gap ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${tLocked ? "locked" : ""} ${isDraggingThis ? "is-dragging-origin" : ""} ${aligned ? "snap-aligned" : ""}`}
                           style={{
-                            left: `${pct(assembledStart(tClips, i))}%`,
+                            left: `${pct(clipStart)}%`,
                             width: `${pct(clipDur(c))}%`,
                           }}
                           onMouseDown={(e) => onDown(e, c, "move", "video", track.id)}
@@ -1209,9 +1254,9 @@ export default function Timeline(p: Props) {
                       <div
                         key={c.id}
                         data-clip-id={c.id}
-                        className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${tLocked ? "locked" : ""} ${!asset || asset.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                        className={`clip2 ${videoSel(c.id) ? "selected" : ""} ${hoveredId === c.id ? "hovered" : ""} ${clipEnabled(c) ? "" : "disabled"} ${tLocked ? "locked" : ""} ${!asset || asset.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""} ${aligned ? "snap-aligned" : ""}`}
                         style={{
-                          left: `${pct(assembledStart(tClips, i))}%`,
+                          left: `${pct(clipStart)}%`,
                           width: `${pct(clipDur(c))}%`,
                           opacity: clipOpacity(c),
                         }}
@@ -1285,14 +1330,17 @@ export default function Timeline(p: Props) {
                     const layerBottom = layerCount > 1 ? (layerIndex === 0 ? "50%" : 3) : 4;
                     const layerTrackId = layer.linked ? primaryId : audioId;
                     const isDraggingThis = activeDrag?.id === c.id;
+                    const clipStart = assembledStart(layer.clips, i);
+                    const clipEnd = clipStart + clipDur(c);
+                    const aligned = isSnapAligned(clipStart, clipEnd);
 
                     return (
                       <div
                         key={`${layer.linked ? "linked" : "extra"}-${c.id}`}
                         data-clip-id={c.id}
-                        className={`clip-audio ${layer.linked ? "linked" : "extra"} ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || (layer.linked && vLocked) ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                        className={`clip-audio ${layer.linked ? "linked" : "extra"} ${gap ? "gap" : ""} ${audioSel(c.id) ? "selected" : ""} ${clipHover(c.id) && !audioSel(c.id) ? "hovered" : ""} ${tLocked || (layer.linked && vLocked) ? "locked" : ""} ${!gap && (!asset || asset.missing) ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""} ${aligned ? "snap-aligned" : ""}`}
                         style={{
-                          left: `${pct(assembledStart(layer.clips, i))}%`,
+                          left: `${pct(clipStart)}%`,
                           width: `${pct(clipDur(c))}%`,
                           top: layerTop,
                           bottom: layerBottom,
@@ -1342,11 +1390,12 @@ export default function Timeline(p: Props) {
                     const overlapping = allSubs.filter((other) => other.start < s.end && other.end > s.start);
                     const overlapLevel = overlapping.findIndex((other) => other.id === s.id);
                     const isDraggingThis = activeDrag?.id === s.id;
+                    const aligned = isSnapAligned(s.start, s.end);
                     return (
                       <div
                         key={s.id}
                         data-clip-id={s.id}
-                        className={`cue2 ${overlapping.length > 1 ? "overlap" : ""} ${selectedSubId === s.id || isMultiSel(s.id) ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                        className={`cue2 ${overlapping.length > 1 ? "overlap" : ""} ${selectedSubId === s.id || isMultiSel(s.id) ? "selected" : ""} ${hoveredSubId === s.id ? "hovered" : ""} ${isDraggingThis ? "is-dragging-origin" : ""} ${aligned ? "snap-aligned" : ""}`}
                         style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.4, pct(s.end - s.start))}%`, top: `${4 + Math.max(0, overlapLevel) * 18}px`, height: 17, bottom: "auto" }}
                         title={`${s.text}${overlapping.length > 1 ? ` · חפיפה עם ${overlapping.length - 1} כתוביות` : ""}`}
                         onMouseDown={(e) => onSubDown(e, s)}
@@ -1397,12 +1446,13 @@ export default function Timeline(p: Props) {
                 const label = o.kind === "text" ? (o.text || "טקסט") : ((asset?.name || "").replace(/\.[^.]+$/, "") || "תמונה");
                 const dur = Math.max(0.05, o.end - o.start);
                 const isDraggingThis = activeDrag?.id === o.id;
+                const aligned = isSnapAligned(o.start, o.end);
 
                 return (
                   <div
                     key={o.id}
                     data-clip-id={o.id}
-                    className={`clip-ov ${o.id === selectedOverlayId || isMultiSel(o.id) ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""}`}
+                    className={`clip-ov ${o.id === selectedOverlayId || isMultiSel(o.id) ? "selected" : ""} ${o.hidden ? "disabled" : ""} ${asset?.missing ? "missing" : ""} ${isDraggingThis ? "is-dragging-origin" : ""} ${aligned ? "snap-aligned" : ""}`}
                     style={{
                       left: `${pct(o.start)}%`,
                       width: `${Math.max(0.4, pct(dur))}%`,
