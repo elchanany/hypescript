@@ -1,22 +1,26 @@
 # Goal
-Keep the CapCut-style timeline trustworthy for Hebrew lesson editing — especially free placement of narration above images.
+Ship timeline narration free-placement + CapCut-style snap to `main` via PR review (no production deploy from this agent).
 
 # Current State
-- 2026-09-08: **Timeline narration no longer snaps back; CapCut-style image snap restored**
-  1. **Root cause:** `Timeline.tsx` stripped gap spacers from the dedicated audio lane before layout, so `assembledStart` always drew free-placed narration at t=0 even when `moveClipAtTimeline` stored the correct time with leading gaps.
-  2. **Fix:** Audio lane keeps gaps (same model as video). Magnetic snap prefers named overlay/image edges (priority 8), shows the yellow guide only while locked, and highlights the aligned clip/layer; dragging audio also lights the overlay row it locked onto.
-  3. **Verification:** `freePlacement` + `time` tests green; Playwright drag demo left narration ~267px from origin (`stayedMoved: true`); screen recording shows yellow guide when aligning to `still-test` end and no snap-back after drop.
-- Prior export/WASM/landing work remains as previously documented on `main`.
+- **Branch:** `cursor/timeline-audio-snap-placement-aec5` @ `370b5a9` (pushed; tracking origin).
+- **PR:** https://github.com/elchanany/hypescript/pull/34 — OPEN, ready for review, MERGEABLE. Not merged; **not on production `main`**.
+- **Preview (Vercel):** https://hypescript-git-cursor-timeline-audi-385fc3-elchanan-ys-projects.vercel.app
+- **Fix shipped on branch:** Audio lane keeps gap spacers so free-placed narration no longer redraws at t=0; magnetic snap prefers named overlay/image edges, yellow guide only while locked, aligned clip/layer highlight.
+- **Files:** `web/components/Timeline.tsx`, `web/app/globals.css`, `web/lib/editor/freePlacement.test.ts`, `web/lib/editor/time.test.ts`, `docs/GAP_MAP.md`.
 
-# Active Files
-- `web/components/Timeline.tsx` — audio gap display, snap guide/highlights
-- `web/app/globals.css` — `.snap-aligned` styling
-- `web/lib/editor/freePlacement.test.ts`, `web/lib/editor/time.test.ts` — regressions
+# Verification (re-run this maintenance pass)
+- `npx vitest run lib/editor/freePlacement.test.ts lib/editor/time.test.ts lib/editor/tracks.test.ts` → 3 files / 28 tests pass.
+- `npx tsc --noEmit` (web) → exit 0.
+- Earlier Playwright demo: `stayedMoved: true` (delta ≈ 267px); recording showed yellow guide + no snap-back.
+
+# Graphify
+- Ran `graphify update . --no-description` → rebuilt into gitignored `.graphify/` (2669 nodes / 6220 edges). Tracked `graphify-out/graph.json` left unchanged (large index; `.graphify/` is ignored).
 
 # Exact Next Steps
-1. Merge PR for timeline audio snap after human review.
-2. Optional: track-reorder UX if users need the audio *row* above a video still (distinct from temporal align).
+1. Human review + merge PR #34 to `main` for production visibility.
+2. Optional later: audio *track-row* reorder above a video still (separate from temporal align).
 
 # Open Risks
-- Cloud project create still 503 in this environment without mocked `/api/cloud/projects` (unrelated to timeline drag).
-- Safe-area guides on canvas remain PARTIAL per GAP_MAP.
+- Live site will not show the fix until merge to `main`.
+- Cloud project create can 503 in this environment without `/api/cloud/projects` (unrelated).
+- Canvas safe-area guides still PARTIAL (GAP_MAP).

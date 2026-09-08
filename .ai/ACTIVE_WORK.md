@@ -2,11 +2,14 @@
 
 ## 2026-09-08 — Timeline narration free-placement + CapCut image snap
 - **Branch:** `cursor/timeline-audio-snap-placement-aec5`
-- **Latest commit:** (see git log on branch)
-- **Status:** Fixed and browser-verified; PR open
-- **Bug:** Dragging narration/audio looked like it “snapped back” to t=0; no clear CapCut-style lock to an image/layer edge underneath.
-- **Root cause:** Audio lane rendered `dedicatedAudio.filter(!gap)` then `assembledStart` on the gapless list → every free-placed narration packed to the start.
-- **Fix:** Keep gaps in audio display; raise overlay/image edge snap priority; yellow guide only on magnetic lock; highlight aligned clip/layer; light overlay row when audio locks to it.
-- **Verification:** Vitest freePlacement+time (16); Playwright demo metrics `stayedMoved: true` (delta ~267px); video shows yellow guide + narration stays after drop.
-- **Continuation:** If users still want audio *track reorder* above a video still (not just temporal align), that’s a separate track-order UX pass.
-
+- **Latest commit:** `370b5a9` (matches `origin/cursor/timeline-audio-snap-placement-aec5`)
+- **PR:** https://github.com/elchanany/hypescript/pull/34 — OPEN / ready / MERGEABLE; **not merged to `main`**
+- **Preview:** https://hypescript-git-cursor-timeline-audi-385fc3-elchanan-ys-projects.vercel.app
+- **Status:** Code + docs on branch; continuity maintenance pass completed; awaiting merge for production
+- **Bug:** Narration/audio drag appeared to snap back to t=0; weak CapCut-style lock to image/layer edges
+- **Root cause:** Audio lane stripped gaps before layout → `assembledStart` packed clips to start
+- **Fix:** Keep audio gaps; overlay/image snap priority 8; yellow guide only on lock; `.snap-aligned` + overlay-row highlight
+- **Verification (this pass):** Vitest 28/28 (`freePlacement`/`time`/`tracks`); `tsc --noEmit` clean; prior Playwright `stayedMoved: true`
+- **Graphify:** `graphify update .` → `.graphify/` (ignored); tracked `graphify-out` untouched
+- **Continuation:** Merge PR #34 for live deploy; optional track-reorder UX is out of scope here
+- **Non-change:** No production deploy; no PROJECT_STATE/DECISIONS update (bugfix of existing timeline magnet/free-placement)
