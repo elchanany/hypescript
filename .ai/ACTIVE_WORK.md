@@ -7,7 +7,7 @@ End-of-turn continuity for campaign-agent capabilities (no new feature work).
 `cursor/campaign-agent-capabilities-22aa`
 
 ## Latest commit
-`d1abfdd` — feat(agent): יכולות הפקת שורט קמפיין ביקורתי מקצה לקצה
+`f72dba3` — docs(continuity) על גבי `d1abfdd` (יכולות קמפיין)
 
 ## PR
 https://github.com/elchanany/hypescript/pull/35 (draft, base `main`)

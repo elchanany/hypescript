@@ -2,7 +2,7 @@
 Agent can execute an end-to-end critical/political campaign short (Hook → narration → music duck → SFX/freeze/cover → render) without false “missing tools” claims.
 
 ## Verified state (2026-09-08)
-- Branch: `cursor/campaign-agent-capabilities-22aa` @ `d1abfdd`
+- Branch: `cursor/campaign-agent-capabilities-22aa` @ `f72dba3` (feature `d1abfdd` + continuity)
 - PR: https://github.com/elchanany/hypescript/pull/35 (draft → `main`)
 - Re-verify this turn: `npx tsc --noEmit` clean; 24 files / 223 tests green (agent + intent + elevenlabs + duck + speakers).
 - Graphify: `graphify update . --force` → 4003 nodes / 9050 edges / 222 communities.
