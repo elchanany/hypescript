@@ -75,6 +75,17 @@ describe("דירוג יעדים — התרחישים שתוארו", () => {
     expect(ranked[0].goal).toBe("business_deck");
   });
 
+  it("שורט ביקורתי / תשדיר פוליטי → campaign_critical", () => {
+    const { ranked } = analyze(
+      [asset("v", "video", 88)],
+      "תכין סרטון ביקורתי-פוליטי מקצועי לרשתות, תשדיר בחירות, קריינות ומוזיקה, בלי לשאול",
+    );
+    expect(ranked[0].goal).toBe("campaign_critical");
+    expect(GOALS.campaign_critical.recipe.narration).toBe(true);
+    expect(GOALS.campaign_critical.recipe.music).toBe("cinematic");
+    expect(GOALS.campaign_critical.recipe.captions).toBe("phrase");
+  });
+
   it("כל יעד מדורג מגיע עם סיבה", () => {
     const { ranked } = analyze(photos(6), "פוסט לאינסטגרם");
     for (const entry of ranked) expect(entry.reasonsHe.length).toBeGreaterThan(0);

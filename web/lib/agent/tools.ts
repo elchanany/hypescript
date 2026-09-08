@@ -4,6 +4,9 @@
 import { isSpeechWord, Word } from "@/lib/models";
 import { normalizeHebrew } from "@/lib/align";
 import { DEFAULT_TTS_MODEL } from "@/lib/elevenlabs/constants";
+import { buildDirectedNarrationText } from "@/lib/elevenlabs/narrationDirection";
+import { filterAndRankVoices, HEBREW_CAMPAIGN_VOICE_SEARCHES } from "@/lib/elevenlabs/voicesFilter";
+import { planMusicDuck } from "@/lib/audio/duckMusic";
 import {
   addClip, Clip, clipAudioFades, clipDur, clipVisualFades, firstVideo, MediaAsset, mediaById, moveClip, splitClip, totalDur, trimClip, uid,
 } from "@/lib/editor/model";
@@ -39,6 +42,7 @@ import { CaptionStyle } from "@/lib/editor/captionStyle";
 import {
   assembleTranscript,
   assembledDuration,
+  filterWordsBySpeaker,
   formatTranscriptLines,
 } from "@/lib/editor/assembleTranscript";
 import { analyzeAudio, avgDb, findSilences } from "@/lib/audio";
@@ -733,18 +737,23 @@ export const TOOLS: ToolMeta[] = [
           query: { type: "string" },
           source: { type: "string", description: "סרטון המקור (ברירת מחדל הראשי; לא רלוונטי עם timeline)" },
           timeline: { type: "boolean", description: "true=חיפוש על הציר הערוך (assembled)" },
+          speaker: { type: "string", description: "סינון לפי דובר (speaker_0 / 0) — מריאיון מרובה-דוברים" },
         },
         required: ["query"],
       },
     },
     run: async (a, ctx) => {
       const onTimeline = a.timeline === true || a.timeline === "true";
+      const speaker = a.speaker != null ? String(a.speaker) : "";
       if (onTimeline) {
         if (!ctx.clips?.length) return "אין ציר ערוך. חתוך קודם או השתמש בלי timeline.";
-        const words = ctx.assembledWords?.length
+        let words = ctx.assembledWords?.length
           ? ctx.assembledWords
           : assembleTranscript(ctx.clips, (sid) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null));
-        if (!words.length) return "אין תמלול למקורות שבציר. תמלל קודם (transcribe_video).";
+        if (speaker) words = filterWordsBySpeaker(words, speaker);
+        if (!words.length) return speaker
+          ? `אין מילים לדובר "${speaker}" על הציר. בדוק get_transcript — תוויות הדוברים.`
+          : "אין תמלול למקורות שבציר. תמלל קודם (transcribe_video).";
         const r = findRanges(words, String(a.query || ""));
         return r.length
           ? "נמצא על הציר הערוך:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n")
@@ -752,8 +761,9 @@ export const TOOLS: ToolMeta[] = [
       }
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset) return "שגיאה: אין סרטון.";
-      const words = transcriptOf(ctx, asset);
+      let words = transcriptOf(ctx, asset);
       if (!words) return `צריך לתמלל קודם את "${asset.name}".`;
+      if (speaker) words = filterWordsBySpeaker(words, speaker);
       const r = findRanges(words, String(a.query || ""));
       return r.length ? "נמצא במקור:\n" + r.map((x) => `• ${x.start.toFixed(2)}–${x.end.toFixed(2)}s: "${x.text}"`).join("\n") : `לא נמצא "${a.query}".`;
     },
@@ -1242,6 +1252,7 @@ export const TOOLS: ToolMeta[] = [
           remove_fillers: { type: "boolean", description: "הסרת אה/אמ/יעני (ברירת מחדל true)" },
           keep_laughter: { type: "boolean", description: "השאר צחוק קהל (ברירת מחדל true)" },
           append: { type: "boolean", description: "להוסיף לרצף הקיים במקום להחליף (הרכבה מכמה סרטונים)" },
+          speaker: { type: "string", description: "חתוך רק דיבור של דובר מסוים (speaker_0 / 0) — לריאיון מרובה-דוברים" },
         },
         required: ["script"],
       },
@@ -1249,8 +1260,17 @@ export const TOOLS: ToolMeta[] = [
     run: async (a, ctx, report) => {
       const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
       if (!asset) return "שגיאה: אין סרטון.";
-      const words = transcriptOf(ctx, asset);
+      let words = transcriptOf(ctx, asset);
       if (!words) return `צריך לתמלל קודם את "${asset.name}" (transcribe_video source="${asset.name}").`;
+      if (a.speaker) {
+        const filtered = filterWordsBySpeaker(words, String(a.speaker));
+        if (!filtered.length) {
+          const ids = [...new Set(words.map((w) => w.speakerId).filter(Boolean))];
+          return `שגיאה: אין מילים לדובר "${a.speaker}". דוברים בתמלול: ${ids.join(", ") || "אין תוויות"}.`;
+        }
+        words = filtered;
+        report(`מסנן לדובר ${a.speaker} (${filtered.filter(isSpeechWord).length} מילים)…`);
+      }
       const scriptText = String(a.script || "").trim();
       if (!scriptText) return "שגיאה: script ריק.";
       if (!a.append) ctx.script = scriptText;
@@ -2481,23 +2501,65 @@ export const TOOLS: ToolMeta[] = [
     name: "list_voices", label: "קולות קריינות", color: "#a855f7", icon: "🎙️",
     schema: {
       name: "list_voices",
-      description: "מציג קולות ElevenLabs זמינים (שם, voice_id, קטגוריה, תיאור) כדי שהמשתמש/הסוכן יבחרו קול לקריינות. דורש ELEVENLABS_API_KEY.",
+      description:
+        "מציג קולות ElevenLabs לבחירת קריין. " +
+        "לקריינות עברית: אין חובה לקול עם תווית hebrew — השתמש ב-eleven_v3 + language_code=he על קול מולטילינגואלי. " +
+        "לחיפוש עברי שנכשל: נסה search=\"narrative\" / \"deep\" / \"mature\", או language=\"he\" (מדרג גם בלי תווית). " +
+        "לקמפיין רציני: prefer_campaign=true + gender=male.",
       parameters: {
         type: "object",
         properties: {
-          search: { type: "string", description: "סינון לפי שם/תיאור" },
+          search: { type: "string", description: "סינון לפי שם/תיאור (hebrew / narrative / deep…)" },
+          language: { type: "string", description: "he/hebrew — סינון רך לפי תוויות; אם ריק עדיין אפשר קריינות עברית עם v3" },
+          gender: { type: "string", enum: ["male", "female", "neutral"], description: "העדפת מגדר" },
+          prefer_campaign: { type: "boolean", description: "דירוג לקמפיין/תיעודי (בריטון, narrative, לא hyped)" },
           limit: { type: "number", description: "כמה קולות להציג (ברירת מחדל 20)" },
         },
       },
     },
     run: async (a) => {
-      const qs = new URLSearchParams({ page_size: String(Math.min(50, Math.max(1, +(a.limit || 20)))) });
+      const limit = Math.min(50, Math.max(1, +(a.limit || 20)));
+      const qs = new URLSearchParams({ page_size: String(limit) });
       if (a.search) qs.set("search", String(a.search));
+      if (a.language) qs.set("language", String(a.language));
+      if (a.gender) qs.set("gender", String(a.gender));
+      if (a.prefer_campaign === true || a.prefer_campaign === "true") qs.set("prefer_campaign", "1");
       const resp = await fetch(`/api/elevenlabs/voices?${qs}`);
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "נכשל בטעינת קולות.");
-      const voices = data.voices || [];
-      if (!voices.length) return "לא נמצאו קולות. ודא שיש ELEVENLABS_API_KEY ושהמפתח כולל Voices: Read.";
+      let voices = data.voices || [];
+      // אם חיפוש hebrew החזיר ריק — נסיגה אוטומטית לרשימה מדורגת לקמפיין (בלי search)
+      if (!voices.length && a.search && /hebrew|עברית|israeli/i.test(String(a.search))) {
+        const fallbackQs = new URLSearchParams({
+          page_size: String(limit),
+          prefer_campaign: "1",
+          gender: String(a.gender || "male"),
+          language: "he",
+        });
+        const fb = await fetch(`/api/elevenlabs/voices?${fallbackQs}`);
+        const fbData = await fb.json();
+        if (fb.ok && (fbData.voices || []).length) {
+          voices = fbData.voices;
+          data.note_he = (data.note_he ? data.note_he + " " : "") +
+            `חיפוש "${a.search}" היה ריק — הוצגה רשימת נסיגה מדורגת לקמפיין (${HEBREW_CAMPAIGN_VOICE_SEARCHES.join(" / ")}).`;
+          data.hint_he = fbData.hint_he || data.hint_he;
+        }
+      }
+      // דירוג נוסף בצד לקוח אם ה-API לא סינן
+      if (voices.length && (a.prefer_campaign === true || a.prefer_campaign === "true" || a.language || a.gender)) {
+        const ranked = filterAndRankVoices(voices, {
+          language: a.language ? String(a.language) : null,
+          gender: (a.gender === "male" || a.gender === "female" || a.gender === "neutral") ? a.gender : null,
+          preferCampaign: a.prefer_campaign === true || a.prefer_campaign === "true",
+        });
+        voices = ranked.voices;
+        if (ranked.noteHe && !data.note_he) data.note_he = ranked.noteHe;
+      }
+      if (!voices.length) {
+        return "לא נמצאו קולות. ודא התחברות לענן + ELEVENLABS_API_KEY עם Voices: Read. " +
+          "טיפ: אל תסיק מחיפוש hebrew ריק שאין קריינות עברית — נסה prefer_campaign=true בלי search.";
+      }
+      const note = [data.note_he, data.hint_he].filter(Boolean).join("\n");
       return `קולות ElevenLabs (${voices.length}${data.has_more ? "+" : ""}):\n` +
         voices.map((v: any, i: number) => {
           const labels = v.labels && typeof v.labels === "object"
@@ -2505,7 +2567,8 @@ export const TOOLS: ToolMeta[] = [
             : "";
           return `${i + 1}. ${v.name} · id=${v.voice_id}${v.category ? ` · ${v.category}` : ""}${labels ? ` · ${labels}` : ""}${v.description ? `\n   ${String(v.description).slice(0, 120)}` : ""}`;
         }).join("\n") +
-        "\n\nלקריינות: generate_narration(text=..., voice_id=...).";
+        (note ? `\n\n${note}` : "") +
+        "\n\nלקריינות עברית: generate_narration(text=..., voice_id=..., model_id=\"eleven_v3\", language_code=\"he\", emotion=\"restrained_critical\").";
     },
   },
   {
@@ -2542,17 +2605,26 @@ export const TOOLS: ToolMeta[] = [
     schema: {
       name: "generate_narration",
       description:
-        "יוצר קריינות מדויקת בעברית מטקסט דרך ElevenLabs TTS. " +
-        "אם אין voice_id — קרא קודם list_voices והצג למשתמש אפשרויות (ask_user), או בחר קול מתאים. " +
-        "מודלים: eleven_v3 (רגשי, תגיות [laughs]/[whispers]), eleven_multilingual_v2 (ארוך/יציב), eleven_flash_v2_5 (מהיר).",
+        "יוצר קריינות בעברית דרך ElevenLabs TTS. " +
+        "חובה: model_id=eleven_v3 + language_code=he לעברית תקינה (multilingual_v2 גרוע לעברית). " +
+        "כיוון רגשי: העבר emotion (restrained_critical/disappointed/firm/quiet/decisive) או direction_tag (controlled/disappointed/firm/quiet/sighs) — " +
+        "מוזרק כתגית [tag] בתחילת הטקסט לפי מפרט Eleven v3. אפשר גם לכתוב תגיות ידנית בטקסט. " +
+        "לקמפיין: צור כמה קריאות נפרדות (משפטים קצרים) במקום קובץ אחד ארוך. " +
+        "אם אין voice_id — list_voices(prefer_campaign=true, gender=male) ובחר קול בריטון/narrative (אל תחקה פוליטיקאי).",
       parameters: {
         type: "object",
         properties: {
-          text: { type: "string", description: "הטקסט לקריינות" },
+          text: { type: "string", description: "הטקסט לקריינות (אפשר עם [controlled] וכו')" },
           voice_id: { type: "string", description: "מזהה הקול מ-list_voices" },
-          model_id: { type: "string", description: "מודל TTS (ברירת מחדל eleven_v3)" },
+          model_id: { type: "string", description: "מודל TTS (ברירת מחדל eleven_v3 — חובה לעברית)" },
           language_code: { type: "string", description: "קוד שפה (ברירת מחדל he)" },
-          stability: { type: "number" },
+          emotion: {
+            type: "string",
+            enum: ["restrained_critical", "disappointed", "firm", "quiet", "decisive"],
+            description: "פריסט רגש לקמפיין — מזריק תגית + stability/style",
+          },
+          direction_tag: { type: "string", description: "תגית כיוון מפורשת (controlled / disappointed / firm / quiet / sighs) — גוברת על emotion" },
+          stability: { type: "number", description: "0–1; לביטוי עם תגיות העדף ~0.3–0.45 (Natural/Creative)" },
           similarity_boost: { type: "number" },
           style: { type: "number" },
         },
@@ -2560,22 +2632,33 @@ export const TOOLS: ToolMeta[] = [
       },
     },
     run: async (a, ctx, report) => {
-      const text = String(a.text || "").trim();
+      const rawText = String(a.text || "").trim();
       const voiceId = String(a.voice_id || "").trim();
-      if (!text) return "שגיאה: חסר טקסט.";
-      if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices ובחר קול.";
-      report("יוצר קריינות ב-ElevenLabs…");
+      if (!rawText) return "שגיאה: חסר טקסט.";
+      if (!voiceId) return "שגיאה: חסר voice_id. הרץ list_voices(prefer_campaign=true) ובחר קול.";
+      const directed = buildDirectedNarrationText(rawText, {
+        emotion: a.emotion ? String(a.emotion) : null,
+        direction_tag: a.direction_tag ? String(a.direction_tag) : null,
+      });
+      const text = directed.text;
+      const modelId = String(a.model_id || DEFAULT_TTS_MODEL);
+      if (modelId.includes("multilingual_v2") && String(a.language_code || "he").startsWith("he")) {
+        report("אזהרה: multilingual_v2 גרוע לעברית — מומלץ eleven_v3. ממשיך לפי הבקשה…");
+      }
+      report(directed.applied
+        ? `יוצר קריינות ב-ElevenLabs (${modelId}) עם כיוון [${directed.applied}]…`
+        : `יוצר קריינות ב-ElevenLabs (${modelId})…`);
       const resp = await fetch("/api/elevenlabs/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text,
           voice_id: voiceId,
-          model_id: a.model_id || DEFAULT_TTS_MODEL,
+          model_id: modelId,
           language_code: a.language_code || "he",
-          stability: a.stability,
+          stability: a.stability ?? directed.stability,
           similarity_boost: a.similarity_boost,
-          style: a.style,
+          style: a.style ?? directed.style,
         }),
       });
       if (!resp.ok) {
@@ -2584,12 +2667,11 @@ export const TOOLS: ToolMeta[] = [
         throw new Error(err);
       }
       const blob = await resp.blob();
-      const modelId = resp.headers.get("X-Model-Id") || a.model_id || DEFAULT_TTS_MODEL;
+      const resolvedModel = resp.headers.get("X-Model-Id") || modelId;
       const { contextualFileName } = await import("@/lib/chat/markdown");
-      const name = contextualFileName(text, "audio", `narration_${voiceId.slice(0, 8)}.mp3`);
+      const name = contextualFileName(rawText, "audio", `narration_${voiceId.slice(0, 8)}.mp3`);
       const file = new File([blob], name, { type: blob.type || "audio/mpeg" });
       const url = URL.createObjectURL(file);
-      // משך משוער — נטען אסינכרונית אם אפשר
       let duration = 0;
       try {
         duration = await new Promise<number>((resolve, reject) => {
@@ -2609,7 +2691,6 @@ export const TOOLS: ToolMeta[] = [
         url,
       };
       const { asset: registered } = registerMediaAsset(ctx, narrationAsset);
-      // סוף הציר המדויק (מקסימום על פני כל הרצועות — וידאו ואודיו) — הנקודה שבה מתחיל האאוטרו
       const timelineStart = (() => {
         const clips = ctx.clips || [];
         if (!clips.length) return 0;
@@ -2623,15 +2704,16 @@ export const TOOLS: ToolMeta[] = [
         return Math.max(0, ...ends.values());
       })();
       const audioTrackName = audioTrack(ctx.tracks || [])?.name || audioTrack(ctx.tracks || [])?.id || "אודיו";
+      const dirNote = directed.applied ? ` כיוון=[${directed.applied}].` : "";
       return {
         text: formatNarrationResult({
           asset: registered,
           blobSize: blob.size,
-          modelId,
+          modelId: resolvedModel,
           voiceId,
           timelineStart,
           audioTrackName,
-        }),
+        }) + dirNote,
         artifacts: [{ blob, name, kind: "audio" }],
       };
     },
@@ -2702,14 +2784,300 @@ export const TOOLS: ToolMeta[] = [
     },
   },
   {
+    name: "generate_sfx", label: "אפקט קולי", color: "#0ea5e9", icon: "💥",
+    schema: {
+      name: "generate_sfx",
+      description:
+        "יוצר אפקט קולי קצר דרך ElevenLabs Sound Generation (whoosh עדין, sub-bass impact, room tone). " +
+        "השתמש בדלילות — רק במעברים משמעותיים / Freeze Frame. לא למלא כל שנייה. דורש הרשאת Sound Effects במפתח.",
+      parameters: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "תיאור האפקט באנגלית מומלץ (low cinematic whoosh / soft sub bass impact)" },
+          duration_seconds: { type: "number", description: "0.5–30; אופציונלי" },
+          prompt_influence: { type: "number", description: "0–1 ברירת מחדל 0.3" },
+        },
+        required: ["text"],
+      },
+    },
+    run: async (a, ctx, report) => {
+      const text = String(a.text || "").trim();
+      if (!text) return "שגיאה: חסר תיאור לאפקט.";
+      report("יוצר אפקט קולי ב-ElevenLabs…");
+      const resp = await fetch("/api/elevenlabs/sfx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          duration_seconds: a.duration_seconds != null ? Number(a.duration_seconds) : undefined,
+          prompt_influence: a.prompt_influence != null ? Number(a.prompt_influence) : 0.3,
+        }),
+      });
+      if (!resp.ok) {
+        let err = "יצירת האפקט נכשלה.";
+        try { err = (await resp.json()).error || err; } catch { /* ignore */ }
+        throw new Error(err);
+      }
+      const blob = await resp.blob();
+      const duration = Math.max(0.5, Math.min(30, Number(a.duration_seconds) || 1.2));
+      const { contextualFileName } = await import("@/lib/chat/markdown");
+      const name = contextualFileName(text, "audio", "sfx.mp3");
+      const file = new File([blob], name, { type: blob.type || "audio/mpeg" });
+      const asset: MediaAsset = { id: uid("sfx"), name, kind: "audio", file, duration, url: URL.createObjectURL(file) };
+      const { asset: registered } = registerMediaAsset(ctx, asset);
+      const audioTrackName = audioTrack(ctx.tracks || [])?.name || "אודיו";
+      return {
+        text: `אפקט קולי נוצר ונשמר כ־@media:${registered.id} (~${duration.toFixed(1)}s). ` +
+          `הוסף עם add_clip(source="@media:${registered.id}", timeline_start=<שנייה>, track="${audioTrackName}") ואז set_clip_volume נמוך (~0.4–0.7).`,
+        artifacts: [{ blob, name, kind: "audio" }],
+      };
+    },
+  },
+  {
+    name: "duck_under_speech", label: "הנמכת מוזיקה תחת דיבור", color: "#64748b", icon: "🔉",
+    schema: {
+      name: "duck_under_speech",
+      description:
+        "מנמיך מוזיקת רקע אוטומטית כשיש דיבור (קריינות/דובר מקורי). " +
+        "מפצל את קליפ המוזיקה למקטעים בעוצמות שונות. העבר music_clip_index (1-based מ-list_clips) או music_media (שם/@media).",
+      parameters: {
+        type: "object",
+        properties: {
+          music_clip_index: { type: "number", description: "אינדקס קליפ מוזיקה ב-list_clips (1-based)" },
+          music_media: { type: "string", description: "שם או @media:id של המוזיקה" },
+          ducked_volume: { type: "number", description: "עוצמה תחת דיבור (ברירת מחדל 0.12)" },
+          full_volume: { type: "number", description: "עוצמה בלי דיבור (ברירת מחדל 0.55)" },
+          pad_sec: { type: "number", description: "מרווח לפני/אחרי דיבור (ברירת מחדל 0.15)" },
+        },
+      },
+    },
+    run: async (a, ctx) => {
+      const clips = ctx.clips || [];
+      if (!clips.length) return "שגיאה: אין ציר. הוסף קליפים קודם.";
+      const primary = primaryVideoTrackId(ctx.tracks || []);
+      const aid = audioTrack(ctx.tracks || [])?.id || "trk_audio";
+
+      let musicIdx = a.music_clip_index != null ? (+a.music_clip_index | 0) - 1 : -1;
+      if (musicIdx < 0 && a.music_media) {
+        const asset = resolveAsset(ctx, String(a.music_media));
+        musicIdx = clips.findIndex((c) => c.sourceId === asset?.id);
+      }
+      if (musicIdx < 0) {
+        // נסיגה: קליפ אודיו הארוך ביותר שאינו נשמע כמו קריינות קצרה
+        const audioIdxs = clips
+          .map((c, i) => ({ c, i, m: mediaById(ctx.media, c.sourceId) }))
+          .filter((x) => x.m?.kind === "audio" || clipTrackId(x.c, primary) === aid);
+        audioIdxs.sort((a, b) => clipDur(b.c) - clipDur(a.c));
+        musicIdx = audioIdxs[0]?.i ?? -1;
+      }
+      if (musicIdx < 0 || musicIdx >= clips.length) return "שגיאה: לא נמצא קליפ מוזיקה. ציין music_clip_index.";
+
+      const musicClip = clips[musicIdx];
+      const musicTrackId = clipTrackId(musicClip, primary);
+      // זמן התחלה על הציר — כמו list_clips (לפי רצועה)
+      let musicStart = 0;
+      for (let i = 0; i < musicIdx; i++) {
+        if (clipTrackId(clips[i], primary) === musicTrackId) musicStart += clipDur(clips[i]);
+      }
+      const musicDur = clipDur(musicClip);
+
+      // דיבור = קליפי וידאו + קליפי אודיו שאינם המוזיקה (לפי זמן רצועה)
+      const speechSpans: { start: number; end: number }[] = [];
+      const elapsed = new Map<string, number>();
+      clips.forEach((c, i) => {
+        const tid = clipTrackId(c, primary);
+        const start = elapsed.get(tid) || 0;
+        const end = start + clipDur(c);
+        elapsed.set(tid, end);
+        if (i === musicIdx || isGapClip(c)) return;
+        const m = mediaById(ctx.media, c.sourceId);
+        const isSpeechAudio = m?.kind === "audio" && tid === aid;
+        const isVideoSpeech = m?.kind === "video" && (c.volume == null || c.volume > 0.05);
+        if (!isSpeechAudio && !isVideoSpeech) return;
+        speechSpans.push({ start, end });
+      });
+      // גם מילות תמלול מורכבות אם יש
+      const words = ctx.assembledWords?.length
+        ? ctx.assembledWords
+        : assembleTranscript(clips, (sid) => ctx.transcripts[sid] ?? (sid === mainVideo(ctx)?.id ? ctx.words : null));
+      for (const w of words.filter(isSpeechWord)) {
+        speechSpans.push({ start: w.start, end: w.end });
+      }
+
+      const segs = planMusicDuck({
+        musicStart,
+        musicDuration: musicDur,
+        speechSpans,
+        duckedVolume: a.ducked_volume != null ? +a.ducked_volume : 0.12,
+        fullVolume: a.full_volume != null ? +a.full_volume : 0.55,
+        padSec: a.pad_sec != null ? +a.pad_sec : 0.15,
+      });
+
+      const sourceStart = musicClip.start;
+      const newClips: Clip[] = segs.map((s) => ({
+        id: uid("duck"),
+        sourceId: musicClip.sourceId,
+        start: sourceStart + s.offset,
+        end: sourceStart + s.offset + s.duration,
+        trackId: musicClip.trackId || aid,
+        volume: s.volume,
+        audioFadeIn: s.ducked ? 0.05 : 0.08,
+        audioFadeOut: 0.08,
+      }));
+
+      const next = [...clips.slice(0, musicIdx), ...newClips, ...clips.slice(musicIdx + 1)];
+      setClips(ctx, next);
+      const duckedN = segs.filter((s) => s.ducked).length;
+      return `Ducking הוחל על קליפ מוזיקה #${musicIdx + 1}: ${segs.length} מקטעים (${duckedN} מונמכים). ` +
+        `עוצמה מלאה=${segs.find((s) => !s.ducked)?.volume ?? 0.55}, תחת דיבור=${segs.find((s) => s.ducked)?.volume ?? 0.12}.`;
+    },
+  },
+  {
+    name: "freeze_frame", label: "פריז פריים", color: "#06b6d4", icon: "❄️",
+    schema: {
+      name: "freeze_frame",
+      description:
+        "מחלץ פריים מהמקור או מהציר, שומר כתמונה במדיה, ואופציונלית מחליף/מוסיף קליפ דומם על הציר (Freeze Frame קולנועי). " +
+        "לקמפיין: אחרי ה-Hook — freeze + הורדת saturation עדינה (set_clip_color) + קריינות.",
+      parameters: {
+        type: "object",
+        properties: {
+          at_seconds: { type: "number", description: "שנייה במקור (או על הציר אם timeline=true)" },
+          duration: { type: "number", description: "משך התמונה על הציר (ברירת מחדל 2.5s)" },
+          timeline: { type: "boolean", description: "true=זמן על הציר הערוך" },
+          source: { type: "string", description: "מקור וידאו (אופציונלי)" },
+          insert: { type: "boolean", description: "false=רק לשמור במדיה בלי להכניס לציר (ברירת מחדל true)" },
+          desaturate: { type: "boolean", description: "true=הורדת saturation עדינה על קליפ ה-freeze" },
+        },
+        required: ["at_seconds"],
+      },
+    },
+    run: async (a, ctx) => {
+      const at = +a.at_seconds;
+      const duration = Math.max(0.4, Math.min(12, Number(a.duration) || 2.5));
+      const onTimeline = a.timeline === true || a.timeline === "true";
+      let blob: Blob;
+      let label: string;
+      if (onTimeline && ctx.clips?.length) {
+        let renderTimelineFrame: typeof import("@/lib/ffmpeg").renderTimelineFrame;
+        try { ({ renderTimelineFrame } = await import("@/lib/ffmpeg")); }
+        catch { throw new Error("נפרסה גרסה חדשה — רענן (Ctrl+Shift+R)."); }
+        const micro = buildMicroEdl(ctx.clips, ctx.tracks || [], at, ctx.overlays || [], ctx.subs || [], {});
+        if (!micro) return "שגיאה: אין תוכן על הציר בנקודה הזו.";
+        blob = await renderTimelineFrame({
+          media: ctx.media, micro, canvas: ctx.canvas || defaultCanvasFor(), captionStyle: ctx.captionStyle ?? null,
+        });
+        label = `freeze_tl_${at.toFixed(1)}s.png`;
+      } else {
+        const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+        if (!asset || asset.kind !== "video") return "אין סרטון לפריז.";
+        const { extractFrame } = await import("@/lib/ffmpeg");
+        blob = await extractFrame(asset.file, at);
+        label = `freeze_${at.toFixed(1)}s.png`;
+      }
+      const file = new File([blob], label, { type: "image/png" });
+      const imageAsset: MediaAsset = {
+        id: uid("frz"), name: label, kind: "image", file, duration, url: URL.createObjectURL(file),
+      };
+      const { asset: registered } = registerMediaAsset(ctx, imageAsset);
+      try { ctx.pendingImages?.push(await blobToModelImage(blob)); } catch { /* ignore */ }
+
+      if (a.insert === false || a.insert === "false") {
+        return {
+          text: `נשמר Freeze Frame כ־@media:${registered.id} (${label}). לא הוכנס לציר.`,
+          artifacts: [{ blob, name: label, kind: "image" }],
+        };
+      }
+
+      const primary = primaryVideoTrackId(ctx.tracks || []);
+      const clip: Clip = ensureTrackId(ctx, {
+        id: uid("frz"),
+        sourceId: registered.id,
+        start: 0,
+        end: duration,
+        trackId: primary,
+        ...(a.desaturate === true || a.desaturate === "true"
+          ? { saturation: 0.75, contrast: 1.08 }
+          : {}),
+      });
+      // הכנסה בנקודת הזמן על הציר
+      const clips = ctx.clips || [];
+      let insertAt = clips.length;
+      if (onTimeline && clips.length) {
+        let acc = 0;
+        for (let i = 0; i < clips.length; i++) {
+          const d = clipDur(clips[i]);
+          if (acc + d >= at) { insertAt = i + 1; break; }
+          acc += d;
+        }
+      }
+      setClips(ctx, addClip(clips, clip, insertAt));
+      return {
+        text: `Freeze Frame נוצר (@media:${registered.id}) והוכנס לציר ל־${duration.toFixed(1)}s` +
+          `${a.desaturate ? " עם desaturate עדין" : ""}. המשך עם קריינות / B-roll.`,
+        artifacts: [{ blob, name: label, kind: "image" }],
+      };
+    },
+  },
+  {
+    name: "export_cover", label: "ייצוא קאבר", color: "#f97316", icon: "🖼️",
+    schema: {
+      name: "export_cover",
+      description:
+        "מייצא תמונת Cover/Thumbnail אנכית (PNG) מפריים נבחר — לקאבר רילס/טיקטוק. " +
+        "לא שורף טקסט על הפריים (הוסף כותרת בנפרד ב-generate_image או כשכבה). מחזיר ארטיפקט PNG בצ'אט + @media.",
+      parameters: {
+        type: "object",
+        properties: {
+          at_seconds: { type: "number", description: "שנייה לצילום (מקור או ציר)" },
+          timeline: { type: "boolean", description: "true=מהציר הערוך" },
+          source: { type: "string" },
+          name: { type: "string", description: "שם קובץ (ברירת מחדל cover.png)" },
+        },
+        required: ["at_seconds"],
+      },
+    },
+    run: async (a, ctx) => {
+      const at = +a.at_seconds;
+      const fileName = String(a.name || "cover.png").replace(/[^\w.\u0590-\u05FF-]+/g, "_") || "cover.png";
+      let blob: Blob;
+      if ((a.timeline === true || a.timeline === "true") && ctx.clips?.length) {
+        let renderTimelineFrame: typeof import("@/lib/ffmpeg").renderTimelineFrame;
+        try { ({ renderTimelineFrame } = await import("@/lib/ffmpeg")); }
+        catch { throw new Error("נפרסה גרסה חדשה — רענן (Ctrl+Shift+R)."); }
+        const micro = buildMicroEdl(ctx.clips, ctx.tracks || [], at, ctx.overlays || [], ctx.subs || [], {});
+        if (!micro) return "שגיאה: אין תוכן על הציר.";
+        blob = await renderTimelineFrame({
+          media: ctx.media, micro, canvas: ctx.canvas || defaultCanvasFor(), captionStyle: ctx.captionStyle ?? null,
+        });
+      } else {
+        const asset = a.source ? resolveAsset(ctx, a.source) : mainVideo(ctx);
+        if (!asset || asset.kind !== "video") return "אין סרטון לקאבר.";
+        const { extractFrame } = await import("@/lib/ffmpeg");
+        blob = await extractFrame(asset.file, at);
+      }
+      const file = new File([blob], fileName, { type: "image/png" });
+      const imageAsset: MediaAsset = {
+        id: uid("cov"), name: fileName, kind: "image", file, duration: 3, url: URL.createObjectURL(file),
+      };
+      const { asset: registered } = registerMediaAsset(ctx, imageAsset);
+      try { ctx.pendingImages?.push(await blobToModelImage(blob)); } catch { /* ignore */ }
+      return {
+        text: `קאבר נשמר כ־@media:${registered.id} (${fileName}). הורד מהצ'אט. ליצירת וריאציות עם כותרת — generate_image על בסיס התיאור + הפריים.`,
+        artifacts: [{ blob, name: fileName, kind: "image" }],
+      };
+    },
+  },
+  {
     name: "discover_intent", label: "הבנת המטרה", color: "#6366f1", icon: "🧭",
     schema: {
       name: "discover_intent",
       description:
         "**הכלי הראשון בכל שיחה חדשה.** קורא את המדיה שהועלתה ואת מה שהמשתמש כתב, ומסיק מה המוצר " +
         "שהוא באמת רוצה: פוסט מתמונות, מצגת משפחתית, חיתוך שיעור, עריכת פודקאסט, שורטים מתוכן ארוך, " +
-        "מצגת עסקית. מחזיר יעד מדורג עם סיבות, ואת השאלות הקצרות שכדאי לשאול — רק מה שאי-אפשר להסיק, " +
-        "ולכל היותר שלוש. אל תתחיל לחתוך לפני שהרצת אותו.",
+        "קליפ לרשתות, שורט ביקורתי/קמפיין, מצגת עסקית. מחזיר יעד מדורג עם סיבות, ואת השאלות הקצרות שכדאי לשאול — רק מה שאי-אפשר להסיק, " +
+        "ולכל היותר שלוש. אם המשתמש נתן בריף מפורט ואמר לא לשאול — דלג על שאלות וקבע set_project_brief מיד. " +
+        "אל תתחיל לחתוך לפני שהרצת אותו.",
       parameters: {
         type: "object",
         properties: {
@@ -2718,15 +3086,19 @@ export const TOOLS: ToolMeta[] = [
       },
     },
     run: async (a, ctx) => {
+      const userText = String(a.user_text || "");
       const signals = collectSignals({
         media: ctx.media,
         hasTranscript: !!ctx.words || Object.keys(ctx.transcripts || {}).length > 0,
         hasScript: !!(ctx.script || "").trim(),
         timelineSec: ctx.clips?.length ? totalDur(ctx.clips) : 0,
       });
-      const ranked = scoreGoals(signals, String(a.user_text || ""));
-      const questions = planQuestions(signals, ranked);
-      const brief = buildBrief(signals, ranked, {});
+      const ranked = scoreGoals(signals, userText);
+      const skipAsk = /בלי לשאול|אל תשאל|תעבוד לבד|אל תבקש|don't ask|just do|בצע בעצמך|אל תחזיר.*תוכנית/i.test(userText);
+      const questions = skipAsk ? [] : planQuestions(signals, ranked);
+      const brief = buildBrief(signals, ranked, skipAsk && ranked[0]?.goal === "campaign_critical"
+        ? { goal: "campaign_critical", tone: "serious", music: "yes_generated", narration: "yes", platform: "tiktok", length: "very_short" }
+        : {});
 
       const lines: string[] = [];
       lines.push(`חומר: ${signals.imageCount} תמונות · ${signals.videoCount} וידאו · ${signals.audioCount} אודיו`
@@ -2738,20 +3110,25 @@ export const TOOLS: ToolMeta[] = [
         lines.push(`  ${GOALS[entry.goal].labelHe} (${entry.score.toFixed(1)}) — ${entry.reasonsHe.join("; ")}`);
       }
       lines.push("");
-      lines.push(isConfident(ranked)
-        ? `ההובלה חד-משמעית. הצע: ${describeBrief(brief)}`
-        : "ההובלה אינה חד-משמעית — שאל לפני שתתחיל.");
-      if (questions.length) {
-        lines.push("", `שאלות לשאול (${questions.length}, כולן ניתנות לדילוג):`);
-        for (const q of questions) {
-          lines.push(`  [${q.id}] ${q.promptHe}`);
-          lines.push(`     ${q.options.map((o) => `${o.labelHe}${o.hintHe ? ` (${o.hintHe})` : ""}`).join(" · ")}`);
-        }
-        lines.push("העבר אותן ל-ask_user אחת-אחת בניסוח שלך, ידידותי וקצר. דילוג = ברירת המחדל.");
+      if (skipAsk) {
+        lines.push("המשתמש ביקש לא לשאול — דלג על שאלות. קבע set_project_brief לפי הבריף המפורט והתחל בעבודה ב-Act.");
+        lines.push(`הצעה לקיבוע: ${describeBrief(brief)}`);
       } else {
-        lines.push("", "אין צורך לשאול — אפשר להציע תוכנית ולהתחיל.");
+        lines.push(isConfident(ranked)
+          ? `ההובלה חד-משמעית. הצע: ${describeBrief(brief)}`
+          : "ההובלה אינה חד-משמעית — שאל לפני שתתחיל.");
+        if (questions.length) {
+          lines.push("", `שאלות לשאול (${questions.length}, כולן ניתנות לדילוג):`);
+          for (const q of questions) {
+            lines.push(`  [${q.id}] ${q.promptHe}`);
+            lines.push(`     ${q.options.map((o) => `${o.labelHe}${o.hintHe ? ` (${o.hintHe})` : ""}`).join(" · ")}`);
+          }
+          lines.push("העבר אותן ל-ask_user אחת-אחת בניסוח שלך, ידידותי וקצר. דילוג = ברירת המחדל.");
+        } else {
+          lines.push("", "אין צורך לשאול — אפשר להציע תוכנית ולהתחיל.");
+        }
       }
-      lines.push("", "אחרי שהמשתמש עונה: set_project_brief כדי לקבע את ההחלטות.");
+      lines.push("", "אחרי קיבוע: set_project_brief. אל תטען שכלי יצירה/רינדור חסרים — הם קיימים ב-Act.");
       return lines.join("\n");
     },
   },
@@ -2762,11 +3139,11 @@ export const TOOLS: ToolMeta[] = [
       description:
         "מקבע את מה שסוכם: יעד, פלטפורמה, טון, מוזיקה, קריינות, אורך. מחזיר את המתכון המלא — " +
         "יחס מסך, קצב חיתוך, סגנון כתוביות, קטגוריות מעברים וצעדים מומלצים. כל שאר הכלים אמורים " +
-        "להתיישר לפי זה במקום לנחש.",
+        "להתיישר לפי זה במקום לנחש. לקמפיין ביקורתי: goal=campaign_critical, tone=serious, music=yes_generated, narration=yes.",
       parameters: {
         type: "object",
         properties: {
-          goal: { type: "string", description: "photo_promo|family_slideshow|lecture_cut|podcast_edit|shorts_from_long|social_promo|business_deck" },
+          goal: { type: "string", description: "photo_promo|family_slideshow|lecture_cut|podcast_edit|shorts_from_long|social_promo|campaign_critical|business_deck" },
           platform: { type: "string", description: "tiktok|instagram|facebook|youtube|whatsapp|screen" },
           tone: { type: "string", description: "energetic|warm|serious|clean" },
           music: { type: "string", description: "yes_generated|yes_own|no" },
@@ -3052,10 +3429,16 @@ export const PLAN_TOOL_NAMES: ReadonlySet<string> = new Set([
 
 export const PLAN_TOOL_SCHEMAS = TOOLS.filter((t) => PLAN_TOOL_NAMES.has(t.name)).map((t) => t.schema);
 
-export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hypescript. אתה עורך בשיחה סרטונים מכל סוג — תוכן בעברית, רשתות, עסקים, אירועים, משפחה, הרצאות ופודקאסטים — מחומר גלם ועד ייצוא מוכן.
+export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hypescript. אתה עורך בשיחה סרטונים מכל סוג — תוכן בעברית, רשתות, עסקים, אירועים, משפחה, הרצאות, פודקאסטים **וקמפיינים ביקורתיים** — מחומר גלם ועד ייצוא מוכן.
 
 ═══ מה נחשב הצלחה ═══
 הפלט מכיל **בדיוק** את הטקסט שהמשתמש ביקש — לא מילה פחות ולא מילה יותר; כל קאט נופל בשקט מדוד ולא באמצע הברה; הכתוביות קריאות ומכובדות. אם אחד מהשלושה לא מתקיים — העבודה לא הסתיימה, גם אם כל הכלים "הצליחו". אל תדווח הצלחה לפני audit_edit.
+בפרויקט קמפיין/ביקורתי: בנוסף — Hook חזק, קריינות מאופקת, מוזיקה שלא מתחרה בדיבור, בלי לזייף ציטוטים.
+
+═══ איסור קריטי: אל תטען שכלים חסרים ═══
+הכלים הבאים **קיימים ב-Act** — אל תאמר שהם לא זמינים, גם אם חיפוש קולות החזיר ריק או שנכשלת באימות:
+list_voices, generate_narration, generate_background_music, generate_sfx, generate_image, duck_under_speech, freeze_frame, export_cover, add_clip, add_text_overlay, set_clip_color, apply_look, generate_subtitles, export_srt, render_video, capture_frame.
+אם כלי נכשל — דווח את שגיאת ה-API האמיתית (401/מכסה/מפתח) ותקן; אל תמציא ש"אין כלי".
 
 ═══ שלב 0: להבין מה רוצים (לפני כל פעולה) ═══
 **הרץ discover_intent בתחילת כל שיחה חדשה, לפני כל דבר אחר.** הוא קורא את המדיה ואת מה שנכתב ומחזיר יעד מדורג עם סיבות, ואת השאלות ששווה לשאול.
@@ -3063,6 +3446,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 אותו קובץ הוא מוצר אחר לכל אדם. תיקיית תמונות היא מודעת דירת-שותפים לפייסבוק אצל אחד ומצגת משפחתית אצל אחר — ומהן נגזרים יחס מסך, קצב, מוזיקה וסגנון כתוביות הפוכים. אל תניח.
 
 - ההובלה חד-משמעית ⇒ הצע תוכנית במשפט אחד והתחל.
+- בריף מפורט + "אל תשאל / תעבוד לבד / בצע בעצמך" ⇒ **אל תשאל**. set_project_brief מיד (למשל goal=campaign_critical, tone=serious) ועבוד.
 - לא חד-משמעית ⇒ שאל את השאלות שהכלי החזיר, **לכל היותר שלוש**, אחת-אחת דרך ask_user, בניסוח קצר וידידותי משלך. אמור מראש שאפשר לדלג.
 - אחרי התשובות (או דילוג) ⇒ set_project_brief, ואז התיישר אליו: יחס מסך, pacing, סגנון כתוביות, מעברים.
 - get_project_brief כשאתה לא בטוח לאיזה קצב או סגנון להתיישר. אל תנחש מה שכבר סוכם.
@@ -3074,17 +3458,18 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 ב. **מטא/כותרות** — "הקלטה ראשונה", תיאור שיווקי. לא נכנס.
 ג. **טקסט מסך** — שורות מסומנות כציטוט/כרטיס, נועדו לשכבה.
 ד. **הוראות עריכה** — "הסאונד נחלש", "תשים לוגו". פעולות, לא תוכן.
-ה. **טקסט חדש שלא נאמר** (CTA/אאוטרו) — קריינות או כרטיס בסוף. **אסור** ל-keep_by_script.
+ה. **טקסט חדש שלא נאמר** (CTA/אאוטרו/קריינות ביקורתית) — **אסור** ל-keep_by_script; רק generate_narration / add_text_overlay.
 
 כלל ההכרעה: קטע הוא "טקסט מדובר" רק אם הוא בתמלול. בספק — find_in_transcript על 4–6 מילים. לא נמצא ⇒ אינו טקסט מדובר.
 שלילה מפורשת ("אל תשים פופ-אפ") היא אילוץ קשיח שגובר על כל ברירת מחדל.
+**יושרה בציטוט:** אל תוציא משפטים מהקשרם באופן מטעה; אל תחבר מילים שונות של הדובר; אל תשנה את קולו. ביקורת — במסגור ובקריינות, לא בזיוף.
 
 ═══ להבין את החומר, לא רק את הבקשה ═══
 - **תמונות:** לפני שמסדרים אותן — capture_frame או צפייה ישירה, כדי לדעת מה בכל תמונה. סדר נכון של סיפור דורש לדעת מה רואים. אל תמציא תיאור לתמונה שלא ראית.
-- **תוכן ארוך (פודקאסט/הרצאה):** transcribe_video ואז get_transcript, וסכם למשתמש במשפט־שניים על מה מדובר ואיפה הקטעים החזקים. אל תשפוך עליו את התמלול.
+- **תוכן ארוך / ריאיון:** transcribe_video(diarize=true) ואז get_transcript — תוויות **דובר N** מופיעות כשיש הפרדת דוברים. זהה מי אמר מה לפני חיתוך. keep_by_script(..., speaker="0") לחתוך רק דובר אחד.
 - **אימות ויזואלי:** capture_frame(timeline=true) מרנדר את הציר בדיוק כמו בייצוא — כך רואים מה יצא באמת אחרי שכבות וכתוביות.
 
-═══ הזרימה הקנונית ═══
+═══ הזרימה הקנונית (שיעור/חיתוך) ═══
 0. discover_intent → שאלות (אם צריך) → set_project_brief. כל השאר מתיישר לבריף.
 1. transcribe_video — ElevenLabs Scribe עדיף לעברית (חותמות מילה, אירועי שמע, דוברים). keyterms לשמות ומונחים תורניים.
 2. keep_by_script(script=הטקסט המדובר בלבד, pacing=...) — **פעולה אחת** שמיישרת, מסירה מה שלא בטקסט, מהדקת פאוזות וממקמת כל קאט בעמק השקט. אל תריץ remove_silence אחריה; זה כבר נעשה.
@@ -3093,10 +3478,30 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
    נשימות, כחכוחים ורעשי רהיטים מוסרים אקוסטית בכל pacing — אל תעלה את האגרסיביות רק כדי להיפטר מהם, זה חותך לתוך דיבור.
 3. אם keep_by_script דיווח על מילים חסרות — **עצור וטפל**. בדוק אם נאמרו (find_in_transcript); אם לא נאמרו, אמור זאת למשתמש. אל תמשיך כאילו הכל תקין.
 4. transcribe_timeline(remap) — לרענון הזמנים על הציר הערוך.
-5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. הסגנון לפי הבריף: list_caption_styles ואז set_caption_style. karaoke (הדגשת המילה הנאמרת) לטיקטוק; lecture (משפט שלם) לשיעור. אל תשים karaoke על הרצאה.
+5. generate_subtitles(script=אותו טקסט) — פעימות של 4–6 מילים, שבירה לפי מבנה משפט, בלי חזרות. הסגנון לפי הבריף: list_caption_styles ואז set_caption_style. karaoke (הדגשת המילה הנאמרת) לטיקטוק; lecture (משפט שלם) לשיעור; **phrase** לקמפיין רציני. אל תשים karaoke על הרצאה או תשדיר רציני.
 6. שכבות/לוגו/כרטיסים, ואז CTA/אאוטרו (קריינות + כרטיס) אם ביקשו.
 7. **audit_edit** — חובה. יש כשלים ⇒ תקן, אל תרנדר.
 8. render_video רק בסוף או לפי בקשה.
+
+═══ זרימת קמפיין ביקורתי / תשדיר (goal=campaign_critical) ═══
+פורמט: 9:16, ~25–40s, טון רציני מאופק — לא מם, לא glitch, לא זום קומי.
+1. transcribe + get_transcript — זהה דוברים ו-Hook (המשפט הכי חזק).
+2. keep_by_script על ציטוטי הדובר הרלוונטי בלבד (speaker=…); אל תערבב מראיין לתוך האשמה.
+3. set_aspect_ratio ל-portrait אם צריך. Hook בפתיחה (0–3s).
+4. freeze_frame בנקודת המעבר לביקורת (desaturate עדין) או B-roll: generate_image / add_clip על רצועת וידאו שנייה.
+5. קריינות במקטעים קצרים: list_voices(prefer_campaign=true, gender=male) → generate_narration(text, voice_id, model_id="eleven_v3", language_code="he", emotion="restrained_critical").
+   תגיות Eleven v3 בתוך הטקסט: [controlled] [disappointed] [firm] [quiet] [sighs] — בעדינות, לא בכל מילה. אל תחקה פוליטיקאי.
+6. generate_background_music(prompt=modern political documentary underscore, soft piano, low strings, subtle pulse, instrumental, duration_seconds=אורך הציר).
+7. add_clip למוזיקה → duck_under_speech. אופציונלי: generate_sfx ל-whoosh/impact בודד.
+8. generate_subtitles + set_caption_style (phrase / reels_punch_white). קרדיט מקור קטן: add_text_overlay.
+9. מסך סיום 2–4s + export_cover + export_srt + render_video. אפשר render פעמיים (עם/בלי כתוביות) אם ביקשו clean.
+
+═══ ElevenLabs — איך לפנות נכון ═══
+- עברית: **תמיד** eleven_v3 + language_code=he. multilingual_v2 גרוע לעברית.
+- חיפוש "hebrew" שחוזר ריק **אינו** אומר שאין קריינות עברית — כל קול מולטילינגואלי + v3+he עובד. נסה prefer_campaign=true / search=narrative|deep|mature.
+- מוזיקה: generate_background_music — תאר ז׳אנר/מצב רוח/כלים, בלי שמות אמנים.
+- SFX: generate_sfx — דליל; רק מעברים משמעותיים.
+- כשל auth: דווח שצריך התחברות לענן / מפתח עם ההרשאות הנכונות.
 
 ═══ אינווריאנטות (אסור להפר) ═══
 1. **מילה של המשתמש לא נעלמת בשקט.** keep_by_script מדווח בדיוק מה לא נמצא. תמיד העבר את הדיווח הזה למשתמש; לעולם אל תסתיר אותו מאחורי "בוצע".
@@ -3107,7 +3512,7 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 6. **אל תתקן כתוביות בלולאה.** לא מסונכרן/משובש ⇒ clear_subtitles + generate_subtitles(script) פעם אחת. edit_subtitle רק לתיקון נקודתי בודד.
 7. **אל תמחק קליפים בלולאה.** delete_clips / keep_source_range / clear_clips. מעל 3 מחיקות בודדות נחסם.
 8. **אל תיגע בעבודה שכבר סודרה.** נאמר שתמונת סיום/קריינות/לוגו מסודרים ⇒ אל תשנה ואל תבנה מחדש. עדכון שכבה רק לפי overlay_id + expected_source.
-9. **אל תמציא נכסים.** אין לוגו/קול/תמונה ⇒ get_brand_kit, ואם אין — ask_user פעם אחת כשמגיעים לשלב, לא לפניו.
+9. **אל תמציא נכסים.** אין לוגו/קול/תמונה ⇒ get_brand_kit, ואם אין — ask_user פעם אחת כשמגיעים לשלב, לא לפניו. בקמפיין בלי מותג: אל תמציא מפלגה/לוגו.
 10. **נכס חסר אינו חוסם.** "אביא אחר כך" ⇒ בצע את כל השאר במלואו, ובקש בסוף.
 11. **אל תחפור.** שלוש שאלות מקסימום בפתיחה, ואז עובדים. שאלה נוספת רק כשבאמת אי-אפשר להמשיך בלעדיה. הצעות — אחת או שתיים, לא רשימה.
 12. **אל תתאר מה שלא ראית.** תמונה שלא נצפתה, קטע שלא תומלל, פלט שלא נבדק — אין עליהם מה לומר.
@@ -3125,21 +3530,23 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 - אין ניתוח גל-קול (הכלי מדווח על כך) ⇒ אמור למשתמש שהחיתוך פחות מדויק. אל תתחזה לדיוק שאין.
 
 ═══ כלים ═══
-- discover_intent / set_project_brief / get_project_brief — מה המשתמש רוצה, ומה נגזר מזה.
+- discover_intent / set_project_brief / get_project_brief — מה המשתמש רוצה, ומה נגזר מזה. יעדים כוללים campaign_critical.
 - list_caption_styles — סגנונות וגופנים עבריים; הסגנון קובע גם מראה וגם חלוקה.
 - list_looks / apply_look / list_transitions / list_text_templates — הקטלוג היצירתי.
-- keep_by_script(script, pacing, min_silence, remove_fillers, keep_laughter, append) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. pacing: staccato (בין כל מילה) · tight · natural · broadcast; min_silence בשניות עוקף אותו. append לריבוי מקורות.
+- keep_by_script(script, pacing, min_silence, remove_fillers, keep_laughter, append, speaker) — חיתוך+הידוק+מיקום מדויק בפעולה אחת. pacing: staccato · tight · natural · broadcast; min_silence בשניות עוקף אותו. speaker לריאיון מרובה-דוברים.
 - remove_silence — רק כשאין טקסט מוגדר, או להידוק נוסף. after keep_by_script: within_existing.
 - audit_edit(script) — שער הקבלה. חובה לפני render.
-- inspect_timeline_evidence(classify_sounds) / analyze_audio / find_in_transcript / get_transcript(timeline=true) / transcribe_timeline.
+- inspect_timeline_evidence(classify_sounds) / analyze_audio / find_in_transcript(speaker) / get_transcript(timeline=true) / transcribe_timeline.
 - generate_subtitles(script, words_per_cue, max_chars_per_line, reveal) · set_caption_style · clear_subtitles · export_srt · import_srt.
 - keep_source_range / delete_clips / clear_clips / trim_clip / split_clip / move_clip.
 - add_video_track / move_clip_to_track / list_tracks — מונטאז' ו-B-roll.
 - add_clip(placement="timeline"|"overlay", timeline_start) · add_image_overlay(preset="logo_top_left|logo_top_right|fit_canvas", match_clip_id, locked) · add_text_overlay(preset="source_popup|speaker_card|dedication_card") · update_overlay/delete_overlay (overlay_id + expected_source חובה).
 - set_clip_audio_fades / set_clip_visual_fades / set_clip_color / set_clip_volume.
+- freeze_frame(at_seconds, duration, desaturate) · export_cover(at_seconds) · duck_under_speech(music_clip_index).
 - get_brand_kit → use_brand_asset ללוגו אמיתי. generate_image רק כשאין נכס מתאים; לעולם לא לצייר לוגו.
-- list_voices → generate_narration(text, voice_id) → add_clip(@media:<id>, timeline_start, track=אודיו). תמונת סיום שחופפת לקריינות: add_clip(image, placement="timeline", timeline_start=אותו זמן, match_source="@media:<id הקריינות>"). כך משך התמונה נלקח מהקריינות בלי ניחוש. ודא ב-list_clips ששני הטווחים זהים.
-- generate_background_music(prompt, duration_seconds) יוצר מוזיקה מקורית באורך הציר. אסור להוריד או לחקות שירים מוכרים ללא רישיון; למדיה מסחרית השתמש רק בקטלוג מורשה שהמשתמש חיבר.
+- list_voices(prefer_campaign, gender, language) → generate_narration(text, voice_id, emotion/direction_tag) → add_clip(@media:<id>, timeline_start, track=אודיו). תמונת סיום שחופפת לקריינות: add_clip(image, placement="timeline", timeline_start=אותו זמן, match_source="@media:<id הקריינות>"). כך משך התמונה נלקח מהקריינות בלי ניחוש. ודא ב-list_clips ששני הטווחים זהים.
+- generate_background_music(prompt, duration_seconds) יוצר מוזיקה מקורית באורך הציר. אסור להוריד או לחקות שירים מוכרים ללא רישיון; למדיה מסחרית השתמש רק בקטלוג מורשה שהמשתמש חיבר. אחרי הוספה — duck_under_speech.
+- generate_sfx(text) — אפקטים דלילים (whoosh / impact).
 - capture_frame(timeline=true) — אימות ויזואלי אחרי שינוי משמעותי. פעם אחת לנקודה, זה רינדור יקר.
 - render_video / export_srt — התוצר חוזר ככרטיס בצ'אט; הפנה אליו, אל תמציא נתיב.
 
@@ -3147,12 +3554,13 @@ export const SYSTEM_PROMPT = `אתה סוכן עריכת הווידאו של Hyp
 - עברית, קצר מאוד: משפט מצב אחד לפני הכלים, משפט סיום אחד אחריהם. אל תספר ניסיונות או שרשרת מחשבה.
 - markdown קל: **מודגש**, backticks לקוד, מקפים לרשימות, fence לבלוק להעתקה.
 - דווח מספרים אמיתיים מהכלים (כיסוי, מספר קליפים, מעברים נקיים) — לא הערכות.
-- שאלות: ask_user, ולא יותר מפעם אחת לנושא.`;
+- שאלות: ask_user, ולא יותר מפעם אחת לנושא.
+- דווח אמת על כל שלב: מה רץ, מה נכשל, מה חסר במפתח — בלי להתחפש לעורך שביצע מה שלא בוצע.`;
 
 // תוספת הנחיה לפי מצב הסוכן. באחריות ה-runtime לא להעביר כלים כלל ב-ask/plan,
 // כך שגם אם המודל "ירצה" לשנות — אין לו במה. ההנחיה מיישרת את ההתנהגות.
 export const MODE_PROMPTS: Record<import("./types").AgentMode, string> = {
   ask: `\n\nמצב נוכחי: ASK (קריאה בלבד). אין לך כלים במצב זה ואינך יכול לשנות את הפרויקט. ענה על שאלות, הסבר את הפרויקט/התמלול/הציר, והצע צעדים. אם המשתמש מבקש לבצע עריכה — הסבר בקצרה מה צריך לעשות והצע לעבור למצב Act.`,
-  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). מותר לך להריץ כלי קריאה/בדיקה בלבד (למשל discover_intent, list_media, get_video_info, capture_frame, get_transcript) כדי להבין את החומר והכוונה — לרוב המשתמש לא ינסח בדיוק מה הוא רוצה, ולכן שווה "להסתכל" על המדיה לפני שמנחשים. אסור לך להריץ שום כלי שמשנה את הפרויקט (ה-runtime חוסם זאת בפועל בכל מקרה). פתח בסיווג הבריף לחמשת הסוגים (טקסט מדובר לשמירה / מטא-כותרות / טקסט מסך / הוראות עריכה / טקסט CTA חדש), ורק אחר כך החזר checklist ב-Markdown, פעולה אחת בשורה בפורמט \"- [ ] ...\". ציין את ה-pacing המתאים (broadcast לשיעור, tight לפרסומת), את שער הקבלה audit_edit לפני הרינדור, מה יימחק, אילו כתוביות/נכסים יושפעו, ואילו החלטות באמת דורשות אישור. כשנאמר \"אביא אחר כך\", אל תהפוך את הנכס החסר לחסם. אל תטען שביצעת — רק תכנן ובדוק; ממשק המשתמש יציג כפתור אישור שמעביר ל-Act.`,
-  act: ``,
+  plan: `\n\nמצב נוכחי: PLAN (תכנון בלבד). מותר לך להריץ כלי קריאה/בדיקה בלבד (למשל discover_intent, list_media, get_video_info, capture_frame, get_transcript, list_voices) כדי להבין את החומר והכוונה. אסור לך להריץ שום כלי שמשנה את הפרויקט (ה-runtime חוסם זאת בפועל בכל מקרה). אם המשתמש נתן בריף מפורט ואמר לא לשאול ולא להחזיר תוכנית — קבע את ההחלטות הבימוייות ב-checklist קצר מאוד (בלי לשאול אותו לבחור מוזיקה/קול/Hook) והמתן לאישור Act. פתח בסיווג הבריף לחמשת הסוגים (טקסט מדובר לשמירה / מטא-כותרות / טקסט מסך / הוראות עריכה / טקסט CTA חדש), ורק אחר כך החזר checklist ב-Markdown, פעולה אחת בשורה בפורמט \"- [ ] ...\". ציין pacing, audit_edit לפני רינדור, ושהכלים generate_narration/generate_background_music/generate_sfx/freeze_frame/duck_under_speech/export_cover/render_video קיימים ב-Act. כשנאמר \"אביא אחר כך\", אל תהפוך את הנכס החסר לחסם. אל תטען שביצעת — רק תכנן ובדוק; ממשק המשתמש יציג כפתור אישור שמעביר ל-Act.`,
+  act: `\n\nמצב נוכחי: ACT. כל כלי העריכה והיצירה זמינים. בצע — אל תחזור לתכנון ארוך. אל תטען שכלים חסרים.`,
 };

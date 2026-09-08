@@ -48,6 +48,7 @@ export const MUTATING_TOOLS = new Set([
 "add_image_overlay", "delete_overlay", "generate_narration", "use_brand_asset", "generate_image",
 "set_clip_flip", "set_clip_audio_fades", "set_clip_visual_fades", "apply_look",
 "set_caption_style", "set_aspect_ratio", "add_track", "rename_media", "generate_background_music",
+"generate_sfx", "duck_under_speech", "freeze_frame", "export_cover",
 ]);
 
 export const SERIALIZED_TOOLS: ReadonlySet<string> = new Set([...MUTATING_TOOLS, "render_video"]);

@@ -95,22 +95,47 @@ export function assembledDuration(clips: Clip[]): number {
   return clips.filter(clipEnabled).reduce((s, c) => s + clipDur(c), 0);
 }
 
-/** פורמט תצוגה לסוכן: שורות עם חותמות זמן על הציר הנתון. */
+/** תווית דובר קצרה לתצוגה (speaker_0 → דובר 0). */
+export function formatSpeakerLabel(speakerId: string | undefined | null): string {
+  const raw = String(speakerId || "").trim();
+  if (!raw) return "";
+  const m = raw.match(/(\d+)\s*$/);
+  if (m) return `דובר ${m[1]}`;
+  return raw;
+}
+
+/** פורמט תצוגה לסוכן: שורות עם חותמות זמן + תווית דובר כשיש diarization. */
 export function formatTranscriptLines(words: Word[], maxWordsPerLine = 12): string {
   const speech = words.filter(isSpeechWord);
   const lines: string[] = [];
   let cur: Word[] = [];
   const flush = () => {
     if (!cur.length) return;
+    const speaker = formatSpeakerLabel(cur[0].speakerId);
+    const prefix = speaker ? `${speaker} · ` : "";
     lines.push(
-      `[${cur[0].start.toFixed(1)}–${cur[cur.length - 1].end.toFixed(1)}s] ${cur.map((w) => w.text).join(" ")}`,
+      `[${cur[0].start.toFixed(1)}–${cur[cur.length - 1].end.toFixed(1)}s] ${prefix}${cur.map((w) => w.text).join(" ")}`,
     );
     cur = [];
   };
   for (const w of speech) {
-    if (cur.length && (w.start - cur[cur.length - 1].end > 0.8 || cur.length >= maxWordsPerLine)) flush();
+    const speakerChanged = !!cur.length && String(cur[0].speakerId || "") !== String(w.speakerId || "");
+    if (cur.length && (speakerChanged || w.start - cur[cur.length - 1].end > 0.8 || cur.length >= maxWordsPerLine)) {
+      flush();
+    }
     cur.push(w);
   }
   flush();
   return lines.join("\n");
+}
+
+/** מסנן מילים לפי מזהה דובר (התאמה חלקית: "0" ↔ "speaker_0"). */
+export function filterWordsBySpeaker(words: Word[], speaker: string | null | undefined): Word[] {
+  const want = String(speaker || "").trim().toLowerCase();
+  if (!want) return words;
+  return words.filter((w) => {
+    const id = String(w.speakerId || "").trim().toLowerCase();
+    if (!id) return false;
+    return id === want || id.endsWith(want) || id.includes(want) || want.includes(id);
+  });
 }

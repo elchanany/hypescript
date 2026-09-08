@@ -107,6 +107,7 @@ export type GoalId =
   | "podcast_edit"       // תוכן ארוך: לנקות ולקצר
   | "shorts_from_long"   // לחלץ שורטים מתוכן ארוך
   | "social_promo"       // קליפ קצר לרשתות מחומר קיים
+  | "campaign_critical"  // שורט ביקורתי/פוליטי/תיעודי לרשתות (רציני, קריינות, underscore)
   | "business_deck"      // מצגת עסקית מונפשת
   | "unknown";
 
@@ -195,6 +196,20 @@ export const GOALS: Record<GoalId, Goal> = {
       steps: ["transcribe", "pick_segment", "keep_by_script", "captions", "add_music", "export"],
     },
   },
+  campaign_critical: {
+    id: "campaign_critical",
+    labelHe: "שורט ביקורתי / קמפיין",
+    outcomeHe: "שורט אנכי רציני בסגנון תשדיר: Hook מהמקור, קריינות מאופקת, מוזיקת underscore, B-roll וכתוביות נקיות.",
+    recipe: {
+      aspect: "portrait", targetSec: 35, pacing: "tight", captions: "phrase",
+      transitions: ["dissolve"], music: "cinematic", narration: true,
+      steps: [
+        "transcribe", "identify_speakers", "pick_hook", "keep_by_script",
+        "freeze_or_broll", "generate_narration", "generate_background_music",
+        "duck_under_speech", "captions", "ending_card", "export_cover", "render",
+      ],
+    },
+  },
   business_deck: {
     id: "business_deck",
     labelHe: "מצגת עסקית",
@@ -234,8 +249,23 @@ const TEXT_HINTS: Array<{ words: string[]; goals: GoalId[]; weight: number; reas
   { words: ["פודקאסט", "podcast", "ראיון", "פרק"], goals: ["podcast_edit", "shorts_from_long"], weight: 3, reasonHe: "הוזכר פודקאסט או ראיון" },
   { words: ["עסקי", "מצגת עסקית", "לקוחות", "משקיעים", "פיץ", "מכירות"], goals: ["business_deck"], weight: 3, reasonHe: "הוזכר הקשר עסקי" },
   { words: ["שותף", "שותפה", "דירה", "חדר", "להשכרה"], goals: ["photo_promo"], weight: 3, reasonHe: "הוזכרה מודעת דירה/שותפים" },
-  { words: ["קריינות", "הקראה", "voiceover"], goals: ["photo_promo", "business_deck"], weight: 1.5, reasonHe: "התבקשה קריינות" },
+  { words: ["קריינות", "הקראה", "voiceover"], goals: ["photo_promo", "business_deck", "campaign_critical"], weight: 1.5, reasonHe: "התבקשה קריינות" },
   { words: ["שיר", "מוזיקה", "מנגינה"], goals: ["family_slideshow", "photo_promo"], weight: 1, reasonHe: "התבקשה מוזיקה" },
+  {
+    words: [
+      "קמפיין", "פוליטי", "ביקורתי", "תשדיר", "בחירות", "מחאה", "ניתוק",
+      "ממשלה", "שר ", "ח\"כ", "חכ ", "documentary", "political", "campaign",
+    ],
+    goals: ["campaign_critical"],
+    weight: 5,
+    reasonHe: "הוזכר קמפיין/ביקורת פוליטית או תשדיר",
+  },
+  {
+    words: ["בלי לשאול", "אל תשאל", "תעבוד לבד", "אל תבקש", "don't ask", "just do", "בצע בעצמך"],
+    goals: ["campaign_critical"],
+    weight: 0.5,
+    reasonHe: "המשתמש ביקש ביצוע אוטונומי",
+  },
 ];
 
 /**

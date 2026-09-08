@@ -38,6 +38,7 @@ describe("agent tool-set consistency", () => {
     for (const name of [
       "set_clip_flip", "set_clip_audio_fades", "set_clip_visual_fades", "apply_look",
       "set_caption_style", "set_aspect_ratio", "add_track", "rename_media", "generate_background_music",
+      "generate_sfx", "duck_under_speech", "freeze_frame", "export_cover",
     ]) {
       expect(MUTATING_TOOLS.has(name), `${name} mutates state and needs a checkpoint`).toBe(true);
     }

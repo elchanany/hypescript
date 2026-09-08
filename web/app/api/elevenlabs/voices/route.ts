@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams;
     const pageSize = sp.get("page_size") || "30";
     const search = sp.get("search") || "";
+    const language = sp.get("language") || "";
+    const gender = sp.get("gender") || "";
+    const preferCampaign = sp.get("prefer_campaign") === "1" || sp.get("prefer_campaign") === "true";
     const qs = new URLSearchParams({ page_size: pageSize });
     if (search) qs.set("search", search);
 
@@ -35,20 +38,34 @@ export async function GET(req: NextRequest) {
       total_count?: number;
     };
 
-    const voices = (data.voices || []).map((v) => ({
-      voice_id: v.voice_id,
-      name: v.name,
-      category: v.category,
-      description: v.description || "",
-      preview_url: v.preview_url || null,
-      labels: v.labels || {},
-      high_quality_base_model_ids: v.high_quality_base_model_ids || [],
+    const mapped = (data.voices || []).map((v) => ({
+      voice_id: String(v.voice_id || ""),
+      name: String(v.name || ""),
+      category: v.category ? String(v.category) : undefined,
+      description: String(v.description || ""),
+      preview_url: (v.preview_url as string | null) || null,
+      labels: (v.labels as Record<string, unknown>) || {},
+      high_quality_base_model_ids: Array.isArray(v.high_quality_base_model_ids)
+        ? (v.high_quality_base_model_ids as string[])
+        : [],
     }));
+
+    const { filterAndRankVoices } = await import("@/lib/elevenlabs/voicesFilter");
+    const { voices, noteHe } = filterAndRankVoices(mapped, {
+      language: language || null,
+      gender: (gender === "male" || gender === "female" || gender === "neutral") ? gender : null,
+      preferCampaign,
+      preferV3: preferCampaign,
+    });
 
     return NextResponse.json({
       voices,
       has_more: !!data.has_more,
       total_count: data.total_count ?? voices.length,
+      note_he: noteHe || undefined,
+      hint_he:
+        "לקריינות עברית: generate_narration עם model_id=eleven_v3 ו-language_code=he. " +
+        "אין חובה לקול עם תווית hebrew — חיפוש ריק ל־hebrew אינו אומר שאין קריינות עברית.",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
