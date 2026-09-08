@@ -34,6 +34,14 @@ describe("time model", () => {
     ], 0.05);
     expect(result.match?.label).toBe("clip edge");
   });
+  it("prefers overlay/image edges over playhead so narration can lock flush above a still", () => {
+    const result = snapToMagneticTarget(12.01, [
+      { time: 12, label: "ראש הנגן", kind: "playhead", priority: 1 },
+      { time: 12, label: "cta · התחלה", kind: "overlay", priority: 8 },
+    ], 0.05);
+    expect(result.match?.kind).toBe("overlay");
+    expect(result.match?.label).toContain("cta");
+  });
   it("snaps either edge of a moving range while preserving duration", () => {
     const targets = [{ time: 10, label: "upper track end", kind: "clip" as const, priority: 5 }];
     expect(snapRangeStart(9.98, 3, targets, 0.05)).toMatchObject({ start: 10, edge: "start", snapped: true });

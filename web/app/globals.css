@@ -1434,6 +1434,16 @@ input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius
   background: linear-gradient(90deg, rgba(255,209,102,.04), rgba(255,209,102,.1), rgba(255,209,102,.04));
 }
 
+/* CapCut-style: highlight the clip/image/caption edge the magnet locked onto */
+.clip2.snap-aligned,
+.clip-audio.snap-aligned:not(.gap),
+.clip-ov.snap-aligned,
+.cue2.snap-aligned,
+.clip-gap.snap-aligned {
+  box-shadow: 0 0 0 1.5px #ffd166, 0 0 14px rgba(255, 209, 102, 0.45);
+  z-index: 6;
+}
+
 /* CapCut-like magnet guide — vertical line across the whole timeline when snapping */
 .tl-snap-guide {
   background: #ffd166; z-index: 15; pointer-events: none;

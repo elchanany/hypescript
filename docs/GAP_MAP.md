@@ -24,7 +24,7 @@
 | Project coordinates | OK | — |
 | בחירה/Bounding box/drag/resize/rotate | OK | — |
 | Inspector transform sync | OK | — |
-| Snapping/guides/safe-areas | PARTIAL | קנבס: snap למרכז + שולי 10% (Alt מבטל); טיימליין: מגנט חוצה-רצועות עם קו+תווית יעד, שני קצות קליפ, M להפעלה ו-Alt לשחרור; safe-area guides קבועים עדיין חסרים |
+| Snapping/guides/safe-areas | PARTIAL | קנבס: snap למרכז + שולי 10% (Alt מבטל); טיימליין: מגנט חוצה-רצועות עם קו צהוב רק בנעילה, הדגשת קליפ/שכבה מיושרים, עדיפות לקצוות תמונה/שכבה; safe-area guides קבועים עדיין חסרים |
 
 ## 3. Timeline
 | פריט | סטטוס | פער |
@@ -38,7 +38,7 @@
 | Gap entity / Delete-leaves-gap / Ripple-delete | OK | Preview+Export (lavfi black); Roll/Slip ✅ (כפתורים + מקלדת) |
 | Transitions/Effects/Keyframes visuals | MISSING | — |
 | Overlay/Text tracks | OK | בחירה + trim/move בציר |
-| Magnetic cross-track placement | OK | קצוות מחושבים בנפרד לכל רצועה; גרירת קליפ/מדיה נצמדת להתחלה/סוף מעל ומתחת ושומרת timeline_start מדויק |
+| Magnetic cross-track placement | OK | קצוות מחושבים בנפרד לכל רצועה; גרירת קליפ/מדיה נצמדת להתחלה/סוף מעל ומתחת; רצועת אודיו שומרת gaps כדי שמיקום חופשי של קריינות לא ייארז חזרה ל־t=0 |
 
 ## 4. Text / Captions / Images / Logos / Overlays
 | פריט | סטטוס | פער |

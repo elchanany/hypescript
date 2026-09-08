@@ -59,4 +59,20 @@ describe("free placement — vacated space stays open", () => {
     expect(startOf(twice, PRIMARY, "C")).toBeCloseTo(startOf(once, PRIMARY, "C"), 5);
     expect(startOf(twice, PRIMARY, "B")).toBeCloseTo(10, 5);
   });
+
+  it("keeps dedicated narration on the audio track at the dropped time (including leading gap)", () => {
+    const AUDIO = "trk_audio";
+    const clips = [
+      c("v1", 20, PRIMARY),
+      { id: "narr", sourceId: "tts1", start: 0, end: 9.2, trackId: AUDIO } as Clip,
+    ];
+    const out = moveClipAtTimeline(clips, "narr", AUDIO, 12.5, PRIMARY);
+    const audioList = clipsOnTrack(out, AUDIO, PRIMARY);
+    expect(startOf(out, AUDIO, "narr")).toBeCloseTo(12.5, 5);
+    expect(audioList.some((item) => isGapClip(item))).toBe(true);
+    // UI must render with gaps; stripping them would pack narration back to t=0.
+    const withoutGaps = audioList.filter((item) => !isGapClip(item));
+    expect(assembledStart(withoutGaps, withoutGaps.findIndex((item) => item.id === "narr"))).toBe(0);
+    expect(assembledStart(audioList, audioList.findIndex((item) => item.id === "narr"))).toBeCloseTo(12.5, 5);
+  });
 });
