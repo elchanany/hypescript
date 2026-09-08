@@ -2,7 +2,7 @@
 
 ## 2026-09-08 — Timeline narration free-placement + CapCut image snap
 - **Branch:** `cursor/timeline-audio-snap-placement-aec5`
-- **Latest commit:** `370b5a9` (matches `origin/cursor/timeline-audio-snap-placement-aec5`)
+- **Latest commit:** `97bad5f` (continuity); fix commits `5166ae0` / `370b5a9`
 - **PR:** https://github.com/elchanany/hypescript/pull/34 — OPEN / ready / MERGEABLE; **not merged to `main`**
 - **Preview:** https://hypescript-git-cursor-timeline-audi-385fc3-elchanan-ys-projects.vercel.app
 - **Status:** Code + docs on branch; continuity maintenance pass completed; awaiting merge for production

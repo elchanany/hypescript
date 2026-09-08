@@ -2,7 +2,7 @@
 Ship timeline narration free-placement + CapCut-style snap to `main` via PR review (no production deploy from this agent).
 
 # Current State
-- **Branch:** `cursor/timeline-audio-snap-placement-aec5` @ `370b5a9` (pushed; tracking origin).
+- **Branch:** `cursor/timeline-audio-snap-placement-aec5` @ `97bad5f` (pushed; fix at `5166ae0`/`370b5a9`).
 - **PR:** https://github.com/elchanany/hypescript/pull/34 — OPEN, ready for review, MERGEABLE. Not merged; **not on production `main`**.
 - **Preview (Vercel):** https://hypescript-git-cursor-timeline-audi-385fc3-elchanan-ys-projects.vercel.app
 - **Fix shipped on branch:** Audio lane keeps gap spacers so free-placed narration no longer redraws at t=0; magnetic snap prefers named overlay/image edges, yellow guide only while locked, aligned clip/layer highlight.
