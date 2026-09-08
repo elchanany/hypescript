@@ -41,10 +41,10 @@
 ## Image / Video / Voice / Music / Storage / Search / Fonts / Icons / Templates
 | קטגוריה | ספקים מתוכננים | סטטוס |
 |---|---|---|
-| Image | GPT Image, Gemini Image, ComfyUI, SD/A1111, REST | **חסר** |
+| Image | GPT Image (`/api/openai/images` + `generate_image`); Gemini/ComfyUI/SD | ✔ חלקי (OpenAI); שאר הספקים חסרים |
 | Video | Veo, Sora, Seedance (רק API רשמי מתועד — אין scraping), ComfyUI, REST | **חסר** |
-| Voice | ElevenLabs TTS (`eleven_v3` + voices/models) | ✔ Registry + `/api/elevenlabs/*` + כלי סוכן |
-| Music/SFX | ספקי-REST/local | **חסר** |
+| Voice | ElevenLabs TTS (`eleven_v3` + voices/models + direction tags + סינון עברית/קמפיין) | ✔ Registry + `/api/elevenlabs/*` + כלי סוכן; עברית = v3+`language_code=he` |
+| Music/SFX | ElevenLabs Music + Sound Generation | ✔ `/api/elevenlabs/music` + `/api/elevenlabs/sfx` + `generate_background_music` / `generate_sfx` / `duck_under_speech` |
 | Storage | Local FS, Supabase Storage, R2, S3, Drive/Dropbox/OneDrive | **חסר** (כרגע OPFS/IndexedDB בלבד) |
 | Media search | Pexels, Pixabay, Openverse (חובה לשמור license/attribution; אין hotlink קבוע) | **חסר** |
 | Fonts/Icons/Templates | Google Fonts/Fontsource, Iconify (Lucide בשימוש), TemplatePackage | **חסר** |

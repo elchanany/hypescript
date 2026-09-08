@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — מצב יציב של hypescript
 
-עודכן לאחרונה: 2026-08-11 (חבילת SaaS trial + landing בבדיקה לפני push).
+עודכן לאחרונה: 2026-09-08 (יכולות סוכן להפקת שורט קמפיין ביקורתי).
 
 ## מה המוצר
 
@@ -29,6 +29,7 @@
 - **עורך (פאזה 1+):** shell, preview דו-מאגרי עם preload ובקרת גבול פריים, timeline, Inspector, snap/Magnet, A/V מקושר, CommandBus/gaps, Provider Registry, ציטוט מקום, זום; כמה רצועות video + `clip.trackId` + cutaway flatten בנגן/ייצוא.
 - **ערכת מותג מקומית:** `/settings/brand` — org/name, tagline, קווים מנחים לכתיבה, פלטת צבעים מנורמלת, לוגו/תמונות רפרנס ב-IndexedDB מקומי עם ניקוי object URLs וערכה פעילה בין פרויקטים; הסוכן קורא סיכום נטול בינארי (`get_brand_kit`) ומייבא Blob דרך גבול דפדפן מפורש (`use_brand_asset` → `EditorApi.addMediaAsset`), בלי המצאת נכסים או ייבוא כפול. אין סנכרון ענן.
 - **CTA asset pipeline:** `generate_narration` מתמיד אודיו ElevenLabs בפרויקט דרך `EditorApi.addMediaAsset` ומחזיר `@media:<id>` יציב + הנחיית `add_clip` מדויקת (timeline_start = סוף הציר, רצועת אודיו); `generate_image` (ספק `openai-image` נפרד, אותו `OPENAI_API_KEY`, אישור חיוב fail-closed לכל יכולת) יוצר PNG דרך `/api/openai/images` (gpt-image-1, `output_format=png`, פענוח `b64_json`) עם בריף מותג טקסטואלי מוגבל בלי המצאת לוגו; טקסט CTA חדש מחוץ ל-keep_by_script; אימות מורכב (`capture_frame(timeline=true)`). E2E חי עם מפתחות אמיתיים עדיין חסר.
+- **הפקת שורט קמפיין (agent):** יעד `campaign_critical`; קריינות עברית דרך `eleven_v3`+`language_code=he` עם תגיות כיוון; מוזיקה + `duck_under_speech`; `generate_sfx`; `freeze_frame` / `export_cover`; תוויות דובר בתמלול ו-`speaker=` בחיתוך. חיפוש קול `hebrew` ריק אינו נחשב כהיעדר TTS. E2E חי עם מפתחות עדיין חסר.
 - **local:** CLI+GUI, faster-whisper/ענן, intro/outro, burn-in, chunking, retry.
 - **בדיקות web:** vitest 53 קבצים / 381 בדיקות עוברות + `tsc` נקי.
 

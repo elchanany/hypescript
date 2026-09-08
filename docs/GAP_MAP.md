@@ -65,7 +65,7 @@
 | CommandBus + Query API | PARTIAL | פעולות UI וכלי agent יחידניים וב־bulk עוברים דרך פקודות מאומתות, כולל clip/subtitle replace אטומי; File probe/object-URL נשאר גבול I/O; נותר Query API עשיר יותר |
 | רצועות וידאו מרובות + כלי סוכן | OK | trackId + cutaway flatten בנגן/ייצוא; add_video_track / move_clip_to_track |
 | אימות ויזואלי (capture_frame) | OK | ברירת מחדל = פריים גולמי מהמקור (מהיר); `timeline=true` = פריים מורכב שקול לייצוא (opt-in); SYSTEM_PROMPT מגביל לאימות שינוי משמעותי בלי צילומים מיותרים |
-| CTA/אאוטרו flow (קריינות + תמונה/כרטיס + popup) | PARTIAL | `generate_narration` מתמיד אודיו ElevenLabs בפרויקט ומחזיר `@media:<id>` יציב + הנחיית `add_clip` מדויקת (timeline_start = סוף הציר, רצועת אודיו); `generate_image` (openai-image) עם בריף מותג טקסטואלי מוגבל; טקסט CTA חדש מחוץ ל-keep_by_script; נכסי מותג קודם; טווח אודיו/תמונה/כרטיס מדויק; אימות מורכב (`capture_frame(timeline=true)`). חסר: E2E דפדפן חי עם מפתחות אמיתיים |
+| CTA/אאוטרו flow (קריינות + תמונה/כרטיס + popup) | PARTIAL | `generate_narration` + emotion/direction tags (Eleven v3); `generate_background_music` + `duck_under_speech`; `generate_sfx`; `freeze_frame` / `export_cover`; יעד `campaign_critical`; תוויות דובר בתמלול + `speaker=` ב-keep_by_script. חסר: E2E דפדפן חי עם מפתחות אמיתיים |
 | כלי overlays / enable / volume / leave_gap | OK | — |
 
 ## 6. Project / Auth / Dashboard
@@ -84,7 +84,7 @@
 | תמלול Groq (proxy) | PARTIAL | מפתח client-side |
 | Provider Registry + policies + Zero-cost | PARTIAL | Registry + configured-unverified + billing-risk classification; LLM/STT/TTS נחסמים עד אישור מפורש מקומי לפי ספק; live health-check ומדיניות server/roles חסרים |
 | Image generation (OpenAI GPT Image) | PARTIAL | ספק `openai-image` נפרד (אותו `OPENAI_API_KEY`) עם אישור חיוב fail-closed לכל יכולת; `/api/openai/images` מאמת פרמטרים allowlisted של gpt-image-1, קורא ל-`images/generations` הרשמי עם `output_format=png` (אין `response_format` נתמך), מפענח `b64_json` ומחזיר PNG עם שגיאות עברית מנוקות מסודות; `generate_image` מצרף בריף מותג טקסטואלי מוגבל בלי המצאת לוגו ורושם את ה-PNG במדיה (`@media:<id>`). חסר: E2E חי עם מפתח OpenAI אמיתי |
-| Video/Voice/Music/Storage/Search | MISSING | — |
+| Video/Voice/Music/Storage/Search | PARTIAL | Voice+Music+SFX דרך ElevenLabs (`generate_narration` / `generate_background_music` / `generate_sfx`); Image דרך OpenAI; Storage/Search עדיין חסרים |
 
 ## 8–9. Templates / Effects / Usage / Admin
 | הכל | MISSING | אין להציג בלי Preview+Export אמיתי / דורש אישור |

@@ -144,3 +144,8 @@
 - Split handles are visible and support pointer, keyboard and double-click reset; their sizes persist locally. The timeline defaults to about 38% height and the canvas always uses contain.
 - An effect or transition appears in the catalog only when the same clip state works in Preview and Export. CapCut is a product reference, not an asset source.
 - The initial catalog uses existing clip looks and fades. Remotion, Lottie, GIPHY or GLSL expansion requires licensing review and Preview/Export parity tests.
+
+## D-028 — קריינות עברית וקמפיין כזרימת סוכן ראשונה-מחלקה
+- **בחירה:** קריינות עברית תקינה דורשת `eleven_v3` + `language_code=he` (לא `eleven_multilingual_v2`). חיפוש Voices עם המחרוזת `hebrew` שחוזר ריק אינו ראיה שאין TTS עברי — הסוכן מדורג לפי קולות narrative/campaign ונופל לרשימה מלאה. יעד Intent `campaign_critical` + כלים `generate_sfx` / `duck_under_speech` / `freeze_frame` / `export_cover` הם חלק מזרימת Act; אסור לסוכן לטעון שהם חסרים כשהם רשומים ב-TOOLS.
+- **סיבה:** כשל אמיתי בהפקת תשדיר: חיפוש עברי ריק + מצב PLAN + בריף `social_promo` upbeat גרמו לנטישת הפקה למרות ש-TTS/מוזיקה/רינדור כבר היו בקוד.
+- **השלכה:** SYSTEM_PROMPT כולל playbook קמפיין ותגיות כיוון v3; provider matrix מסמן Music/SFX כמיושמים חלקית; E2E חי עם מפתחות נשאר פתוח.
